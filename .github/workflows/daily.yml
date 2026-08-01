@@ -1,9 +1,11 @@
 name: CPVN daily EOD refresh
 
-# 15:15 giờ VN = 08:15 UTC, Thứ 2–6. (Có thể bấm chạy tay ở tab Actions.)
+# DỰ PHÒNG THỦ CÔNG: bấm "Run workflow" ở tab Actions khi server chính (103.165.144.161,
+# Scheduled Task "CPVN EOD refresh" 15:15 T2–T6) bảo trì/hỏng.
+# Lịch cron đã TẮT 2026-08-02 để tránh 2 máy cùng push một lúc; muốn bật lại thì bỏ comment:
+#  schedule:
+#    - cron: "15 8 * * 1-5"   # 15:15 giờ VN = 08:15 UTC, Thứ 2–6
 on:
-  schedule:
-    - cron: "15 8 * * 1-5"
   workflow_dispatch: {}
 
 # cho phép workflow commit ngược vào repo
