@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>CPVN — Bong bóng chứng khoán Việt Nam</title>
+<title>CPVN — Thông tin chứng khoán Việt Nam</title>
 <meta name="description" content="Toàn cảnh chứng khoán Việt Nam dạng bong bóng: HOSE + HNX real-time, biến động theo ngày/tuần/tháng/năm, vốn hoá, KQKD, báo cáo phân tích CTCK và tin tức theo mã." />
 <meta name="theme-color" content="#0a0a0c" />
 <meta name="author" content="CPVN.io" />
 <link rel="canonical" href="https://cpvn.io/" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="CPVN — Bong bóng chứng khoán Việt Nam" />
+<meta property="og:title" content="CPVN — Thông tin chứng khoán Việt Nam" />
 <meta property="og:description" content="Toàn cảnh HOSE + HNX dạng bong bóng, real-time. Kích thước theo biến động/vốn hoá, màu theo trần/sàn/tham chiếu." />
 <meta property="og:url" content="https://cpvn.io/" />
 <meta property="og:site_name" content="CPVN.io" />
@@ -69,15 +69,15 @@
   canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 
   /* cột ngành dọc bên trái */
-  #sectorbar{width:172px;flex-shrink:0;background:#0c0c0f;border-right:1px solid var(--line);
+  #sectorbar{width:212px;flex-shrink:0;background:#0c0c0f;border-right:1px solid var(--line);
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   #sectorbar .sbhead{position:sticky;top:0;background:#0c0c0f;padding:8px 12px 6px;font-size:11px;
     font-weight:800;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);z-index:1}
   #sectorList .si{display:flex;justify-content:space-between;align-items:center;gap:6px;
-    padding:6px 12px;font-size:12px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap;overflow:hidden}
+    padding:6px 12px;font-size:12px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03)}
   #sectorList .si:hover{background:var(--panel2)}
   #sectorList .si.active{background:var(--accent);color:#fff;font-weight:700}
-  #sectorList .si .n{overflow:hidden;text-overflow:ellipsis}
+  #sectorList .si .n{line-height:1.3}   /* cho phép xuống dòng -> luôn thấy đủ tên ngành */
   #sectorList .si .c{color:var(--muted);font-size:10.5px;flex-shrink:0}
   #sectorList .si.active .c{color:rgba(255,255,255,.8)}
   #sbBackdrop{display:none}
@@ -94,7 +94,7 @@
     padding:6px 14px;font-size:12px;color:var(--muted);pointer-events:none;transition:opacity .4s;z-index:4}
 
   /* panel chi tiết */
-  #detail{position:absolute;right:12px;top:12px;width:392px;max-width:calc(100vw - 24px);
+  #detail{position:absolute;right:12px;top:12px;width:472px;max-width:calc(100vw - 24px);
     max-height:calc(100% - 24px);overflow-y:auto;background:rgba(19,19,24,.97);
     border:1px solid var(--line);border-radius:14px;padding:14px;backdrop-filter:blur(8px);
     box-shadow:0 12px 40px rgba(0,0,0,.55);display:none;z-index:6}
@@ -170,6 +170,26 @@
   #detReports .rp a.rt{color:var(--txt);text-decoration:none;font-size:12px;line-height:1.4;display:block}
   #detReports .rp a.rt:hover{color:#fff;text-decoration:underline}
 
+  /* bảng BÁO CÁO CTCK nổi bên trái (chỉ bản desktop) */
+  #repBoard{position:absolute;left:14px;top:12px;width:278px;max-height:52%;display:none;
+    flex-direction:column;background:rgba(19,19,24,.93);border:1px solid var(--line);
+    border-radius:12px;backdrop-filter:blur(6px);box-shadow:0 8px 28px rgba(0,0,0,.45);z-index:4;overflow:hidden}
+  #repBoard .rbHead{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;border-bottom:1px solid var(--line);flex-shrink:0}
+  #repBoard .rbHead .arr{color:var(--muted);font-size:11px}
+  #rbList{overflow-y:auto;padding:2px 12px 8px}
+  #rbList::-webkit-scrollbar{width:7px} #rbList::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+  #rbList .ri{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  #rbList .ri .rh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
+  #rbList .ri .sym{font-weight:800;font-size:12.5px;cursor:pointer;color:#7ab7ff}
+  #rbList .ri .sym:hover{text-decoration:underline}
+  #rbList .ri .rec{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 5px}
+  #rbList .ri .mt{font-size:11px;font-weight:700}
+  #rbList .ri .meta{font-size:10.5px;color:var(--muted)}
+  #rbList .ri a.tt{display:block;color:var(--txt);text-decoration:none;font-size:11.5px;line-height:1.35;margin-top:1px}
+  #rbList .ri a.tt:hover{color:#fff;text-decoration:underline}
+  @media(max-width:640px){ #repBoard{display:none !important} }
+
   .legend{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);
     background:rgba(20,20,26,.7);padding:6px 12px;border-radius:20px;border:1px solid var(--line);flex-wrap:wrap;z-index:4}
   .legend b{color:var(--txt)}
@@ -218,6 +238,7 @@
     </select>
 
     <input class="search" id="search" placeholder="Mã / tên…" />
+    <button class="toggle" id="shotBtn" title="Chụp hình màn hình bong bóng (có đóng dấu CPVN.IO)">📷</button>
     <div class="spacer"></div>
     <div class="live" id="live"><span class="pulse"></span><span id="liveTxt">Đang tải…</span></div>
   </header>
@@ -233,6 +254,11 @@
   <main>
     <canvas id="cv"></canvas>
     <div id="status">Đang tải universe…</div>
+
+    <div id="repBoard">
+      <div class="rbHead" id="rbHead"><span>📊 Báo cáo CTCK mới nhất</span><span class="arr" id="rbArr">thu gọn ▾</span></div>
+      <div id="rbList"></div>
+    </div>
 
     <div id="detail">
       <span class="close" id="detClose">×</span>
@@ -269,8 +295,9 @@
         <span><i style="background:#5b6b7a"></i>Doanh thu</span>
         <span><i style="background:#c98a2b"></i>Giá vốn</span>
         <span><i style="background:#16c784"></i>LN sau thuế</span>
+        <span><i style="background:#38bdf8;height:2.5px;width:11px;border-radius:1px;vertical-align:2px"></i>Biên ròng %</span>
       </div>
-      <canvas id="detFin" height="118"></canvas>
+      <canvas id="detFin" height="150"></canvas>
       <div class="fintable" id="detFinTable"></div>
       <div class="subnote" id="detFinNote"></div>
 
@@ -786,6 +813,7 @@ function loadLogo(c,cb){
   if(logoCache.has(c.sym)){ const v=logoCache.get(c.sym); if(v&&v!=='loading')cb(v); return; }
   logoCache.set(c.sym,'loading');
   const im=new Image();
+  im.crossOrigin='anonymous';   // CDN Simplize cho CORS -> canvas không bị "taint", nút chụp hình dùng được
   im.onload=()=>{ logoCache.set(c.sym,im); cb(im); };
   im.onerror=()=>{ logoCache.set(c.sym,null); };
   im.src=c.img;
@@ -801,7 +829,10 @@ cv.addEventListener('pointerdown',e=>{ const p=pos(e); pointer.x=p.x;pointer.y=p
   downPos={x:p.x,y:p.y}; dragged=pick(p.x,p.y); if(dragged) cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointerup',e=>{ const p=pos(e); pointer.down=false;
   // CHẠM = con trỏ gần như không di chuyển giữa lúc nhấn và thả (phân biệt với kéo)
-  if(dragged && downPos && Math.hypot(downPos.x-p.x,downPos.y-p.y)<8) showDetail(dragged.c);
+  if(downPos && Math.hypot(downPos.x-p.x,downPos.y-p.y)<8){
+    if(dragged) showDetail(dragged.c);
+    else if(detailSym) closeDetail();   // chạm chỗ trống -> tự đóng bảng thông tin
+  }
   dragged=null; downPos=null; });
 cv.addEventListener('pointercancel',()=>{ pointer.down=false; dragged=null; downPos=null; });
 cv.style.cursor='pointer';
@@ -1192,33 +1223,68 @@ async function renderProfit(sym){
   const r=cached.rows, last=r[r.length-1], back=finPeriod==='Q'?4:1, prev=r[r.length-1-back];
   let yoy='';
   if(prev&&prev.np){ const gv=(last.np/prev.np-1)*100; yoy=` · LNST ${gv>=0?'+':''}${gv.toFixed(1)}% so cùng kỳ`; }
-  note.textContent=`Đơn vị: tỷ đồng · mới nhất bên trái (${last.label})${yoy}`;
+  note.textContent=`Đơn vị: tỷ đồng · biểu đồ cũ → mới, bảng mới nhất bên trái (${last.label})${yoy}`;
 }
 function drawFin(rows){
-  const cvs=$('detFin'); const w=cvs.clientWidth||360, h=118;
+  const cvs=$('detFin'); const w=cvs.clientWidth||440, h=150;
   if(cvs.width!==w*DPR){ cvs.width=w*DPR; cvs.height=h*DPR; }
   const g=cvs.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
   if(!rows){ g.fillStyle='#666'; g.font='11px system-ui'; g.textAlign='center'; g.fillText('Đang tải…',w/2,h/2); return; }
   if(!rows.length) return;
-  rows=[...rows].reverse();          // mới nhất -> bên TRÁI
+  // rows đã theo thứ tự CŨ -> MỚI: vẽ thời gian trôi trái -> phải như biểu đồ nến
   let mx=0,mn=0;
   for(const r of rows){ mx=Math.max(mx,r.rev||0,r.cogs||0,r.np||0); mn=Math.min(mn,r.np||0); }
   if(mx-mn<1e-9) mx=mn+1;
-  const padT=6,padB=15, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
-  const n=rows.length, cw=w/n, bw=Math.max(2,cw/4.4);
+  const padT=8,padB=16,padR=40, plotW=w-padR;
+  const y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
+  const n=rows.length, cw=plotW/n, bw=Math.max(3,Math.min(16,cw/3.8));
+  // LƯỚI + nhãn trục (tỷ đồng, viết gọn: 12,5k = 12.500 tỷ)
+  const fmtAx=v=>Math.abs(v)>=1000?(v/1000).toLocaleString('en-US',{maximumFractionDigits:1})+'k':Math.round(v).toLocaleString('en-US');
+  g.font='9px system-ui'; g.textBaseline='middle';
+  for(let i=0;i<=3;i++){
+    const v=mn+(mx-mn)*i/3, yy=y(v);
+    g.strokeStyle='rgba(255,255,255,.06)'; g.lineWidth=1;
+    g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
+    g.fillStyle='#8a8a99'; g.textAlign='left'; g.fillText(fmtAx(v), plotW+5, yy);
+  }
+  g.textBaseline='alphabetic';
+  // CỘT: doanh thu / giá vốn / LNST — có gradient nhẹ cho sinh động
+  const bar=(x,v,col)=>{
+    const yy=y(v), top=Math.min(yy,zero), hh=Math.max(1.5,Math.abs(yy-zero));
+    const gr=g.createLinearGradient(0,top,0,top+hh);
+    gr.addColorStop(0,col); gr.addColorStop(1,col+'88');
+    g.fillStyle=gr;
+    if(g.roundRect){ g.beginPath(); g.roundRect(x,top,bw,hh,[2,2,0,0]); g.fill(); }
+    else g.fillRect(x,top,bw,hh);
+  };
   for(let i=0;i<n;i++){
     const r=rows[i], cx=i*cw+cw/2;
-    const bars=[[r.rev,'#5b6b7a'],[r.cogs,'#c98a2b'],[r.np,(r.np>=0?'#16c784':'#ea3943')]];
-    bars.forEach((b,bi)=>{
-      if(b[0]==null) return;
-      const x=cx+(bi-1)*(bw+1.2)-bw/2, yy=y(b[0]);
-      g.fillStyle=b[1]; g.fillRect(x, Math.min(yy,zero), bw, Math.max(1,Math.abs(yy-zero)));
-    });
+    if(r.rev!=null)  bar(cx-bw*1.5-2, r.rev, '#5b6b7a');
+    if(r.cogs!=null) bar(cx-bw*0.5,   r.cogs,'#c98a2b');
+    if(r.np!=null)   bar(cx+bw*0.5+2, r.np,  r.np>=0?'#16c784':'#ea3943');
   }
-  g.strokeStyle='rgba(255,255,255,.2)'; g.lineWidth=1;
-  g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
+  // trục 0
+  g.strokeStyle='rgba(255,255,255,.25)'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,zero); g.lineTo(plotW,zero); g.stroke();
+  // ĐƯỜNG BIÊN LỢI NHUẬN RÒNG % (thang riêng bên phải, màu lơ)
+  const nmv=rows.map(r=>r.nm).filter(v=>v!=null);
+  if(nmv.length>=2){
+    let nmn=Math.min(...nmv,0), nmx=Math.max(...nmv,1);
+    const yn=v=>h-padB-(v-nmn)/(nmx-nmn||1)*(h-padT-padB)*0.92;
+    g.strokeStyle='#38bdf8'; g.lineWidth=1.6; g.beginPath();
+    let started=false;
+    for(let i=0;i<n;i++){ const v=rows[i].nm; if(v==null) continue;
+      const x=i*cw+cw/2; started?g.lineTo(x,yn(v)):g.moveTo(x,yn(v)); started=true; }
+    g.stroke();
+    for(let i=0;i<n;i++){ const v=rows[i].nm; if(v==null) continue;
+      g.fillStyle='#38bdf8'; g.beginPath(); g.arc(i*cw+cw/2,yn(v),2.2,0,7); g.fill(); }
+    const last=rows[n-1].nm;
+    if(last!=null){ g.font='700 9px system-ui'; g.fillStyle='#38bdf8'; g.textAlign='left';
+      g.fillText(last.toFixed(1)+'%', plotW-30, yn(last)-6); }
+  }
+  // nhãn kỳ dưới chân cột
   g.font='700 9px system-ui'; g.fillStyle='#888'; g.textAlign='center';
-  for(let i=0;i<n;i++){ if(n>9&&i%2) continue; g.fillText(rows[i].label, i*cw+cw/2, h-4); }
+  for(let i=0;i<n;i++){ if(n>9&&i%2===0) continue; g.fillText(rows[i].label, i*cw+cw/2, h-4); }
 }
 function renderFinTable(rows){
   const show=rows.slice(-8).reverse(), cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');  // mới nhất trái
@@ -1344,8 +1410,100 @@ setInterval(()=>{
   }
   if(++peerTick%10===0) renderPeers();   // 3 giây/lần là đủ
 },300);
-$('detClose').onclick=()=>{ $('detail').style.display='none'; detailSym=null; candles=null;
-  clearInterval(newsTimer); newsTimer=null; };
+function closeDetail(){ $('detail').style.display='none'; detailSym=null; candles=null;
+  clearInterval(newsTimer); newsTimer=null; }
+$('detClose').onclick=closeDetail;
+
+/* ---------- CHỤP HÌNH (đóng dấu CPVN.IO gần cuối ảnh) --------------------- */
+function snapshot(){
+  try{
+    const s=document.createElement('canvas');
+    s.width=cv.width; s.height=cv.height;               // giữ nguyên độ phân giải (đã nhân DPR)
+    const g=s.getContext('2d'), k=DPR, w=cv.width/k, h=cv.height/k;
+    g.setTransform(k,0,0,k,0,0);
+    g.fillStyle='#0a0a0c'; g.fillRect(0,0,w,h);
+    g.drawImage(cv,0,0,w,h);
+    // nhãn góc trên trái: khung thời gian + thời điểm chụp
+    const vn=new Date().toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour12:false,
+      day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    g.font='700 13px system-ui'; g.textAlign='left'; g.textBaseline='alphabetic';
+    g.shadowColor='rgba(0,0,0,.8)'; g.shadowBlur=4;
+    g.fillStyle='rgba(255,255,255,.9)';
+    g.fillText(`Khung ${state.tf.toUpperCase()} · ${vn}`, 12, 22);
+    // ĐÓNG DẤU CPVN.IO gần cuối hình
+    g.textAlign='center';
+    g.font='800 30px system-ui';
+    g.fillStyle='rgba(255,255,255,.95)';
+    g.fillText('CPVN.IO', w/2, h-20);
+    g.font='600 11px system-ui'; g.fillStyle='rgba(255,255,255,.55)';
+    g.fillText('Thông tin chứng khoán Việt Nam', w/2, h-6);
+    g.shadowBlur=0;
+    s.toBlob(b=>{
+      if(!b){ setStatus('Không chụp được hình'); return; }
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(b);
+      const t=vn.replace(/[/:]/g,'-').replace(/[,\s]+/g,'_');
+      a.download=`CPVN_${state.tf}_${t}.png`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+      setStatus('Đã lưu ảnh chụp 📷');
+    },'image/png');
+  }catch(e){ setStatus('Không chụp được hình: '+e.message); }
+}
+$('shotBtn').onclick=snapshot;
+
+/* ---------- BẢNG BÁO CÁO CTCK bên trái (desktop) --------------------------- */
+/* Gộp báo cáo mới nhất của ~20 mã vốn hoá lớn nhất (Simplize), làm mới 10 phút/lần */
+let rbLoading=false;
+const rbCache=new Map();   // sym -> {at, d} — TTL 9 phút để mỗi lượt làm mới lấy tin thật sự mới
+async function loadRepBoard(){
+  const wv=window.innerWidth;
+  if(!SRC.reports||rbLoading||(wv>0&&wv<=640)) return;   // chỉ ẩn trên mobile thật (wv=0 = chưa đo được)
+  rbLoading=true;
+  try{
+    const top=[...state.coins.values()]
+      .sort((a,b)=>(b.mcapLive||b.mcap||0)-(a.mcapLive||a.mcap||0)).slice(0,20);
+    const all=[];
+    for(const c of top){
+      let ent=rbCache.get(c.sym);
+      if(!ent||Date.now()-ent.at>540000){
+        let d=null;
+        try{ d=await SRC.reports(c.sym); repCache.set(c.sym,d); }catch(e){}
+        ent={at:Date.now(),d}; rbCache.set(c.sym,ent);
+        await new Promise(r=>setTimeout(r,120));   // giãn nhịp cho lịch sự với API
+      }
+      const d=ent.d;
+      if(d&&d.items) for(const r of d.items.slice(0,4)) all.push({...r,sym:c.sym});
+    }
+    const ts=s=>{ const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s||'');
+      if(m) return new Date(+m[3],+m[2]-1,+m[1]).getTime();
+      const p=Date.parse(s||''); return isNaN(p)?0:p; };
+    all.sort((a,b)=>ts(b.date)-ts(a.date));
+    paintRepBoard(all.slice(0,12));
+  }finally{ rbLoading=false; }
+}
+function paintRepBoard(items){
+  const bd=$('repBoard'), list=$('rbList');
+  if(!items||!items.length){ bd.style.display='none'; return; }
+  const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  list.innerHTML=items.map(r=>{
+    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${recStyle(r.rec)}">${esc(r.rec)}</span>`:'';
+    const mt=r.target?`<span class="mt">MT ${fmtD(r.target)}</span>`:'';
+    const link=r.pdf?`href="${esc(r.pdf)}" target="_blank" rel="noopener"`:'href="#" onclick="return false"';
+    return `<div class="ri"><div class="rh"><span class="sym" data-sym="${esc(r.sym)}">${esc(r.sym)}</span>`+
+      `${rec}${mt}<span class="meta" style="margin-left:auto">${esc(r.source)} · ${esc(r.date)}</span></div>`+
+      `<a class="tt" ${link}>${esc(r.title)}</a></div>`;
+  }).join('');
+  list.querySelectorAll('.sym').forEach(el=>el.onclick=()=>{
+    const c=state.coins.get(el.dataset.sym); if(c) showDetail(c);
+  });
+  bd.style.display='flex';
+}
+$('rbHead').onclick=()=>{
+  const l=$('rbList'), open=l.style.display!=='none';
+  l.style.display=open?'none':'block';
+  $('rbArr').textContent=open?'mở ▸':'thu gọn ▾';
+};
 
 /* ---------- UI BINDINGS --------------------------------------------------- */
 function bindGroup(id,attr,fn){
@@ -1505,8 +1663,10 @@ async function openNews(slug){
     await loadEOD();       // vẽ NGAY bằng snapshot đã lưu (chỉ ~100KB — "dữ liệu hôm nay")
     rebuild();
     refreshIdxBar();
-    pollBoard().then(()=>{ rebuild(); refreshIdxBar(); });   // giá trực tiếp đè lên khi có
+    pollBoard().then(()=>{ rebuild(); refreshIdxBar(); loadRepBoard(); });  // giá trực tiếp đè lên khi có
     setInterval(rebuild, 30000);
+    setInterval(loadRepBoard, 600000);   // bảng báo cáo CTCK: làm mới 10 phút/lần
+    setTimeout(()=>{ if(!rbCache.size) loadRepBoard(); }, 60000);   // lượt đầu lỡ (mạng/chưa đo được khung) -> thử lại
   }catch(e){ setStatus('Lỗi khởi động: '+e.message); }
 })();
 </script>
