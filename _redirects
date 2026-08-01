@@ -1,3 +1,4 @@
-# Cloudflare Pages tự phục vụ /bang-gia và /co-phieu (pretty URL cho file .html)
-# Chỉ cần rule cho URL dạng /co-phieu/VNM -> trang chi tiết (client tự đọc mã từ path)
-/co-phieu/:sym   /co-phieu?sym=:sym   200
+# Cloudflare Pages tự phục vụ /banggia và /co-phieu (pretty URL cho file .html)
+/bang-gia        /banggia              301
+/bang-gia.html   /banggia              301
+/co-phieu/:sym   /co-phieu?sym=:sym    200

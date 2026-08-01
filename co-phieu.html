@@ -21,14 +21,15 @@
     border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);
     position:sticky;top:0;z-index:20}
   .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
-  .brand .mark{width:30px;height:30px}
+  .brand .mark{width:30px;height:30px;
+    filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
   .brand b{color:#ffd60a}
   .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .spacer{flex:1}
-  #page{max-width:1180px;margin:0 auto;padding:16px}
+  #page{max-width:1320px;margin:0 auto;padding:16px}
 
   /* ---- hero ---- */
   #hero{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
@@ -65,7 +66,7 @@
   .chips button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
   .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .chead .note{color:var(--muted);font-size:11.5px;margin-left:auto}
-  canvas#cv{width:100%;height:430px;display:block;border-radius:10px;background:rgba(255,255,255,.02)}
+  canvas#cv{width:100%;height:520px;display:block;border-radius:10px;background:rgba(255,255,255,.02)}
 
   /* ---- tabs nội dung ---- */
   #secTabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap}
@@ -138,7 +139,7 @@
   </svg><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <a href="index.html">🫧 Bong bóng</a>
-    <a href="bang-gia.html">📊 Bảng giá</a>
+    <a href="banggia.html">📊 Bảng giá</a>
   </nav>
   <div class="spacer"></div>
 </header>
@@ -181,25 +182,13 @@
   </div>
 
   <div id="secTabs">
-    <button data-t="tq" class="on">Tổng quan</button>
-    <button data-t="tc">Báo cáo tài chính</button>
-    <button data-t="tl">Tài liệu</button>
-    <button data-t="tt">Tin tức</button>
+    <button data-t="tc" class="on">📑 Báo cáo tài chính</button>
+    <button data-t="tt">📰 Tin tức</button>
+    <button data-t="cn">🏭 Cùng ngành</button>
+    <button data-t="tl">📂 Tài liệu</button>
   </div>
 
-  <div class="sect on" id="s-tq">
-    <div class="card">
-      <h3 class="t" style="margin-top:0" id="peerT">So với ngành</h3>
-      <div class="chips" id="peerTf" style="margin-bottom:8px">
-        <button data-v="w">1W</button><button data-v="m" class="on">1M</button><button data-v="y">1Y</button>
-      </div>
-      <div id="peers"></div>
-      <h3 class="t">Cổ tức các năm</h3>
-      <div class="twrap" id="divT"></div>
-    </div>
-  </div>
-
-  <div class="sect" id="s-tc">
+  <div class="sect on" id="s-tc">
     <div class="card">
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
@@ -216,7 +205,19 @@
       <div class="twrap" id="bsT"></div>
       <h3 class="t">Lưu chuyển tiền tệ</h3>
       <div class="twrap" id="cfT"></div>
+      <h3 class="t">Cổ tức các năm</h3>
+      <div class="twrap" id="divT"></div>
       <div class="subnote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
+    </div>
+  </div>
+
+  <div class="sect" id="s-cn">
+    <div class="card">
+      <h3 class="t" style="margin-top:0" id="peerT">So với ngành</h3>
+      <div class="chips" id="peerTf" style="margin-bottom:8px">
+        <button data-v="w">1W</button><button data-v="m" class="on">1M</button><button data-v="y">1Y</button>
+      </div>
+      <div id="peers"></div>
     </div>
   </div>
 
@@ -550,11 +551,13 @@ document.querySelectorAll('#peerTf button').forEach(b=>b.onclick=()=>{
 window.addEventListener('resize',()=>{ drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]); });
 
 (async function init(){
-  if(!SYM){ location.href='bang-gia.html'; return; }
+  if(!SYM){ location.href='banggia.html'; return; }
   await CP.loadBase();
   C=CP.coins.get(SYM);
   if(!C){ $('sym').textContent=SYM; $('cname').textContent='Không tìm thấy mã này trong hệ thống.'; return; }
-  renderHero(); renderPeers(); loadChart(); renderFromHist(); renderDocsNews();
+  renderHero(); loadChart(); renderFromHist();
+  renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
+  renderPeers(); renderDocsNews();
   const h=CP.health;
   $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
   CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();

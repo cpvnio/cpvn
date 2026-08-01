@@ -24,7 +24,8 @@
     border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);
     position:sticky;top:0;z-index:20}
   .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
-  .brand .mark{width:30px;height:30px;flex-shrink:0}
+  .brand .mark{width:30px;height:30px;flex-shrink:0;
+    filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
   .brand b{color:#ffd60a}
   .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
@@ -56,7 +57,7 @@
 
   /* bảng xếp hạng */
   #wrap{overflow-x:auto;padding:0 8px 10px}
-  table{border-collapse:collapse;width:100%;min-width:1080px;font-size:13.5px}
+  table{border-collapse:collapse;width:100%;min-width:780px;font-size:13.5px}
   thead th{position:sticky;top:0;background:#0e0e12;color:var(--muted);font-size:12px;
     font-weight:700;text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);
     cursor:pointer;user-select:none;white-space:nowrap;z-index:5}
@@ -121,7 +122,7 @@
   </svg><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <a href="index.html">🫧 Bong bóng</a>
-    <a class="on" href="bang-gia.html">📊 Bảng giá</a>
+    <a class="on" href="banggia.html">📊 Bảng giá</a>
   </nav>
   <div class="spacer"></div>
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
@@ -152,14 +153,10 @@
         <th class="l" data-k="sym">Cổ phiếu</th>
         <th data-k="price">Giá (đ)</th>
         <th data-k="chg1d">1D %</th>
-        <th data-k="w">1W %</th>
-        <th data-k="m">1M %</th>
-        <th data-k="y">1Y %</th>
         <th data-k="mcap">Vốn hoá</th>
         <th data-k="gtgd">GTGD hôm nay</th>
         <th data-k="nn">NN ròng</th>
         <th data-k="pe">P/E</th>
-        <th>7 ngày</th>
       </tr>
     </thead>
     <tbody id="tb"></tbody>
@@ -235,17 +232,12 @@ function render(){
       <td class="l"><div class="co">${logo}<div><span class="sym">${c.sym}</span><span class="ex">${c.ex}</span><div class="nm">${CP.esc(c.name)}</div></div></div></td>
       <td class="price" data-price style="color:${CP.col1d(c)}">${CP.fmtD(c.price)}</td>
       <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
-      <td class="pc" style="color:${CP.pcCol(c.pct&&c.pct.w)}">${CP.pcTxt(c.pct&&c.pct.w)}</td>
-      <td class="pc" style="color:${CP.pcCol(c.pct&&c.pct.m)}">${CP.pcTxt(c.pct&&c.pct.m)}</td>
-      <td class="pc" style="color:${CP.pcCol(c.pct&&c.pct.y)}">${CP.pcTxt(c.pct&&c.pct.y)}</td>
       <td>${CP.fmtVnd(c.mcapLive||c.mcap)}</td>
       <td>${CP.fmtVnd(c.gtgd)}</td>
       <td class="nn ${nn>0?'pos':nn<0?'neg':''}">${nn?((nn>0?'+':'−')+CP.fmtShares(Math.abs(nn)).replace(' cp','')):'—'}</td>
       <td>${c.pe!=null?(+c.pe).toFixed(1):'—'}</td>
-      <td><canvas class="spark" data-spark="${c.sym}"></canvas></td>
     </tr>`;
   }).join('');
-  document.querySelectorAll('#tb canvas[data-spark]').forEach(cv=>CP.drawSpark(cv,CP.spark[cv.dataset.spark],7));
   document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
     if(e.target.closest('[data-star]')) return;
     location.href='co-phieu.html?sym='+tr.dataset.sym;
