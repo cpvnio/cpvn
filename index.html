@@ -257,7 +257,7 @@
         <div class="row"><span>NN ròng (tuần · tháng)</span><span id="detNN"></span></div>
       </div>
 
-      <div class="sect" style="margin-top:9px"><span>Cổ tức tiền mặt các năm</span></div>
+      <div class="sect" style="margin-top:9px"><span>Cổ tức các năm</span><span class="subnote">tiền mặt & cổ phiếu</span></div>
       <div class="divtbl" id="detDiv"></div>
 
       <div class="sect"><span>Kết quả kinh doanh</span>
@@ -880,14 +880,12 @@ function renderDiv(sym){
   if(d===undefined){ box.innerHTML='<div class="subnote">đang tải cổ tức…</div>'; return; }
   if(!d||!d.length){ box.innerHTML='<div class="subnote">Chưa có dữ liệu cổ tức.</div>'; return; }
   const rows=d.slice(0,6);   // 6 năm gần nhất (mới -> cũ)
-  const hasStock=rows.some(r=>r.stock>0);
-  const stockRow=hasStock?'<tr><td style="color:var(--muted)">Cổ phiếu</td>'+
-    rows.map(r=>`<td>${r.stock>0?r.stock.toFixed(0)+'%':'—'}</td>`).join('')+'</tr>':'';
+  const pctRow=(lb,key)=>rows.some(r=>r[key]>0)
+    ? `<tr><td style="color:var(--muted)">${lb}</td>`+rows.map(r=>`<td>${r[key]>0?r[key].toFixed(0)+'%':'—'}</td>`).join('')+'</tr>' : '';
   box.innerHTML='<table><thead><tr><th></th>'+rows.map(r=>`<th>${r.year}</th>`).join('')+'</tr></thead><tbody>'+
-    '<tr><td style="color:var(--muted)">Tiền (đ/CP)</td>'+rows.map(r=>`<td>${r.cash>0?fmtD(r.cash):'—'}</td>`).join('')+'</tr>'+
-    stockRow+
-    '<tr><td style="color:var(--muted)">Tỉ suất</td>'+rows.map(r=>`<td>${r.yield!=null?(+r.yield).toFixed(1)+'%':'—'}</td>`).join('')+'</tr>'+
-    '</tbody></table>'+(hasStock?'<div class="subnote" style="margin-top:3px">Cổ phiếu = tỉ lệ chia thêm CP mỗi năm</div>':'');
+    '<tr><td style="color:var(--muted)">Tiền mặt</td>'+rows.map(r=>`<td>${r.cash>0?fmtD(r.cash)+' vnđ':'—'}</td>`).join('')+'</tr>'+
+    pctRow('Cổ tức CP','div')+pctRow('Thưởng CP','bonus')+
+    '</tbody></table>';
 }
 // cộng dồn n phiên gần nhất -> NN ròng (mua-bán khối ngoại)
 function flowSum(series,n){ let fb=0,fs=0; for(const r of series.slice(-n)){ fb+=r.fBuy; fs+=r.fSell; } return fb-fs; }
@@ -1361,13 +1359,21 @@ function wireSources(){
     const by={};
     for(const x of (cashJ&&cashJ.data)||[]){
       const y=+x.year; if(!y) continue;
-      by[y]=by[y]||{year:y,cash:0,stock:0}; by[y].cash=x.total||0; by[y].yield=x.dividendYield;
+      by[y]=by[y]||{year:y,cash:0,div:0,bonus:0}; by[y].cash=x.total||0;
     }
     for(const e of (evJ&&evJ.data)||[]){
-      if(!/cổ phiếu/i.test(e.eventTypeName||'')) continue;          // trả cổ tức/thưởng bằng cổ phiếu
-      const y=+((e.exDividendDate||'').split('/')[2]||0);
-      const rm=/tỷ lệ\s*(\d+)\s*[:/]\s*(\d+)/i.exec(e.description||'');
-      if(y&&rm){ by[y]=by[y]||{year:y,cash:0,stock:0}; by[y].stock+=(+rm[2])/(+rm[1])*100; }
+      const t=e.eventTypeName||'', desc=e.description||'';
+      const isBonus=/thưởng/i.test(t), isDiv=/cổ tức.*cổ phiếu/i.test(t);
+      if(!isBonus&&!isDiv) continue;
+      const rm=/tỷ lệ\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)/i.exec(desc); if(!rm) continue;
+      const pct=(+rm[2])/(+rm[1])*100;
+      const exY=+((e.exDividendDate||'').split('/')[2]||0);
+      // THƯỞNG: năm chốt quyền (năm thực hiện). CỔ TỨC CP: năm tài chính trong mô tả, nếu không có -> ex−1
+      let y;
+      if(isBonus) y=exY; else { const fy=/năm\s*(\d{4})/.exec(desc); y=fy?+fy[1]:(exY?exY-1:0); }
+      if(!y) continue;
+      by[y]=by[y]||{year:y,cash:0,div:0,bonus:0};
+      if(isBonus) by[y].bonus+=pct; else by[y].div+=pct;
     }
     return Object.values(by).sort((a,b)=>b.year-a.year);
   };
