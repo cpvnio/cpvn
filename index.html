@@ -94,14 +94,14 @@
     padding:6px 14px;font-size:12px;color:var(--muted);pointer-events:none;transition:opacity .4s;z-index:4}
 
   /* panel chi tiết */
-  #detail{position:absolute;right:12px;top:12px;width:472px;max-width:calc(100vw - 24px);
+  #detail{position:absolute;right:12px;top:12px;width:520px;max-width:calc(100vw - 24px);
     max-height:calc(100% - 24px);overflow-y:auto;background:rgba(19,19,24,.97);
     border:1px solid var(--line);border-radius:14px;padding:14px;backdrop-filter:blur(8px);
     box-shadow:0 12px 40px rgba(0,0,0,.55);display:none;z-index:6}
   #detail::-webkit-scrollbar{width:8px} #detail::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
-  #detail h3{margin:0 0 2px;display:flex;align-items:center;gap:8px;font-size:17px}
-  #detail .sub{color:var(--muted);font-size:11.5px;margin-bottom:8px;line-height:1.35}
-  #detail .row{display:flex;justify-content:space-between;font-size:12.5px;padding:3.5px 0;border-top:1px solid var(--line);gap:8px}
+  #detail h3{margin:0 0 2px;display:flex;align-items:center;gap:8px;font-size:18px}
+  #detail .sub{color:var(--muted);font-size:12px;margin-bottom:8px;line-height:1.35}
+  #detail .row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-top:1px solid var(--line);gap:8px}
   #detail .row span:first-child{color:var(--muted);white-space:nowrap}
   #detail .row span:last-child{text-align:right}
   #detail .big{font-size:22px;font-weight:800;margin:2px 0 6px;transition:color .25s;display:flex;gap:10px;align-items:baseline}
@@ -123,7 +123,7 @@
   .finlegend{display:flex;gap:12px;font-size:10.5px;color:var(--muted);margin:2px 0 4px}
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   .fintable{overflow-x:auto;margin-top:6px}
-  .fintable table{border-collapse:collapse;font-size:11px;white-space:nowrap;min-width:100%}
+  .fintable table{border-collapse:collapse;font-size:11.5px;white-space:nowrap;min-width:100%}
   .fintable th,.fintable td{padding:3px 7px;text-align:right;border-bottom:1px solid var(--line)}
   .fintable th:first-child,.fintable td:first-child{text-align:left;color:var(--muted);position:sticky;left:0;
     background:rgba(19,19,24,.98)}
@@ -169,26 +169,6 @@
   #detReports .rp .dt{font-size:10.5px;color:var(--muted);margin-left:auto}
   #detReports .rp a.rt{color:var(--txt);text-decoration:none;font-size:12px;line-height:1.4;display:block}
   #detReports .rp a.rt:hover{color:#fff;text-decoration:underline}
-
-  /* bảng BÁO CÁO CTCK nổi bên trái (chỉ bản desktop) */
-  #repBoard{position:absolute;left:14px;top:12px;width:278px;max-height:52%;display:none;
-    flex-direction:column;background:rgba(19,19,24,.93);border:1px solid var(--line);
-    border-radius:12px;backdrop-filter:blur(6px);box-shadow:0 8px 28px rgba(0,0,0,.45);z-index:4;overflow:hidden}
-  #repBoard .rbHead{display:flex;justify-content:space-between;align-items:center;gap:8px;
-    padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;border-bottom:1px solid var(--line);flex-shrink:0}
-  #repBoard .rbHead .arr{color:var(--muted);font-size:11px}
-  #rbList{overflow-y:auto;padding:2px 12px 8px}
-  #rbList::-webkit-scrollbar{width:7px} #rbList::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
-  #rbList .ri{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-  #rbList .ri .rh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
-  #rbList .ri .sym{font-weight:800;font-size:12.5px;cursor:pointer;color:#7ab7ff}
-  #rbList .ri .sym:hover{text-decoration:underline}
-  #rbList .ri .rec{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 5px}
-  #rbList .ri .mt{font-size:11px;font-weight:700}
-  #rbList .ri .meta{font-size:10.5px;color:var(--muted)}
-  #rbList .ri a.tt{display:block;color:var(--txt);text-decoration:none;font-size:11.5px;line-height:1.35;margin-top:1px}
-  #rbList .ri a.tt:hover{color:#fff;text-decoration:underline}
-  @media(max-width:640px){ #repBoard{display:none !important} }
 
   .legend{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);
     background:rgba(20,20,26,.7);padding:6px 12px;border-radius:20px;border:1px solid var(--line);flex-wrap:wrap;z-index:4}
@@ -255,10 +235,6 @@
     <canvas id="cv"></canvas>
     <div id="status">Đang tải universe…</div>
 
-    <div id="repBoard">
-      <div class="rbHead" id="rbHead"><span>📊 Báo cáo CTCK mới nhất</span><span class="arr" id="rbArr">thu gọn ▾</span></div>
-      <div id="rbList"></div>
-    </div>
 
     <div id="detail">
       <span class="close" id="detClose">×</span>
@@ -702,16 +678,18 @@ function computeRadii(){
 let simTime=0;
 function step(dt){
   simTime+=dt;
-  const cx=W/2, cy=H/2, damp=Math.pow(0.002,dt);
-  const gK=state.cluster?3.2:1.1;      // hút tâm nhẹ khi xem chung -> bong bóng dàn rộng ra
+  /* hãm nhẹ (0.05 thay vì 0.002) + lực trôi sin mạnh hơn -> bong bóng KHÔNG BAO GIỜ đứng yên,
+     luôn dập dềnh hỗn loạn nhẹ quanh màn hình như bọt nước */
+  const cx=W/2, cy=H/2, damp=Math.pow(0.05,dt);
+  const gK=state.cluster?3.2:0.85;     // hút tâm nhẹ -> có chỗ để trôi lang thang
   for(const b of bubbles){
     b.r += (b.tr-b.r)*Math.min(1,dt*5);
     const a=state.cluster&&clusterAnchors.get(b.c.sector);
     const tx=a?a.x:cx, ty=a?a.y:cy;
     b.vx += (tx-b.x)*gK*dt;
     b.vy += (ty-b.y)*gK*dt;
-    b.vx += Math.cos(b.wp1+simTime*b.wf1)*36*dt;
-    b.vy += Math.sin(b.wp2+simTime*b.wf2)*36*dt;
+    b.vx += Math.cos(b.wp1+simTime*b.wf1)*95*dt;
+    b.vy += Math.sin(b.wp2+simTime*b.wf2)*95*dt;
     const px=b.x-pointer.x, py=b.y-pointer.y, pd2=px*px+py*py;
     if(pd2<28900&&!pointer.down){ const d=Math.sqrt(pd2)||1, f=(170-d)/170*900*dt; b.vx+=px/d*f; b.vy+=py/d*f; }
   }
@@ -1223,7 +1201,7 @@ async function renderProfit(sym){
   const r=cached.rows, last=r[r.length-1], back=finPeriod==='Q'?4:1, prev=r[r.length-1-back];
   let yoy='';
   if(prev&&prev.np){ const gv=(last.np/prev.np-1)*100; yoy=` · LNST ${gv>=0?'+':''}${gv.toFixed(1)}% so cùng kỳ`; }
-  note.textContent=`Đơn vị: tỷ đồng · biểu đồ cũ → mới, bảng mới nhất bên trái (${last.label})${yoy}`;
+  note.textContent=`Đơn vị: tỷ đồng · mới → cũ, kỳ mới nhất bên trái (${last.label})${yoy}`;
 }
 function drawFin(rows){
   const cvs=$('detFin'); const w=cvs.clientWidth||440, h=150;
@@ -1231,7 +1209,7 @@ function drawFin(rows){
   const g=cvs.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
   if(!rows){ g.fillStyle='#666'; g.font='11px system-ui'; g.textAlign='center'; g.fillText('Đang tải…',w/2,h/2); return; }
   if(!rows.length) return;
-  // rows đã theo thứ tự CŨ -> MỚI: vẽ thời gian trôi trái -> phải như biểu đồ nến
+  rows=[...rows].reverse();   // MỚI -> CŨ: kỳ mới nhất bên TRÁI, thẳng cột với bảng bên dưới
   let mx=0,mn=0;
   for(const r of rows){ mx=Math.max(mx,r.rev||0,r.cogs||0,r.np||0); mn=Math.min(mn,r.np||0); }
   if(mx-mn<1e-9) mx=mn+1;
@@ -1278,16 +1256,17 @@ function drawFin(rows){
     g.stroke();
     for(let i=0;i<n;i++){ const v=rows[i].nm; if(v==null) continue;
       g.fillStyle='#38bdf8'; g.beginPath(); g.arc(i*cw+cw/2,yn(v),2.2,0,7); g.fill(); }
-    const last=rows[n-1].nm;
-    if(last!=null){ g.font='700 9px system-ui'; g.fillStyle='#38bdf8'; g.textAlign='left';
-      g.fillText(last.toFixed(1)+'%', plotW-30, yn(last)-6); }
+    const newest=rows[0].nm;   // kỳ mới nhất giờ nằm bên TRÁI
+    if(newest!=null){ g.font='700 9px system-ui'; g.fillStyle='#38bdf8'; g.textAlign='left';
+      g.fillText(newest.toFixed(1)+'%', cw/2+5, yn(newest)-6); }
   }
   // nhãn kỳ dưới chân cột
   g.font='700 9px system-ui'; g.fillStyle='#888'; g.textAlign='center';
-  for(let i=0;i<n;i++){ if(n>9&&i%2===0) continue; g.fillText(rows[i].label, i*cw+cw/2, h-4); }
+  for(let i=0;i<n;i++){ if(n>9&&i%2) continue; g.fillText(rows[i].label, i*cw+cw/2, h-4); }
 }
 function renderFinTable(rows){
-  const show=rows.slice(-8).reverse(), cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');  // mới nhất trái
+  // MỚI -> CŨ (2026-2025-2024…): mới nhất bên TRÁI, cùng chiều với biểu đồ phía trên
+  const show=rows.slice(-8).reverse(), cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
   const line=(lb,key,sign)=>`<tr><td>${lb}</td>`+show.map(r=>{
     const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+`</tr>`;
   const pct=(lb,key)=>`<tr><td>${lb}</td>`+show.map(r=>`<td>${r[key]==null?'—':r[key].toFixed(1)+'%'}</td>`).join('')+`</tr>`;
@@ -1452,59 +1431,6 @@ function snapshot(){
 }
 $('shotBtn').onclick=snapshot;
 
-/* ---------- BẢNG BÁO CÁO CTCK bên trái (desktop) --------------------------- */
-/* Gộp báo cáo mới nhất của ~20 mã vốn hoá lớn nhất (Simplize), làm mới 10 phút/lần */
-let rbLoading=false;
-const rbCache=new Map();   // sym -> {at, d} — TTL 9 phút để mỗi lượt làm mới lấy tin thật sự mới
-async function loadRepBoard(){
-  const wv=window.innerWidth;
-  if(!SRC.reports||rbLoading||(wv>0&&wv<=640)) return;   // chỉ ẩn trên mobile thật (wv=0 = chưa đo được)
-  rbLoading=true;
-  try{
-    const top=[...state.coins.values()]
-      .sort((a,b)=>(b.mcapLive||b.mcap||0)-(a.mcapLive||a.mcap||0)).slice(0,20);
-    const all=[];
-    for(const c of top){
-      let ent=rbCache.get(c.sym);
-      if(!ent||Date.now()-ent.at>540000){
-        let d=null;
-        try{ d=await SRC.reports(c.sym); repCache.set(c.sym,d); }catch(e){}
-        ent={at:Date.now(),d}; rbCache.set(c.sym,ent);
-        await new Promise(r=>setTimeout(r,120));   // giãn nhịp cho lịch sự với API
-      }
-      const d=ent.d;
-      if(d&&d.items) for(const r of d.items.slice(0,4)) all.push({...r,sym:c.sym});
-    }
-    const ts=s=>{ const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s||'');
-      if(m) return new Date(+m[3],+m[2]-1,+m[1]).getTime();
-      const p=Date.parse(s||''); return isNaN(p)?0:p; };
-    all.sort((a,b)=>ts(b.date)-ts(a.date));
-    paintRepBoard(all.slice(0,12));
-  }finally{ rbLoading=false; }
-}
-function paintRepBoard(items){
-  const bd=$('repBoard'), list=$('rbList');
-  if(!items||!items.length){ bd.style.display='none'; return; }
-  const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  list.innerHTML=items.map(r=>{
-    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${recStyle(r.rec)}">${esc(r.rec)}</span>`:'';
-    const mt=r.target?`<span class="mt">MT ${fmtD(r.target)}</span>`:'';
-    const link=r.pdf?`href="${esc(r.pdf)}" target="_blank" rel="noopener"`:'href="#" onclick="return false"';
-    return `<div class="ri"><div class="rh"><span class="sym" data-sym="${esc(r.sym)}">${esc(r.sym)}</span>`+
-      `${rec}${mt}<span class="meta" style="margin-left:auto">${esc(r.source)} · ${esc(r.date)}</span></div>`+
-      `<a class="tt" ${link}>${esc(r.title)}</a></div>`;
-  }).join('');
-  list.querySelectorAll('.sym').forEach(el=>el.onclick=()=>{
-    const c=state.coins.get(el.dataset.sym); if(c) showDetail(c);
-  });
-  bd.style.display='flex';
-}
-$('rbHead').onclick=()=>{
-  const l=$('rbList'), open=l.style.display!=='none';
-  l.style.display=open?'none':'block';
-  $('rbArr').textContent=open?'mở ▸':'thu gọn ▾';
-};
-
 /* ---------- UI BINDINGS --------------------------------------------------- */
 function bindGroup(id,attr,fn){
   document.querySelectorAll(`#${id} button`).forEach(btn=>btn.onclick=()=>{
@@ -1663,10 +1589,8 @@ async function openNews(slug){
     await loadEOD();       // vẽ NGAY bằng snapshot đã lưu (chỉ ~100KB — "dữ liệu hôm nay")
     rebuild();
     refreshIdxBar();
-    pollBoard().then(()=>{ rebuild(); refreshIdxBar(); loadRepBoard(); });  // giá trực tiếp đè lên khi có
+    pollBoard().then(()=>{ rebuild(); refreshIdxBar(); });   // giá trực tiếp đè lên khi có
     setInterval(rebuild, 30000);
-    setInterval(loadRepBoard, 600000);   // bảng báo cáo CTCK: làm mới 10 phút/lần
-    setTimeout(()=>{ if(!rbCache.size) loadRepBoard(); }, 60000);   // lượt đầu lỡ (mạng/chưa đo được khung) -> thử lại
   }catch(e){ setStatus('Lỗi khởi động: '+e.message); }
 })();
 </script>
