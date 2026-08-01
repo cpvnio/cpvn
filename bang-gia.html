@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CPVN — Bảng giá cổ phiếu Việt Nam</title>
+<meta name="description" content="Bảng giá & xếp hạng toàn bộ cổ phiếu Việt Nam: giá realtime, biến động 1D–1Y, vốn hoá, thanh khoản, khối ngoại, sparkline 7 ngày. Dữ liệu HOSE · HNX · UPCOM." />
+<meta name="theme-color" content="#0a0a0c" />
+<meta property="og:title" content="CPVN — Bảng giá cổ phiếu Việt Nam" />
+<meta property="og:description" content="Xếp hạng toàn bộ cổ phiếu Việt Nam theo vốn hoá — giá, biến động, khối ngoại, sparkline." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8.6' fill='%2316c784'/%3E%3Ccircle cx='13.2' cy='12.9' r='2.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='7' r='5' fill='%23eab308'/%3E%3Ccircle cx='5.6' cy='5.5' r='1.5' fill='%23fff' opacity='.38'/%3E%3Ccircle cx='25' cy='7' r='5.4' fill='%23ea3943'/%3E%3Ccircle cx='23.4' cy='5.4' r='1.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='25' r='4.6' fill='%2338bdf8'/%3E%3Ccircle cx='5.8' cy='23.6' r='1.4' fill='%23fff' opacity='.4'/%3E%3Ccircle cx='25' cy='25' r='5' fill='%23c026d3'/%3E%3Ccircle cx='23.5' cy='23.4' r='1.5' fill='%23fff' opacity='.33'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
+    --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
+    --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:inherit;text-decoration:none}
+
+  header{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);
+    position:sticky;top:0;z-index:20}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
+  .brand .mark{width:30px;height:30px;flex-shrink:0}
+  .brand b{color:#ffd60a}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
+  .tabs a.on{color:#fff;background:var(--accent)}
+  .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
+  .spacer{flex:1}
+  input.search{background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:8px 13px;font-size:15px;outline:none;width:210px}
+
+  /* hàng thống kê tổng quan */
+  #stats{display:flex;gap:16px;align-items:center;padding:7px 16px;font-size:13px;
+    border-bottom:1px solid var(--line);background:#0d0d11;overflow-x:auto;white-space:nowrap}
+  .st{display:flex;gap:6px;align-items:baseline;flex-shrink:0}
+  .st .nm{color:var(--muted);font-weight:700}
+  .st .val{font-weight:800}
+  .stsep{width:1px;height:15px;background:var(--line);flex-shrink:0;align-self:center}
+  /* độ rộng thị trường: chip 3 màu — nét riêng CPVN */
+  .breadth{display:flex;gap:5px;align-items:center;flex-shrink:0}
+  .breadth b{padding:1px 8px;border-radius:6px;font-size:12px}
+
+  /* thanh công cụ bảng */
+  #tools{display:flex;gap:9px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+  #tools .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  #tools .seg button{background:transparent;border:0;color:var(--muted);padding:7px 13px;font-size:13.5px;font-weight:700;cursor:pointer}
+  #tools .seg button.on{color:#fff;background:var(--accent)}
+  #tools select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:7px 10px;font-size:13.5px;outline:none;max-width:230px}
+  #cnt{color:var(--muted);font-size:12.5px;margin-left:auto}
+
+  /* bảng xếp hạng */
+  #wrap{overflow-x:auto;padding:0 8px 10px}
+  table{border-collapse:collapse;width:100%;min-width:1080px;font-size:13.5px}
+  thead th{position:sticky;top:0;background:#0e0e12;color:var(--muted);font-size:12px;
+    font-weight:700;text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);
+    cursor:pointer;user-select:none;white-space:nowrap;z-index:5}
+  thead th:hover{color:var(--txt)}
+  thead th.sorted{color:#ffd60a}
+  tbody td{padding:8px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.045);white-space:nowrap}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:rgba(255,255,255,.035)}
+  th.l,td.l{text-align:left}
+  td.rank{color:var(--muted);font-size:12px;width:38px}
+  td.star{width:30px;font-size:15px;color:#3f3f4a;cursor:pointer;text-align:center}
+  td.star.on{color:#ffd60a}
+  .co{display:flex;align-items:center;gap:9px}
+  .co img{width:24px;height:24px;border-radius:6px;background:#fff;object-fit:contain;flex-shrink:0}
+  .co .noimg{width:24px;height:24px;border-radius:6px;background:var(--panel2);display:flex;
+    align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--muted);flex-shrink:0}
+  .co .sym{font-weight:800;font-size:14px}
+  .co .nm{color:var(--muted);font-size:11.5px;max-width:210px;overflow:hidden;text-overflow:ellipsis}
+  .co .ex{font-size:9.5px;font-weight:800;color:var(--muted);border:1px solid var(--line);
+    border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+  td.price{font-weight:800;font-size:13.5px}
+  td.price.up{animation:flashG .9s} td.price.down{animation:flashR .9s}
+  @keyframes flashG{0%{background:rgba(22,199,132,.28)}100%{background:transparent}}
+  @keyframes flashR{0%{background:rgba(234,57,67,.28)}100%{background:transparent}}
+  .pc{font-weight:700}
+  .badge{display:inline-block;min-width:64px;text-align:center;padding:2.5px 7px;border-radius:7px;font-weight:700;font-size:12.5px}
+  canvas.spark{width:118px;height:34px;display:block;margin-left:auto}
+  td.nn.pos{color:var(--green);font-weight:700} td.nn.neg{color:var(--red);font-weight:700}
+
+  /* phân trang */
+  #pager{display:flex;gap:6px;align-items:center;justify-content:center;padding:14px;flex-wrap:wrap}
+  #pager button{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:7px;
+    padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
+  #pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  #pager button:disabled{opacity:.35;cursor:default}
+
+  footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 14px 22px;
+    color:var(--muted);font-size:11.5px;flex-wrap:wrap;text-align:center}
+  #kho.ok{color:var(--green)} #kho.bad{color:var(--yellow)}
+
+  @media(max-width:760px){
+    .brand{font-size:17px} .brand .mark{width:24px;height:24px}
+    .tabs a{padding:7px 11px;font-size:13px}
+    input.search{width:100%;order:9}
+    table{min-width:940px;font-size:12.5px}
+    /* ghim cột hạng + mã khi cuộn ngang (kiểu bảng coin mobile) */
+    th:nth-child(1),td:nth-child(1){position:sticky;left:0;background:#0b0b0e;z-index:6}
+    th:nth-child(3),td:nth-child(3){position:sticky;left:38px;background:#0b0b0e;z-index:6}
+    td:nth-child(2),th:nth-child(2){display:none}   /* ẩn cột sao cho gọn */
+    .co .nm{max-width:120px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="index.html"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="16" cy="16" r="8.6" fill="#16c784"/><circle cx="13.2" cy="12.9" r="2.7" fill="#fff" opacity=".33"/>
+    <circle cx="7" cy="7" r="5" fill="#eab308"/><circle cx="5.6" cy="5.5" r="1.5" fill="#fff" opacity=".38"/>
+    <circle cx="25" cy="7" r="5.4" fill="#ea3943"/><circle cx="23.4" cy="5.4" r="1.7" fill="#fff" opacity=".33"/>
+    <circle cx="7" cy="25" r="4.6" fill="#38bdf8"/><circle cx="5.8" cy="23.6" r="1.4" fill="#fff" opacity=".4"/>
+    <circle cx="25" cy="25" r="5" fill="#c026d3"/><circle cx="23.5" cy="23.4" r="1.5" fill="#fff" opacity=".33"/>
+  </svg><span><b>CPVN</b>.IO</span></a>
+  <nav class="tabs">
+    <a href="index.html">🫧 Bong bóng</a>
+    <a class="on" href="bang-gia.html">📊 Bảng giá</a>
+  </nav>
+  <div class="spacer"></div>
+  <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
+</header>
+
+<div id="stats"></div>
+
+<div id="tools">
+  <div class="seg" id="scope">
+    <button data-v="all" class="on">Tất cả</button>
+    <button data-v="watch">⭐ Theo dõi</button>
+  </div>
+  <select id="floor">
+    <option value="all">Tất cả sàn</option>
+    <option>HOSE</option><option>HNX</option><option>UPCOM</option>
+    <option>VN30</option><option>HNX30</option>
+  </select>
+  <select id="sector"><option value="all">Tất cả ngành</option></select>
+  <span id="cnt"></span>
+</div>
+
+<div id="wrap">
+  <table>
+    <thead>
+      <tr>
+        <th data-k="rank">#</th>
+        <th>⭐</th>
+        <th class="l" data-k="sym">Cổ phiếu</th>
+        <th data-k="price">Giá (đ)</th>
+        <th data-k="chg1d">1D %</th>
+        <th data-k="w">1W %</th>
+        <th data-k="m">1M %</th>
+        <th data-k="y">1Y %</th>
+        <th data-k="mcap">Vốn hoá</th>
+        <th data-k="gtgd">GTGD hôm nay</th>
+        <th data-k="nn">NN ròng</th>
+        <th data-k="pe">P/E</th>
+        <th>7 ngày</th>
+      </tr>
+    </thead>
+    <tbody id="tb"></tbody>
+  </table>
+</div>
+<div id="pager"></div>
+
+<footer>
+  <span id="kho">kho dữ liệu: đang kiểm tra…</span>
+  <span>·</span><span id="liveAt"></span>
+  <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM, có kho dự phòng nên không phụ thuộc nguồn sống</span>
+</footer>
+
+<script src="assets/core.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[] };
+
+/* giá trị sort/hiển thị cho từng mã */
+function val(c,k){
+  switch(k){
+    case 'sym':   return c.sym;
+    case 'price': return c.price||0;
+    case 'chg1d': return c.chg1d==null?-1e9:c.chg1d;
+    case 'w': case 'm': case 'y': return c.pct&&c.pct[k]!=null?c.pct[k]:-1e9;
+    case 'mcap':  return c.mcapLive||c.mcap||0;
+    case 'gtgd':  return c.gtgd||0;
+    case 'nn':    return (c.fbuy||0)-(c.fsell||0);
+    case 'pe':    return c.pe==null?1e9:+c.pe;
+    default:      return 0;
+  }
+}
+function filterRows(){
+  let list=[...CP.coins.values()];
+  if(ST.scope==='watch'){ const w=CP.watch.get(); list=list.filter(c=>w.has(c.sym)); }
+  if(ST.floor==='VN30') list=list.filter(c=>CP.vn30.has(c.sym));
+  else if(ST.floor==='HNX30') list=list.filter(c=>CP.hnx30.has(c.sym));
+  else if(ST.floor!=='all') list=list.filter(c=>c.ex===ST.floor);
+  if(ST.sector!=='all') list=list.filter(c=>c.sector===ST.sector);
+  if(ST.q){ const q=ST.q.toUpperCase();
+    list=list.filter(c=>c.sym.includes(q)||c.name.toUpperCase().includes(q)); }
+  const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
+  list.sort((a,b)=>{ const va=val(a,k), vb=val(b,k);
+    return (typeof va==='string') ? dir*va.localeCompare(vb) : dir*(va-vb); });
+  ST.rows=list;
+}
+function badge(v,extra){
+  if(v==null||v===-1e9) return '<span class="badge" style="color:var(--muted)">—</span>';
+  let bg,cl;
+  if(extra==='ceil'){ bg='rgba(192,38,211,.16)'; cl='var(--purple)'; }
+  else if(extra==='floor'){ bg='rgba(56,189,248,.16)'; cl='var(--cyan)'; }
+  else if(Math.abs(v)<0.005){ bg='rgba(234,179,8,.14)'; cl='var(--yellow)'; }
+  else if(v>0){ bg='rgba(22,199,132,.13)'; cl='var(--green)'; }
+  else { bg='rgba(234,57,67,.13)'; cl='var(--red)'; }
+  return `<span class="badge" style="background:${bg};color:${cl}">${CP.pcTxt(v)}</span>`;
+}
+function render(){
+  filterRows();
+  const total=ST.rows.length, pages=Math.max(1,Math.ceil(total/ST.PER));
+  if(ST.page>pages) ST.page=pages;
+  const start=(ST.page-1)*ST.PER, slice=ST.rows.slice(start,start+ST.PER);
+  const W=CP.watch.get();
+  $('cnt').textContent=`${total.toLocaleString('en-US')} mã`;
+  $('tb').innerHTML=slice.map((c,i)=>{
+    const nn=(c.fbuy||0)-(c.fsell||0);
+    const ceilHit=c.ceil>0&&c.price>0&&c.price>=c.ceil, floorHit=c.flr>0&&c.price>0&&c.price<=c.flr;
+    const logo=c.img?`<img src="${CP.esc(c.img)}" loading="lazy" onerror="this.outerHTML='<span class=noimg>${c.sym.slice(0,2)}</span>'">`
+                    :`<span class="noimg">${c.sym.slice(0,2)}</span>`;
+    return `<tr data-sym="${c.sym}">
+      <td class="rank">${start+i+1}</td>
+      <td class="star ${W.has(c.sym)?'on':''}" data-star="${c.sym}">${W.has(c.sym)?'★':'☆'}</td>
+      <td class="l"><div class="co">${logo}<div><span class="sym">${c.sym}</span><span class="ex">${c.ex}</span><div class="nm">${CP.esc(c.name)}</div></div></div></td>
+      <td class="price" data-price style="color:${CP.col1d(c)}">${CP.fmtD(c.price)}</td>
+      <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
+      <td class="pc" style="color:${CP.pcCol(c.pct&&c.pct.w)}">${CP.pcTxt(c.pct&&c.pct.w)}</td>
+      <td class="pc" style="color:${CP.pcCol(c.pct&&c.pct.m)}">${CP.pcTxt(c.pct&&c.pct.m)}</td>
+      <td class="pc" style="color:${CP.pcCol(c.pct&&c.pct.y)}">${CP.pcTxt(c.pct&&c.pct.y)}</td>
+      <td>${CP.fmtVnd(c.mcapLive||c.mcap)}</td>
+      <td>${CP.fmtVnd(c.gtgd)}</td>
+      <td class="nn ${nn>0?'pos':nn<0?'neg':''}">${nn?((nn>0?'+':'−')+CP.fmtShares(Math.abs(nn)).replace(' cp','')):'—'}</td>
+      <td>${c.pe!=null?(+c.pe).toFixed(1):'—'}</td>
+      <td><canvas class="spark" data-spark="${c.sym}"></canvas></td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#tb canvas[data-spark]').forEach(cv=>CP.drawSpark(cv,CP.spark[cv.dataset.spark],7));
+  document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
+    if(e.target.closest('[data-star]')) return;
+    location.href='co-phieu.html?sym='+tr.dataset.sym;
+  });
+  document.querySelectorAll('#tb [data-star]').forEach(td=>td.onclick=()=>{
+    const on=CP.watch.toggle(td.dataset.star);
+    td.classList.toggle('on',on); td.textContent=on?'★':'☆';
+    if(ST.scope==='watch') render();
+  });
+  document.querySelectorAll('thead th').forEach(th=>th.classList.toggle('sorted',th.dataset.k===ST.sort));
+  renderPager(pages);
+}
+function renderPager(pages){
+  const p=$('pager'); if(pages<=1){ p.innerHTML=''; return; }
+  const btn=(n,lb,on,dis)=>`<button data-p="${n}" ${dis?'disabled':''} class="${on?'on':''}">${lb}</button>`;
+  const items=[]; items.push(btn(ST.page-1,'‹',false,ST.page===1));
+  const around=new Set([1,2,pages-1,pages,ST.page-1,ST.page,ST.page+1]);
+  let last=0;
+  for(let n=1;n<=pages;n++){ if(!around.has(n)) continue;
+    if(last&&n-last>1) items.push('<span style="color:var(--muted)">…</span>');
+    items.push(btn(n,n,n===ST.page,false)); last=n; }
+  items.push(btn(ST.page+1,'›',false,ST.page===pages));
+  p.innerHTML=items.join('');
+  p.querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{
+    ST.page=+b.dataset.p; render(); window.scrollTo({top:0,behavior:'smooth'}); });
+}
+
+/* hàng thống kê tổng quan + trạng thái kho */
+function renderStats(){
+  const s=CP.marketStats();
+  const idx=(nm,val,chg)=>`<span class="st"><span class="nm">${nm}</span><span class="val">${val}</span>`+
+    (chg!=null?`<span style="color:${CP.pcCol(chg)};font-weight:700">${CP.pcTxt(chg)}</span>`:'')+`</span>`;
+  let html=(CP.indices||[]).map(d=>idx(d.name,d.value.toLocaleString('en-US',{maximumFractionDigits:2}),d.chg)).join('');
+  html+='<span class="stsep"></span>';
+  html+=idx('Vốn hoá TT',CP.fmtVnd(s.mcap),null);
+  html+=idx('Thanh khoản',Math.round(s.gtgd/1e9).toLocaleString('en-US')+' tỷ',null);
+  html+=`<span class="breadth"><span class="nm" style="color:var(--muted);font-weight:700">Độ rộng</span>`+
+    `<b style="background:rgba(22,199,132,.15);color:var(--green)">▲ ${s.up}</b>`+
+    `<b style="background:rgba(234,179,8,.13);color:var(--yellow)">– ${s.flat}</b>`+
+    `<b style="background:rgba(234,57,67,.15);color:var(--red)">▼ ${s.down}</b>`+
+    (s.ceil?`<b style="background:rgba(192,38,211,.16);color:var(--purple)">CE ${s.ceil}</b>`:'')+
+    (s.floor?`<b style="background:rgba(56,189,248,.16);color:var(--cyan)">FL ${s.floor}</b>`:'')+`</span>`;
+  $('stats').innerHTML=html;
+  const at=CP.lastPollAt?new Date(CP.lastPollAt).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'}):null;
+  $('liveAt').textContent=at?`giá cập nhật ${at}`:`giá phiên ${CP.eodDate||'—'} (kho)`;
+}
+function renderKho(){
+  const el=$('kho'), h=CP.health;
+  if(!h){ el.textContent='kho dữ liệu: phiên '+(CP.eodDate||'—'); return; }
+  el.className=h.ok?'ok':'bad';
+  el.textContent=`kho dữ liệu: phiên ${h.date} · ${h.ok?'đầy đủ ✓':'thiếu một phần — dùng bản gần nhất'} · máy ${h.runner}`;
+}
+
+/* flash giá khi poll về */
+let prevPrice=new Map();
+function snapPrices(){ prevPrice=new Map([...CP.coins.values()].map(c=>[c.sym,c.price])); }
+function flashUpdate(){
+  renderStats();
+  document.querySelectorAll('#tb tr').forEach(tr=>{
+    const c=CP.coins.get(tr.dataset.sym); if(!c) return;
+    const cell=tr.querySelector('[data-price]'); if(!cell) return;
+    const old=prevPrice.get(c.sym);
+    cell.textContent=CP.fmtD(c.price); cell.style.color=CP.col1d(c);
+    if(old&&c.price&&old!==c.price){
+      cell.classList.remove('up','down'); void cell.offsetWidth;
+      cell.classList.add(c.price>old?'up':'down');
+    }
+  });
+  snapPrices();
+}
+
+/* điều khiển */
+document.querySelectorAll('#scope button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#scope button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); ST.scope=b.dataset.v; ST.page=1; render();
+});
+$('floor').onchange=e=>{ ST.floor=e.target.value; ST.page=1; render(); };
+$('sector').onchange=e=>{ ST.sector=e.target.value; ST.page=1; render(); };
+$('q').oninput=e=>{ ST.q=e.target.value.trim(); ST.page=1; render(); };
+document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k;
+  if(ST.sort===k) ST.dir*=-1; else { ST.sort=k; ST.dir=(k==='sym')?1:-1; }
+  ST.page=1; render();
+});
+
+(async function init(){
+  await CP.loadBase();
+  const cnt={};
+  for(const c of CP.coins.values()) cnt[c.sector]=(cnt[c.sector]||0)+1;
+  $('sector').innerHTML='<option value="all">Tất cả ngành</option>'+
+    Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).map(s=>`<option>${CP.esc(s)}</option>`).join('');
+  snapPrices(); render(); renderStats(); renderKho();
+  CP.loadIndices().then(renderStats);
+  CP.startPolling(()=>{ flashUpdate(); });
+  setInterval(()=>{ CP.loadIndices().then(renderStats); },60000);
+})();
+</script>
+</body>
+</html>

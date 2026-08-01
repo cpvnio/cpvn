@@ -1,0 +1,4 @@
+# Cloudflare Pages — URL đẹp cho CPVN.IO
+/bang-gia          /bang-gia.html        200
+/co-phieu/:sym     /co-phieu.html?sym=:sym  200
+/co-phieu          /bang-gia.html        302

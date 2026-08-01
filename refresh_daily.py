@@ -13,12 +13,15 @@ Chạy sau 15h (giờ VN), Thứ 2–6:
 (đồng bộ giá điều chỉnh sau chia cổ tức/tách CP); cào lại KQKD tất cả mã. Không cần token.
 Web ưu tiên API sống, tự rơi về kho này khi API lỗi.
 """
-import json, os, re, sys, time, datetime, urllib.request, concurrent.futures, threading
+import json, os, re, sys, time, datetime, platform, urllib.request, concurrent.futures, threading
 
 BASE=os.path.dirname(os.path.abspath(__file__))
 UNIV=os.path.join(BASE,"universe.json")
 EOD_DIR=os.path.join(BASE,"data","eod"); HIST_DIR=os.path.join(BASE,"data","hist")
 FIN_DIR=os.path.join(BASE,"data","fin"); IDX_FILE=os.path.join(BASE,"data","idx.json")
+NEWS_DIR=os.path.join(BASE,"data","news")
+SPARK=os.path.join(BASE,"data","spark.json"); HEALTH=os.path.join(BASE,"data","health.json")
+HL={}   # health: kết quả từng bước của lượt chạy này -> data/health.json
 UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120"}
 FULL="--full" in sys.argv; NOW=int(time.time())
 BACKFILL_D=2400; DAILY_D=260          # backfill ~6.5 năm; ngày thường chỉ cần 260 ngày (mốc m3/m6)
@@ -86,6 +89,7 @@ def work_sz(sym):
 with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
     list(pool.map(work_sz,syms))
 print(f"Simplize: ok {sok}, fail {sfail} (giữ giá trị cũ nếu lỗi)",flush=True)
+HL["simplize"]={"ok":sok,"fail":sfail}
 
 # 2) bảng giá cuối phiên -> NN + trần/sàn/tham chiếu (chạy TRƯỚC kho hist để ghi NN hôm nay)
 board={}
@@ -141,6 +145,7 @@ def fetch_foreign30(sym):   # seed NN 30 phiên gần nhất (24hMoney) khi back
     except Exception: return None
 hlock=threading.Lock(); hstats={"new":0,"append":0,"full":0,"fail":0}
 prices={}   # sym -> anc/close/vol/o/h/l/ts (cho universe + snapshot)
+sparks={}   # sym -> 30 giá đóng cửa gần nhất (cho sparkline trang bảng giá)
 def work_hist(sym):
     path=os.path.join(HIST_DIR,f"{sym}.json")
     fresh=not os.path.exists(path)
@@ -184,6 +189,7 @@ def work_hist(sym):
     out["sym"]=sym
     jdump(out,path)
     t,c=out["t"],out["c"]
+    sparks[sym]=c[-30:]
     prices[sym]={"anc":{"m3":close_at(t,c,90),"m6":close_at(t,c,180),"last":c[-1]},
                  "close":c[-1],"vol":out["v"][-1],"o":out["o"][-1],"h":out["h"][-1],"l":out["l"][-1],
                  "ts":t[-1]}
@@ -191,6 +197,7 @@ def work_hist(sym):
 with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
     list(pool.map(work_hist,syms))
 print(f"kho lịch sử: backfill {hstats['new']}, nối {hstats['append']}, tải lại {hstats['full']}, lỗi {hstats['fail']}",flush=True)
+HL["hist"]=dict(hstats); HL["board"]=len(board); HL["indices"]=len(indices)
 
 # 4) ghép mốc giá + vốn hoá (=SLCP×giá đóng cửa nếu Simplize thiếu) vào universe
 for sym,s in stocks.items():
@@ -233,6 +240,12 @@ if len(snap)>=100:                    # chống ghi đè kho bằng dữ liệu 
     print(f"ĐÃ LƯU snapshot EOD phiên {sess_date} ({len(snap)} mã) + latest.json",flush=True)
 else:
     print(f"BỎ QUA snapshot: chỉ có {len(snap)} mã (VPS lỗi?) — giữ nguyên latest.json cũ",flush=True)
+HL["snapshot"]=len(snap)
+# spark.json: 30 giá đóng cửa gần nhất mỗi mã — trang bảng giá vẽ sparkline bằng 1 file duy nhất
+if len(sparks)>=100:
+    jdump({"date":sess_date,"d":sparks},SPARK)
+    print(f"ĐÃ LƯU spark.json ({len(sparks)} mã)",flush=True)
+HL["spark"]=len(sparks)
 if indices:
     try: hist_idx=json.load(open(IDX_FILE,encoding="utf-8"))
     except Exception: hist_idx=[]
@@ -241,10 +254,16 @@ if indices:
     hist_idx.sort(key=lambda r:r["date"])
     jdump(hist_idx,IDX_FILE)
 
-# 6) KHO KQKD + CỔ TỨC data/fin/{SYM}.json (24hMoney + Simplize)
-#    Mã thiếu file thì cào (lần đầu = backfill tất cả); --full: cào lại toàn bộ.
+# 6) KHO TÀI CHÍNH data/fin/{SYM}.json — ĐỦ BỘ 3 BÁO CÁO (24hMoney) + cổ tức (Simplize)
+#    view=2 KQKD · view=1 Cân đối kế toán · view=3 Lưu chuyển tiền tệ
+#    Mã thiếu file HOẶC file chưa có CĐKT (schema cũ) thì cào; --full: cào lại toàn bộ.
 os.makedirs(FIN_DIR,exist_ok=True)
-need=[s for s in syms if FULL or not os.path.exists(os.path.join(FIN_DIR,f"{s}.json"))]
+def fin_stale(s):
+    p=os.path.join(FIN_DIR,f"{s}.json")
+    if not os.path.exists(p): return True
+    try: return "bsQ" not in json.load(open(p,encoding="utf-8"))
+    except Exception: return True
+need=[s for s in syms if FULL or fin_stale(s)]
 RX_RATIO=re.compile(r"tỷ lệ\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)",re.I)
 RX_FY=re.compile(r"năm\s*(\d{4})")
 RX_DIVCP=re.compile(r"cổ tức.*cổ phiếu",re.I)
@@ -296,25 +315,103 @@ def fetch_div(sym):      # cổ tức TIỀN MẶT (histories) + CP/thưởng (e
     out=sorted(by.values(),key=lambda r:-r["year"])
     for r in out: r["div"]=rnd(r["div"],1); r["bonus"]=rnd(r["bonus"],1)
     return out
+def parse_generic(d):    # CĐKT/LCTT: giữ nguyên mọi dòng {k,n,v[]}, kỳ CŨ -> MỚI
+    H=d.get("headers") or []; rows=d.get("rows") or []
+    labels=[(f"Q{h.get('quarter')}/{str(h.get('year'))[2:]}" if h.get("quarter") else str(h.get("year"))) for h in H]
+    labels.reverse()
+    out=[]
+    for r in rows:
+        v=[rnd(x) for x in (r.get("values") or [])]; v.reverse()
+        out.append({"k":r.get("key"),"n":(r.get("name") or "").strip(),"v":v})
+    return {"labels":labels,"rows":out} if labels and out else None
 flock=threading.Lock(); fdone=[0,0]
 def work_fin(sym):
-    url=lambda p:f"https://api-finance-t19.24hmoney.vn/v1/web/company/financial-report?symbol={sym}&view=2&period={p}&expanded=false"
+    url=lambda v,p:f"https://api-finance-t19.24hmoney.vn/v1/web/company/financial-report?symbol={sym}&view={v}&period={p}&expanded=false"
     o={"sym":sym,"updated":sess_date,"Y":[],"Q":[],"div":[]}
-    for key,p in (("Y",1),("Q",2)):
+    for key,p in (("Y",1),("Q",2)):     # KQKD năm + quý (format cũ, panel bong bóng đang dùng)
         for att in range(2):
             try:
-                o[key]=parse_fin(get(url(p)).get("data") or {}); break
+                o[key]=parse_fin(get(url(2,p)).get("data") or {}); break
             except Exception: time.sleep(0.8*(att+1))
-        time.sleep(0.1)
+        time.sleep(0.08)
+    for key,v,p in (("bsY",1,1),("bsQ",1,2),("cfY",3,1),("cfQ",3,2)):  # CĐKT + LCTT
+        try:
+            g=parse_generic(get(url(v,p)).get("data") or {})
+            if g: o[key]=g
+        except Exception: pass
+        time.sleep(0.08)
     o["div"]=fetch_div(sym)
     with flock:
         fdone[0]+=1
         if o["Y"] or o["Q"] or o["div"]: fdone[1]+=1
         else: return                     # không có gì -> đừng ghi file rỗng
-        if fdone[0]%100==0: print(f"  KQKD {fdone[0]}/{len(need)}",flush=True)
+        if fdone[0]%100==0: print(f"  tài chính {fdone[0]}/{len(need)}",flush=True)
     jdump(o,os.path.join(FIN_DIR,f"{sym}.json"))
 if need:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
         list(pool.map(work_fin,need))
-print(f"kho KQKD/cổ tức: cào {len(need)} mã, có dữ liệu {fdone[1]}",flush=True)
+print(f"kho tài chính (KQKD+CĐKT+LCTT+cổ tức): cào {len(need)} mã, có dữ liệu {fdone[1]}",flush=True)
+HL["fin"]={"need":len(need),"ok":fdone[1]}
+
+# 7) KHO TIN TỨC + BÁO CÁO CTCK data/news/{SYM}.json — web tự rơi về đây khi nguồn sống chết
+#    Hằng ngày: top 200 GTGD (tin đổi nhanh); --full T2: TOÀN BỘ mã.
+os.makedirs(NEWS_DIR,exist_ok=True)
+if FULL: ntargets=[s for s in syms if s in prices]
+else:
+    ntargets=sorted([s for s in syms if s in prices],
+                    key=lambda s:-(board.get(s,{}).get("gtgd") or 0))[:200]
+nlock=threading.Lock(); ndone=[0,0]
+def work_news(sym):
+    o={"sym":sym,"updated":sess_date,"news":[],"reports":[]}
+    try:
+        j=get(f"https://api2.simplize.vn/api/company/news-event/list?ticker={sym}&page=0&size=15")
+        for n in j.get("data") or []:
+            o["news"].append({"title":n.get("title"),"source":n.get("sourceNameDisplay") or n.get("sourceName") or "",
+                              "ts":n.get("ts") or 0,"slug":n.get("slug"),"url":None})
+    except Exception: pass
+    time.sleep(0.08)
+    try:
+        j=get(f"https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:{sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl")
+        for n in j.get("data") or []:
+            ts=0
+            try:
+                ts=int(datetime.datetime.strptime((n.get("newsDate") or "")+" "+(n.get("newsTime") or "00:00:00"),
+                        "%Y-%m-%d %H:%M:%S").replace(tzinfo=VNTZ).timestamp()*1000)
+            except Exception: pass
+            o["news"].append({"title":n.get("newsTitle"),"source":n.get("newsSource") or "","ts":ts,
+                              "slug":None,"url":n.get("newsUrl")})
+    except Exception: pass
+    time.sleep(0.08)
+    try:
+        j=get(f"https://api2.simplize.vn/api/company/analysis-report/list?ticker={sym}&page=0&size=12")
+        o["total_reports"]=j.get("total") or 0
+        for r in j.get("data") or []:
+            o["reports"].append({"source":r.get("source") or "","rec":r.get("recommend") or "",
+                "target":r.get("targetPrice"),"date":r.get("issueDate") or "",
+                "title":r.get("title") or "","pdf":r.get("attachedLink") or ""})
+    except Exception: pass
+    seen=set(); dedup=[]
+    for it in sorted(o["news"],key=lambda x:-(x.get("ts") or 0)):
+        k=(it.get("title") or "").lower()[:45]
+        if not k or k in seen: continue
+        seen.add(k); dedup.append(it)
+    o["news"]=dedup[:20]
+    with nlock:
+        ndone[0]+=1
+        if o["news"] or o["reports"]: ndone[1]+=1
+        else: return
+        if ndone[0]%200==0: print(f"  tin tức {ndone[0]}/{len(ntargets)}",flush=True)
+    jdump(o,os.path.join(NEWS_DIR,f"{sym}.json"))
+if ntargets:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+        list(pool.map(work_news,ntargets))
+print(f"kho tin tức/báo cáo: cào {len(ntargets)} mã, có dữ liệu {ndone[1]}",flush=True)
+HL["news"]={"need":len(ntargets),"ok":ndone[1]}
+
+# 8) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
+runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")
+HL_ok=(HL.get("hist",{}).get("fail",9999)<len(syms)*0.2 and HL.get("snapshot",0)>=100)
+jdump({"date":sess_date,"generated":vn_now().strftime("%Y-%m-%d %H:%M:%S"),"runner":runner,
+       "full":FULL,"total_syms":len(syms),"ok":HL_ok,"steps":HL},HEALTH)
+print(f"health.json: ok={HL_ok} runner={runner}",flush=True)
 print("XONG.",flush=True)
