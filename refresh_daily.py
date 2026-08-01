@@ -77,7 +77,9 @@ def work_sz(sym):
     time.sleep(0.15)
     o=fetch_simplize(sym)
     with lock:
-        if o and o.get("pct",{}).get("y") is not None:
+        # nhận khi có %1 năm HOẶC có vốn hoá — mã mới niêm yết (như F88) thiếu %1y
+        # nhưng vẫn có mcap, đừng vứt kẻo bị loại khỏi universe oan
+        if o and (o.get("pct",{}).get("y") is not None or o.get("mcap")):
             stocks[sym].update({k:v for k,v in o.items() if v is not None}); sok+=1
         else: sfail+=1
         if (sok+sfail)%200==0: print(f"  simplize {sok+sfail}/{len(syms)} (fail {sfail})",flush=True)
