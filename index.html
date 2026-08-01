@@ -37,6 +37,12 @@
   .brand b{color:#ffd60a}
   .spacer{flex:1}
 
+  /* 2 tab điều hướng trang: Bong bóng | Bảng giá */
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .tabs a{padding:8px 16px;font-size:17px;font-weight:700;color:var(--muted);text-decoration:none}
+  .tabs a.on{color:#fff;background:var(--accent)}
+  .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
+
   .group{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .group button{background:transparent;color:var(--muted);border:0;padding:8px 14px;font-size:18px;
     font-weight:700;cursor:pointer;transition:.15s}
@@ -194,6 +200,7 @@
     header{gap:6px;row-gap:7px;padding:7px 10px}
     .brand{font-size:17px;gap:7px}
     .brand .mark{width:24px;height:24px}
+    .tabs a{padding:6px 10px;font-size:12.5px}
     /* hàng 1: logo bên trái — 📷 bên phải (spacer đẩy) */
     .spacer{order:0}
     #shotBtn{order:2}
@@ -229,7 +236,10 @@
       <circle cx="7" cy="25" r="4.6" fill="#38bdf8"/><circle cx="5.8" cy="23.6" r="1.4" fill="#fff" opacity=".4"/>
       <circle cx="25" cy="25" r="5" fill="#c026d3"/><circle cx="23.5" cy="23.4" r="1.5" fill="#fff" opacity=".33"/>
     </svg><span><b>CPVN</b><span class="full">.IO</span></span></div>
-    <a class="toggle" href="banggia.html" style="text-decoration:none;display:inline-block">📊 Bảng giá</a>
+    <nav class="tabs">
+      <a class="on" href="index.html">Bong bóng</a>
+      <a href="banggia.html">Bảng giá</a>
+    </nav>
 
     <div class="group" id="tf">
       <button data-tf="1d" class="active">1D</button>

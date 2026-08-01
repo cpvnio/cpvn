@@ -43,8 +43,10 @@
   .spacer{flex:1}
   #page{max-width:1320px;margin:0 auto;padding:16px}
 
-  /* ---- hero ---- */
-  #hero{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+  /* ---- khối đầu: 2 bảng thông số bên TRÁI, biểu đồ bên PHẢI ---- */
+  #top{display:grid;grid-template-columns:430px 1fr;gap:16px;align-items:start}
+  #leftCol{display:flex;flex-direction:column;gap:16px}
+  #leftCol .statgrid{grid-template-columns:1fr}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
   .idrow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
   .idrow img{width:44px;height:44px;border-radius:10px;background:#fff;object-fit:contain}
@@ -70,15 +72,15 @@
   .statgrid .row span:last-child{font-weight:700;text-align:right}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
 
-  /* ---- chart ---- */
-  #chartCard{margin-top:16px}
+  /* ---- chart (cột phải, tự giãn theo chiều cao 2 bảng trái) ---- */
+  #chartCard{display:flex;flex-direction:column;min-width:0}
   .chips{display:flex;gap:4px;flex-wrap:wrap}
   .chips button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:7px;
     padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer}
   .chips button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
   .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .chead .note{color:var(--muted);font-size:11.5px;margin-left:auto}
-  canvas#cv{width:100%;height:520px;display:block;border-radius:10px;background:rgba(255,255,255,.02)}
+  canvas#cv{width:100%;height:470px;display:block;border-radius:10px;background:rgba(255,255,255,.02)}
 
   /* ---- tabs nội dung ---- */
   #secTabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap}
@@ -141,8 +143,8 @@
 
   footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:16px;color:var(--muted);
     font-size:11.5px;flex-wrap:wrap;text-align:center}
-  @media(max-width:860px){
-    #hero{grid-template-columns:1fr}
+  @media(max-width:980px){
+    #top{grid-template-columns:1fr}
     .bigpx .p{font-size:31px}
     canvas#cv{height:330px}
     .statgrid{grid-template-columns:1fr}
@@ -159,15 +161,16 @@
     <circle cx="25" cy="25" r="5" fill="#c026d3"/><circle cx="23.5" cy="23.4" r="1.5" fill="#fff" opacity=".33"/>
   </svg><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
-    <a href="index.html">🫧 Bong bóng</a>
-    <a href="banggia.html">📊 Bảng giá</a>
+    <a href="index.html">Bong bóng</a>
+    <a href="banggia.html">Bảng giá</a>
   </nav>
   <div class="spacer"></div>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
 <div id="page">
-  <div id="hero">
+  <div id="top">
+    <div id="leftCol">
     <div class="card" id="heroL">
       <div class="idrow">
         <img id="logo" style="display:none"/>
@@ -190,9 +193,9 @@
     <div class="card">
       <div class="statgrid" id="stats"></div>
     </div>
-  </div>
+    </div>
 
-  <div class="card" id="chartCard">
+    <div class="card" id="chartCard">
     <div class="chead">
       <div class="chips" id="tf">
         <button data-v="1d">1D</button><button data-v="1w">1W</button><button data-v="1m" class="on">1M</button>
@@ -201,13 +204,14 @@
       <span class="note" id="cnote"></span>
     </div>
     <canvas id="cv"></canvas>
+    </div>
   </div>
 
   <div id="secTabs">
-    <button data-t="tc" class="on">📑 Báo cáo tài chính</button>
-    <button data-t="tt">📰 Tin tức</button>
-    <button data-t="cn">🏭 Cùng ngành</button>
-    <button data-t="tl">📂 Tài liệu</button>
+    <button data-t="tc" class="on">Báo cáo tài chính</button>
+    <button data-t="tt">Tin tức</button>
+    <button data-t="cn">Cùng ngành</button>
+    <button data-t="tl">Tài liệu</button>
   </div>
 
   <div class="sect on" id="s-tc">

@@ -133,8 +133,8 @@
     <circle cx="25" cy="25" r="5" fill="#c026d3"/><circle cx="23.5" cy="23.4" r="1.5" fill="#fff" opacity=".33"/>
   </svg><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
-    <a href="index.html">🫧 Bong bóng</a>
-    <a class="on" href="banggia.html">📊 Bảng giá</a>
+    <a href="index.html">Bong bóng</a>
+    <a class="on" href="banggia.html">Bảng giá</a>
   </nav>
   <div class="spacer"></div>
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
@@ -165,8 +165,8 @@
         <th>⭐</th>
         <th class="l" data-k="sym">Cổ phiếu</th>
         <th data-k="price">Giá (đ)</th>
-        <th data-k="chg1d">1D %</th>
         <th data-k="mcap">Vốn hoá</th>
+        <th data-k="chg1d">1D %</th>
         <th data-k="gtgd">GTGD hôm nay</th>
         <th data-k="nn">NN ròng</th>
         <th data-k="pe">P/E</th>
@@ -244,8 +244,8 @@ function render(){
       <td class="star ${W.has(c.sym)?'on':''}" data-star="${c.sym}">${W.has(c.sym)?'★':'☆'}</td>
       <td class="l"><div class="co">${logo}<div><span class="sym">${c.sym}</span><span class="ex">${c.ex}</span><div class="nm">${CP.esc(c.name)}</div></div></div></td>
       <td class="price" data-price style="color:${CP.col1d(c)}">${CP.fmtD(c.price)}</td>
-      <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
       <td>${CP.fmtVnd(c.mcapLive||c.mcap)}</td>
+      <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
       <td>${CP.fmtVnd(c.gtgd)}</td>
       <td class="nn ${nn>0?'pos':nn<0?'neg':''}">${nn?((nn>0?'+':'−')+CP.fmtShares(Math.abs(nn)).replace(' cp','')):'—'}</td>
       <td>${c.pe!=null?(+c.pe).toFixed(1):'—'}</td>
