@@ -40,7 +40,7 @@
   #app{position:fixed;inset:0;display:flex;flex-direction:column}
 
   /* thanh công cụ trên cùng — cỡ vừa (đã tinh chỉnh theo người dùng) */
-  header{display:flex;align-items:center;gap:10px;padding:9px 15px;flex-wrap:wrap;
+  header{display:flex;align-items:center;gap:7px;padding:9px 14px;flex-wrap:wrap;
     border-bottom:1px solid var(--line);background:linear-gradient(var(--hdr1),var(--hdr2));z-index:5}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
     font-size:23px}
@@ -48,26 +48,25 @@
     filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
   .brand b{color:#ffd60a}
   .spacer{flex:1}
-  .brk{flex-basis:100%;height:0}
 
   /* 2 tab điều hướng trang: Bong bóng | Bảng giá */
-  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .tabs a{padding:8px 16px;font-size:17px;font-weight:700;color:var(--muted);text-decoration:none}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:10px}
+  .tabs a{padding:7px 13px;font-size:15px;font-weight:700;color:var(--muted);text-decoration:none}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
 
   .group{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .group button{background:transparent;color:var(--muted);border:0;padding:8px 14px;font-size:18px;
+  .group button{background:transparent;color:var(--muted);border:0;padding:7px 9px;font-size:14.5px;
     font-weight:700;cursor:pointer;transition:.15s}
   .group button:hover{color:var(--txt);background:var(--panel2)}
   .group button.active{color:#fff;background:var(--accent)}
   button.toggle{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:9px;
-    padding:8px 14px;font-size:18px;font-weight:700;cursor:pointer}
+    padding:7px 9px;font-size:14.5px;font-weight:700;cursor:pointer}
   button.toggle.active{color:#fff;background:var(--accent);border-color:var(--accent)}
 
   select,input.search{background:var(--panel);color:var(--txt);border:1px solid var(--line);
-    border-radius:9px;padding:8px 14px;font-size:18px;outline:none;max-width:250px}
-  input.search{width:160px}
+    border-radius:9px;padding:7px 8px;font-size:14.5px;outline:none;max-width:250px}
+  input.search{width:130px;flex-shrink:1;min-width:100px}
   .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
   .live .pulse{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);
     animation:pulse 1.4s infinite}
@@ -211,9 +210,9 @@
   /* ---- MOBILE (≤640px): thanh công cụ xếp lại thành các hàng cân đối, cỡ gọn ---- */
   @media(max-width:640px){
     header{gap:6px;row-gap:7px;padding:7px 10px}
-    .brk{display:none}
     .brand{font-size:17px;gap:7px}
     .brand .mark{width:24px;height:24px}
+    .tabs{margin-left:4px}
     .tabs a{padding:6px 10px;font-size:12.5px}
     /* hàng 1: logo bên trái — 📷 bên phải (spacer đẩy) */
     .spacer{order:0}
@@ -266,7 +265,6 @@
       <button data-tf="5y">5Y</button>
     </div>
 
-    <div class="brk"></div>
     <div class="group" id="sizeby">
       <button data-size="signif" class="active">Nổi bật</button>
       <button data-size="mcap">Vốn hoá</button>
@@ -292,7 +290,6 @@
       <option value="0-9999">Tất cả</option>
     </select>
 
-    <div class="spacer"></div>
     <input class="search" id="search" placeholder="Mã / tên…" />
     <button class="toggle" id="shotBtn" title="Chụp hình màn hình bong bóng (có đóng dấu CPVN.IO)">📷</button>
     <button class="toggle" id="thmBtn" title="Giao diện sáng/tối">🌙</button>
