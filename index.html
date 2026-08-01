@@ -14,7 +14,8 @@
 <meta property="og:url" content="https://cpvn.io/" />
 <meta property="og:site_name" content="CPVN.io" />
 <meta name="twitter:card" content="summary_large_image" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='11' cy='13' r='9' fill='%2316c784'/%3E%3Ccircle cx='22' cy='21' r='7' fill='%23ea3943'/%3E%3Ccircle cx='9' cy='24' r='4' fill='%23eab308'/%3E%3C/svg%3E" />
+<!-- favicon: chùm 5 bong bóng — vàng(TC) · xanh dương(sàn) · đỏ(giảm) · xanh lá(tăng) · tím(trần) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='18' r='10' fill='%2316c784'/%3E%3Ccircle cx='8.8' cy='14.2' r='3.2' fill='%23fff' opacity='.32'/%3E%3Ccircle cx='24' cy='9' r='7' fill='%23ea3943'/%3E%3Ccircle cx='21.8' cy='6.6' r='2.2' fill='%23fff' opacity='.32'/%3E%3Ccircle cx='7.5' cy='5.8' r='5' fill='%23eab308'/%3E%3Ccircle cx='6' cy='4.3' r='1.6' fill='%23fff' opacity='.38'/%3E%3Ccircle cx='26.2' cy='23' r='5.6' fill='%23c026d3'/%3E%3Ccircle cx='24.4' cy='21.2' r='1.8' fill='%23fff' opacity='.32'/%3E%3Ccircle cx='17.6' cy='28' r='3.8' fill='%2338bdf8'/%3E%3Ccircle cx='16.4' cy='26.8' r='1.2' fill='%23fff' opacity='.4'/%3E%3C/svg%3E" />
 <style>
   :root{
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
@@ -26,30 +27,28 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
   #app{position:fixed;inset:0;display:flex;flex-direction:column}
 
-  /* thanh công cụ trên cùng — cỡ chữ/nút to hơn ~40% */
-  header{display:flex;align-items:center;gap:10px;padding:9px 14px;flex-wrap:wrap;
+  /* thanh công cụ trên cùng — cỡ lớn (+40% rồi +30%) */
+  header{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap;
     border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);z-index:5}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
-    font-size:22px}
-  .brand .dot{width:28px;height:28px;border-radius:50%;background:var(--accent);
-    box-shadow:0 0 14px rgba(225,29,72,.6);display:inline-block;position:relative}
-  .brand .dot::after{content:'★';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    color:#ffd60a;font-size:14px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
+    font-size:29px}
+  .brand .mark{width:40px;height:40px;flex-shrink:0;
+    filter:drop-shadow(0 0 8px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
   .brand b{color:#ffd60a}
   .spacer{flex:1}
 
-  .group{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .group button{background:transparent;color:var(--muted);border:0;padding:8px 13px;font-size:17px;
+  .group{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .group button{background:transparent;color:var(--muted);border:0;padding:10px 17px;font-size:22px;
     font-weight:700;cursor:pointer;transition:.15s}
   .group button:hover{color:var(--txt);background:var(--panel2)}
   .group button.active{color:#fff;background:var(--accent)}
-  button.toggle{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:9px;
-    padding:8px 14px;font-size:17px;font-weight:700;cursor:pointer}
+  button.toggle{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:10px;
+    padding:10px 18px;font-size:22px;font-weight:700;cursor:pointer}
   button.toggle.active{color:#fff;background:var(--accent);border-color:var(--accent)}
 
   select,input.search{background:var(--panel);color:var(--txt);border:1px solid var(--line);
-    border-radius:9px;padding:8px 13px;font-size:17px;outline:none;max-width:238px}
-  input.search{width:180px}
+    border-radius:10px;padding:10px 17px;font-size:22px;outline:none;max-width:310px}
+  input.search{width:235px}
   .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
   .live .pulse{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);
     animation:pulse 1.4s infinite}
@@ -185,7 +184,13 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand"><span class="dot"></span><span><b>CPVN</b><span class="full">.IO</span></span></div>
+    <div class="brand"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="12" cy="18" r="10" fill="#16c784"/><circle cx="8.8" cy="14.2" r="3.2" fill="#fff" opacity=".32"/>
+      <circle cx="24" cy="9" r="7" fill="#ea3943"/><circle cx="21.8" cy="6.6" r="2.2" fill="#fff" opacity=".32"/>
+      <circle cx="7.5" cy="5.8" r="5" fill="#eab308"/><circle cx="6" cy="4.3" r="1.6" fill="#fff" opacity=".38"/>
+      <circle cx="26.2" cy="23" r="5.6" fill="#c026d3"/><circle cx="24.4" cy="21.2" r="1.8" fill="#fff" opacity=".32"/>
+      <circle cx="17.6" cy="28" r="3.8" fill="#38bdf8"/><circle cx="16.4" cy="26.8" r="1.2" fill="#fff" opacity=".4"/>
+    </svg><span><b>CPVN</b><span class="full">.IO</span></span></div>
 
     <div class="group" id="tf">
       <button data-tf="1d" class="active">1D</button>
