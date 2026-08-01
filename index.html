@@ -162,9 +162,7 @@
     </div>
 
     <div class="group" id="sizeby">
-      <button data-size="change" class="active">Biến động</button>
-      <button data-size="gtgd">GTGD</button>
-      <button data-size="volume">KLGD</button>
+      <button data-size="signif" class="active">Nổi bật</button>
       <button data-size="mcap">Vốn hoá</button>
     </div>
 
@@ -200,7 +198,7 @@
     <canvas id="cv"></canvas>
     <div id="status">Đang tải universe…</div>
     <div class="legend">
-      <span>Kích thước = <b id="lgSize">|% thay đổi|</b> (diện tích tỉ lệ thuận)</span>
+      <span>Kích thước = <b id="lgSize">Biến động × GTGD</b> (diện tích tỉ lệ thuận)</span>
       <span>Màu (<b id="lgTf">1D</b>):
         <span class="sw" style="background:var(--green)"></span>tăng
         <span class="sw" style="background:var(--red)"></span>giảm
@@ -286,7 +284,7 @@
 const BG='https://bgapidatafeed.vps.com.vn';
 const HIST='https://histdatafeed.vps.com.vn/tradingview/history';
 
-const state={ tf:'1d', sizeBy:'change', floor:'all', sector:'all', cluster:false,
+const state={ tf:'1d', sizeBy:'signif', floor:'all', sector:'all', cluster:false,
   range:[0,100], search:'', coins:new Map(), vn30:new Set(), hnx30:new Set(), sectors:[] };
 
 /* ---------- UNIVERSE ------------------------------------------------------ */
@@ -541,14 +539,17 @@ function computeRadii(){
   if(!bubbles.length) return;
   /* DIỆN TÍCH tỉ lệ thuận với giá_trị^p — bóng gấp đôi GTGD thì to gần gấp đôi thật sự.
      p<1 chỉ để nén bớt độ lệch cực đại; KHÔNG chuẩn hoá min-max nữa. */
-  const p={change:1.0, gtgd:0.75, volume:0.75, mcap:0.6}[state.sizeBy]||0.8;
+  const p={signif:0.5, mcap:0.6}[state.sizeBy]||0.6;
+  // "Nổi bật" = |biến động| × GTGD / tổng GTGD ngày -> cần tổng GTGD của các bóng đang hiện
+  let totalGtgd=0; if(state.sizeBy!=='mcap') for(const b of bubbles) totalGtgd+=(b.c.gtgd||0);
   let sum=0; const val=new Map();
   for(const b of bubbles){
     let v;
-    if(state.sizeBy==='gtgd')        v=b.c.gtgd||0;
-    else if(state.sizeBy==='volume') v=b.c.vol||0;
-    else if(state.sizeBy==='mcap')   v=b.c.mcapLive||0;
-    else v=Math.min(60,Math.abs(changeOf(b.c)));
+    if(state.sizeBy==='mcap') v=b.c.mcapLive||0;
+    else {  // vừa biến động mạnh, vừa chiếm tỉ trọng dòng tiền lớn -> bóng to
+      const share = totalGtgd>0 ? (b.c.gtgd||0)/totalGtgd : 0;
+      v = Math.abs(changeOf(b.c)) * share;
+    }
     v=Math.pow(Math.max(0,v),p); val.set(b,v); sum+=v;
   }
   const budget=W*H*0.36, k=sum>0?budget/sum:0;
@@ -1100,7 +1101,7 @@ function bindGroup(id,attr,fn){
 bindGroup('tf','tf',v=>{ state.tf=v; $('lgTf').textContent=v.toUpperCase(); rebuild();
   if(detailSym){ const c=state.coins.get(detailSym); if(c) updateDetailNumbers(c,true); } });
 bindGroup('sizeby','size',v=>{ state.sizeBy=v;
-  $('lgSize').textContent=v==='gtgd'?'GTGD':v==='volume'?'KLGD':v==='mcap'?'Vốn hoá':'|% thay đổi|'; });
+  $('lgSize').textContent=v==='mcap'?'Vốn hoá':'Biến động × GTGD'; });
 $('floor').onchange=e=>{ state.floor=e.target.value; rebuild(); };
 $('sector').onchange=e=>{ state.sector=e.target.value; rebuild(); };
 $('clusterBtn').onclick=()=>{ state.cluster=!state.cluster;
