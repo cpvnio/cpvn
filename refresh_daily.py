@@ -157,8 +157,8 @@ def work_hist(sym):
             fb=(old.get("fb") or [])[i] if i<len(old.get("fb") or []) else 0
             fs=(old.get("fs") or [])[i] if i<len(old.get("fs") or []) else 0
             if fb or fs: fbfs[vn_day(tt)]=(fb,fs)
-    if fresh:
-        f30=fetch_foreign30(sym)
+    if fresh or FULL:      # backfill lần đầu + --full T2: vá lại NN 30 phiên gần nhất
+        f30=fetch_foreign30(sym)   # -> ngày nào Actions lỡ/lỗi cũng được bù NN trong vòng 1 tuần
         if f30: fbfs.update(f30)
     if fullfetch:
         out=d
