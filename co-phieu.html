@@ -7,19 +7,31 @@
 <meta name="description" content="Thông tin đầy đủ từng cổ phiếu Việt Nam: biểu đồ nến, báo cáo tài chính KQKD/CĐKT/LCTT, cổ tức, khối ngoại, báo cáo phân tích CTCK và tin tức." />
 <meta name="theme-color" content="#0a0a0c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8.6' fill='%2316c784'/%3E%3Ccircle cx='13.2' cy='12.9' r='2.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='7' r='5' fill='%23eab308'/%3E%3Ccircle cx='5.6' cy='5.5' r='1.5' fill='%23fff' opacity='.38'/%3E%3Ccircle cx='25' cy='7' r='5.4' fill='%23ea3943'/%3E%3Ccircle cx='23.4' cy='5.4' r='1.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='25' r='4.6' fill='%2338bdf8'/%3E%3Ccircle cx='5.8' cy='23.6' r='1.4' fill='%23fff' opacity='.4'/%3E%3Ccircle cx='25' cy='25' r='5' fill='%23c026d3'/%3E%3Ccircle cx='23.5' cy='23.4' r='1.5' fill='%23fff' opacity='.33'/%3E%3C/svg%3E" />
+<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
 <style>
   :root{
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
     --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
     --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
+    --hdr1:#111114; --hdr2:#0d0d10; --thead:#0e0e12;
+    --rowline:rgba(255,255,255,.06)
+  }
+  html[data-theme="light"]{
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef2; --line:#dde1e8;
+    --txt:#16181d; --muted:#66707f;
+    --green:#0b9b61; --red:#dc3644; --yellow:#a16207; --purple:#9333ea; --cyan:#0369a1;
+    --hdr1:#ffffff; --hdr2:#f0f2f5; --thead:#f0f2f5;
+    --rowline:rgba(0,0,0,.07)
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   a{color:inherit;text-decoration:none}
   header{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:wrap;
-    border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);
+    border-bottom:1px solid var(--line);background:linear-gradient(var(--hdr1),var(--hdr2));
     position:sticky;top:0;z-index:20}
+  .thmbtn{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:9px;
+    padding:8px 11px;font-size:15px;cursor:pointer}
   .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
   .brand .mark{width:30px;height:30px;
     filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
@@ -53,7 +65,7 @@
     box-shadow:0 0 6px rgba(255,255,255,.8)}
   .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
   .statgrid .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;
-    padding:7.5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    padding:7.5px 0;border-bottom:1px solid var(--rowline)}
   .statgrid .row span:first-child{color:var(--muted)}
   .statgrid .row span:last-child{font-weight:700;text-align:right}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
@@ -82,24 +94,33 @@
   .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   table.ft{border-collapse:collapse;font-size:12.5px;white-space:nowrap;min-width:100%}
   table.ft th,table.ft td{padding:7px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}
-  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:#131318;max-width:290px;
+  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);max-width:290px;
     overflow:hidden;text-overflow:ellipsis}
-  table.ft thead th{color:var(--muted);background:#0e0e12;font-weight:700}
+  table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   .subnote{color:var(--muted);font-size:11.5px;margin-top:6px}
 
-  /* so ngành */
-  .pr{display:flex;align-items:center;gap:8px;font-size:13px;padding:3.5px 0}
-  .pr .nm{width:52px;font-weight:800;cursor:pointer}
-  .pr .nm:hover{color:#ffd60a}
-  .pr .bar{flex:1;height:12px;position:relative;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
-  .pr .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
-  .pr .pc{width:72px;text-align:right;font-weight:700;font-size:12.5px}
-  .pr.me .nm{color:#ffd60a}
+  /* doanh nghiệp cùng ngành: danh sách logo + giá + vốn hoá */
+  .peer{display:flex;align-items:center;gap:11px;padding:9px 8px;border-bottom:1px solid rgba(128,128,128,.12);
+    cursor:pointer;border-radius:8px}
+  .peer:hover{background:rgba(128,128,128,.08)}
+  .peer.me{background:rgba(255,214,10,.08)}
+  .peer img{width:30px;height:30px;border-radius:8px;background:#fff;object-fit:contain;flex-shrink:0}
+  .peer .noimg{width:30px;height:30px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
+  .peer .id{min-width:0}
+  .peer .id .s{font-weight:800;font-size:14.5px}
+  .peer.me .id .s{color:#eab308}
+  .peer .id .n{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+  .peer .px{margin-left:auto;text-align:right}
+  .peer .px .p{font-weight:800;font-size:13.5px}
+  .peer .px .c{font-size:11.5px;font-weight:700}
+  .peer .mc{width:118px;text-align:right;font-weight:700;font-size:13px;flex-shrink:0}
+  .peer .mc small{display:block;color:var(--muted);font-weight:600;font-size:10px}
 
   /* tài liệu + tin */
-  .rp{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .rp{padding:10px 0;border-bottom:1px solid var(--rowline)}
   .rp .rh{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
   .rp .rec{font-size:10.5px;font-weight:800;border-radius:4px;padding:1.5px 7px}
   .rp .mt{font-size:12.5px;font-weight:800}
@@ -109,7 +130,7 @@
   .rp a.rt:hover{color:#fff;text-decoration:underline}
   .rp a.dl{font-size:11.5px;font-weight:800;color:var(--green);border:1px solid rgba(22,199,132,.4);
     border-radius:6px;padding:2px 9px;margin-left:8px;white-space:nowrap}
-  .ni{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .ni{padding:9px 0;border-bottom:1px solid var(--rowline)}
   .ni a{font-size:13.5px;line-height:1.45;display:block}
   .ni a:hover{color:#fff;text-decoration:underline}
   .ni .meta{color:var(--muted);font-size:11.5px;margin-top:2px}
@@ -142,6 +163,7 @@
     <a href="banggia.html">📊 Bảng giá</a>
   </nav>
   <div class="spacer"></div>
+  <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
 <div id="page">
@@ -213,10 +235,7 @@
 
   <div class="sect" id="s-cn">
     <div class="card">
-      <h3 class="t" style="margin-top:0" id="peerT">So với ngành</h3>
-      <div class="chips" id="peerTf" style="margin-bottom:8px">
-        <button data-v="w">1W</button><button data-v="m" class="on">1M</button><button data-v="y">1Y</button>
-      </div>
+      <h3 class="t" style="margin-top:0" id="peerT">Doanh nghiệp cùng ngành</h3>
       <div id="peers"></div>
     </div>
   </div>
@@ -242,6 +261,9 @@
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
+const isLight=()=>document.documentElement.dataset.theme==='light';
+const GRIDC=()=>isLight()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
+const ZEROC=()=>isLight()?'rgba(0,0,0,.32)':'rgba(255,255,255,.25)';
 const SYM=(new URLSearchParams(location.search).get('sym')||'').toUpperCase()||
           decodeURIComponent(location.pathname.split('/').pop()||'').toUpperCase().replace(/\.HTML$/,'');
 let C=null, candles=null, candleSaved=false, tf='1m', finPeriod='Q', peerK='m', finData=null;
@@ -346,7 +368,7 @@ function drawChart(){
   g.font='10.5px system-ui'; g.textBaseline='middle';
   for(let i=0;i<=4;i++){
     const v=mn+(mx-mn)*i/4, yy=y(v);
-    g.strokeStyle='rgba(255,255,255,.06)'; g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
+    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
     g.fillStyle='#8a8a99'; g.textAlign='left';
     g.fillText(v>=1000?(v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+'K':Math.round(v), plotW+6, yy);
   }
@@ -400,26 +422,31 @@ function drawChart(){
   }
 }
 
-/* ---------- tổng quan: so ngành + cổ tức ---------- */
+/* ---------- doanh nghiệp cùng ngành: logo + giá + VỐN HOÁ ---------- */
 function renderPeers(){
   const box=$('peers');
-  $('peerT').textContent='So với ngành: '+(C.sector||'—');
-  const peers=[...CP.coins.values()].filter(x=>x.sector===C.sector)
-    .map(x=>({sym:x.sym,r:x.pct&&x.pct[peerK]!=null?x.pct[peerK]:null,mc:x.mcapLive||x.mcap||0}))
-    .filter(x=>x.r!=null).sort((a,b)=>b.r-a.r);
-  if(!peers.length){ box.innerHTML='<div class="subnote">Chưa đủ dữ liệu ngành.</div>'; return; }
-  const meIdx=peers.findIndex(x=>x.sym===C.sym);
-  const maxAbs=Math.max(...peers.map(x=>Math.abs(x.r)),0.01);
-  const show=peers.slice(0,8);
-  if(meIdx>=8) show.push(peers[meIdx]);
-  box.innerHTML=`<div class="subnote" style="margin-bottom:6px">Hạng <b style="color:var(--txt)">#${meIdx+1}/${peers.length}</b> trong ngành theo khung ${peerK.toUpperCase()==='W'?'1 tuần':peerK==='m'?'1 tháng':'1 năm'}</div>`+
-    show.map(x=>{
-      const wp=Math.abs(x.r)/maxAbs*100, me=x.sym===C.sym, col=x.r>=0?'var(--green)':'var(--red)';
-      return `<div class="pr${me?' me':''}"><span class="nm" data-sym="${x.sym}">${x.sym}</span>`+
-        `<span class="bar"><i style="background:${col};opacity:.85;left:0;width:${wp}%"></i></span>`+
-        `<span class="pc" style="color:${col}">${CP.pcTxt(x.r)}</span></div>`;
-    }).join('');
-  box.querySelectorAll('.nm').forEach(el=>el.onclick=()=>location.href='co-phieu.html?sym='+el.dataset.sym);
+  const all=[...CP.coins.values()].filter(x=>x.sector===C.sector)
+    .sort((a,b)=>(b.mcapLive||b.mcap||0)-(a.mcapLive||a.mcap||0));
+  $('peerT').textContent=`Doanh nghiệp cùng ngành: ${C.sector||'—'} (${all.length} mã)`;
+  if(!all.length){ box.innerHTML='<div class="subnote">Chưa đủ dữ liệu ngành.</div>'; return; }
+  const meIdx=all.findIndex(x=>x.sym===C.sym);
+  const show=all.slice(0,15);
+  if(meIdx>=15) show.push(all[meIdx]);
+  box.innerHTML=show.map(x=>{
+    const me=x.sym===C.sym, rank=all.indexOf(x)+1;
+    const logo=x.img?`<img src="${CP.esc(x.img)}" loading="lazy" onerror="this.outerHTML='<span class=noimg>${x.sym.slice(0,2)}</span>'">`
+                    :`<span class="noimg">${x.sym.slice(0,2)}</span>`;
+    return `<div class="peer${me?' me':''}" data-sym="${x.sym}">
+      <span style="width:24px;text-align:right;color:var(--muted);font-size:12px">${rank}</span>
+      ${logo}
+      <div class="id"><div class="s">${x.sym}${me?' · đang xem':''}</div><div class="n">${CP.esc(x.name)}</div></div>
+      <div class="px"><div class="p">${CP.fmtD(x.price)} đ</div>
+        <div class="c" style="color:${CP.col1d(x)}">${CP.pcTxt(x.chg1d)}</div></div>
+      <div class="mc">${CP.fmtVnd(x.mcapLive||x.mcap)}<small>vốn hoá</small></div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.peer').forEach(el=>el.onclick=()=>{
+    if(el.dataset.sym!==C.sym) location.href='co-phieu.html?sym='+el.dataset.sym; });
 }
 function renderDiv(d){
   const box=$('divT');
@@ -447,7 +474,7 @@ function drawFinChart(rows){
   const padT=10,padB=20, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
   g.font='10px system-ui'; g.textBaseline='middle';
   for(let i=0;i<=3;i++){ const v=mn+(mx-mn)*i/3, yy=y(v);
-    g.strokeStyle='rgba(255,255,255,.06)'; g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
+    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
     if(i>0){ g.fillStyle='#71717f'; g.textAlign='left';
       g.fillText(Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':Math.round(v),3,yy); } }
   g.textBaseline='alphabetic';
@@ -457,7 +484,7 @@ function drawFinChart(rows){
   for(let i=0;i<n;i++){ const r=show[i],cx=i*cw+cw/2;
     if(r.rev!=null) bar(cx-bw-2,r.rev,'#5b6b7a');
     if(r.np!=null)  bar(cx+2,r.np,r.np>=0?'#16c784':'#ea3943'); }
-  g.strokeStyle='rgba(255,255,255,.25)'; g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
+  g.strokeStyle=ZEROC(); g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
   const nmv=show.map(r=>r.nm).filter(v=>v!=null);
   if(nmv.length>=2){
     const nmn=Math.min(...nmv,0),nmx=Math.max(...nmv,1);
@@ -544,11 +571,15 @@ document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#finP button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); finPeriod=b.dataset.v; renderFin();
 });
-document.querySelectorAll('#peerTf button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#peerTf button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); peerK=b.dataset.v; renderPeers();
-});
 window.addEventListener('resize',()=>{ drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]); });
+const thmBtn=$('thm');
+function applyThmIcon(){ thmBtn.textContent=isLight()?'☀️':'🌙'; }
+thmBtn.onclick=()=>{ const l=!isLight();
+  document.documentElement.dataset.theme=l?'light':'';
+  localStorage.setItem('cpvn_theme',l?'light':'');
+  applyThmIcon(); drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]);
+};
+applyThmIcon();
 
 (async function init(){
   if(!SYM){ location.href='banggia.html'; return; }

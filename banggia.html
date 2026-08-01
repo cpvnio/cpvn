@@ -9,11 +9,21 @@
 <meta property="og:title" content="CPVN — Bảng giá cổ phiếu Việt Nam" />
 <meta property="og:description" content="Xếp hạng toàn bộ cổ phiếu Việt Nam theo vốn hoá — giá, biến động, khối ngoại, sparkline." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8.6' fill='%2316c784'/%3E%3Ccircle cx='13.2' cy='12.9' r='2.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='7' r='5' fill='%23eab308'/%3E%3Ccircle cx='5.6' cy='5.5' r='1.5' fill='%23fff' opacity='.38'/%3E%3Ccircle cx='25' cy='7' r='5.4' fill='%23ea3943'/%3E%3Ccircle cx='23.4' cy='5.4' r='1.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='25' r='4.6' fill='%2338bdf8'/%3E%3Ccircle cx='5.8' cy='23.6' r='1.4' fill='%23fff' opacity='.4'/%3E%3Ccircle cx='25' cy='25' r='5' fill='%23c026d3'/%3E%3Ccircle cx='23.5' cy='23.4' r='1.5' fill='%23fff' opacity='.33'/%3E%3C/svg%3E" />
+<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
 <style>
   :root{
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
     --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
     --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
+    --hdr1:#111114; --hdr2:#0d0d10; --thead:#0e0e12; --sticky:#0b0b0e;
+    --rowline:rgba(255,255,255,.05); --rowhover:rgba(255,255,255,.035);
+  }
+  html[data-theme="light"]{
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef2; --line:#dde1e8;
+    --txt:#16181d; --muted:#66707f;
+    --green:#0b9b61; --red:#dc3644; --yellow:#a16207; --purple:#9333ea; --cyan:#0369a1;
+    --hdr1:#ffffff; --hdr2:#f0f2f5; --thead:#f0f2f5; --sticky:#fafbfc;
+    --rowline:rgba(0,0,0,.06); --rowhover:rgba(0,0,0,.045);
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--txt);
@@ -21,8 +31,10 @@
   a{color:inherit;text-decoration:none}
 
   header{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:wrap;
-    border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);
+    border-bottom:1px solid var(--line);background:linear-gradient(var(--hdr1),var(--hdr2));
     position:sticky;top:0;z-index:20}
+  .thmbtn{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:9px;
+    padding:8px 11px;font-size:15px;cursor:pointer}
   .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
   .brand .mark{width:30px;height:30px;flex-shrink:0;
     filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
@@ -37,7 +49,7 @@
 
   /* hàng thống kê tổng quan */
   #stats{display:flex;gap:16px;align-items:center;padding:7px 16px;font-size:13px;
-    border-bottom:1px solid var(--line);background:#0d0d11;overflow-x:auto;white-space:nowrap}
+    border-bottom:1px solid var(--line);background:var(--hdr2);overflow-x:auto;white-space:nowrap}
   .st{display:flex;gap:6px;align-items:baseline;flex-shrink:0}
   .st .nm{color:var(--muted);font-weight:700}
   .st .val{font-weight:800}
@@ -58,14 +70,14 @@
   /* bảng xếp hạng */
   #wrap{overflow-x:auto;padding:0 8px 10px}
   table{border-collapse:collapse;width:100%;min-width:780px;font-size:13.5px}
-  thead th{position:sticky;top:0;background:#0e0e12;color:var(--muted);font-size:12px;
+  thead th{position:sticky;top:0;background:var(--thead);color:var(--muted);font-size:12px;
     font-weight:700;text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);
     cursor:pointer;user-select:none;white-space:nowrap;z-index:5}
   thead th:hover{color:var(--txt)}
   thead th.sorted{color:#ffd60a}
-  tbody td{padding:8px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.045);white-space:nowrap}
+  tbody td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--rowline);white-space:nowrap}
   tbody tr{cursor:pointer}
-  tbody tr:hover{background:rgba(255,255,255,.035)}
+  tbody tr:hover{background:var(--rowhover)}
   th.l,td.l{text-align:left}
   td.rank{color:var(--muted);font-size:12px;width:38px}
   td.star{width:30px;font-size:15px;color:#3f3f4a;cursor:pointer;text-align:center}
@@ -104,8 +116,8 @@
     input.search{width:100%;order:9}
     table{min-width:940px;font-size:12.5px}
     /* ghim cột hạng + mã khi cuộn ngang (kiểu bảng coin mobile) */
-    th:nth-child(1),td:nth-child(1){position:sticky;left:0;background:#0b0b0e;z-index:6}
-    th:nth-child(3),td:nth-child(3){position:sticky;left:38px;background:#0b0b0e;z-index:6}
+    th:nth-child(1),td:nth-child(1){position:sticky;left:0;background:var(--sticky);z-index:6}
+    th:nth-child(3),td:nth-child(3){position:sticky;left:38px;background:var(--sticky);z-index:6}
     td:nth-child(2),th:nth-child(2){display:none}   /* ẩn cột sao cho gọn */
     .co .nm{max-width:120px}
   }
@@ -126,6 +138,7 @@
   </nav>
   <div class="spacer"></div>
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
+  <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
 <div id="stats"></div>
@@ -322,6 +335,17 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
   if(ST.sort===k) ST.dir*=-1; else { ST.sort=k; ST.dir=(k==='sym')?1:-1; }
   ST.page=1; render();
 });
+
+/* giao diện sáng/tối — lưu lựa chọn, dùng chung cho các trang CPVN */
+const thmBtn=$('thm');
+function applyThmIcon(){ thmBtn.textContent=document.documentElement.dataset.theme==='light'?'☀️':'🌙'; }
+thmBtn.onclick=()=>{
+  const light=document.documentElement.dataset.theme!=='light';
+  document.documentElement.dataset.theme=light?'light':'';
+  localStorage.setItem('cpvn_theme',light?'light':'');
+  applyThmIcon();
+};
+applyThmIcon();
 
 (async function init(){
   await CP.loadBase();
