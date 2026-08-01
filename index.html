@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>CPVN — Thông tin chứng khoán Việt Nam</title>
+<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
 <meta name="description" content="Toàn cảnh chứng khoán Việt Nam dạng bong bóng: HOSE + HNX real-time, biến động theo ngày/tuần/tháng/năm, vốn hoá, KQKD, báo cáo phân tích CTCK và tin tức theo mã." />
 <meta name="theme-color" content="#0a0a0c" />
 <meta name="author" content="CPVN.io" />
@@ -21,6 +22,17 @@
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
     --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
     --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
+    --hdr1:#111114; --hdr2:#0d0d10; --bar:#0d0d11; --side:#0c0c0f;
+    --panelT:rgba(19,19,24,.97); --panelT2:rgba(19,19,24,.98);
+    --statusbg:rgba(20,20,26,.85); --legendbg:rgba(20,20,26,.7); --canvasfaint:rgba(255,255,255,.03);
+  }
+  html[data-theme="light"]{
+    --bg:#eef0f3; --panel:#ffffff; --panel2:#e7eaef; --line:#d9dee6;
+    --txt:#16181d; --muted:#66707f;
+    --green:#0b9b61; --red:#dc3644; --yellow:#a16207; --purple:#9333ea; --cyan:#0369a1;
+    --hdr1:#ffffff; --hdr2:#f0f2f5; --bar:#f0f2f5; --side:#f7f8fa;
+    --panelT:rgba(255,255,255,.97); --panelT2:rgba(255,255,255,.98);
+    --statusbg:rgba(255,255,255,.92); --legendbg:rgba(255,255,255,.85); --canvasfaint:rgba(0,0,0,.04);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
@@ -29,13 +41,14 @@
 
   /* thanh công cụ trên cùng — cỡ vừa (đã tinh chỉnh theo người dùng) */
   header{display:flex;align-items:center;gap:10px;padding:9px 15px;flex-wrap:wrap;
-    border-bottom:1px solid var(--line);background:linear-gradient(#111114,#0d0d10);z-index:5}
+    border-bottom:1px solid var(--line);background:linear-gradient(var(--hdr1),var(--hdr2));z-index:5}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
     font-size:23px}
   .brand .mark{width:32px;height:32px;flex-shrink:0;
     filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
   .brand b{color:#ffd60a}
   .spacer{flex:1}
+  .brk{flex-basis:100%;height:0}
 
   /* 2 tab điều hướng trang: Bong bóng | Bảng giá */
   .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
@@ -63,7 +76,7 @@
 
   /* dải chỉ số */
   #idxbar{display:flex;gap:14px;align-items:center;padding:5px 14px;font-size:12.5px;
-    border-bottom:1px solid var(--line);background:#0d0d11;overflow-x:auto;white-space:nowrap;z-index:4}
+    border-bottom:1px solid var(--line);background:var(--bar);overflow-x:auto;white-space:nowrap;z-index:4}
   .idx{display:flex;gap:7px;align-items:baseline;flex-shrink:0}
   .idxsep{width:1px;height:15px;background:var(--line);flex-shrink:0;align-self:center}
   .idx.fng .nm{color:#c9a86a}
@@ -73,7 +86,7 @@
 
   /* dải TÊN NGÀNH đang chọn — chỉ hiện trên mobile, ngay dưới dải chỉ số */
   #secBar{display:none;align-items:center;gap:8px;padding:6px 12px;font-size:13px;
-    border-bottom:1px solid var(--line);background:#0d0d11;z-index:4}
+    border-bottom:1px solid var(--line);background:var(--bar);z-index:4}
   #secBar .sn{font-weight:800;color:#ff9db0}
   #secBar .sc{color:var(--muted);font-size:12px}
   #secBar .sx{margin-left:auto;color:var(--muted);font-weight:700;padding:1px 9px;
@@ -85,9 +98,9 @@
   canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 
   /* cột ngành dọc bên trái */
-  #sectorbar{width:212px;flex-shrink:0;background:#0c0c0f;border-right:1px solid var(--line);
+  #sectorbar{width:212px;flex-shrink:0;background:var(--side);border-right:1px solid var(--line);
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
-  #sectorbar .sbhead{position:sticky;top:0;background:#0c0c0f;padding:8px 12px 6px;font-size:11px;
+  #sectorbar .sbhead{position:sticky;top:0;background:var(--side);padding:8px 12px 6px;font-size:11px;
     font-weight:800;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);z-index:1}
   #sectorList .si{display:flex;justify-content:space-between;align-items:center;gap:6px;
     padding:6px 12px;font-size:12px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03)}
@@ -106,12 +119,12 @@
     #sbBackdrop.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:55}
   }
   #status{position:absolute;top:10px;left:50%;transform:translateX(-50%);
-    background:rgba(20,20,26,.85);border:1px solid var(--line);border-radius:20px;
+    background:var(--statusbg);border:1px solid var(--line);border-radius:20px;
     padding:6px 14px;font-size:12px;color:var(--muted);pointer-events:none;transition:opacity .4s;z-index:4}
 
   /* panel chi tiết */
   #detail{position:absolute;right:12px;top:12px;width:520px;max-width:calc(100vw - 24px);
-    max-height:calc(100% - 24px);overflow-y:auto;background:rgba(19,19,24,.97);
+    max-height:calc(100% - 24px);overflow-y:auto;background:var(--panelT);
     border:1px solid var(--line);border-radius:14px;padding:14px;backdrop-filter:blur(8px);
     box-shadow:0 12px 40px rgba(0,0,0,.55);display:none;z-index:6}
   #detail::-webkit-scrollbar{width:8px} #detail::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
@@ -126,7 +139,7 @@
   #detail a.btn{display:block;margin-top:10px;text-align:center;background:var(--accent);color:#fff;
     text-decoration:none;font-weight:700;padding:8px;border-radius:9px;font-size:13px}
   #detail .close{position:sticky;top:0;float:right;cursor:pointer;color:var(--muted);font-size:19px;line-height:1;z-index:2}
-  #detail canvas{width:100%;display:block;border-radius:8px;background:rgba(255,255,255,.03)}
+  #detail canvas{width:100%;display:block;border-radius:8px;background:var(--canvasfaint)}
   #detCandle{height:150px} #detFin{height:110px}
   .sect{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 6px;
     font-size:12.5px;font-weight:800;color:var(--txt)}
@@ -145,7 +158,7 @@
   .fintable table{border-collapse:collapse;font-size:11.5px;white-space:nowrap;min-width:100%}
   .fintable th,.fintable td{padding:3px 7px;text-align:right;border-bottom:1px solid var(--line)}
   .fintable th:first-child,.fintable td:first-child{text-align:left;color:var(--muted);position:sticky;left:0;
-    background:rgba(19,19,24,.98)}
+    background:var(--panelT2)}
   .fintable thead th{color:var(--muted);font-weight:700}
   .fintable td.pos{color:var(--green)} .fintable td.neg{color:var(--red)}
   /* bảng dòng tiền: NN ròng / trong nước ròng / tổng KLGD theo phiên·tuần·tháng */
@@ -190,7 +203,7 @@
   #detReports .rp a.rt:hover{color:#fff;text-decoration:underline}
 
   .legend{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);
-    background:rgba(20,20,26,.7);padding:6px 12px;border-radius:20px;border:1px solid var(--line);flex-wrap:wrap;z-index:4}
+    background:var(--legendbg);padding:6px 12px;border-radius:20px;border:1px solid var(--line);flex-wrap:wrap;z-index:4}
   .legend b{color:var(--txt)}
   .sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;vertical-align:-1px}
   @media(max-width:760px){ input.search{width:120px} #detail{width:calc(100vw - 24px)} }
@@ -198,6 +211,7 @@
   /* ---- MOBILE (≤640px): thanh công cụ xếp lại thành các hàng cân đối, cỡ gọn ---- */
   @media(max-width:640px){
     header{gap:6px;row-gap:7px;padding:7px 10px}
+    .brk{display:none}
     .brand{font-size:17px;gap:7px}
     .brand .mark{width:24px;height:24px}
     .tabs a{padding:6px 10px;font-size:12.5px}
@@ -240,6 +254,7 @@
       <a class="on" href="index.html">Bong bóng</a>
       <a href="banggia.html">Bảng giá</a>
     </nav>
+    <div class="spacer"></div>
 
     <div class="group" id="tf">
       <button data-tf="1d" class="active">1D</button>
@@ -251,6 +266,7 @@
       <button data-tf="5y">5Y</button>
     </div>
 
+    <div class="brk"></div>
     <div class="group" id="sizeby">
       <button data-size="signif" class="active">Nổi bật</button>
       <button data-size="mcap">Vốn hoá</button>
@@ -276,9 +292,10 @@
       <option value="0-9999">Tất cả</option>
     </select>
 
+    <div class="spacer"></div>
     <input class="search" id="search" placeholder="Mã / tên…" />
     <button class="toggle" id="shotBtn" title="Chụp hình màn hình bong bóng (có đóng dấu CPVN.IO)">📷</button>
-    <div class="spacer"></div>
+    <button class="toggle" id="thmBtn" title="Giao diện sáng/tối">🌙</button>
   </header>
 
   <div id="idxbar"></div>
@@ -379,6 +396,9 @@ const HIST='https://histdatafeed.vps.com.vn/tradingview/history';
    - data/fin/{SYM}.json  : KQKD quý/năm + cổ tức từng mã
    Thêm ?offline vào URL để ép chạy 100% bằng kho (kiểm tra dự phòng). */
 const OFFLINE=/[?&]offline/.test(location.search);
+const isLight=()=>document.documentElement.dataset.theme==='light';
+const GRIDC=()=>isLight()?'rgba(0,0,0,.09)':'rgba(255,255,255,.07)';
+const ZEROC=()=>isLight()?'rgba(0,0,0,.3)':'rgba(255,255,255,.25)';
 
 const state={ tf:'1d', sizeBy:'signif', floor:'all', sector:'all', cluster:false,
   range:[0,100], search:'', coins:new Map(), vn30:new Set(), hnx30:new Set(), sectors:[],
@@ -609,13 +629,21 @@ class Bubble{
     glow.addColorStop(1,`hsla(${h},${s}%,${l}%,0)`);
     g.fillStyle=glow; g.fillRect(0,0,size,size);
 
-    // 2) RUỘT bong bóng: TRONG/TỐI ở giữa, màu dồn dần ra viền (như bóng xà phòng)
+    // 2) RUỘT bong bóng: theo nền — tối cho theme tối, trắng sữa cho theme sáng
     const body=g.createRadialGradient(cx,cy,r*0.1,cx,cy,r);
-    body.addColorStop(0,   `hsla(${h},${s}%,14%,0.22)`);   // giữa: tối, gần trong suốt -> nền lộ qua
-    body.addColorStop(0.55,`hsla(${h},${s}%,18%,0.30)`);
-    body.addColorStop(0.82,`hsla(${h},${s}%,${l-10}%,0.46)`);
-    body.addColorStop(0.96,`hsla(${h},${s}%,${l}%,0.72)`); // sát mép: lên màu
-    body.addColorStop(1,   `hsla(${h},${s}%,${l+4}%,0.85)`);
+    if(isLight()){
+      body.addColorStop(0,   `hsla(${h},${s}%,99%,0.6)`);
+      body.addColorStop(0.55,`hsla(${h},${s}%,96%,0.65)`);
+      body.addColorStop(0.82,`hsla(${h},${s}%,${Math.min(92,l+26)}%,0.78)`);
+      body.addColorStop(0.96,`hsla(${h},${s}%,${l}%,0.85)`);
+      body.addColorStop(1,   `hsla(${h},${s}%,${Math.max(28,l-8)}%,0.92)`);
+    }else{
+      body.addColorStop(0,   `hsla(${h},${s}%,14%,0.22)`);   // giữa: tối, gần trong suốt -> nền lộ qua
+      body.addColorStop(0.55,`hsla(${h},${s}%,18%,0.30)`);
+      body.addColorStop(0.82,`hsla(${h},${s}%,${l-10}%,0.46)`);
+      body.addColorStop(0.96,`hsla(${h},${s}%,${l}%,0.72)`); // sát mép: lên màu
+      body.addColorStop(1,   `hsla(${h},${s}%,${l+4}%,0.85)`);
+    }
     disc(); g.fillStyle=body; g.fill();
 
     // 3) VIỀN sáng (vòng hào quang) + glow
@@ -648,8 +676,10 @@ class Bubble{
       try{ g.drawImage(this.img, lx-dw/2, ly-dh/2, dw, dh); }catch(e){}
       g.restore();
     }
-    // 7) chữ: mã + %
-    g.textAlign='center'; g.fillStyle='#fff'; g.shadowColor='rgba(0,0,0,.7)'; g.shadowBlur=3;
+    // 7) chữ: mã + % — trắng trên nền tối, than chì trên nền sáng
+    g.textAlign='center';
+    g.fillStyle=isLight()?'#14161b':'#fff';
+    g.shadowColor=isLight()?'rgba(255,255,255,.85)':'rgba(0,0,0,.7)'; g.shadowBlur=3;
     if(r>26){
       g.font=`800 ${Math.max(9,r*0.34)}px system-ui`; g.textBaseline='alphabetic';
       g.fillText(this.c.sym, cx, cy+(this.img?r*0.3:r*0.05));
@@ -834,12 +864,12 @@ function drawClusterLabels(){
     t.minY=Math.min(t.minY,b.y-b.r); t.sum+=changeOf(b.c); t.n++;
     tops.set(b.c.sector,t);
   }
-  ctx.textAlign='center'; ctx.shadowColor='rgba(0,0,0,.8)'; ctx.shadowBlur=4;
+  ctx.textAlign='center'; ctx.shadowColor=isLight()?'rgba(255,255,255,.9)':'rgba(0,0,0,.8)'; ctx.shadowBlur=4;
   for(const [sec,t] of tops){
     const a=clusterAnchors.get(sec); if(!a) continue;
     const avg=t.sum/t.n;
     const y=Math.max(16,t.minY-8);
-    ctx.font='800 12px system-ui'; ctx.fillStyle='#d6d6de';
+    ctx.font='800 12px system-ui'; ctx.fillStyle=isLight()?'#3a4050':'#d6d6de';
     ctx.fillText(sec, a.x, y-13);
     ctx.font='700 11px system-ui';
     ctx.fillStyle=avg>=0?'#16c784':'#ea3943';
@@ -1207,7 +1237,7 @@ function drawCandles(){
   const GRID=4;
   for(let i=0;i<=GRID;i++){
     const v=mn+(mx-mn)*i/GRID, yy=y(v);
-    g.strokeStyle='rgba(255,255,255,.07)'; g.lineWidth=1;
+    g.strokeStyle=GRIDC(); g.lineWidth=1;
     g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
     g.fillStyle='#8a8a99'; g.textAlign='left';
     g.fillText(axisPrice(v), plotW+4, yy);
@@ -1332,7 +1362,7 @@ function drawFin(rows){
   g.font='9px system-ui'; g.textBaseline='middle';
   for(let i=0;i<=3;i++){
     const v=mn+(mx-mn)*i/3, yy=y(v);
-    g.strokeStyle='rgba(255,255,255,.06)'; g.lineWidth=1;
+    g.strokeStyle=GRIDC(); g.lineWidth=1;
     g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
     if(i>0){ g.fillStyle='#71717f'; g.textAlign='left'; g.fillText(fmtAx(v), 3, yy); }
   }
@@ -1351,7 +1381,7 @@ function drawFin(rows){
     if(r.np!=null)  bar(cx+1.5,    r.np,  r.np>=0?'#16c784':'#ea3943');
   }
   // trục 0
-  g.strokeStyle='rgba(255,255,255,.25)'; g.lineWidth=1;
+  g.strokeStyle=ZEROC(); g.lineWidth=1;
   g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
   // đường BIÊN LỢI NHUẬN RÒNG % (thang riêng, màu lơ), chấm đúng tâm cột bảng
   const nmv=show.map(r=>r.nm).filter(v=>v!=null);
@@ -1509,23 +1539,25 @@ async function snapshot(){
     const st=$('status'); st.style.opacity=0; clearTimeout(setStatus._t);   // đừng để pill trạng thái lọt vào ảnh
     const node=document.getElementById('app');
     const c=await html2canvas(node,{
-      backgroundColor:'#0a0a0c', useCORS:true, logging:false, scale:Math.min(2,DPR||1),
+      backgroundColor:isLight()?'#eef0f3':'#0a0a0c', useCORS:true, logging:false, scale:Math.min(2,DPR||1),
     });
     const g=c.getContext('2d');
     g.setTransform(1,0,0,1,0,0);               // html2canvas để lại transform trong context -> reset
     const k=c.width/node.clientWidth;          // tỉ lệ pixel thật của ảnh
     const W2=c.width, H2=c.height;
     // đóng dấu CPVN.IO gần cuối ảnh
-    g.textAlign='center'; g.shadowColor='rgba(0,0,0,.85)'; g.shadowBlur=5*k;
-    g.font=`800 ${30*k}px system-ui`; g.fillStyle='rgba(255,255,255,.95)';
+    const wm=isLight()?'rgba(23,26,33,.92)':'rgba(255,255,255,.95)';
+    const wm2=isLight()?'rgba(23,26,33,.6)':'rgba(255,255,255,.6)';
+    g.textAlign='center'; g.shadowColor=isLight()?'rgba(255,255,255,.8)':'rgba(0,0,0,.85)'; g.shadowBlur=5*k;
+    g.font=`800 ${30*k}px system-ui`; g.fillStyle=wm;
     g.fillText('CPVN.IO', W2/2, H2-22*k);
-    g.font=`600 ${11*k}px system-ui`; g.fillStyle='rgba(255,255,255,.6)';
+    g.font=`600 ${11*k}px system-ui`; g.fillStyle=wm2;
     g.fillText('Thông tin chứng khoán Việt Nam', W2/2, H2-7*k);
     g.shadowBlur=0;
     const vn=new Date().toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour12:false,
       day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
     // ghi thời điểm chụp nhỏ ở góc phải dưới
-    g.textAlign='right'; g.font=`600 ${10*k}px system-ui`; g.fillStyle='rgba(255,255,255,.45)';
+    g.textAlign='right'; g.font=`600 ${10*k}px system-ui`; g.fillStyle=isLight()?'rgba(23,26,33,.5)':'rgba(255,255,255,.45)';
     g.fillText(vn, W2-10*k, H2-8*k);
     c.toBlob(b=>{
       if(!b){ setStatus('Không chụp được hình'); return; }
@@ -1541,6 +1573,19 @@ async function snapshot(){
   }catch(e){ setStatus('Không chụp được hình: '+e.message); }
 }
 $('shotBtn').onclick=snapshot;
+
+/* ---------- GIAO DIỆN SÁNG/TỐI (đồng bộ mọi trang qua localStorage) -------- */
+function applyThm(){ $('thmBtn').textContent=isLight()?'☀️':'🌙'; }
+$('thmBtn').onclick=()=>{
+  const l=!isLight();
+  document.documentElement.dataset.theme=l?'light':'';
+  localStorage.setItem('cpvn_theme',l?'light':'');
+  applyThm();
+  for(const b of bubbles) b.spriteR=-1;      // dựng lại toàn bộ bong bóng theo nền mới
+  if(detailSym){ drawCandles();
+    const cc=finCache.get(detailSym+'|'+finPeriod); if(cc&&cc.rows) drawFin(cc.rows); }
+};
+applyThm();
 
 /* ---------- UI BINDINGS --------------------------------------------------- */
 function bindGroup(id,attr,fn){
