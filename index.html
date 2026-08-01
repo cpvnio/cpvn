@@ -62,8 +62,31 @@
   .idx .val{font-weight:800}
   .idx .chg{font-weight:700;font-size:12px}
 
-  main{position:relative;flex:1;overflow:hidden}
+  #body{display:flex;flex:1;min-height:0}
+  main{position:relative;flex:1;overflow:hidden;min-width:0}
   canvas#cv{display:block;width:100%;height:100%;touch-action:none}
+
+  /* cột ngành dọc bên trái */
+  #sectorbar{width:172px;flex-shrink:0;background:#0c0c0f;border-right:1px solid var(--line);
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  #sectorbar .sbhead{position:sticky;top:0;background:#0c0c0f;padding:8px 12px 6px;font-size:11px;
+    font-weight:800;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);z-index:1}
+  #sectorList .si{display:flex;justify-content:space-between;align-items:center;gap:6px;
+    padding:6px 12px;font-size:12px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap;overflow:hidden}
+  #sectorList .si:hover{background:var(--panel2)}
+  #sectorList .si.active{background:var(--accent);color:#fff;font-weight:700}
+  #sectorList .si .n{overflow:hidden;text-overflow:ellipsis}
+  #sectorList .si .c{color:var(--muted);font-size:10.5px;flex-shrink:0}
+  #sectorList .si.active .c{color:rgba(255,255,255,.8)}
+  #sbBackdrop{display:none}
+  button.toggle#sectorToggle{display:none}
+  @media(max-width:640px){
+    button.toggle#sectorToggle{display:inline-block}
+    #sectorbar{position:fixed;left:0;top:0;bottom:0;z-index:60;width:78%;max-width:300px;
+      transform:translateX(-100%);transition:transform .22s ease;box-shadow:6px 0 24px rgba(0,0,0,.5)}
+    #sectorbar.open{transform:translateX(0)}
+    #sbBackdrop.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:55}
+  }
   #status{position:absolute;top:10px;left:50%;transform:translateX(-50%);
     background:rgba(20,20,26,.85);border:1px solid var(--line);border-radius:20px;
     padding:6px 14px;font-size:12px;color:var(--muted);pointer-events:none;transition:opacity .4s;z-index:4}
@@ -112,6 +135,12 @@
   .flowtbl thead th{color:var(--muted);font-weight:700}
   .flowtbl td.pos{color:var(--green);font-weight:600} .flowtbl td.neg{color:var(--red);font-weight:600}
   .flowtbl td.pend{color:var(--muted)}
+  .divtbl{margin:4px 0 2px;overflow-x:auto}
+  .divtbl table{border-collapse:collapse;font-size:11.5px;width:100%}
+  .divtbl th,.divtbl td{padding:3px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  .divtbl th:first-child,.divtbl td:first-child{text-align:left}
+  .divtbl thead th{color:var(--muted);font-weight:700}
+  .divtbl td{color:var(--txt);font-weight:600}
 
   /* so sánh ngành */
   #detPeers .pr{display:flex;align-items:center;gap:7px;font-size:12px;padding:2.5px 0}
@@ -167,16 +196,15 @@
     </div>
 
     <select id="floor">
-      <option value="all" selected>HOSE + HNX</option>
+      <option value="all" selected>Tất cả sàn</option>
       <option value="HOSE">HOSE</option>
       <option value="HNX">HNX</option>
+      <option value="UPCOM">UPCOM</option>
       <option value="VN30">VN30</option>
       <option value="HNX30">HNX30</option>
     </select>
 
-    <select id="sector"><option value="all" selected>Tất cả ngành</option></select>
-
-    <button class="toggle" id="clusterBtn" title="Gom bong bóng thành cụm theo nhóm ngành">Cụm ngành</button>
+    <button class="toggle" id="sectorToggle" title="Chọn ngành">☰ Ngành</button>
 
     <select id="range">
       <option value="0-100" selected>Top 1 – 100</option>
@@ -194,6 +222,12 @@
 
   <div id="idxbar"></div>
 
+  <div id="body">
+    <aside id="sectorbar">
+      <div class="sbhead">Ngành</div>
+      <div id="sectorList"></div>
+    </aside>
+    <div id="sbBackdrop"></div>
   <main>
     <canvas id="cv"></canvas>
     <div id="status">Đang tải universe…</div>
@@ -228,13 +262,11 @@
         <div class="row"><span>KLGD · GTGD</span><span id="detVolGt"></span></div>
         <div class="row"><span>Vốn hoá · SLCP</span><span id="detMcap"></span></div>
         <div class="row"><span>P/E · P/B</span><span id="detPePb"></span></div>
-        <div class="row"><span>EPS · GT sổ sách</span><span id="detEps"></span></div>
-        <div class="row"><span>ROE · ROA</span><span id="detRoe"></span></div>
-        <div class="row"><span>Nợ/VCSH · Nợ/Tài sản</span><span id="detDebt"></span></div>
-        <div class="row"><span>Cổ tức · Room tự do</span><span id="detDiv"></span></div>
-        <div class="row"><span>Beta · EV/EBITDA</span><span id="detBeta"></span></div>
         <div class="row"><span>NN ròng (tuần · tháng)</span><span id="detNN"></span></div>
       </div>
+
+      <div class="sect" style="margin-top:9px"><span>Cổ tức tiền mặt các năm</span></div>
+      <div class="divtbl" id="detDiv"></div>
 
       <div class="sect"><span>Kết quả kinh doanh</span>
         <span class="chips" id="finPeriod">
@@ -267,6 +299,7 @@
       <a class="btn" id="detLink" target="_blank" rel="noopener">Xem trên Simplize ↗</a>
     </div>
   </main>
+  </div>
 </div>
 
 <script>
@@ -288,27 +321,64 @@ const state={ tf:'1d', sizeBy:'signif', floor:'all', sector:'all', cluster:false
   range:[0,100], search:'', coins:new Map(), vn30:new Set(), hnx30:new Set(), sectors:[] };
 
 /* ---------- UNIVERSE ------------------------------------------------------ */
+/* Gộp ngành cho gọn: (1) hợp nhất các nhánh bán lẻ; (2) ngành <4 mã dồn về nhóm cha
+   (bcEconomicSectorName) để bớt phân mảnh/ngành 1 mã. Vẫn giữ chi tiết cho nhóm đủ lớn. */
+const SECTOR_EXPLICIT={
+  // bán lẻ (3 nhánh -> 1)
+  'Bán lẻ chuyên dụng':'Bán lẻ','Bán lẻ thực phẩm và thuốc':'Bán lẻ','Bán lẻ tổng hợp':'Bán lẻ',
+  // y tế & dược
+  'Dược phẩm':'Dược phẩm & Y tế','Dịch vụ chăm sóc sức khỏe':'Dược phẩm & Y tế','Thiết bị vật tư Y tế':'Dược phẩm & Y tế',
+  // công nghệ & điện tử
+  'Phần mềm và dịch vụ CNTT':'Công nghệ & Điện tử','Chất bán dẫn & Thiết bị bán dẫn':'Công nghệ & Điện tử',
+  'Thiết bị & Phụ tùng điện tử':'Công nghệ & Điện tử','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Điện tử',
+  'Thiết bị văn phòng':'Công nghệ & Điện tử',
+  // viễn thông & truyền thông
+  'Dịch vụ Viễn thông':'Viễn thông & Truyền thông','Truyền thông & Mạng':'Viễn thông & Truyền thông',
+  'Truyền thông và Xuất bản':'Viễn thông & Truyền thông',
+};
+function consolidateSectors(){
+  for(const c of state.coins.values()){
+    c.sector=SECTOR_EXPLICIT[c.sector]||c.sector||'Khác';
+  }
+  const cnt={}; for(const c of state.coins.values()) cnt[c.sector]=(cnt[c.sector]||0)+1;
+  for(const c of state.coins.values()) if(cnt[c.sector]<4) c.sector='Khác';  // ngành quá nhỏ -> gom "Khác"
+}
 async function loadUniverse(){
   const u=await fetch('universe.json').then(r=>r.json());
   for(const s of u.stocks){
     state.coins.set(s.sym,{
       sym:s.sym, ex:s.ex, name:s.name, shares:s.shares||null, mcap:s.mcap||null,
       sector:s.sector||'Khác', img:s.img||null, pe:s.pe??null, pb:s.pb??null,
-      anc:s.anc||null,
+      anc:s.anc||null, pct:s.pct||null, divY:s.divY??null, parent:s.parent||null,
       price:0, ref:0, ceil:0, flr:0, chg1d:0, vol:0, gtgd:0, traded:false,
       high:0, low:0, fbuy:0, fsell:0, mcapLive:s.mcap||null,
     });
   }
   state.vn30=new Set(u.vn30||[]); state.hnx30=new Set(u.hnx30||[]);
-  const secCount={};
-  for(const c of state.coins.values()) secCount[c.sector]=(secCount[c.sector]||0)+1;
-  state.sectors=Object.keys(secCount).sort((a,b)=>secCount[b]-secCount[a]);
-  const sel=document.getElementById('sector');
-  for(const s of state.sectors){
-    const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);
-  }
+  consolidateSectors();
+  buildSectorBar();
   setStatus(`${state.coins.size} mã HOSE+HNX · mốc lịch sử ${u.ancDate||u.generated}`);
 }
+/* ---------- CỘT NGÀNH bên trái ------------------------------------------- */
+function buildSectorBar(){
+  const cnt={}; for(const c of state.coins.values()) cnt[c.sector]=(cnt[c.sector]||0)+1;
+  state.sectors=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+  const list=document.getElementById('sectorList'); list.innerHTML='';
+  const mk=(val,label,count)=>{
+    const d=document.createElement('div');
+    d.className='si'+(state.sector===val?' active':''); d.dataset.sec=val;
+    d.innerHTML=`<span class="n">${label}</span><span class="c">${count}</span>`;
+    d.onclick=()=>{ state.sector=val; markSectorActive(); rebuild(); closeSectorBar(); };
+    return d;
+  };
+  list.appendChild(mk('all','Tất cả ngành', state.coins.size));
+  for(const s of state.sectors) list.appendChild(mk(s,s,cnt[s]));
+}
+function markSectorActive(){
+  document.querySelectorAll('#sectorList .si').forEach(d=>d.classList.toggle('active', d.dataset.sec===state.sector));
+}
+function openSectorBar(){ document.getElementById('sectorbar').classList.add('open'); document.getElementById('sbBackdrop').classList.add('open'); }
+function closeSectorBar(){ document.getElementById('sectorbar').classList.remove('open'); document.getElementById('sbBackdrop').classList.remove('open'); }
 
 /* ---------- BẢNG GIÁ VPS -------------------------------------------------- */
 let chunks=[], lastPollAt=0, polling=false;
@@ -365,13 +435,17 @@ function periodReturn(c,key){
 }
 function changeOf(c){
   if(state.tf==='1d') return c.chg1d||0;
+  // 1W/1M/1Y/5Y: dùng % ĐÃ ĐIỀU CHỈNH cổ tức/chia tách (Simplize) -> chính xác
+  const P=c.pct, m={'1w':'w','1m':'m','1y':'y','5y':'y5'}[state.tf];
+  if(P&&m&&P[m]!=null) return P[m];
+  // 3M/6M (và fallback khi thiếu pct): tính từ mốc giá VPS
   return periodReturn(c,TFK[state.tf])??0;
 }
 
 /* ---------- CHỌN MÃ HIỂN THỊ ---------------------------------------------- */
 function baseList(){
   let list=[...state.coins.values()];
-  if(state.floor==='HOSE'||state.floor==='HNX') list=list.filter(c=>c.ex===state.floor);
+  if(state.floor==='HOSE'||state.floor==='HNX'||state.floor==='UPCOM') list=list.filter(c=>c.ex===state.floor);
   else if(state.floor==='VN30') list=list.filter(c=>state.vn30.has(c.sym));
   else if(state.floor==='HNX30') list=list.filter(c=>state.hnx30.has(c.sym));
   if(state.sector!=='all') list=list.filter(c=>c.sector===state.sector);
@@ -384,8 +458,8 @@ function selectCoins(){
     return list.filter(c=>c.sym.includes(q)||c.name.toUpperCase().includes(q))
                .sort((a,b)=>(b.mcapLive||0)-(a.mcapLive||0)).slice(0,120);
   }
-  const active=list.filter(c=>c.traded);
-  if(active.length>Math.min(50,list.length*0.3)) list=active;
+  // CHỈ hiện bong bóng cho mã CÓ giao dịch (KLGD>0). Chưa poll xong thì tạm hiện tất cả.
+  if(lastPollAt>0) list=list.filter(c=>c.traded);
   list.sort((a,b)=>(b.mcapLive||0)-(a.mcapLive||0)||b.gtgd-a.gtgd);
   return list.slice(state.range[0],state.range[1]);
 }
@@ -463,12 +537,16 @@ class Bubble{
       disc(); g.save(); g.clip(); g.fillStyle=hl; g.fillRect(0,0,size,size); g.restore();
     }
 
-    // 6) logo
+    // 6) logo — vùng tròn, GIỮ TỈ LỆ ảnh (contain) để không méo
     if(this.img&&r>15){
-      const sz=r*0.8; g.save();
-      g.beginPath(); g.arc(cx,cy-r*0.3,sz*0.4,0,7); g.closePath(); g.clip();
-      g.fillStyle='#fff'; g.fillRect(cx-sz*0.4,cy-r*0.3-sz*0.4,sz*0.8,sz*0.8);
-      try{ g.drawImage(this.img,cx-sz*0.4,cy-r*0.3-sz*0.4,sz*0.8,sz*0.8);}catch(e){}
+      const R=r*0.4, lx=cx, ly=cy-r*0.3;   // tâm + bán kính vùng logo
+      g.save();
+      g.beginPath(); g.arc(lx,ly,R,0,7); g.closePath(); g.clip();
+      g.fillStyle='#fff'; g.fillRect(lx-R,ly-R,R*2,R*2);
+      const iw=this.img.naturalWidth||this.img.width||1, ih=this.img.naturalHeight||this.img.height||1;
+      const box=R*1.86, sc=Math.min(box/iw, box/ih);   // fit trọn vào ô, không kéo giãn
+      const dw=iw*sc, dh=ih*sc;
+      try{ g.drawImage(this.img, lx-dw/2, ly-dh/2, dw, dh); }catch(e){}
       g.restore();
     }
     // 7) chữ: mã + %
@@ -539,21 +617,24 @@ function computeRadii(){
   if(!bubbles.length) return;
   /* DIỆN TÍCH tỉ lệ thuận với giá_trị^p — bóng gấp đôi GTGD thì to gần gấp đôi thật sự.
      p<1 chỉ để nén bớt độ lệch cực đại; KHÔNG chuẩn hoá min-max nữa. */
-  const p={signif:0.5, mcap:0.6}[state.sizeBy]||0.6;
+  // Khi TÌM KIẾM: cỡ theo vốn hoá (mọi kết quả hiện rõ, kể cả mã không giao dịch)
+  const searching=!!state.search;
+  const p= searching?0.6 : ({signif:0.5, mcap:0.6}[state.sizeBy]||0.6);
   // "Nổi bật" = |biến động| × GTGD / tổng GTGD ngày -> cần tổng GTGD của các bóng đang hiện
-  let totalGtgd=0; if(state.sizeBy!=='mcap') for(const b of bubbles) totalGtgd+=(b.c.gtgd||0);
+  let totalGtgd=0; if(!searching&&state.sizeBy!=='mcap') for(const b of bubbles) totalGtgd+=(b.c.gtgd||0);
   let sum=0; const val=new Map();
   for(const b of bubbles){
     let v;
-    if(state.sizeBy==='mcap') v=b.c.mcapLive||0;
+    if(searching)             v=(b.c.mcapLive||b.c.mcap||5e9);   // vốn hoá; mã không có mcap -> cỡ nền
+    else if(state.sizeBy==='mcap') v=b.c.mcapLive||0;
     else {  // vừa biến động mạnh, vừa chiếm tỉ trọng dòng tiền lớn -> bóng to
       const share = totalGtgd>0 ? (b.c.gtgd||0)/totalGtgd : 0;
       v = Math.abs(changeOf(b.c)) * share;
     }
     v=Math.pow(Math.max(0,v),p); val.set(b,v); sum+=v;
   }
-  const budget=W*H*0.36, k=sum>0?budget/sum:0;
-  const rMax=Math.min(W,H)*0.18, rMin=5;
+  const budget=W*H*0.50, k=sum>0?budget/sum:0;   // lấp ~50% màn -> bong bóng trải rộng
+  const rMax=Math.min(W,H)*0.19, rMin=6;
   for(const b of bubbles){
     const r=Math.sqrt((val.get(b)||0)*k/Math.PI);
     b.tr=Math.max(rMin,Math.min(rMax,r||rMin));
@@ -564,15 +645,15 @@ let simTime=0;
 function step(dt){
   simTime+=dt;
   const cx=W/2, cy=H/2, damp=Math.pow(0.002,dt);
-  const gK=state.cluster?3.2:1.5;      // cụm ngành cần hút mạnh hơn để nhóm gọn
+  const gK=state.cluster?3.2:1.1;      // hút tâm nhẹ khi xem chung -> bong bóng dàn rộng ra
   for(const b of bubbles){
     b.r += (b.tr-b.r)*Math.min(1,dt*5);
     const a=state.cluster&&clusterAnchors.get(b.c.sector);
     const tx=a?a.x:cx, ty=a?a.y:cy;
     b.vx += (tx-b.x)*gK*dt;
     b.vy += (ty-b.y)*gK*dt;
-    b.vx += Math.cos(b.wp1+simTime*b.wf1)*30*dt;
-    b.vy += Math.sin(b.wp2+simTime*b.wf2)*30*dt;
+    b.vx += Math.cos(b.wp1+simTime*b.wf1)*36*dt;
+    b.vy += Math.sin(b.wp2+simTime*b.wf2)*36*dt;
     const px=b.x-pointer.x, py=b.y-pointer.y, pd2=px*px+py*py;
     if(pd2<28900&&!pointer.down){ const d=Math.sqrt(pd2)||1, f=(170-d)/170*900*dt; b.vx+=px/d*f; b.vy+=py/d*f; }
   }
@@ -758,22 +839,23 @@ async function loadFlow(sym){
   if(!SRC.flow) return;
   try{ const d=await SRC.flow(sym); if(d){ flowSeries[sym]=d; if(sym===detailSym) renderFlow(state.coins.get(sym)); } }catch(e){}
 }
-const fundCache={};    // {sym: {eps,book,roe,roa,ev,div,ff,beta,de,da}}
+const divCache={};    // {sym: [{year, cash}...]} — cổ tức tiền mặt theo năm
 async function loadFund(sym){
-  renderFund(sym);
-  if(fundCache[sym]) return;
-  if(!SRC.fund) return;
-  try{ const f=await SRC.fund(sym); fundCache[sym]=f; if(sym===detailSym) renderFund(sym); }catch(e){}
+  renderDiv(sym);
+  if(divCache[sym]!==undefined) return;
+  if(!SRC.div) return;
+  try{ const d=await SRC.div(sym); divCache[sym]=d; if(sym===detailSym) renderDiv(sym); }catch(e){ divCache[sym]=null; }
 }
-function renderFund(sym){
-  const c=state.coins.get(sym), f=fundCache[sym];
-  const p1=v=>v==null||isNaN(v)?'—':(+v).toFixed(1)+'%';
-  const n2=v=>v==null||isNaN(v)?'—':(+v).toFixed(2);
-  $('detEps').textContent  = (f&&f.eps!=null?fmtD(f.eps)+' đ':'—')+' · '+(f&&f.book!=null?fmtD(f.book)+' đ':'—');
-  $('detRoe').textContent  = (f?p1(f.roe):'…')+' · '+(f?p1(f.roa):'…');
-  $('detDebt').textContent = (f?p1(f.de):'…')+' · '+(f?p1(f.da):'…');
-  $('detDiv').textContent  = (f?p1(f.div):'…')+' · '+(f?p1(f.ff):'…');
-  $('detBeta').textContent = (f?n2(f.beta):'…')+' · '+(f&&f.ev!=null?n2(f.ev):'—');
+function renderDiv(sym){
+  const box=$('detDiv'); if(!box) return;
+  const d=divCache[sym];
+  if(d===undefined){ box.innerHTML='<div class="subnote">đang tải cổ tức…</div>'; return; }
+  if(!d||!d.length){ box.innerHTML='<div class="subnote">Chưa có dữ liệu cổ tức.</div>'; return; }
+  const rows=d.slice(0,6);   // 6 năm gần nhất (mới -> cũ)
+  box.innerHTML='<table><thead><tr><th></th>'+rows.map(r=>`<th>${r.year}</th>`).join('')+'</tr></thead><tbody>'+
+    '<tr><td style="color:var(--muted)">đ/CP</td>'+rows.map(r=>`<td>${r.cash!=null?fmtD(r.cash):'—'}</td>`).join('')+'</tr>'+
+    '<tr><td style="color:var(--muted)">Tỉ suất</td>'+rows.map(r=>`<td>${r.yield!=null?(+r.yield).toFixed(1)+'%':'—'}</td>`).join('')+'</tr>'+
+    '</tbody></table>';
 }
 // cộng dồn n phiên gần nhất -> NN ròng (mua-bán khối ngoại)
 function flowSum(series,n){ let fb=0,fs=0; for(const r of series.slice(-n)){ fb+=r.fBuy; fs+=r.fSell; } return fb-fs; }
@@ -806,7 +888,7 @@ function showDetail(c){
   loadFlow(c.sym);
   loadFund(c.sym);
   clearInterval(newsTimer);
-  newsTimer=setInterval(()=>{ if(detailSym) renderNews(detailSym,false); },1800000);  // tin: 30 phút/lần
+  newsTimer=setInterval(()=>{ if(detailSym) renderNews(detailSym,false); },300000);  // tin: làm mới 5 phút/lần
 }
 function setChips(id,v){
   document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle('active',b.dataset.v===v));
@@ -931,6 +1013,26 @@ function drawCandles(){
 }
 
 /* ---- KQKD: doanh thu / giá vốn / LNST theo quý & năm ---- */
+/* lịch sử giá dài (≈9 năm) để tính VỐN HOÁ cuối mỗi kỳ = SLCP × giá đóng cửa kỳ đó */
+const finHistCache={};
+async function loadFinHist(sym){
+  if(finHistCache[sym]) return finHistCache[sym];
+  const to=Math.floor(Date.now()/1e3), from=to-3400*86400;
+  try{
+    const j=await fetch(`${HIST}?symbol=${sym}&resolution=1D&from=${from}&to=${to}`).then(r=>r.json());
+    finHistCache[sym]=(j.s==='ok'&&j.c&&j.c.length)
+      ? {t:j.t, c:j.c.map(x=>x*(j.c[j.c.length-1]<500?1000:1))} : {t:[],c:[]};
+  }catch(e){ finHistCache[sym]={t:[],c:[]}; }
+  return finHistCache[sym];
+}
+function periodEndTs(label){                       // "Q2/26" -> 30/6/2026 ; "2025" -> 31/12/2025
+  const mq=/^Q(\d)\/(\d{2})$/.exec(label);
+  const y=mq?2000+ +mq[2]:+label, m=mq?(+mq[1])*3:12;
+  return Math.floor(new Date(y,m,0).getTime()/1000);
+}
+function closeAtTs(h,ts){ if(!h||!h.t.length)return null; let v=null;
+  for(let i=0;i<h.t.length;i++){ if(h.t[i]<=ts) v=h.c[i]; else break; } return v; }
+
 async function renderProfit(sym){
   const note=$('detFinNote');
   let cached=finCache.get(sym+'|'+finPeriod);
@@ -944,6 +1046,13 @@ async function renderProfit(sym){
   if(!cached||!cached.rows.length){ drawFin(null); $('detFinTable').innerHTML='';
     note.textContent='Không lấy được KQKD cho mã này.'; return; }
   drawFin(cached.rows); renderFinTable(cached.rows);
+  // vốn hoá cuối mỗi kỳ = SLCP × giá đóng cửa kỳ đó (để đối chiếu với lợi nhuận)
+  const hist=await loadFinHist(sym); if(sym!==detailSym) return;
+  const co=state.coins.get(sym);
+  if(co&&co.shares&&hist.t.length){
+    cached.rows.forEach(r=>{ const px=closeAtTs(hist,periodEndTs(r.label)); r._mcap=px?px*co.shares/1e9:null; });
+    renderFinTable(cached.rows);
+  }
   const r=cached.rows, last=r[r.length-1], back=finPeriod==='Q'?4:1, prev=r[r.length-1-back];
   let yoy='';
   if(prev&&prev.np){ const gv=(last.np/prev.np-1)*100; yoy=` · LNST ${gv>=0?'+':''}${gv.toFixed(1)}% so cùng kỳ`; }
@@ -980,20 +1089,30 @@ function renderFinTable(rows){
   const line=(lb,key,sign)=>`<tr><td>${lb}</td>`+show.map(r=>{
     const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+`</tr>`;
   const pct=(lb,key)=>`<tr><td>${lb}</td>`+show.map(r=>`<td>${r[key]==null?'—':r[key].toFixed(1)+'%'}</td>`).join('')+`</tr>`;
+  const hasMcap=show.some(r=>r._mcap!=null);
+  const mcapLine=hasMcap?`<tr><td>Vốn hoá</td>`+show.map(r=>`<td>${r._mcap!=null?cell(r._mcap):'—'}</td>`).join('')+`</tr>`:'';
   $('detFinTable').innerHTML=
     `<table><thead><tr><th>Tỷ đồng</th>${show.map(r=>`<th>${r.label}</th>`).join('')}</tr></thead><tbody>`+
     line('Doanh thu','rev')+line('Giá vốn','cogs')+line('LN gộp','gross')+
-    line('LN sau thuế','np',true)+pct('Biên LN ròng','nm')+`</tbody></table>`;
+    line('LN sau thuế','np',true)+pct('Biên LN ròng','nm')+mcapLine+`</tbody></table>`;
 }
 
+/* % theo khung cho 1 mã bất kỳ (peerKey='w1'|'m1'|'m3'|'m6'|'y1'|'y5'): ưu tiên pct điều chỉnh */
+function peerReturn(c,akey){
+  const pm={w1:'w',m1:'m',y1:'y',y5:'y5'}[akey];
+  if(pm&&c.pct&&c.pct[pm]!=null) return c.pct[pm];
+  const a=c.anc&&c.anc[akey];
+  if(a&&c.price) return (c.price/a-1)*100;
+  return null;
+}
 /* ---- SO SÁNH CÙNG NGÀNH (từ mốc đã cào — tức thời, không cần fetch) ---- */
 function renderPeers(){
   const c=state.coins.get(detailSym); if(!c) return;
   const box=$('detPeers');
   $('detPeerTitle').textContent='So với ngành: '+c.sector;
   const peers=[...state.coins.values()]
-    .filter(x=>x.sector===c.sector&&x.price>0&&x.anc&&x.anc[peerKey])
-    .map(x=>({sym:x.sym, r:periodReturn(x,peerKey)}))
+    .filter(x=>x.sector===c.sector)
+    .map(x=>({sym:x.sym, r:peerReturn(x,peerKey)}))
     .filter(x=>x.r!=null)
     .sort((a,b)=>b.r-a.r);
   if(!peers.length){ box.innerHTML='<div class="subnote">Chưa đủ dữ liệu.</div>'; return; }
@@ -1020,7 +1139,7 @@ async function renderNews(sym,showLoading){
   const box=$('detNews');
   if(showLoading) box.innerHTML='<div class="subnote">Đang tải tin…</div>';
   const cached=newsCache.get(sym);
-  if(cached&&Date.now()-cached.at<1800000){ paintNews(cached.items); return; }  // cache tin 30 phút
+  if(cached&&Date.now()-cached.at<300000){ paintNews(cached.items); return; }  // cache tin 5 phút
   const items=await loadNews(sym);
   if(sym!==detailSym) return;
   if(items){ newsCache.set(sym,{at:Date.now(),items}); paintNews(items); }
@@ -1103,10 +1222,8 @@ bindGroup('tf','tf',v=>{ state.tf=v; $('lgTf').textContent=v.toUpperCase(); rebu
 bindGroup('sizeby','size',v=>{ state.sizeBy=v;
   $('lgSize').textContent=v==='mcap'?'Vốn hoá':'Biến động × GTGD'; });
 $('floor').onchange=e=>{ state.floor=e.target.value; rebuild(); };
-$('sector').onchange=e=>{ state.sector=e.target.value; rebuild(); };
-$('clusterBtn').onclick=()=>{ state.cluster=!state.cluster;
-  $('clusterBtn').classList.toggle('active',state.cluster);
-  computeClusters(); warmup(200); };
+$('sectorToggle').onclick=openSectorBar;
+$('sbBackdrop').onclick=closeSectorBar;
 $('range').onchange=e=>{ const [a,b]=e.target.value.split('-').map(Number); state.range=[a,b]; rebuild(); };
 $('search').oninput=e=>{ state.search=e.target.value.trim(); rebuild(); };
 
@@ -1138,9 +1255,12 @@ function wireSources(){
   //     isa3 doanh thu thuần · isa4 giá vốn · isa5 LN gộp · isa16 LNTT · isa20 LNST
   SRC.fin=async(sym)=>{
     const parse=(d)=>{
-      const H=d.headers||[], row=k=>{ const r=(d.rows||[]).find(x=>x.key===k); return r?r.values:[]; };
-      const rev=row('isa3'), cogs=row('isa4'), gross=row('isa5'), pretax=row('isa16'),
-            np=row('isa20'), gm=row('gross_profit_margin'), nm=row('net_profit_margin');
+      const H=d.headers||[];
+      // key khác nhau theo loại hình: thường / ngân hàng (total_*, isa22) / bảo hiểm (isi*)
+      const row=(...keys)=>{ for(const k of keys){ const r=(d.rows||[]).find(x=>x.key===k); if(r) return r.values; } return []; };
+      const rev=row('total_revenue','isa3','isi64'), cogs=row('total_cost','isa4'),
+            gross=row('isa5','isi87'), pretax=row('isa16'),
+            np=row('isa22','isa20'), gm=row('gross_profit_margin'), nm=row('net_profit_margin');
       const out=[];
       for(let i=0;i<H.length;i++){
         const h=H[i];
@@ -1188,20 +1308,11 @@ function wireSources(){
   };
 
   // (6) CHỈ SỐ CƠ BẢN — Simplize summary (EPS/ROE/ROA/cổ tức/room/beta/sổ sách) + 24hMoney cân đối (tỉ lệ nợ)
-  SRC.fund=async(sym)=>{
-    const [s,bs]=await Promise.all([
-      fetch(`https://api2.simplize.vn/api/company/summary/${sym}`).then(r=>r.json()).then(j=>j.data).catch(()=>null),
-      fetch(`https://api-finance-t19.24hmoney.vn/v1/web/company/financial-report?symbol=${sym}&view=1&period=1&expanded=false`).then(r=>r.json()).then(j=>j.data).catch(()=>null),
-    ]);
-    const o={};
-    if(s){ o.eps=s.epsRatio; o.book=s.bookValue; o.roe=s.roe; o.roa=s.roa;
-      o.ev=s.evEbitdaRatio; o.div=s.dividendYieldCurrent; o.ff=s.freeFloatRate; o.beta=s.beta5y; }
-    if(bs&&bs.rows){ const val=k=>{ const r=bs.rows.find(x=>x.key===k); return r&&r.values&&r.values[0]; };
-      const assets=val('bsa53'), liab=val('bsa54'), equity=val('bsa78');
-      if(liab&&equity) o.de=liab/equity*100;   // Nợ/VCSH (%)
-      if(liab&&assets) o.da=liab/assets*100;   // Nợ/Tổng tài sản (%)
-    }
-    return o;
+  // (6) CỔ TỨC TIỀN MẶT theo năm — Simplize (CORS *, không token)
+  SRC.div=async(sym)=>{
+    const j=await fetch(`https://api.simplize.vn/api/company/dividend/histories/${sym}`).then(r=>r.json());
+    return (j.data||[]).map(x=>({year:x.year, cash:x.total, yield:x.dividendYield}))
+      .filter(x=>x.cash!=null).sort((a,b)=>(+b.year)-(+a.year));   // mới nhất trước
   };
 }
 /* mở bài báo gốc: gọi detail lấy sourceUrl rồi mở tab (list không có link) */
