@@ -1,0 +1,32 @@
+name: CPVN daily EOD refresh
+
+on:
+  schedule:
+    - cron: "15 8 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Cap nhat EOD
+        run: |
+          if [ "$(date -u +%u)" = "1" ]; then
+            python refresh_daily.py --full
+          else
+            python refresh_daily.py
+          fi
+      - name: Commit du lieu moi
+        run: |
+          git config user.name  "cpvn-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add universe.json data/
+          git commit -m "EOD $(TZ=Asia/Ho_Chi_Minh date +%F)" || echo "khong co thay doi"
+          git push
