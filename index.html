@@ -917,9 +917,11 @@ function fearGreed(){
   const col=score<25?'#ea3943':score<45?'#f0932b':score<55?'#eab308':score<75?'#7ac74f':'#16c784';
   return {score,lab,col};
 }
+let lastIdxData=null;   // giữ lại chỉ số mới nhất cho ảnh chụp màn hình
 async function refreshIdxBar(){
   let [data,mkt]=await Promise.all([loadIndices(), loadMarket()]);
   if(!data||!data.length) data=state.savedIdx||[];   // VPS lỗi -> chỉ số từ snapshot đã lưu
+  lastIdxData={data,mkt};
   const bar=$('idxbar'); bar.style.display='flex';
   const idx=(name,val,chg)=>`<span class="idx"><span class="nm">${name}</span><span class="val">${val}</span>`+
     (chg!=null?`<span class="chg" style="color:${pcCol(chg)}">${pcTxt(chg)}</span>`:'')+`</span>`;
@@ -1421,39 +1423,80 @@ function closeDetail(){ $('detail').style.display='none'; detailSym=null; candle
   clearInterval(newsTimer); newsTimer=null; }
 $('detClose').onclick=closeDetail;
 
-/* ---------- CHỤP HÌNH (đóng dấu CPVN.IO gần cuối ảnh) --------------------- */
+/* ---------- CHỤP HÌNH TOÀN CẢNH ------------------------------------------- */
+/* Ảnh tự dựng đủ ngữ cảnh: thương hiệu + NGÀNH/SÀN/KHUNG đang chọn + dải chỉ số
+   + toàn bộ bong bóng + đóng dấu CPVN.IO gần cuối — nhìn ảnh là biết đang xem gì. */
 function snapshot(){
   try{
+    const HEAD=96;                                      // chiều cao dải thông tin đầu ảnh
+    const k=DPR, w=cv.width/k, h=cv.height/k;
     const s=document.createElement('canvas');
-    s.width=cv.width; s.height=cv.height;               // giữ nguyên độ phân giải (đã nhân DPR)
-    const g=s.getContext('2d'), k=DPR, w=cv.width/k, h=cv.height/k;
+    s.width=Math.round(w*k); s.height=Math.round((h+HEAD)*k);
+    const g=s.getContext('2d');
     g.setTransform(k,0,0,k,0,0);
-    g.fillStyle='#0a0a0c'; g.fillRect(0,0,w,h);
-    g.drawImage(cv,0,0,w,h);
-    // nhãn góc trên trái: khung thời gian + thời điểm chụp
+    g.fillStyle='#0a0a0c'; g.fillRect(0,0,w,h+HEAD);
+    // ---- dải đầu ----
+    g.fillStyle='#101014'; g.fillRect(0,0,w,HEAD);
+    g.strokeStyle='#2a2a33'; g.lineWidth=1;
+    g.beginPath(); g.moveTo(0,HEAD-.5); g.lineTo(w,HEAD-.5); g.stroke();
+    // thương hiệu
+    g.beginPath(); g.arc(24,26,10,0,7); g.fillStyle='#e11d48'; g.fill();
+    g.font='800 11px system-ui'; g.textAlign='center'; g.fillStyle='#ffd60a'; g.fillText('★',24,30);
+    g.textAlign='left'; g.font='800 18px system-ui';
+    g.fillStyle='#ffd60a'; g.fillText('CPVN',42,32);
+    g.fillStyle='#e9e9ef'; g.fillText('Bubbles',42+g.measureText('CPVN ').width,32);
+    // thời điểm chụp (góc phải)
     const vn=new Date().toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour12:false,
       day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    g.font='700 13px system-ui'; g.textAlign='left'; g.textBaseline='alphabetic';
-    g.shadowColor='rgba(0,0,0,.8)'; g.shadowBlur=4;
-    g.fillStyle='rgba(255,255,255,.9)';
-    g.fillText(`Khung ${state.tf.toUpperCase()} · ${vn}`, 12, 22);
-    // ĐÓNG DẤU CPVN.IO gần cuối hình
-    g.textAlign='center';
-    g.font='800 30px system-ui';
-    g.fillStyle='rgba(255,255,255,.95)';
-    g.fillText('CPVN.IO', w/2, h-20);
+    g.font='600 11.5px system-ui'; g.textAlign='right'; g.fillStyle='#8a8a99';
+    g.fillText(vn,w-14,30);
+    // TIÊU ĐỀ NGỮ CẢNH: ngành / sàn / khung / số mã (hoặc từ khoá tìm kiếm)
+    const secName=state.sector==='all'?'Tất cả ngành':('Ngành: '+state.sector);
+    const floorName={all:'Tất cả sàn',HOSE:'HOSE',HNX:'HNX',UPCOM:'UPCOM',VN30:'VN30',HNX30:'HNX30'}[state.floor]||state.floor;
+    const rangeOpt=document.querySelector('#range option:checked');
+    const rangeLb=rangeOpt&&state.range[1]<9000?' · '+rangeOpt.textContent.trim():'';
+    const title=state.search
+      ? `Tìm kiếm: “${state.search}” · ${bubbles.length} mã`
+      : `${secName} · ${floorName}${rangeLb} · Khung ${state.tf.toUpperCase()} · ${bubbles.length} mã`;
+    g.textAlign='left'; g.fillStyle='#fff';
+    let fs=17; g.font=`800 ${fs}px system-ui`;
+    while(fs>11&&g.measureText(title).width>w-28){ fs--; g.font=`800 ${fs}px system-ui`; }
+    g.fillText(title,14,58);
+    // dải chỉ số (VNINDEX/VN30/HNX/UPCOM + BTC nếu có)
+    let x=14; const yI=80;
+    const seg=(txt,col,font)=>{ g.font=font; g.fillStyle=col; g.fillText(txt,x,yI); x+=g.measureText(txt).width; };
+    const cchg=v=>v>0.005?'#16c784':v<-0.005?'#ea3943':'#eab308';
+    for(const d of (lastIdxData&&lastIdxData.data)||[]){
+      if(x>w-170) break;
+      seg(d.name+' ','#8a8a99','700 11.5px system-ui');
+      seg(d.value.toLocaleString('en-US',{maximumFractionDigits:2})+' ','#e9e9ef','800 11.5px system-ui');
+      seg(pcTxt(d.chg)+'   ',cchg(d.chg),'700 11.5px system-ui');
+    }
+    const mkt=lastIdxData&&lastIdxData.mkt;
+    if(mkt&&mkt.btc&&x<w-150){
+      seg('BTC ','#8a8a99','700 11.5px system-ui');
+      seg('$'+mkt.btc.usd.toLocaleString('en-US',{maximumFractionDigits:0})+' ','#e9e9ef','800 11.5px system-ui');
+      seg(pcTxt(mkt.btc.chg),cchg(mkt.btc.chg),'700 11.5px system-ui');
+    }
+    // ---- bong bóng ----
+    g.drawImage(cv,0,0,cv.width,cv.height,0,HEAD,w,h);
+    // ---- đóng dấu CPVN.IO gần cuối ----
+    g.textAlign='center'; g.shadowColor='rgba(0,0,0,.8)'; g.shadowBlur=5;
+    g.font='800 30px system-ui'; g.fillStyle='rgba(255,255,255,.95)';
+    g.fillText('CPVN.IO',w/2,h+HEAD-22);
     g.font='600 11px system-ui'; g.fillStyle='rgba(255,255,255,.55)';
-    g.fillText('Thông tin chứng khoán Việt Nam', w/2, h-6);
+    g.fillText('Thông tin chứng khoán Việt Nam',w/2,h+HEAD-7);
     g.shadowBlur=0;
     s.toBlob(b=>{
       if(!b){ setStatus('Không chụp được hình'); return; }
       const a=document.createElement('a');
       a.href=URL.createObjectURL(b);
       const t=vn.replace(/[/:]/g,'-').replace(/[,\s]+/g,'_');
-      a.download=`CPVN_${state.tf}_${t}.png`;
+      const sec=state.sector==='all'?'':state.sector.replace(/\s+/g,'-')+'_';
+      a.download=`CPVN_${sec}${state.tf}_${t}.png`;
       a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-      setStatus('Đã lưu ảnh chụp 📷');
+      setStatus('Đã lưu ảnh chụp toàn cảnh 📷');
     },'image/png');
   }catch(e){ setStatus('Không chụp được hình: '+e.message); }
 }
