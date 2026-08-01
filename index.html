@@ -57,7 +57,9 @@
   /* dải chỉ số */
   #idxbar{display:flex;gap:14px;align-items:center;padding:5px 14px;font-size:12.5px;
     border-bottom:1px solid var(--line);background:#0d0d11;overflow-x:auto;white-space:nowrap;z-index:4}
-  .idx{display:flex;gap:7px;align-items:baseline}
+  .idx{display:flex;gap:7px;align-items:baseline;flex-shrink:0}
+  .idxsep{width:1px;height:15px;background:var(--line);flex-shrink:0;align-self:center}
+  .idx.fng .nm{color:#c9a86a}
   .idx .nm{color:var(--muted);font-weight:700}
   .idx .val{font-weight:800}
   .idx .chg{font-weight:700;font-size:12px}
@@ -231,16 +233,6 @@
   <main>
     <canvas id="cv"></canvas>
     <div id="status">Đang tải universe…</div>
-    <div class="legend">
-      <span>Kích thước = <b id="lgSize">Biến động × GTGD</b> (diện tích tỉ lệ thuận)</span>
-      <span>Màu (<b id="lgTf">1D</b>):
-        <span class="sw" style="background:var(--green)"></span>tăng
-        <span class="sw" style="background:var(--red)"></span>giảm
-        <span class="sw" style="background:var(--yellow)"></span>TC
-        <span class="sw" style="background:var(--purple)"></span>trần
-        <span class="sw" style="background:var(--cyan)"></span>sàn
-      </span>
-    </div>
 
     <div id="detail">
       <span class="close" id="detClose">×</span>
@@ -815,17 +807,53 @@ async function loadIndices(){
 }
 
 /* ---------- DẢI CHỈ SỐ ---------------------------------------------------- */
+/* Giá VÀNG (SJC, CafeF) + BẠC (gold-api, quy đổi VND) + BITCOIN (Binance) */
+let marketCache=null, marketAt=0;
+async function loadMarket(){
+  if(marketCache && Date.now()-marketAt<90000) return marketCache;
+  const out={};
+  try{ const D=(await fetch('https://cafef.vn/du-lieu/Ajax/ajaxgoldpricehistory.ashx?index=SJC').then(r=>r.json())).Data||{};
+    const sjc=(D.goldPriceWorldHistories||[])[0], w=D.goldPriceWorlds;
+    if(sjc) out.gold={vnd:sjc.sellPrice*1e6, chg:w?w.changePricePercent:null};
+    if(w){ out.goldWorldVND=w.goldPriceWorldVND; out.goldUSD=w.price; }
+  }catch(e){}
+  try{ const x=await fetch('https://api.gold-api.com/price/XAG').then(r=>r.json());
+    out.silver={usd:x.price, vnd:(out.goldWorldVND&&out.goldUSD)? x.price*out.goldWorldVND/out.goldUSD : null};
+  }catch(e){}
+  try{ const b=await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT').then(r=>r.json());
+    out.btc={usd:+b.lastPrice, chg:+b.priceChangePercent};
+  }catch(e){}
+  marketCache=out; marketAt=Date.now(); return out;
+}
+/* Chỉ số THAM LAM & SỢ HÃI — tự tính từ độ rộng thị trường (số mã tăng/giảm/trần/sàn) */
+function fearGreed(){
+  let up=0,down=0,ceil=0,floor=0,n=0;
+  for(const c of state.coins.values()){
+    if(!c.traded) continue; n++;
+    if(c.ceil>0&&c.price>=c.ceil) ceil++; else if(c.flr>0&&c.price<=c.flr) floor++;
+    if(c.chg1d>0.01) up++; else if(c.chg1d<-0.01) down++;
+  }
+  if(n<20) return null;
+  let score=up/Math.max(1,up+down)*100 + (ceil-floor)/Math.max(1,up+down)*60;
+  score=Math.max(0,Math.min(100,Math.round(score)));
+  const lab=score<25?'Sợ hãi tột độ':score<45?'Sợ hãi':score<55?'Trung tính':score<75?'Tham lam':'Tham lam tột độ';
+  const col=score<25?'#ea3943':score<45?'#f0932b':score<55?'#eab308':score<75?'#7ac74f':'#16c784';
+  return {score,lab,col};
+}
 async function refreshIdxBar(){
-  const data=await loadIndices();
-  const bar=$('idxbar');
-  if(!data||!data.length){ bar.style.display='none'; return; }
-  bar.style.display='flex';
-  bar.innerHTML=data.map(d=>{
-    const col=pcCol(d.chg);
-    return `<span class="idx"><span class="nm">${d.name}</span>`+
-      `<span class="val">${d.value.toLocaleString('en-US',{maximumFractionDigits:2})}</span>`+
-      `<span class="chg" style="color:${col}">${pcTxt(d.chg)}</span></span>`;
-  }).join('');
+  const [data,mkt]=await Promise.all([loadIndices(), loadMarket()]);
+  const bar=$('idxbar'); bar.style.display='flex';
+  const idx=(name,val,chg)=>`<span class="idx"><span class="nm">${name}</span><span class="val">${val}</span>`+
+    (chg!=null?`<span class="chg" style="color:${pcCol(chg)}">${pcTxt(chg)}</span>`:'')+`</span>`;
+  let html=(data||[]).map(d=>idx(d.name, d.value.toLocaleString('en-US',{maximumFractionDigits:2}), d.chg)).join('');
+  const tr=v=>v?(v/1e6).toFixed(1)+'tr':null;
+  if(mkt.gold) html+='<span class="idxsep"></span>'+idx('Vàng', tr(mkt.gold.vnd)||'—', mkt.gold.chg);
+  if(mkt.silver&&mkt.silver.vnd) html+=idx('Bạc', tr(mkt.silver.vnd), null);
+  if(mkt.btc) html+=idx('BTC', '$'+mkt.btc.usd.toLocaleString('en-US',{maximumFractionDigits:0}), mkt.btc.chg);
+  const fg=fearGreed();
+  if(fg) html+=`<span class="idxsep"></span><span class="idx fng" title="Tâm lý thị trường: ${fg.lab}"><span class="nm">Tâm lý</span>`+
+    `<span class="val" style="color:${fg.col}">${fg.score}</span><span class="chg" style="color:${fg.col}">${fg.lab}</span></span>`;
+  bar.innerHTML=html;
 }
 setInterval(refreshIdxBar, 30000);
 
@@ -852,10 +880,14 @@ function renderDiv(sym){
   if(d===undefined){ box.innerHTML='<div class="subnote">đang tải cổ tức…</div>'; return; }
   if(!d||!d.length){ box.innerHTML='<div class="subnote">Chưa có dữ liệu cổ tức.</div>'; return; }
   const rows=d.slice(0,6);   // 6 năm gần nhất (mới -> cũ)
+  const hasStock=rows.some(r=>r.stock>0);
+  const stockRow=hasStock?'<tr><td style="color:var(--muted)">Cổ phiếu</td>'+
+    rows.map(r=>`<td>${r.stock>0?r.stock.toFixed(0)+'%':'—'}</td>`).join('')+'</tr>':'';
   box.innerHTML='<table><thead><tr><th></th>'+rows.map(r=>`<th>${r.year}</th>`).join('')+'</tr></thead><tbody>'+
-    '<tr><td style="color:var(--muted)">đ/CP</td>'+rows.map(r=>`<td>${r.cash!=null?fmtD(r.cash):'—'}</td>`).join('')+'</tr>'+
+    '<tr><td style="color:var(--muted)">Tiền (đ/CP)</td>'+rows.map(r=>`<td>${r.cash>0?fmtD(r.cash):'—'}</td>`).join('')+'</tr>'+
+    stockRow+
     '<tr><td style="color:var(--muted)">Tỉ suất</td>'+rows.map(r=>`<td>${r.yield!=null?(+r.yield).toFixed(1)+'%':'—'}</td>`).join('')+'</tr>'+
-    '</tbody></table>';
+    '</tbody></table>'+(hasStock?'<div class="subnote" style="margin-top:3px">Cổ phiếu = tỉ lệ chia thêm CP mỗi năm</div>':'');
 }
 // cộng dồn n phiên gần nhất -> NN ròng (mua-bán khối ngoại)
 function flowSum(series,n){ let fb=0,fs=0; for(const r of series.slice(-n)){ fb+=r.fBuy; fs+=r.fSell; } return fb-fs; }
@@ -1149,10 +1181,11 @@ function paintNews(items){
   const box=$('detNews');
   if(!items.length){ box.innerHTML='<div class="subnote">Chưa có tin cho mã này.</div>'; return; }
   const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  box.innerHTML=items.slice(0,7).map(n=>
-    `<div class="ni"><a href="#" data-slug="${n.slug}">${esc(n.title)}</a>`+
+  box.innerHTML=items.slice(0,8).map((n,i)=>
+    `<div class="ni"><a href="#" data-i="${i}">${esc(n.title)}</a>`+
     `<div class="meta">${esc(n.source)}${n.source&&n.ts?' · ':''}${n.ts?timeAgo(n.ts):''}</div></div>`).join('');
-  box.querySelectorAll('a[data-slug]').forEach(a=>a.onclick=e=>{ e.preventDefault(); openNews(a.dataset.slug); });
+  box.querySelectorAll('a[data-i]').forEach(a=>a.onclick=e=>{ e.preventDefault();
+    const n=items[+a.dataset.i]; if(n.url) window.open(n.url,'_blank','noopener'); else if(n.slug) openNews(n.slug); });
 }
 
 /* ---- BÁO CÁO PHÂN TÍCH của CTCK (Simplize, theo mã) ---- */
@@ -1217,10 +1250,9 @@ function bindGroup(id,attr,fn){
     btn.classList.add('active'); fn(btn.dataset[attr]);
   });
 }
-bindGroup('tf','tf',v=>{ state.tf=v; $('lgTf').textContent=v.toUpperCase(); rebuild();
+bindGroup('tf','tf',v=>{ state.tf=v; rebuild();
   if(detailSym){ const c=state.coins.get(detailSym); if(c) updateDetailNumbers(c,true); } });
-bindGroup('sizeby','size',v=>{ state.sizeBy=v;
-  $('lgSize').textContent=v==='mcap'?'Vốn hoá':'Biến động × GTGD'; });
+bindGroup('sizeby','size',v=>{ state.sizeBy=v; });
 $('floor').onchange=e=>{ state.floor=e.target.value; rebuild(); };
 $('sectorToggle').onclick=openSectorBar;
 $('sbBackdrop').onclick=closeSectorBar;
@@ -1243,12 +1275,23 @@ function wireSources(){
     }).filter(d=>d.value>0);
   };
 
-  // (2) TIN TỨC theo mã — Simplize news-event/list (CORS *, không auth)
+  // (2) TIN TỨC theo mã — GỘP Simplize + VNDirect (link gốc, mới hơn), sắp mới nhất trước
   SRC.news=async(sym)=>{
-    const j=await fetch(`https://api2.simplize.vn/api/company/news-event/list?ticker=${sym}&page=0&size=15`).then(r=>r.json());
-    return (j.data||[]).map(n=>({
-      title:n.title, source:n.sourceNameDisplay||n.sourceName||'', ts:n.ts||0, slug:n.slug,
-    }));
+    const [sim,vnd]=await Promise.all([
+      fetch(`https://api2.simplize.vn/api/company/news-event/list?ticker=${sym}&page=0&size=15`).then(r=>r.json()).catch(()=>null),
+      fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsId,newsDate,newsTime,newsTitle,newsSource,newsUrl`).then(r=>r.json()).catch(()=>null),
+    ]);
+    const items=[];
+    for(const n of (sim&&sim.data)||[])
+      items.push({title:n.title, source:n.sourceNameDisplay||n.sourceName||'', ts:n.ts||0, slug:n.slug, url:null});
+    for(const n of (vnd&&vnd.data)||[]){
+      const ts=Date.parse((n.newsDate||'')+'T'+(n.newsTime||'00:00:00')+'+07:00')||0;
+      items.push({title:n.newsTitle, source:n.newsSource||'', ts, slug:null, url:n.newsUrl});
+    }
+    items.sort((a,b)=>b.ts-a.ts);
+    const seen=new Set(), out=[];   // khử trùng theo tiêu đề
+    for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45); if(!k||seen.has(k))continue; seen.add(k); out.push(it); }
+    return out;
   };
 
   // (3) LỢI NHUẬN quý/năm — 24hMoney financial-report (view=2 KQKD; đơn vị TỶ ĐỒNG)
@@ -1309,10 +1352,24 @@ function wireSources(){
 
   // (6) CHỈ SỐ CƠ BẢN — Simplize summary (EPS/ROE/ROA/cổ tức/room/beta/sổ sách) + 24hMoney cân đối (tỉ lệ nợ)
   // (6) CỔ TỨC TIỀN MẶT theo năm — Simplize (CORS *, không token)
+  // cổ tức: TIỀN MẶT (histories) + CỔ PHIẾU (events/list, parse tỉ lệ trong description)
   SRC.div=async(sym)=>{
-    const j=await fetch(`https://api.simplize.vn/api/company/dividend/histories/${sym}`).then(r=>r.json());
-    return (j.data||[]).map(x=>({year:x.year, cash:x.total, yield:x.dividendYield}))
-      .filter(x=>x.cash!=null).sort((a,b)=>(+b.year)-(+a.year));   // mới nhất trước
+    const [cashJ,evJ]=await Promise.all([
+      fetch(`https://api.simplize.vn/api/company/dividend/histories/${sym}`).then(r=>r.json()).catch(()=>null),
+      fetch(`https://api.simplize.vn/api/company/events/list?ticker=${sym}&type=&page=0&size=200`).then(r=>r.json()).catch(()=>null),
+    ]);
+    const by={};
+    for(const x of (cashJ&&cashJ.data)||[]){
+      const y=+x.year; if(!y) continue;
+      by[y]=by[y]||{year:y,cash:0,stock:0}; by[y].cash=x.total||0; by[y].yield=x.dividendYield;
+    }
+    for(const e of (evJ&&evJ.data)||[]){
+      if(!/cổ phiếu/i.test(e.eventTypeName||'')) continue;          // trả cổ tức/thưởng bằng cổ phiếu
+      const y=+((e.exDividendDate||'').split('/')[2]||0);
+      const rm=/tỷ lệ\s*(\d+)\s*[:/]\s*(\d+)/i.exec(e.description||'');
+      if(y&&rm){ by[y]=by[y]||{year:y,cash:0,stock:0}; by[y].stock+=(+rm[2])/(+rm[1])*100; }
+    }
+    return Object.values(by).sort((a,b)=>b.year-a.year);
   };
 }
 /* mở bài báo gốc: gọi detail lấy sourceUrl rồi mở tab (list không có link) */
