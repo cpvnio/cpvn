@@ -1,10 +1,12 @@
 name: CPVN daily EOD refresh
 
+# 15:15 giờ VN = 08:15 UTC, Thứ 2–6. (Có thể bấm chạy tay ở tab Actions.)
 on:
   schedule:
     - cron: "15 8 * * 1-5"
   workflow_dispatch: {}
 
+# cho phép workflow commit ngược vào repo
 permissions:
   contents: write
 
@@ -12,21 +14,25 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@**v5**
-      - uses: actions/setup-python@**v6**
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - name: Cap nhat EOD
+
+      # Thứ 2 chạy --full (làm mới cả SLCP/ngành/logo/PE/PB); các ngày khác chỉ mốc giá + EOD
+      - name: Cập nhật EOD
         run: |
           if [ "$(date -u +%u)" = "1" ]; then
             python refresh_daily.py --full
           else
             python refresh_daily.py
           fi
-      - name: Commit du lieu moi
+
+      - name: Commit dữ liệu mới
         run: |
           git config user.name  "cpvn-bot"
           git config user.email "bot@users.noreply.github.com"
           git add universe.json data/
-          git commit -m "EOD $(TZ=Asia/Ho_Chi_Minh date +%F)" || echo "khong co thay doi"
+          git commit -m "EOD $(TZ=Asia/Ho_Chi_Minh date +%F)" || echo "không có thay đổi"
           git push
