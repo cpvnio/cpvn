@@ -1,4 +1,3 @@
-# Cloudflare Pages — URL đẹp cho CPVN.IO
-/bang-gia          /bang-gia.html        200
-/co-phieu/:sym     /co-phieu.html?sym=:sym  200
-/co-phieu          /bang-gia.html        302
+# Cloudflare Pages tự phục vụ /bang-gia và /co-phieu (pretty URL cho file .html)
+# Chỉ cần rule cho URL dạng /co-phieu/VNM -> trang chi tiết (client tự đọc mã từ path)
+/co-phieu/:sym   /co-phieu?sym=:sym   200
