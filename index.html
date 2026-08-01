@@ -308,9 +308,17 @@
 
 const BG='https://bgapidatafeed.vps.com.vn';
 const HIST='https://histdatafeed.vps.com.vn/tradingview/history';
+/* KHO DỮ LIỆU trong repo (refresh_daily.py ghi mỗi ngày) — web ưu tiên API sống,
+   tự rơi về kho khi API lỗi; mở trang chỉ tải data/eod/latest.json (~100KB):
+   - data/eod/latest.json : snapshot phiên gần nhất (giá/KLGD/NN/trần-sàn/chỉ số)
+   - data/hist/{SYM}.json : toàn bộ nến ngày OHLCV + NN mua/bán từng mã
+   - data/fin/{SYM}.json  : KQKD quý/năm + cổ tức từng mã
+   Thêm ?offline vào URL để ép chạy 100% bằng kho (kiểm tra dự phòng). */
+const OFFLINE=/[?&]offline/.test(location.search);
 
 const state={ tf:'1d', sizeBy:'signif', floor:'all', sector:'all', cluster:false,
-  range:[0,100], search:'', coins:new Map(), vn30:new Set(), hnx30:new Set(), sectors:[] };
+  range:[0,100], search:'', coins:new Map(), vn30:new Set(), hnx30:new Set(), sectors:[],
+  eodDate:null, eodLoaded:false, savedIdx:null };
 
 /* ---------- UNIVERSE ------------------------------------------------------ */
 /* Gộp ngành cho gọn: (1) hợp nhất các nhánh bán lẻ; (2) ngành <4 mã dồn về nhóm cha
@@ -336,7 +344,7 @@ function consolidateSectors(){
   for(const c of state.coins.values()) if(cnt[c.sector]<4) c.sector='Khác';  // ngành quá nhỏ -> gom "Khác"
 }
 async function loadUniverse(){
-  const u=await fetch('universe.json').then(r=>r.json());
+  const u=await fetch('universe.json',{cache:'no-cache'}).then(r=>r.json());
   for(const s of u.stocks){
     state.coins.set(s.sym,{
       sym:s.sym, ex:s.ex, name:s.name, shares:s.shares||null, mcap:s.mcap||null,
@@ -350,6 +358,27 @@ async function loadUniverse(){
   consolidateSectors();
   buildSectorBar();
   setStatus(`${state.coins.size} mã HOSE+HNX · mốc lịch sử ${u.ancDate||u.generated}`);
+}
+/* ---------- SNAPSHOT ĐÃ LƯU (data/eod/latest.json) ------------------------ */
+/* Vẽ ngay bằng số liệu phiên gần nhất trong kho — web vẫn đầy đủ khi API sập;
+   bảng giá trực tiếp (nếu sống) sẽ đè lên sau. */
+async function loadEOD(){
+  try{
+    const j=await fetch('data/eod/latest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null);
+    if(!j||!j.data) return;
+    state.eodDate=j.date; state.savedIdx=j.indices&&j.indices.length?j.indices:null;
+    for(const r of j.data){
+      const c=state.coins.get(r.sym); if(!c) continue;
+      c.price=r.close||c.price; c.ref=r.ref||0; c.ceil=r.ceil||0; c.flr=r.floor||0;
+      c.vol=r.vol||0; c.gtgd=r.gtgd||0; c.high=r.h||0; c.low=r.l||0;
+      c.fbuy=r.fBuy||0; c.fsell=r.fSell||0;
+      c.traded=(r.vol||0)>0;
+      c.chg1d=c.ref>0?(c.price-c.ref)/c.ref*100:0;
+      c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
+    }
+    state.eodLoaded=true;
+    updateLivePill();
+  }catch(e){}
 }
 /* ---------- CỘT NGÀNH bên trái ------------------------------------------- */
 function buildSectorBar(){
@@ -379,7 +408,7 @@ function buildChunks(){
   for(let i=0;i<syms.length;i+=150) chunks.push(syms.slice(i,i+150).join(','));
 }
 async function pollBoard(){
-  if(polling) return; polling=true;
+  if(polling||OFFLINE) return; polling=true;
   try{
     for(const ch of chunks){
       const arr=await fetch(BG+'/getliststockdata/'+ch).then(r=>r.json());
@@ -399,7 +428,11 @@ async function pollBoard(){
       }
     }
     lastPollAt=Date.now(); updateLivePill();
-  }catch(e){ setStatus('Lỗi bảng giá VPS: '+e.message); }
+  }catch(e){
+    setStatus(state.eodLoaded&&!lastPollAt
+      ?`Bảng giá trực tiếp lỗi — đang dùng số liệu lưu phiên ${state.eodDate||''}`
+      :'Lỗi bảng giá VPS: '+e.message);
+  }
   finally{ polling=false; }
 }
 // Cửa sổ giao dịch: Thứ 2–6, 9:00–15:00 (giờ VN). Trong cửa sổ này làm mới mỗi 5 phút.
@@ -409,7 +442,13 @@ function sessionOpen(){
   return d>=1&&d<=5&&m>=540&&m<900;   // 540=9:00, 900=15:00
 }
 function updateLivePill(){
-  const open=sessionOpen(), el=document.getElementById('live');
+  const el=document.getElementById('live');
+  if(!lastPollAt){        // chưa có bảng giá trực tiếp -> đang chạy bằng kho đã lưu
+    if(state.eodLoaded){ el.classList.add('off');
+      document.getElementById('liveTxt').textContent='Bản lưu · phiên '+(state.eodDate||''); }
+    return;
+  }
+  const open=sessionOpen();
   el.classList.toggle('off',!open);
   const ts=new Date(lastPollAt).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'});
   document.getElementById('liveTxt').textContent=(open?'Đang cập nhật · 5 phút':'Đóng cửa')+' · '+ts;
@@ -450,8 +489,8 @@ function selectCoins(){
     return list.filter(c=>c.sym.includes(q)||c.name.toUpperCase().includes(q))
                .sort((a,b)=>(b.mcapLive||0)-(a.mcapLive||0)).slice(0,120);
   }
-  // CHỈ hiện bong bóng cho mã CÓ giao dịch (KLGD>0). Chưa poll xong thì tạm hiện tất cả.
-  if(lastPollAt>0) list=list.filter(c=>c.traded);
+  // CHỈ hiện bong bóng cho mã CÓ giao dịch (KLGD>0). Chưa có dữ liệu thì tạm hiện tất cả.
+  if(lastPollAt>0||state.eodLoaded) list=list.filter(c=>c.traded);
   list.sort((a,b)=>(b.mcapLive||0)-(a.mcapLive||0)||b.gtgd-a.gtgd);
   return list.slice(state.range[0],state.range[1]);
 }
@@ -797,9 +836,22 @@ async function loadNews(sym){
   if(!SRC.news) return null;
   try{ return await SRC.news(sym); }catch(e){ return null; }
 }
+/* kho KQKD + cổ tức từng mã trong repo — dự phòng khi 24hMoney/Simplize lỗi */
+const finFileCache=new Map();
+async function loadFinFile(sym){
+  if(finFileCache.has(sym)) return finFileCache.get(sym);
+  let d=null;
+  try{
+    const j=await fetch(`data/fin/${sym}.json`).then(r=>r.ok?r.json():null);
+    if(j) d={Y:j.Y||[], Q:j.Q||[], div:j.div||[]};
+  }catch(e){}
+  finFileCache.set(sym,d); return d;
+}
 async function loadProfit(sym){
-  if(!SRC.fin) return null;
-  try{ return await SRC.fin(sym); }catch(e){ return null; }
+  let d=null;
+  if(SRC.fin){ try{ d=await SRC.fin(sym); }catch(e){} }
+  if(d&&((d.Q&&d.Q.length)||(d.Y&&d.Y.length))) return d;
+  return await loadFinFile(sym);       // API lỗi -> kho đã lưu
 }
 async function loadIndices(){
   if(!SRC.idx) return null;
@@ -841,7 +893,8 @@ function fearGreed(){
   return {score,lab,col};
 }
 async function refreshIdxBar(){
-  const [data,mkt]=await Promise.all([loadIndices(), loadMarket()]);
+  let [data,mkt]=await Promise.all([loadIndices(), loadMarket()]);
+  if(!data||!data.length) data=state.savedIdx||[];   // VPS lỗi -> chỉ số từ snapshot đã lưu
   const bar=$('idxbar'); bar.style.display='flex';
   const idx=(name,val,chg)=>`<span class="idx"><span class="nm">${name}</span><span class="val">${val}</span>`+
     (chg!=null?`<span class="chg" style="color:${pcCol(chg)}">${pcTxt(chg)}</span>`:'')+`</span>`;
@@ -864,15 +917,34 @@ const finCache=new Map(), newsCache=new Map();
 const flowSeries={};   // {sym: [{date,fBuy,fSell,vol}...] } — 30 phiên gần nhất (24hMoney)
 async function loadFlow(sym){
   renderFlow(state.coins.get(sym));
-  if(!SRC.flow) return;
-  try{ const d=await SRC.flow(sym); if(d){ flowSeries[sym]=d; if(sym===detailSym) renderFlow(state.coins.get(sym)); } }catch(e){}
+  let d=null;
+  if(SRC.flow){ try{ d=await SRC.flow(sym); }catch(e){} }
+  if(!d||!d.length){                    // 24hMoney lỗi -> NN theo ngày từ kho đã lưu
+    const f=await loadHistFile(sym);
+    if(f&&f.fb){
+      d=[];
+      for(let i=Math.max(0,f.t.length-30);i<f.t.length;i++)
+        if(f.fb[i]||f.fs[i]) d.push({date:f.t[i], fBuy:f.fb[i]||0, fSell:f.fs[i]||0, vol:f.v[i]||0});
+      if(!d.length) d=null;
+    }
+  }
+  if(d){ flowSeries[sym]=d; if(sym===detailSym) renderFlow(state.coins.get(sym)); }
+  else if(sym===detailSym&&!flowSeries[sym]){
+    const el=$('detNN'); if(el) el.innerHTML='<span style="color:var(--muted)">—</span>';
+  }
 }
 const divCache={};    // {sym: [{year, cash}...]} — cổ tức tiền mặt theo năm
 async function loadFund(sym){
   renderDiv(sym);
   if(divCache[sym]!==undefined) return;
-  if(!SRC.div) return;
-  try{ const d=await SRC.div(sym); divCache[sym]=d; if(sym===detailSym) renderDiv(sym); }catch(e){ divCache[sym]=null; }
+  let d=null;
+  if(SRC.div){ try{ d=await SRC.div(sym); }catch(e){} }
+  if(!d||!d.length){                    // Simplize lỗi -> cổ tức từ kho đã lưu
+    const f=await loadFinFile(sym);
+    if(f&&f.div&&f.div.length) d=f.div;
+  }
+  divCache[sym]=d&&d.length?d:null;
+  if(sym===detailSym) renderDiv(sym);
 }
 function renderDiv(sym){
   const box=$('detDiv'); if(!box) return;
@@ -953,33 +1025,58 @@ const CANDLE_CFG={
   '1y':{res:'1D', span:400*86400,  agg:5},
   '5y':{res:'1D', span:2000*86400, agg:21},
 };
-async function loadCandles(sym){
-  candles=null; drawCandles();
-  const cfg=CANDLE_CFG[candleTf], to=Math.floor(Date.now()/1e3);
+/* kho lịch sử từng mã trong repo — dự phòng khi VPS lỗi (nến, NN, vốn hoá theo kỳ) */
+const histFileCache=new Map();
+async function loadHistFile(sym){
+  if(histFileCache.has(sym)) return histFileCache.get(sym);
+  let d=null;
   try{
-    const j=await fetch(`${HIST}?symbol=${sym}&resolution=${cfg.res}&from=${to-cfg.span}&to=${to}`).then(r=>r.json());
-    if(sym!==detailSym||j.s!=='ok'||!j.t||j.t.length<2) return;
-    let rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i]}));
-    if(cfg.sameDay){
-      const day=t=>new Date(t*1000).toLocaleDateString('en-US',{timeZone:'Asia/Ho_Chi_Minh'});
-      const lastDay=day(rows[rows.length-1].t);
-      rows=rows.filter(r=>day(r.t)===lastDay);
-    }
-    if(cfg.agg&&rows.length>cfg.agg){
-      const out=[];
-      for(let i=0;i<rows.length;i+=cfg.agg){
-        const gp=rows.slice(i,i+cfg.agg);
-        out.push({t:gp[0].t,o:gp[0].o,c:gp[gp.length-1].c,
-                  h:Math.max(...gp.map(x=>x.h)), l:Math.min(...gp.map(x=>x.l))});
-      }
-      rows=out;
-    }
-    const k=rows[rows.length-1].c<500?1000:1;
-    if(k!==1) rows=rows.map(r=>({t:r.t,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
-    if(rows.length<2) return;
-    candles=rows;
-    drawCandles();
+    const j=await fetch(`data/hist/${sym}.json`).then(r=>r.ok?r.json():null);
+    if(j&&j.t&&j.t.length) d=j;
   }catch(e){}
+  histFileCache.set(sym,d); return d;
+}
+let candleSaved=false;   // true = nến đang vẽ lấy từ kho (hiện ghi chú trên biểu đồ)
+async function loadCandles(sym){
+  candles=null; candleSaved=false; drawCandles();
+  const cfg=CANDLE_CFG[candleTf], to=Math.floor(Date.now()/1e3);
+  let rows=null;
+  if(!OFFLINE) try{
+    const j=await fetch(`${HIST}?symbol=${sym}&resolution=${cfg.res}&from=${to-cfg.span}&to=${to}`).then(r=>r.json());
+    if(j.s==='ok'&&j.t&&j.t.length>=2){
+      rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i]}));
+      if(cfg.sameDay){
+        const day=t=>new Date(t*1000).toLocaleDateString('en-US',{timeZone:'Asia/Ho_Chi_Minh'});
+        const lastDay=day(rows[rows.length-1].t);
+        rows=rows.filter(r=>day(r.t)===lastDay);
+      }
+      const k=rows.length&&rows[rows.length-1].c<500?1000:1;
+      if(k!==1) rows=rows.map(r=>({t:r.t,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
+    }
+  }catch(e){}
+  if(!rows||rows.length<2){            // VPS lỗi -> nến NGÀY từ kho đã lưu (giá đã là VND)
+    const f=await loadHistFile(sym);
+    if(f){
+      const from=to-(cfg.sameDay?30*86400:cfg.span);   // khung 1D: ~20 phiên gần nhất
+      rows=[];
+      for(let i=0;i<f.t.length;i++)
+        if(f.t[i]>=from) rows.push({t:f.t[i],o:f.o[i],h:f.h[i],l:f.l[i],c:f.c[i]});
+      candleSaved=true;
+    }
+  }
+  if(sym!==detailSym||!rows||rows.length<2) return;
+  if(cfg.agg&&rows.length>cfg.agg){
+    const out=[];
+    for(let i=0;i<rows.length;i+=cfg.agg){
+      const gp=rows.slice(i,i+cfg.agg);
+      out.push({t:gp[0].t,o:gp[0].o,c:gp[gp.length-1].c,
+                h:Math.max(...gp.map(x=>x.h)), l:Math.min(...gp.map(x=>x.l))});
+    }
+    rows=out;
+  }
+  if(rows.length<2) return;
+  candles=rows;
+  drawCandles();
 }
 function axisPrice(v){                       // nhãn trục giá gọn: 67,1K / 1,23K / 950
   if(v>=1000) return (v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+'K';
@@ -1040,6 +1137,10 @@ function drawCandles(){
   const pct=(lastC/candles[0].o-1)*100;
   g.font='700 11px system-ui'; g.textAlign='left'; g.fillStyle=pct>=0?'#16c784':'#ea3943';
   g.fillText(`${candleTf.toUpperCase()}  ${pct>=0?'+':''}${pct.toFixed(2)}%`,6,12);
+  if(candleSaved){   // đang vẽ từ kho lưu (API nến lỗi) -> ghi chú nhỏ
+    g.font='9px system-ui'; g.fillStyle='#8a8a99'; g.textAlign='right';
+    g.fillText('nến ngày · bản lưu', plotW-4, 12);
+  }
 }
 
 /* ---- KQKD: doanh thu / giá vốn / LNST theo quý & năm ---- */
@@ -1048,12 +1149,17 @@ const finHistCache={};
 async function loadFinHist(sym){
   if(finHistCache[sym]) return finHistCache[sym];
   const to=Math.floor(Date.now()/1e3), from=to-3400*86400;
-  try{
+  let out=null;
+  if(!OFFLINE) try{
     const j=await fetch(`${HIST}?symbol=${sym}&resolution=1D&from=${from}&to=${to}`).then(r=>r.json());
-    finHistCache[sym]=(j.s==='ok'&&j.c&&j.c.length)
-      ? {t:j.t, c:j.c.map(x=>x*(j.c[j.c.length-1]<500?1000:1))} : {t:[],c:[]};
-  }catch(e){ finHistCache[sym]={t:[],c:[]}; }
-  return finHistCache[sym];
+    if(j.s==='ok'&&j.c&&j.c.length) out={t:j.t, c:j.c.map(x=>x*(j.c[j.c.length-1]<500?1000:1))};
+  }catch(e){}
+  if(!out){   // VPS lỗi -> dùng kho đã lưu
+    const f=await loadHistFile(sym);
+    out=f?{t:f.t,c:f.c}:{t:[],c:[]};
+  }
+  finHistCache[sym]=out;
+  return out;
 }
 function periodEndTs(label){                       // "Q2/26" -> 30/6/2026 ; "2025" -> 31/12/2025
   const mq=/^Q(\d)\/(\d{2})$/.exec(label);
@@ -1262,6 +1368,7 @@ function setStatus(t){ const s=$('status'); s.textContent=t; s.style.opacity=1;
 
 /* ---------- NGUỒN DỮ LIỆU (đã probe & xác nhận CORS-mở) ------------------- */
 function wireSources(){
+  if(OFFLINE) return;   // ?offline: không cắm API sống -> mọi thứ chạy từ kho đã lưu
   // (1) CHỈ SỐ — VPS getlistindexdetail: 1 request cho 4 chỉ số, có cIndex(live)+oIndex(TC)
   const IDX=[['10','VNINDEX'],['11','VN30'],['02','HNX'],['03','UPCOM']];
   SRC.idx=async()=>{
@@ -1395,9 +1502,10 @@ async function openNews(slug){
     wireSources();
     await loadUniverse();
     buildChunks();
-    await pollBoard();
+    await loadEOD();       // vẽ NGAY bằng snapshot đã lưu (chỉ ~100KB — "dữ liệu hôm nay")
     rebuild();
     refreshIdxBar();
+    pollBoard().then(()=>{ rebuild(); refreshIdxBar(); });   // giá trực tiếp đè lên khi có
     setInterval(rebuild, 30000);
   }catch(e){ setStatus('Lỗi khởi động: '+e.message); }
 })();
