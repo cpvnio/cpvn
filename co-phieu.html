@@ -93,6 +93,9 @@
   .finlegend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:4px 0 6px;flex-wrap:wrap}
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   canvas.fin{width:100%;height:200px;display:block}
+  /* biểu đồ + bảng KQKD chung 1 khung cuộn -> cột biểu đồ thẳng hàng cột bảng */
+  .finwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  .finwrap canvas.fin{width:auto}
   .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   table.ft{border-collapse:collapse;font-size:12.5px;white-space:nowrap;min-width:100%}
   table.ft th,table.ft td{padding:7px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}
@@ -225,8 +228,10 @@
         <span><i style="background:#16c784"></i>LN sau thuế</span>
         <span><i style="background:#38bdf8;height:2.5px;width:11px;border-radius:1px;vertical-align:2px"></i>Biên ròng %</span>
       </div>
-      <canvas class="fin" id="finCv"></canvas>
-      <div class="twrap" id="kqkdT" style="margin-top:8px"></div>
+      <div class="finwrap">
+        <canvas class="fin" id="finCv"></canvas>
+        <div id="kqkdT"></div>
+      </div>
       <h3 class="t">Cân đối kế toán</h3>
       <div class="twrap" id="bsT"></div>
       <h3 class="t">Lưu chuyển tiền tệ</h3>
@@ -271,7 +276,6 @@ const ZEROC=()=>isLight()?'rgba(0,0,0,.32)':'rgba(255,255,255,.25)';
 const SYM=(new URLSearchParams(location.search).get('sym')||'').toUpperCase()||
           decodeURIComponent(location.pathname.split('/').pop()||'').toUpperCase().replace(/\.HTML$/,'');
 let C=null, candles=null, candleSaved=false, tf='1m', finPeriod='Q', peerK='m', finData=null;
-let NN5=null, NN22=null;   // NN ròng 5/22 phiên (tính từ kho hist, giữ qua các lần vẽ lại)
 
 const CFG={ '1d':{res:'5',span:4*86400,sameDay:true}, '1w':{res:'30',span:12*86400},
   '1m':{res:'1D',span:45*86400}, '3m':{res:'1D',span:100*86400}, '6m':{res:'1D',span:200*86400},
@@ -306,8 +310,6 @@ function renderHero(){
     ['P/E · P/B',(C.pe!=null?(+C.pe).toFixed(1):'—')+' · '+(C.pb!=null?(+C.pb).toFixed(2):'—')],
     ['Tỷ suất cổ tức',C.divY!=null?(+C.divY).toFixed(1)+'%':'—'],
     ['NN ròng hôm nay',nnCell((C.fbuy||0)-(C.fsell||0))],
-    ['NN ròng 5 phiên',NN5==null?'…':nnCell(NN5)],
-    ['NN ròng 22 phiên',NN22==null?'…':nnCell(NN22)],
   ];
   $('stats').innerHTML=rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
 }
@@ -325,9 +327,6 @@ async function renderFromHist(){
     $('yLo').textContent=CP.fmtD(lo); $('yHi').textContent=CP.fmtD(hi);
     $('yMark').style.left=Math.max(0,Math.min(100,(C.price-lo)/(hi-lo)*100))+'%';
   }
-  const sum=k=>{ let s=0; for(let i=Math.max(0,n-k);i<n;i++) s+=(f.fb[i]||0)-(f.fs[i]||0); return s; };
-  NN5=sum(5); NN22=sum(22);
-  renderHero();   // vẽ lại lưới thống kê với NN 5/22 đã tính
 }
 
 /* ---------- biểu đồ nến lớn + khối lượng + MA20 ---------- */
@@ -465,17 +464,30 @@ function renderDiv(d){
 
 /* ---------- tài chính: KQKD chart + 3 bảng đầy đủ ---------- */
 function drawFinChart(rows){
-  const cvs=$('finCv'), DPR=Math.min(2,window.devicePixelRatio||1);
-  const w=cvs.clientWidth||800, h=200;
-  cvs.width=w*DPR; cvs.height=h*DPR;
-  const g=cvs.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
+  /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
+  const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
+  const DPRl=Math.min(2,window.devicePixelRatio||1);
+  const w=(tbl&&tbl.offsetWidth)||cvs.parentElement.clientWidth||800, h=200;
+  cvs.width=Math.round(w*DPRl); cvs.height=h*DPRl;
+  cvs.style.width=w+'px'; cvs.style.height=h+'px';
+  const g=cvs.getContext('2d'); g.setTransform(DPRl,0,0,DPRl,0,0); g.clearRect(0,0,w,h);
   if(!rows||!rows.length){ g.fillStyle='#666'; g.font='12px system-ui'; g.textAlign='center'; g.fillText('Chưa có dữ liệu',w/2,h/2); return; }
-  const show=rows.slice(-10).reverse();   // mới -> cũ (trái -> phải), khớp bảng
-  const n=show.length, cw=w/n, bw=Math.max(8,Math.min(26,cw/3.2));
+  const show=rows.slice(-10).reverse();   // mới -> cũ, đúng các cột bảng đang hiện
+  const n=show.length;
+  let centers=null,colW=70;
+  if(tbl&&tbl.tHead&&tbl.tHead.rows.length){
+    const ths=[...tbl.tHead.rows[0].cells].slice(1,1+n);
+    if(ths.length===n&&ths[0].offsetWidth>0){
+      centers=ths.map(th=>th.offsetLeft+th.offsetWidth/2);
+      colW=ths[0].offsetWidth;
+    }
+  }
+  if(!centers){ const cw=w/n; centers=show.map((_,i)=>cw*i+cw/2); colW=cw; }
+  const bw=Math.max(8,Math.min(24,(colW-14)/2));
   let mx=0,mn=0;
   for(const r of show){ mx=Math.max(mx,r.rev||0,r.np||0); mn=Math.min(mn,r.np||0); }
   if(mx-mn<1e-9) mx=mn+1;
-  const padT=10,padB=20, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
+  const padT=10,padB=6, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
   g.font='10px system-ui'; g.textBaseline='middle';
   for(let i=0;i<=3;i++){ const v=mn+(mx-mn)*i/3, yy=y(v);
     g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
@@ -485,7 +497,7 @@ function drawFinChart(rows){
   const bar=(x,v,col)=>{ const yy=y(v),top=Math.min(yy,zero),hh=Math.max(1.5,Math.abs(yy-zero));
     const gr=g.createLinearGradient(0,top,0,top+hh); gr.addColorStop(0,col); gr.addColorStop(1,col+'88');
     g.fillStyle=gr; if(g.roundRect){ g.beginPath(); g.roundRect(x,top,bw,hh,[3,3,0,0]); g.fill(); } else g.fillRect(x,top,bw,hh); };
-  for(let i=0;i<n;i++){ const r=show[i],cx=i*cw+cw/2;
+  for(let i=0;i<n;i++){ const r=show[i],cx=centers[i];
     if(r.rev!=null) bar(cx-bw-2,r.rev,'#5b6b7a');
     if(r.np!=null)  bar(cx+2,r.np,r.np>=0?'#16c784':'#ea3943'); }
   g.strokeStyle=ZEROC(); g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
@@ -495,13 +507,12 @@ function drawFinChart(rows){
     const yn=v=>h-padB-(v-nmn)/(nmx-nmn||1)*(h-padT-padB)*0.9;
     g.strokeStyle='#38bdf8'; g.lineWidth=1.7; g.beginPath(); let st=false;
     for(let i=0;i<n;i++){ const v=show[i].nm; if(v==null)continue;
-      st?g.lineTo(i*cw+cw/2,yn(v)):g.moveTo(i*cw+cw/2,yn(v)); st=true; }
+      st?g.lineTo(centers[i],yn(v)):g.moveTo(centers[i],yn(v)); st=true; }
     g.stroke();
     for(let i=0;i<n;i++){ const v=show[i].nm; if(v==null)continue;
-      g.fillStyle='#38bdf8'; g.beginPath(); g.arc(i*cw+cw/2,yn(v),2.4,0,7); g.fill(); }
+      g.fillStyle='#38bdf8'; g.beginPath(); g.arc(centers[i],yn(v),2.4,0,7); g.fill(); }
   }
-  g.font='700 10px system-ui'; g.fillStyle='#888'; g.textAlign='center';
-  for(let i=0;i<n;i++) g.fillText(show[i].label,i*cw+cw/2,h-6);
+  // KHÔNG vẽ nhãn kỳ: hàng kỳ của bảng nằm ngay dưới, thẳng cột với biểu đồ
 }
 function kqkdTable(rows){
   const show=rows.slice(-10).reverse();
@@ -528,7 +539,7 @@ function genericTable(el,G,emph){
 async function renderFin(){
   finData=await CP.loadFin(C.sym);
   const rows=finData&&finData[finPeriod]||[];
-  drawFinChart(rows); kqkdTable(rows);
+  kqkdTable(rows); drawFinChart(rows);   // bảng TRƯỚC -> biểu đồ đo cột bảng
   const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),bs,['bsa53','bsa78','TỔNG TÀI SẢN','NỢ PHẢI TRẢ','VỐN CHỦ SỞ HỮU']);

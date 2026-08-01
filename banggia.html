@@ -45,7 +45,7 @@
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .spacer{flex:1}
   input.search{background:var(--panel);color:var(--txt);border:1px solid var(--line);
-    border-radius:9px;padding:8px 13px;font-size:15px;outline:none;width:210px}
+    border-radius:9px;padding:8px 12px;font-size:14px;outline:none;width:185px;flex-shrink:1;min-width:120px}
 
   /* hàng thống kê tổng quan */
   #stats{display:flex;gap:16px;align-items:center;padding:7px 16px;font-size:13px;
@@ -58,14 +58,13 @@
   .breadth{display:flex;gap:5px;align-items:center;flex-shrink:0}
   .breadth b{padding:1px 8px;border-radius:6px;font-size:12px}
 
-  /* thanh công cụ bảng */
-  #tools{display:flex;gap:9px;align-items:center;padding:10px 16px;flex-wrap:wrap}
-  #tools .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-  #tools .seg button{background:transparent;border:0;color:var(--muted);padding:7px 13px;font-size:13.5px;font-weight:700;cursor:pointer}
-  #tools .seg button.on{color:#fff;background:var(--accent)}
-  #tools select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
-    border-radius:8px;padding:7px 10px;font-size:13.5px;outline:none;max-width:230px}
-  #cnt{color:var(--muted);font-size:12.5px;margin-left:auto}
+  /* bộ lọc nằm cùng hàng header với ô tìm kiếm */
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-shrink:0}
+  .seg button{background:transparent;border:0;color:var(--muted);padding:8px 12px;font-size:13.5px;font-weight:700;cursor:pointer}
+  .seg button.on{color:#fff;background:var(--accent)}
+  header select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:8px 9px;font-size:13.5px;outline:none;max-width:165px}
+  #cnt{color:var(--muted);font-size:12px;white-space:nowrap}
 
   /* bảng xếp hạng */
   #wrap{overflow-x:auto;padding:0 8px 10px}
@@ -113,7 +112,11 @@
   @media(max-width:760px){
     .brand{font-size:17px} .brand .mark{width:24px;height:24px}
     .tabs a{padding:7px 11px;font-size:13px}
-    input.search{width:100%;order:9}
+    header select{max-width:130px;flex:1;min-width:0}
+    .seg{flex:0 0 auto}
+    #cnt{display:none}
+    input.search{order:9;flex:1;width:auto;min-width:140px}
+    #thm{order:10}
     table{min-width:940px;font-size:12.5px}
     /* ghim cột hạng + mã khi cuộn ngang (kiểu bảng coin mobile) */
     th:nth-child(1),td:nth-child(1){position:sticky;left:0;background:var(--sticky);z-index:6}
@@ -137,13 +140,6 @@
     <a class="on" href="banggia.html">Bảng giá</a>
   </nav>
   <div class="spacer"></div>
-  <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
-  <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
-</header>
-
-<div id="stats"></div>
-
-<div id="tools">
   <div class="seg" id="scope">
     <button data-v="all" class="on">Tất cả</button>
     <button data-v="watch">⭐ Theo dõi</button>
@@ -155,7 +151,11 @@
   </select>
   <select id="sector"><option value="all">Tất cả ngành</option></select>
   <span id="cnt"></span>
-</div>
+  <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
+  <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
+</header>
+
+<div id="stats"></div>
 
 <div id="wrap">
   <table>
