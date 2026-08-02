@@ -104,6 +104,8 @@
   table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
+  /* dòng LN SAU THUẾ: to + đậm để đập vào mắt ngay */
+  table.ft tr.npRow td{font-size:15px;font-weight:800}
   .subnote{color:var(--muted);font-size:11.5px;margin-top:6px}
 
   /* doanh nghiệp cùng ngành: danh sách logo + giá + vốn hoá */
@@ -511,11 +513,11 @@ function drawFinChart(rows){
 function kqkdTable(rows){
   const show=rows.slice(-10).reverse();
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
-  const line=(lb,key,sign)=>`<tr><td>${lb}</td>`+show.map(r=>{
+  const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td>${lb}</td>`+show.map(r=>{
     const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'</tr>';
   $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th>Tỷ đồng</th>${show.map(r=>`<th>${r.label}</th>`).join('')}</tr></thead><tbody>`+
     line('Doanh thu','rev')+line('Giá vốn','cogs')+line('Lợi nhuận gộp','gross')+
-    line('LN trước thuế','pretax')+line('LN sau thuế','np',true)+
+    line('LN trước thuế','pretax')+line('LN sau thuế','np',true,true)+
     `<tr><td>Biên LN ròng</td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}</tr>`+
     `</tbody></table>`;
 }
