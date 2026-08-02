@@ -59,7 +59,12 @@
   .stsep{width:1px;height:15px;background:var(--line);flex-shrink:0;align-self:center}
   /* độ rộng thị trường: chip 3 màu — nét riêng CPVN */
   .breadth{display:flex;gap:5px;align-items:center;flex-shrink:0}
-  .breadth b{padding:1px 8px;border-radius:6px;font-size:12px}
+  .breadth b{padding:1px 8px;border-radius:6px;font-size:12px;font-weight:700}
+  .breadth b.bchip{cursor:pointer;border:1px solid transparent;transition:transform .08s}
+  .breadth b.bchip:hover{transform:translateY(-1px);filter:brightness(1.25)}
+  .breadth b.bchip.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(255,255,255,.08) inset}
+  .breadth b.bclear{cursor:pointer;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+  .breadth b.bclear:hover{color:var(--txt)}
 
   /* bộ lọc nằm cùng hàng header với ô tìm kiếm */
   .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-shrink:0}
@@ -196,7 +201,8 @@
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[] };
+const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[], bd:null };
+// bd = lọc theo độ rộng thị trường: 'up'|'flat'|'down'|'ceil'|'floor' (bấm chip màu ở hàng thống kê)
 
 /* giá trị sort/hiển thị cho từng mã */
 function val(c,k){
@@ -221,6 +227,19 @@ function filterRows(){
   if(ST.sector!=='all') list=list.filter(c=>c.sector===ST.sector);
   if(ST.q){ const q=ST.q.toUpperCase();
     list=list.filter(c=>c.sym.includes(q)||c.name.toUpperCase().includes(q)); }
+  if(ST.bd){                                  // lọc theo chip màu độ rộng
+    list=list.filter(c=>{
+      if(!c.traded) return false;
+      const isCe=c.ceil>0&&c.price>=c.ceil, isFl=c.flr>0&&c.price<=c.flr;
+      switch(ST.bd){
+        case 'ceil':  return isCe;
+        case 'floor': return isFl;
+        case 'up':    return c.chg1d>0.01;
+        case 'down':  return c.chg1d<-0.01;
+        default:      return !(c.chg1d>0.01)&&!(c.chg1d<-0.01);
+      }
+    });
+  }
   const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
   list.sort((a,b)=>{ const va=val(a,k), vb=val(b,k);
     return (typeof va==='string') ? dir*va.localeCompare(vb) : dir*(va-vb); });
@@ -238,11 +257,13 @@ function badge(v,extra){
 }
 function render(){
   filterRows();
+  if(ST.bd) ST.rows=ST.rows.slice(0,100);     // lọc theo màu: 100 mã lớn nhất là đủ xem
   const total=ST.rows.length, pages=Math.max(1,Math.ceil(total/ST.PER));
   if(ST.page>pages) ST.page=pages;
   const start=(ST.page-1)*ST.PER, slice=ST.rows.slice(start,start+ST.PER);
   const W=CP.watch.get();
-  $('cnt').textContent=`${total.toLocaleString('en-US')} mã`;
+  const BDN={up:'đang tăng',flat:'đứng giá',down:'đang giảm',ceil:'giá trần',floor:'giá sàn'};
+  $('cnt').textContent=ST.bd?`${total} mã ${BDN[ST.bd]}`:`${total.toLocaleString('en-US')} mã`;
   $('tb').innerHTML=slice.map((c,i)=>{
     const nn=(c.fbuy||0)-(c.fsell||0);
     const ceilHit=c.ceil>0&&c.price>0&&c.price>=c.ceil, floorHit=c.flr>0&&c.price>0&&c.price<=c.flr;
@@ -295,13 +316,23 @@ function renderStats(){
   html+='<span class="stsep"></span>';
   html+=idx('Vốn hoá TT',CP.fmtVnd(s.mcap),null);
   html+=idx('Thanh khoản',Math.round(s.gtgd/1e9).toLocaleString('en-US')+' tỷ',null);
+  // chip màu: bấm để lọc bảng theo đúng nhóm màu đó (bấm lại = bỏ lọc). Trần/sàn chỉ còn MÀU, không chữ.
+  const chip=(k,txt,bg,col,tip)=>`<b data-bd="${k}" title="${tip}"`+
+    ` class="bchip${ST.bd===k?' on':''}" style="background:${bg};color:${col}">${txt}</b>`;
   html+=`<span class="breadth"><span class="nm" style="color:var(--muted);font-weight:700">Độ rộng</span>`+
-    `<b style="background:rgba(22,199,132,.15);color:var(--green)">▲ ${s.up}</b>`+
-    `<b style="background:rgba(234,179,8,.13);color:var(--yellow)">– ${s.flat}</b>`+
-    `<b style="background:rgba(234,57,67,.15);color:var(--red)">▼ ${s.down}</b>`+
-    (s.ceil?`<b style="background:rgba(192,38,211,.16);color:var(--purple)">CE ${s.ceil}</b>`:'')+
-    (s.floor?`<b style="background:rgba(56,189,248,.16);color:var(--cyan)">FL ${s.floor}</b>`:'')+`</span>`;
+    chip('up',`▲ ${s.up}`,'rgba(22,199,132,.15)','var(--green)','Mã tăng — bấm để lọc')+
+    chip('flat',`– ${s.flat}`,'rgba(234,179,8,.13)','var(--yellow)','Mã đứng giá — bấm để lọc')+
+    chip('down',`▼ ${s.down}`,'rgba(234,57,67,.15)','var(--red)','Mã giảm — bấm để lọc')+
+    (s.ceil?chip('ceil',String(s.ceil),'rgba(192,38,211,.16)','var(--purple)','Mã trần — bấm để lọc'):'')+
+    (s.floor?chip('floor',String(s.floor),'rgba(56,189,248,.16)','var(--cyan)','Mã sàn — bấm để lọc'):'')+
+    (ST.bd?`<b class="bclear" title="Bỏ lọc">✕</b>`:'')+`</span>`;
   $('stats').innerHTML=html;
+  $('stats').querySelectorAll('b[data-bd]').forEach(el=>el.onclick=()=>{
+    ST.bd=ST.bd===el.dataset.bd?null:el.dataset.bd; ST.page=1; render(); renderStats();
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+  const bc=$('stats').querySelector('.bclear');
+  if(bc) bc.onclick=()=>{ ST.bd=null; ST.page=1; render(); renderStats(); };
   const at=CP.lastPollAt?new Date(CP.lastPollAt).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'}):null;
   $('liveAt').textContent=at?`giá cập nhật ${at}`:`giá phiên ${CP.eodDate||'—'} (kho)`;
 }
