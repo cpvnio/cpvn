@@ -46,7 +46,10 @@
     font-size:23px}
   .brand .mark{width:32px;height:32px;flex-shrink:0;
     border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
-  .brand b{color:#ffd60a}
+  /* chữ CPVN.IO: TRẮNG toàn bộ (giao diện sáng dùng màu chữ nền sáng để còn đọc được) */
+  .brand{color:#fff}
+  html[data-theme="light"] .brand{color:var(--txt)}
+  .brand b{color:inherit}
   .spacer{flex:1}
 
   /* 2 tab điều hướng trang: Bong bóng | Bảng giá */

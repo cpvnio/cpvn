@@ -38,7 +38,10 @@
   .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
   .brand .mark{width:30px;height:30px;flex-shrink:0;
     border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
-  .brand b{color:#ffd60a}
+  /* chữ CPVN.IO: TRẮNG toàn bộ (giao diện sáng dùng màu chữ nền sáng để còn đọc được) */
+  .brand{color:#fff}
+  html[data-theme="light"] .brand{color:var(--txt)}
+  .brand b{color:inherit}
   .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:75px}
   .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
   .tabs a.on{color:#fff;background:var(--accent)}
