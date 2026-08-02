@@ -113,6 +113,30 @@
   #hsBox .blk ul{margin:6px 0;padding-left:22px}
   #hsBox .blk li{margin:3px 0}
   #hsBox .statgrid .row span:last-child{max-width:62%;overflow-wrap:anywhere}
+  /* bảng cổ đông / công ty con / quỹ nắm giữ */
+  #hsBox table.hst{width:100%;border-collapse:collapse;font-size:13.5px;margin:2px 0 4px}
+  #hsBox .hst th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.4px;text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  #hsBox .hst td{padding:7px 8px;border-bottom:1px solid var(--rowline);vertical-align:middle}
+  #hsBox .hst tr:last-child td{border-bottom:none}
+  #hsBox .hst .r{text-align:right}
+  #hsBox .hst a.lnk{color:var(--cyan);font-weight:800}
+  #hsBox .hst a.lnk:hover{text-decoration:underline}
+  #hsBox .hst .sub{color:var(--muted);font-size:11.5px;margin-top:1px}
+  #hsBox .pcell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  #hsBox .pbar{width:64px;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;flex:none}
+  #hsBox .pbar i{display:block;height:100%;background:var(--cyan);border-radius:3px}
+  #hsBox .tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
+  #hsBox .tag.con{background:rgba(22,199,132,.14);color:var(--green)}
+  #hsBox .tag.lk{background:rgba(192,38,211,.14);color:var(--purple)}
+  #hsBox .ownbar{display:flex;height:12px;border-radius:7px;overflow:hidden;margin:8px 0 7px;background:var(--panel2)}
+  #hsBox .ownbar i{height:100%}
+  #hsBox .ownlg{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12px;color:var(--muted);margin-bottom:2px}
+  #hsBox .ownlg .d{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  #hsBox .morebtn{display:block;width:100%;margin:6px 0 2px;padding:7px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center}
+  #hsBox .morebtn:hover{color:var(--txt)}
+  @media (max-width:640px){ #hsBox .hidem{display:none} }
 
   /* doanh nghiệp cùng ngành: danh sách logo + giá + vốn hoá */
   .peer{display:flex;align-items:center;gap:11px;padding:9px 8px;border-bottom:1px solid rgba(128,128,128,.12);
@@ -590,12 +614,14 @@ function sanHTML(html){   // lọc thẻ/thuộc tính nguy hiểm từ HTML ngu
 }
 async function loadProfile(){
   if(profData) return renderProfile();
-  let d=null;
+  // kho trước (đã kèm cổ đông/cty con + link mã niêm yết do server nhận diện), sống đè chỉ số mới
+  let arc=null, live=null;
+  try{ arc=await fetch(`data/profile/${C.sym}.json`).then(r=>r.ok?r.json():null); }catch(e){}
   if(!CP.OFFLINE){
     try{
       const j=await fetch(`https://api2.simplize.vn/api/company/summary/${C.sym}`).then(r=>r.json());
       const x=j.data||{};
-      if(x.nameVi||x.businessOverall) d={sym:C.sym,updated:'mới nhất (trực tiếp)',
+      if(x.nameVi||x.businessOverall) live={sym:C.sym,
         nameVi:x.nameVi,nameEn:x.nameEn,website:x.website,exchange:x.stockExchange,
         industry:x.industryActivity,sectorParent:x.bcEconomicSectorName,
         overview:x.businessOverall||x.businessLine,services:x.mainService,
@@ -605,9 +631,42 @@ async function loadProfile(){
         revLtmGrowth:x.revenueLtmGrowth,npLtmGrowth:x.netIncomeLtmGrowth};
     }catch(e){}
   }
-  if(!d){ try{ d=await fetch(`data/profile/${C.sym}.json`).then(r=>r.ok?r.json():null); }catch(e){} }
+  const d=live?Object.assign({},arc||{},live,{updated:arc?arc.updated:'mới nhất (trực tiếp)'}):arc;
+  if(d&&!d.sh&&!d.subs&&!CP.OFFLINE) await liveOwnership(d);   // mã mới, kho chưa kịp có
   profData=d||{none:true};
   renderProfile();
+}
+async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho chưa có (fallback)
+  try{
+    const j=await fetch(`https://api2.simplize.vn/api/company/ownership/shareholder-fund-details/${C.sym}?page=0&size=100`).then(r=>r.json());
+    const seen=new Set(), out=[];
+    for(const r of (j.data&&j.data.shareholderDetails)||[]){
+      const nm=(r.investorFullName||'').trim().replace(/\s+/g,' ');
+      if(!nm||seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
+      out.push({n:nm,p:r.pctOfSharesOutHeld,s:r.sharesHeld,c:r.countryOfInvestor});
+    }
+    if(out.length) d.sh=out.slice(0,40);
+    const fh=((j.data&&j.data.fundHoldings)||[]).filter(f=>f.sharesHeld);
+    if(fh.length) d.funds=fh.sort((a,b)=>(b.sharesHeldValueVnd||0)-(a.sharesHeldValueVnd||0)).slice(0,12)
+      .map(f=>({n:f.fundCode,fn:f.fundName,s:f.sharesHeld,v:f.sharesHeldValueVnd,d:f.fillingDate}));
+  }catch(e){}
+  try{
+    const j=await fetch(`https://api2.simplize.vn/api/company/sub-company/${C.sym}`).then(r=>r.json());
+    const ss=(j.data||[]).filter(r=>r.companyName).map(r=>{
+      const e={n:r.companyName.trim().replace(/\s+/g,' '),p:r.ratio,cap:r.capital};
+      if(r.type==='ASSOCIATED') e.a=1;
+      const t=(r.companyTicker||'').trim().toUpperCase();
+      if(t&&CP.coins.has(t)&&t!==C.sym) e.t=t;
+      return e;
+    });
+    if(ss.length) d.subs=ss.sort((a,b)=>(b.p||0)-(a.p||0));
+  }catch(e){}
+  try{
+    const j=await fetch(`https://api2.simplize.vn/api/company/ownership/ownership-breakdown/${C.sym}`).then(r=>r.json());
+    const oo=(j.data||[]).filter(x=>x.investorType&&x.pctOfSharesOutHeldTier)
+      .map(x=>({n:x.investorType,p:x.pctOfSharesOutHeldTier}));
+    if(oo.length) d.own=oo;
+  }catch(e){}
 }
 function renderProfile(){
   const b=$('hsBox'), d=profData;
@@ -627,15 +686,74 @@ function renderProfile(){
     ['Tăng trưởng doanh thu 4 quý',f1(d.revLtmGrowth,'%')],
     ['Tăng trưởng lợi nhuận 4 quý',f1(d.npLtmGrowth,'%')],
   ];
+  /* ---- cơ cấu sở hữu / cổ đông lớn / công ty con / quỹ nắm giữ ---- */
+  const OWNC=['#38bdf8','#16c784','#eab308','#c026d3','#ea3943','#2dd4bf','#f97316'];
+  const nameCell=(n,t,sub)=>{
+    const nm=CP.esc(n||'—');
+    const core=t?`<a class="lnk" href="co-phieu.html?sym=${CP.esc(t)}">${nm} <span style="opacity:.8">· ${CP.esc(t)} ↗</span></a>`:nm;
+    return `<div>${core}${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+  };
+  let ownH='';
+  if(d.own&&d.own.length){
+    const tot=d.own.reduce((a,x)=>a+(+x.p||0),0), sc=tot>100?100/tot:1;
+    ownH=`<h3 class="t">Cơ cấu sở hữu</h3>`+
+      `<div class="ownbar">${d.own.map((x,i)=>`<i style="width:${Math.max(1,(+x.p||0)*sc)}%;background:${OWNC[i%OWNC.length]}"></i>`).join('')}</div>`+
+      `<div class="ownlg">${d.own.map((x,i)=>`<span><span class="d" style="background:${OWNC[i%OWNC.length]}"></span>${CP.esc(x.n)} <b style="color:var(--txt)">${f1(x.p,'%')}</b></span>`).join('')}</div>`;
+  }
+  let shH='';
+  if(d.sh&&d.sh.length){
+    const maxP=Math.max(...d.sh.map(x=>+x.p||0),1);
+    const totP=d.sh.reduce((a,x)=>a+(+x.p||0),0);
+    const row=(x,i)=>`<tr>
+      <td style="width:26px;color:var(--muted);font-size:12px">${i+1}</td>
+      <td>${nameCell(x.n,x.t,x.c&&x.c!=='Vietnam'?CP.esc(x.c):'')}</td>
+      <td class="r hidem" style="color:var(--muted)">${x.s?CP.fmtD(Math.round(x.s)):'—'}</td>
+      <td class="r" style="width:126px"><div class="pcell"><span style="font-weight:800">${f1(x.p,'%')}</span><span class="pbar"><i style="width:${Math.min(100,(+x.p||0)/maxP*100)}%"></i></span></div></td>
+    </tr>`;
+    const head=d.sh.slice(0,12), rest=d.sh.slice(12);
+    shH=`<h3 class="t">Cổ đông lớn</h3><table class="hst" id="shT"><thead><tr><th>#</th><th>Cổ đông</th><th class="r hidem">Số cổ phiếu</th><th class="r">Tỷ lệ</th></tr></thead>`+
+      `<tbody>${head.map(row).join('')}</tbody>`+
+      (rest.length?`<tbody id="shMore" style="display:none">${rest.map((x,i)=>row(x,i+12)).join('')}</tbody>`:'')+
+      `</table>`+
+      (rest.length?`<button class="morebtn" id="shBtn">Xem thêm ${rest.length} cổ đông ▾</button>`:'')+
+      `<div class="subnote" style="margin-top:4px">${d.sh.length} cổ đông thống kê nắm ${f1(totP,'%')} cổ phần · bấm tên có mã ↗ để xem</div>`;
+  }
+  let subH='';
+  if(d.subs&&d.subs.length){
+    subH=`<h3 class="t">Công ty con & liên kết (${d.subs.length})</h3><table class="hst" id="subT"><thead><tr><th>Công ty</th><th>Quan hệ</th><th class="r">Sở hữu</th><th class="r hidem">Vốn điều lệ</th></tr></thead><tbody>`+
+      d.subs.map(x=>`<tr>
+        <td>${nameCell(x.n,x.t,'')}</td>
+        <td><span class="tag ${x.a?'lk':'con'}">${x.a?'Liên kết':'Cty con'}</span></td>
+        <td class="r" style="font-weight:800">${f1(x.p,'%')}</td>
+        <td class="r hidem" style="color:var(--muted)">${x.cap?CP.fmtVnd(x.cap):'—'}</td>
+      </tr>`).join('')+`</tbody></table>`;
+  }
+  let fundH='';
+  if(d.funds&&d.funds.length){
+    fundH=`<h3 class="t">Quỹ đầu tư đang nắm giữ (${d.funds.length})</h3><table class="hst"><thead><tr><th>Quỹ</th><th class="r">Số cổ phiếu</th><th class="r">Giá trị</th><th class="r hidem">Ngày BC</th></tr></thead><tbody>`+
+      d.funds.map(x=>`<tr>
+        <td>${nameCell(x.n,null,x.fn&&x.fn!==x.n?CP.esc(x.fn):'')}</td>
+        <td class="r" style="color:var(--muted)">${x.s?CP.fmtD(Math.round(x.s)):'—'}</td>
+        <td class="r" style="font-weight:700">${x.v?CP.fmtVnd(x.v):'—'}</td>
+        <td class="r hidem" style="color:var(--muted)">${CP.esc(x.d||'—')}</td>
+      </tr>`).join('')+`</tbody></table>`;
+  }
   const blk=(t,h)=>h?`<h3 class="t">${t}</h3><div class="blk">${sanHTML(h)}</div>`:'';
   b.innerHTML=
     `<h3 class="t" style="margin-top:0">Thông tin doanh nghiệp</h3>`+
     `<div class="statgrid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}</div>`+
+    ownH+shH+subH+fundH+
     blk('Giới thiệu',d.overview)+
     blk('Sản phẩm & dịch vụ chính',d.services)+
     blk('Chiến lược kinh doanh',d.strategy)+
     blk('Rủi ro kinh doanh',d.risk)+
     `<div class="subnote">Nguồn: Simplize · lưu trong kho CPVN, tự làm mới mỗi 3 ngày · bản: ${CP.esc(d.updated||'—')}</div>`;
+  const btn=$('shBtn');
+  if(btn) btn.onclick=()=>{
+    const m=$('shMore'), on=m.style.display!=='none';
+    m.style.display=on?'none':'';
+    btn.textContent=on?`Xem thêm ${d.sh.length-12} cổ đông ▾`:'Thu gọn ▴';
+  };
 }
 
 /* ---------- điều khiển ---------- */

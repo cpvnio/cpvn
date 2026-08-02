@@ -417,16 +417,96 @@ print(f"kho tin tức/báo cáo: cào {len(ntargets)} mã, có dữ liệu {ndon
 HL["news"]={"need":len(ntargets),"ok":ndone[1]}
 
 # 8) KHO HỒ SƠ DOANH NGHIỆP data/profile/{SYM}.json — giới thiệu, dịch vụ, chiến lược,
-#    rủi ro, website + chỉ số chất lượng (ROE/ROA/beta/free-float...). LÀM MỚI MỖI 3 NGÀY.
+#    rủi ro, website + chỉ số chất lượng + CỔ ĐÔNG LỚN + QUỸ NẮM GIỮ + CÔNG TY CON/LIÊN KẾT
+#    + cơ cấu sở hữu (v2). LÀM MỚI MỖI 3 NGÀY; file thiếu v2 tự cào lại.
 os.makedirs(PROF_DIR,exist_ok=True)
+# map tên -> mã: nhận diện cổ đông/công ty con là DN niêm yết để web cho bấm xem.
+# Chỉ nhận khớp TUYỆT ĐỐI sau chuẩn hoá; tên trùng giữa 2 mã thì bỏ (thà thiếu link còn hơn sai).
+def _pnorm(s):
+    return re.sub(r"\s+"," ",str(s or "").strip().lower()).rstrip(" .,;")
+def _pvariants(s):
+    n=_pnorm(s)
+    if not n: return set()
+    v={n}
+    if n.startswith("công ty cổ phần "): v.add("ctcp "+n[16:])
+    if n.startswith("ctcp "): v.add("công ty cổ phần "+n[5:])
+    for suf in (" joint stock company"," corporation"," corp"," jsc"):
+        if n.endswith(suf): v.add(n[:-len(suf)].rstrip(" .,"))
+    return v
+NAME2SYM={}; _amb=set()
+def _learn(name,sym):
+    for k in _pvariants(name):
+        if len(k)<5 or k in _amb: continue
+        cur=NAME2SYM.get(k)
+        if cur is None: NAME2SYM[k]=sym
+        elif cur!=sym: _amb.add(k); NAME2SYM.pop(k,None)
+for _s in syms: _learn(stocks[_s].get("name"),_s)
+if os.path.isdir(PROF_DIR):
+    for _fn in os.listdir(PROF_DIR):
+        if not _fn.endswith(".json"): continue
+        try:
+            _j=json.load(open(os.path.join(PROF_DIR,_fn),encoding="utf-8"))
+            _s=_j.get("sym") or _fn[:-5]
+            if _s in stocks: _learn(_j.get("nameVi"),_s); _learn(_j.get("nameEn"),_s)
+        except Exception: pass
+def resolve_listed(name,self_sym=None):
+    for k in _pvariants(name):
+        t=NAME2SYM.get(k)
+        if t and t!=self_sym: return t
+    return None
 def prof_stale(s):
     p=os.path.join(PROF_DIR,f"{s}.json")
     try:
-        u=json.load(open(p,encoding="utf-8")).get("updated","2000-01-01")
+        j=json.load(open(p,encoding="utf-8"))
+        if j.get("v")!=2: return True          # bản cũ chưa có cổ đông/cty con -> cào lại
+        u=j.get("updated","2000-01-01")
         return (datetime.date.fromisoformat(sess_date)-datetime.date.fromisoformat(u)).days>=3
     except Exception: return True
 ptargets=[s for s in syms if prof_stale(s)]
 plock=threading.Lock(); pdone=[0,0]
+def fetch_ownership(sym,o):
+    """Điền sh (cổ đông lớn) / funds (quỹ nắm giữ) / subs (cty con-liên kết) / own (cơ cấu) vào o."""
+    try:
+        sh=get(f"https://api2.simplize.vn/api/company/ownership/shareholder-fund-details/{sym}?page=0&size=100")["data"] or {}
+        seen=set(); out=[]
+        for r in sh.get("shareholderDetails") or []:
+            nm=re.sub(r"\s+"," ",(r.get("investorFullName") or "").strip())
+            if not nm or nm.lower() in seen: continue
+            seen.add(nm.lower())
+            e={"n":nm,"p":rnd(r.get("pctOfSharesOutHeld")),"s":r.get("sharesHeld"),"c":r.get("countryOfInvestor")}
+            t=resolve_listed(nm,sym)
+            if t: e["t"]=t
+            out.append({k:v for k,v in e.items() if v is not None})
+        if out: o["sh"]=out[:40]
+        ff=[{"n":f.get("fundCode"),"fn":f.get("fundName"),"s":f.get("sharesHeld"),
+             "v":f.get("sharesHeldValueVnd"),"d":f.get("fillingDate")}
+            for f in sh.get("fundHoldings") or [] if f.get("sharesHeld")]
+        if ff:
+            o["funds"]=[{k:v for k,v in f.items() if v is not None}
+                        for f in sorted(ff,key=lambda x:-(x.get("v") or 0))[:12]]
+    except Exception: pass
+    time.sleep(0.06)
+    try:
+        ss=[]
+        for r in get(f"https://api2.simplize.vn/api/company/sub-company/{sym}")["data"] or []:
+            if not r.get("companyName"): continue
+            e={"n":re.sub(r"\s+"," ",r["companyName"].strip()),"p":rnd(r.get("ratio")),"cap":r.get("capital")}
+            if r.get("type")=="ASSOCIATED": e["a"]=1
+            t=(r.get("companyTicker") or "").strip().upper()
+            if t and t in stocks and t!=sym: e["t"]=t
+            elif e["n"]:
+                t2=resolve_listed(e["n"],sym)
+                if t2: e["t"]=t2
+            ss.append({k:v for k,v in e.items() if v is not None})
+        if ss: o["subs"]=sorted(ss,key=lambda x:-(x.get("p") or 0))
+    except Exception: pass
+    time.sleep(0.06)
+    try:
+        oo=[{"n":x.get("investorType"),"p":rnd(x.get("pctOfSharesOutHeldTier"))}
+            for x in get(f"https://api2.simplize.vn/api/company/ownership/ownership-breakdown/{sym}")["data"] or []
+            if x.get("investorType") and x.get("pctOfSharesOutHeldTier")]
+        if oo: o["own"]=oo
+    except Exception: pass
 def work_prof(sym):
     d=None
     for att in range(2):
@@ -436,7 +516,7 @@ def work_prof(sym):
     time.sleep(0.1)
     with plock: pdone[0]+=1
     if not d: return
-    o={"sym":sym,"updated":sess_date,
+    o={"sym":sym,"updated":sess_date,"v":2,
        "nameVi":d.get("nameVi"),"nameEn":d.get("nameEn"),
        "website":d.get("website"),"exchange":d.get("stockExchange"),
        "industry":d.get("industryActivity"),"sectorParent":d.get("bcEconomicSectorName"),
@@ -447,6 +527,8 @@ def work_prof(sym):
        "eps":rnd(d.get("epsRatio")),"evEbitda":rnd(d.get("evEbitdaRatio")),
        "revLtmGrowth":rnd(d.get("revenueLtmGrowth")),"npLtmGrowth":rnd(d.get("netIncomeLtmGrowth")),
        "riskLevel":d.get("overallRiskLevel"),"shares":d.get("outstandingSharesValue")}
+    _learn(o.get("nameVi"),sym); _learn(o.get("nameEn"),sym)
+    fetch_ownership(sym,o)
     o={k:v for k,v in o.items() if v not in (None,"")}
     with plock:
         pdone[1]+=1
