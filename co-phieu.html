@@ -36,7 +36,7 @@
   .brand .mark{width:30px;height:30px;
     border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
   .brand b{color:#ffd60a}
-  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:75px}
   .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
@@ -107,6 +107,12 @@
   /* dòng LN SAU THUẾ: to + đậm để đập vào mắt ngay */
   table.ft tr.npRow td{font-size:15px;font-weight:800}
   .subnote{color:var(--muted);font-size:11.5px;margin-top:6px}
+  /* hồ sơ doanh nghiệp: chuẩn hoá HTML từ nguồn về font/cỡ của trang */
+  #hsBox .blk{font-size:13.5px;line-height:1.7;color:var(--txt)}
+  #hsBox .blk *{font-family:inherit!important;font-size:inherit!important;color:inherit!important;background:none!important}
+  #hsBox .blk ul{margin:6px 0;padding-left:22px}
+  #hsBox .blk li{margin:3px 0}
+  #hsBox .statgrid .row span:last-child{max-width:62%;overflow-wrap:anywhere}
 
   /* doanh nghiệp cùng ngành: danh sách logo + giá + vốn hoá */
   .peer{display:flex;align-items:center;gap:11px;padding:9px 8px;border-bottom:1px solid rgba(128,128,128,.12);
@@ -149,6 +155,7 @@
   footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:16px;color:var(--muted);
     font-size:11.5px;flex-wrap:wrap;text-align:center}
   @media(max-width:980px){
+    .tabs{margin-left:6px}
     #top{grid-template-columns:1fr}
     .bigpx .p{font-size:31px}
     canvas#cv{height:330px}
@@ -211,6 +218,7 @@
     <button data-t="tt">Tin tức</button>
     <button data-t="cn">Cùng ngành</button>
     <button data-t="tl">Tài liệu</button>
+    <button data-t="hs">Hồ sơ doanh nghiệp</button>
   </div>
 
   <div class="sect on" id="s-tc">
@@ -257,6 +265,10 @@
 
   <div class="sect" id="s-tt">
     <div class="card"><div id="newsL">Đang tải tin…</div></div>
+  </div>
+
+  <div class="sect" id="s-hs">
+    <div class="card" id="hsBox"><div class="subnote">Đang tải hồ sơ doanh nghiệp…</div></div>
   </div>
 </div>
 
@@ -567,6 +579,65 @@ async function renderDocsNews(){
   nl.querySelectorAll('a[data-i]').forEach(a=>a.onclick=e=>{ e.preventDefault(); CP.openNewsItem(d.news[+a.dataset.i]); });
 }
 
+/* ---------- hồ sơ doanh nghiệp (sống -> kho data/profile, chu kỳ 3 ngày) ---------- */
+let profData=null;
+function sanHTML(html){   // lọc thẻ/thuộc tính nguy hiểm từ HTML nguồn ngoài
+  return String(html||'')
+    .replace(/<\s*(script|iframe|object|embed|form|link|meta|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,'')
+    .replace(/<\s*(script|iframe|object|embed|form|link|meta|style)[^>]*\/?>/gi,'')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+    .replace(/javascript:/gi,'');
+}
+async function loadProfile(){
+  if(profData) return renderProfile();
+  let d=null;
+  if(!CP.OFFLINE){
+    try{
+      const j=await fetch(`https://api2.simplize.vn/api/company/summary/${C.sym}`).then(r=>r.json());
+      const x=j.data||{};
+      if(x.nameVi||x.businessOverall) d={sym:C.sym,updated:'mới nhất (trực tiếp)',
+        nameVi:x.nameVi,nameEn:x.nameEn,website:x.website,exchange:x.stockExchange,
+        industry:x.industryActivity,sectorParent:x.bcEconomicSectorName,
+        overview:x.businessOverall||x.businessLine,services:x.mainService,
+        strategy:x.businessStrategy,risk:x.businessRisk,
+        roe:x.roe,roa:x.roa,beta5y:x.beta5y,freeFloat:x.freeFloatRate,bookValue:x.bookValue,
+        eps:x.epsRatio,evEbitda:x.evEbitdaRatio,
+        revLtmGrowth:x.revenueLtmGrowth,npLtmGrowth:x.netIncomeLtmGrowth};
+    }catch(e){}
+  }
+  if(!d){ try{ d=await fetch(`data/profile/${C.sym}.json`).then(r=>r.ok?r.json():null); }catch(e){} }
+  profData=d||{none:true};
+  renderProfile();
+}
+function renderProfile(){
+  const b=$('hsBox'), d=profData;
+  if(!d||d.none){ b.innerHTML='<div class="subnote">Chưa có hồ sơ cho mã này.</div>'; return; }
+  const f1=(v,s)=>v==null||isNaN(v)?'—':(+v).toFixed(1)+(s||'');
+  const rows=[
+    ['Tên đầy đủ',CP.esc(d.nameVi||C.name)],
+    ['Tên tiếng Anh',CP.esc(d.nameEn||'—')],
+    ['Website',d.website?`<a href="${CP.esc(d.website)}" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:700">${CP.esc(String(d.website).replace(/^https?:\/\//,'').replace(/\/$/,''))}</a>`:'—'],
+    ['Sàn · Ngành',`${CP.esc(d.exchange||C.ex)} · ${CP.esc(d.industry||C.sector||'—')}`],
+    ['ROE · ROA',f1(d.roe,'%')+' · '+f1(d.roa,'%')],
+    ['Beta 5 năm',d.beta5y??'—'],
+    ['Free-float',f1(d.freeFloat,'%')],
+    ['Giá trị sổ sách/CP',d.bookValue?CP.fmtD(d.bookValue)+' đ':'—'],
+    ['EPS',d.eps?CP.fmtD(d.eps)+' đ':'—'],
+    ['EV/EBITDA',d.evEbitda!=null?f1(d.evEbitda):'—'],
+    ['Tăng trưởng doanh thu 4 quý',f1(d.revLtmGrowth,'%')],
+    ['Tăng trưởng lợi nhuận 4 quý',f1(d.npLtmGrowth,'%')],
+  ];
+  const blk=(t,h)=>h?`<h3 class="t">${t}</h3><div class="blk">${sanHTML(h)}</div>`:'';
+  b.innerHTML=
+    `<h3 class="t" style="margin-top:0">Thông tin doanh nghiệp</h3>`+
+    `<div class="statgrid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}</div>`+
+    blk('Giới thiệu',d.overview)+
+    blk('Sản phẩm & dịch vụ chính',d.services)+
+    blk('Chiến lược kinh doanh',d.strategy)+
+    blk('Rủi ro kinh doanh',d.risk)+
+    `<div class="subnote">Nguồn: Simplize · lưu trong kho CPVN, tự làm mới mỗi 3 ngày · bản: ${CP.esc(d.updated||'—')}</div>`;
+}
+
 /* ---------- điều khiển ---------- */
 document.querySelectorAll('#tf button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tf button').forEach(x=>x.classList.remove('on'));
@@ -577,6 +648,7 @@ document.querySelectorAll('#secTabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.sect').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); $('s-'+b.dataset.t).classList.add('on');
   if(b.dataset.t==='tc'&&!finData) renderFin();
+  if(b.dataset.t==='hs'&&!profData) loadProfile();
 });
 document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#finP button').forEach(x=>x.classList.remove('on'));

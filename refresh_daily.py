@@ -20,6 +20,7 @@ UNIV=os.path.join(BASE,"universe.json")
 EOD_DIR=os.path.join(BASE,"data","eod"); HIST_DIR=os.path.join(BASE,"data","hist")
 FIN_DIR=os.path.join(BASE,"data","fin"); IDX_FILE=os.path.join(BASE,"data","idx.json")
 NEWS_DIR=os.path.join(BASE,"data","news")
+PROF_DIR=os.path.join(BASE,"data","profile")
 SPARK=os.path.join(BASE,"data","spark.json"); HEALTH=os.path.join(BASE,"data","health.json")
 HL={}   # health: kết quả từng bước của lượt chạy này -> data/health.json
 UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120"}
@@ -415,7 +416,49 @@ if ntargets:
 print(f"kho tin tức/báo cáo: cào {len(ntargets)} mã, có dữ liệu {ndone[1]}",flush=True)
 HL["news"]={"need":len(ntargets),"ok":ndone[1]}
 
-# 8) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
+# 8) KHO HỒ SƠ DOANH NGHIỆP data/profile/{SYM}.json — giới thiệu, dịch vụ, chiến lược,
+#    rủi ro, website + chỉ số chất lượng (ROE/ROA/beta/free-float...). LÀM MỚI MỖI 3 NGÀY.
+os.makedirs(PROF_DIR,exist_ok=True)
+def prof_stale(s):
+    p=os.path.join(PROF_DIR,f"{s}.json")
+    try:
+        u=json.load(open(p,encoding="utf-8")).get("updated","2000-01-01")
+        return (datetime.date.fromisoformat(sess_date)-datetime.date.fromisoformat(u)).days>=3
+    except Exception: return True
+ptargets=[s for s in syms if prof_stale(s)]
+plock=threading.Lock(); pdone=[0,0]
+def work_prof(sym):
+    d=None
+    for att in range(2):
+        try:
+            d=get(f"https://api2.simplize.vn/api/company/summary/{sym}")["data"]; break
+        except Exception: time.sleep(0.8*(att+1))
+    time.sleep(0.1)
+    with plock: pdone[0]+=1
+    if not d: return
+    o={"sym":sym,"updated":sess_date,
+       "nameVi":d.get("nameVi"),"nameEn":d.get("nameEn"),
+       "website":d.get("website"),"exchange":d.get("stockExchange"),
+       "industry":d.get("industryActivity"),"sectorParent":d.get("bcEconomicSectorName"),
+       "overview":d.get("businessOverall") or d.get("businessLine"),
+       "services":d.get("mainService"),"strategy":d.get("businessStrategy"),"risk":d.get("businessRisk"),
+       "roe":rnd(d.get("roe")),"roa":rnd(d.get("roa")),"beta5y":d.get("beta5y"),
+       "freeFloat":d.get("freeFloatRate"),"bookValue":d.get("bookValue"),
+       "eps":rnd(d.get("epsRatio")),"evEbitda":rnd(d.get("evEbitdaRatio")),
+       "revLtmGrowth":rnd(d.get("revenueLtmGrowth")),"npLtmGrowth":rnd(d.get("netIncomeLtmGrowth")),
+       "riskLevel":d.get("overallRiskLevel"),"shares":d.get("outstandingSharesValue")}
+    o={k:v for k,v in o.items() if v not in (None,"")}
+    with plock:
+        pdone[1]+=1
+        if pdone[0]%300==0: print(f"  hồ sơ {pdone[0]}/{len(ptargets)}",flush=True)
+    jdump(o,os.path.join(PROF_DIR,f"{sym}.json"))
+if ptargets:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        list(pool.map(work_prof,ptargets))
+print(f"kho hồ sơ doanh nghiệp: cào {len(ptargets)} mã, ok {pdone[1]} (chu kỳ 3 ngày)",flush=True)
+HL["profile"]={"need":len(ptargets),"ok":pdone[1]}
+
+# 9) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
 runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")
 HL_ok=(HL.get("hist",{}).get("fail",9999)<len(syms)*0.2 and HL.get("snapshot",0)>=100)
 jdump({"date":sess_date,"generated":vn_now().strftime("%Y-%m-%d %H:%M:%S"),"runner":runner,

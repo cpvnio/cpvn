@@ -39,7 +39,7 @@
   .brand .mark{width:30px;height:30px;flex-shrink:0;
     border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
   .brand b{color:#ffd60a}
-  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:75px}
   .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
@@ -111,6 +111,7 @@
 
   @media(max-width:760px){
     .brand{font-size:17px} .brand .mark{width:24px;height:24px}
+    .tabs{margin-left:4px}
     .tabs a{padding:7px 11px;font-size:13px}
     header select{max-width:130px;flex:1;min-width:0}
     .seg{flex:0 0 auto}
