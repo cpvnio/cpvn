@@ -97,10 +97,19 @@
   .finwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   .finwrap canvas.fin{width:auto}
   .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  /* LƯỚI CỘT CHUNG cho mọi bảng (KQKD/CĐKT/LCTT/cổ tức) -> cột kỳ thẳng hàng nhau:
+     nhãn cột 1 bọc .lb bề rộng CỐ ĐỊNH (nhãn dài không đẩy được cột), cột kỳ khai báo 106px
+     (luôn > nội dung số) -> trình duyệt tính ra cùng một lưới ở cả 4 bảng */
   table.ft{border-collapse:collapse;font-size:12.5px;white-space:nowrap;min-width:100%}
+  table.ft th:first-child{width:250px}
+  table.ft th:not(:first-child){width:106px}
+  table.ft .lb{width:232px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   table.ft th,table.ft td{padding:7px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}
-  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);max-width:290px;
-    overflow:hidden;text-overflow:ellipsis}
+  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  @media (max-width:640px){
+    table.ft th:first-child{width:158px}
+    table.ft .lb{width:140px}
+  }
   table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
@@ -129,10 +138,12 @@
   #hsBox .tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
   #hsBox .tag.con{background:rgba(22,199,132,.14);color:var(--green)}
   #hsBox .tag.lk{background:rgba(192,38,211,.14);color:var(--purple)}
-  #hsBox .ownbar{display:flex;height:12px;border-radius:7px;overflow:hidden;margin:8px 0 7px;background:var(--panel2)}
-  #hsBox .ownbar i{height:100%}
-  #hsBox .ownlg{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12px;color:var(--muted);margin-bottom:2px}
-  #hsBox .ownlg .d{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  /* cơ cấu sở hữu: BIỂU ĐỒ TRÒN (donut conic-gradient) + chú giải bên cạnh */
+  #hsBox .ownwrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin:10px 0 6px}
+  #hsBox .ownpie{width:138px;height:138px;border-radius:50%;flex:none;position:relative}
+  #hsBox .ownpie::after{content:"";position:absolute;inset:27%;border-radius:50%;background:var(--panel)}
+  #hsBox .ownlg{display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--muted);min-width:0}
+  #hsBox .ownlg .d{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px;flex:none}
   #hsBox .morebtn{display:block;width:100%;margin:6px 0 2px;padding:7px;background:var(--panel2);
     border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center}
   #hsBox .morebtn:hover{color:var(--txt)}
@@ -239,10 +250,10 @@
 
   <div id="secTabs">
     <button data-t="tc" class="on">Báo cáo tài chính</button>
+    <button data-t="hs">Hồ sơ doanh nghiệp</button>
     <button data-t="tt">Tin tức</button>
     <button data-t="cn">Cùng ngành</button>
     <button data-t="tl">Tài liệu</button>
-    <button data-t="hs">Hồ sơ doanh nghiệp</button>
   </div>
 
   <div class="sect on" id="s-tc">
@@ -487,10 +498,11 @@ function renderDiv(d){
   const box=$('divT');
   if(!d||!d.length){ box.innerHTML='<div class="subnote" style="padding:10px">Chưa có dữ liệu cổ tức.</div>'; return; }
   const rows=d.slice(0,8);
+  while(rows.length<8) rows.push({});          // đủ 8 cột -> thẳng lưới với các bảng trên
   const pctRow=(lb,key)=>rows.some(r=>r[key]>0)
-    ?`<tr><td>${lb}</td>`+rows.map(r=>`<td>${r[key]>0?r[key].toFixed(0)+'%':'—'}</td>`).join('')+'</tr>':'';
-  box.innerHTML=`<table class="ft"><thead><tr><th></th>${rows.map(r=>`<th>${r.year}</th>`).join('')}</tr></thead><tbody>`+
-    `<tr><td>Tiền mặt</td>${rows.map(r=>`<td>${r.cash>0?CP.fmtD(r.cash)+' đ':'—'}</td>`).join('')}</tr>`+
+    ?`<tr><td><div class="lb">${lb}</div></td>`+rows.map(r=>`<td>${r[key]>0?r[key].toFixed(0)+'%':(r.year?'—':'')}</td>`).join('')+'</tr>':'';
+  box.innerHTML=`<table class="ft"><thead><tr><th><div class="lb"></div></th>${rows.map(r=>`<th>${r.year||''}</th>`).join('')}</tr></thead><tbody>`+
+    `<tr><td><div class="lb">Tiền mặt</div></td>${rows.map(r=>`<td>${r.cash>0?CP.fmtD(r.cash)+' đ':r.year?'—':''}</td>`).join('')}</tr>`+
     pctRow('Cổ tức cổ phiếu','div')+pctRow('Thưởng cổ phiếu','bonus')+`</tbody></table>`;
 }
 
@@ -504,7 +516,7 @@ function drawFinChart(rows){
   cvs.style.width=w+'px'; cvs.style.height=h+'px';
   const g=cvs.getContext('2d'); g.setTransform(DPRl,0,0,DPRl,0,0); g.clearRect(0,0,w,h);
   if(!rows||!rows.length){ g.fillStyle='#666'; g.font='12px system-ui'; g.textAlign='center'; g.fillText('Chưa có dữ liệu',w/2,h/2); return; }
-  const show=rows.slice(-10).reverse();   // mới -> cũ, đúng các cột bảng đang hiện
+  const show=rows.slice(-8).reverse();   // mới -> cũ, 8 kỳ = đúng số cột bảng (chung lưới với CĐKT/LCTT)
   const n=show.length;
   let centers=null,colW=70;
   if(tbl&&tbl.tHead&&tbl.tHead.rows.length){
@@ -547,24 +559,24 @@ function drawFinChart(rows){
   // KHÔNG vẽ nhãn kỳ: hàng kỳ của bảng nằm ngay dưới, thẳng cột với biểu đồ
 }
 function kqkdTable(rows){
-  const show=rows.slice(-10).reverse();
+  const show=rows.slice(-8).reverse();
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
-  const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td>${lb}</td>`+show.map(r=>{
+  const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td><div class="lb">${lb}</div></td>`+show.map(r=>{
     const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'</tr>';
-  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th>Tỷ đồng</th>${show.map(r=>`<th>${r.label}</th>`).join('')}</tr></thead><tbody>`+
+  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${show.map(r=>`<th>${r.label}</th>`).join('')}</tr></thead><tbody>`+
     line('Doanh thu','rev')+line('Giá vốn','cogs')+line('Lợi nhuận gộp','gross')+
     line('LN trước thuế','pretax')+line('LN sau thuế','np',true,true)+
-    `<tr><td>Biên LN ròng</td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}</tr>`+
+    `<tr><td><div class="lb">Biên LN ròng</div></td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}</tr>`+
     `</tbody></table>`;
 }
 function genericTable(el,G,emph){
   if(!G||!G.labels||!G.rows||!G.rows.length){ el.innerHTML='<div class="subnote" style="padding:10px">Nguồn chưa có dữ liệu cho mã này.</div>'; return; }
   const idx=G.labels.map((_,i)=>i).reverse();   // mới -> cũ
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
-  el.innerHTML=`<table class="ft"><thead><tr><th>Tỷ đồng</th>${idx.map(i=>`<th>${G.labels[i]}</th>`).join('')}</tr></thead><tbody>`+
+  el.innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${idx.map(i=>`<th>${G.labels[i]}</th>`).join('')}</tr></thead><tbody>`+
     G.rows.map(r=>{
       const head=emph.some(k=>r.k===k||(r.n||'').toUpperCase()===k);
-      return `<tr class="${head?'head':''}"><td title="${CP.esc(r.n)}">${CP.esc(r.n)}</td>`+
+      return `<tr class="${head?'head':''}"><td title="${CP.esc(r.n)}"><div class="lb">${CP.esc(r.n)}</div></td>`+
         idx.map(i=>`<td>${cell(r.v[i])}</td>`).join('')+'</tr>';
     }).join('')+`</tbody></table>`;
 }
@@ -696,9 +708,15 @@ function renderProfile(){
   let ownH='';
   if(d.own&&d.own.length){
     const tot=d.own.reduce((a,x)=>a+(+x.p||0),0), sc=tot>100?100/tot:1;
+    let acc=0; const segs=[];
+    d.own.forEach((x,i)=>{ const w=(+x.p||0)*sc, c=OWNC[i%OWNC.length];
+      segs.push(`${c} ${acc.toFixed(2)}% ${(acc+w).toFixed(2)}%`); acc+=w; });
+    if(acc<99.9) segs.push(`var(--panel2) ${acc.toFixed(2)}% 100%`);   // phần "khác/chưa thống kê"
+    const lg=d.own.map((x,i)=>`<span><span class="d" style="background:${OWNC[i%OWNC.length]}"></span>${CP.esc(x.n)} <b style="color:var(--txt)">${f1(x.p,'%')}</b></span>`)
+      .concat(tot<99.9?[`<span><span class="d" style="background:var(--panel2)"></span>Khác / chưa thống kê <b style="color:var(--txt)">${f1(100-tot,'%')}</b></span>`]:[]);
     ownH=`<h3 class="t">Cơ cấu sở hữu</h3>`+
-      `<div class="ownbar">${d.own.map((x,i)=>`<i style="width:${Math.max(1,(+x.p||0)*sc)}%;background:${OWNC[i%OWNC.length]}"></i>`).join('')}</div>`+
-      `<div class="ownlg">${d.own.map((x,i)=>`<span><span class="d" style="background:${OWNC[i%OWNC.length]}"></span>${CP.esc(x.n)} <b style="color:var(--txt)">${f1(x.p,'%')}</b></span>`).join('')}</div>`;
+      `<div class="ownwrap"><div class="ownpie" style="background:conic-gradient(${segs.join(',')})"></div>`+
+      `<div class="ownlg">${lg.join('')}</div></div>`;
   }
   let shH='';
   if(d.sh&&d.sh.length){
