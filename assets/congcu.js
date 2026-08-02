@@ -225,26 +225,6 @@ function radarCard(ic,title,rows,id){
     '<div class="pb">'+(rows.length?rows.join(''):'<div class="empty">Phiên này không có mã nào thoả</div>')+'</div></div>';
 }
 LB.shotCard=(el,name)=>shot($('#rc-'+el),'cpvn-'+name+'-'+ST.date);
-function recap(){
-  const s=marketStats(), sp=sectorPerf(), md=mood();
-  const nnT=ST.list.filter(c=>c.nnVal>0).sort((a,b)=>b.nnVal-a.nnVal)[0];
-  const nnB=ST.list.filter(c=>c.nnVal<0).sort((a,b)=>a.nnVal-b.nnVal)[0];
-  const idx=ST.indices.map(i=>'<b>'+esc(i.name)+'</b> '+(+i.value).toLocaleString('en-US',{maximumFractionDigits:2})+
-    ' <span class="'+cls(i.chg)+'">'+pct(i.chg)+'</span>').join(' · ');
-  const dom=s.up>s.dn*1.25?'sắc <b class="up">xanh</b> chiếm ưu thế':s.dn>s.up*1.25?'sắc <b class="dn">đỏ</b> chiếm ưu thế':'thị trường <b>giằng co</b>';
-  const lines=[];
-  lines.push(idx+'.');
-  lines.push('Độ rộng <span class="up">▲'+s.up+'</span> · <span class="fl">–'+s.fl+'</span> · <span class="dn">▼'+s.dn+'</span>'+
-    (s.ce?' · <span class="ce">'+s.ce+' trần</span>':'')+(s.fo?' · <span class="fo">'+s.fo+' sàn</span>':'')+
-    ' — '+dom+'. Thanh khoản khớp <b>'+ty(s.gtgd)+'</b>.');
-  if(sp.length) lines.push('Nhóm mạnh nhất: <b>'+esc(sp[0].k)+'</b> <span class="'+cls(sp[0].d)+'">'+pct(sp[0].d)+'</span>'+
-    ' · yếu nhất: <b>'+esc(sp[sp.length-1].k)+'</b> <span class="'+cls(sp[sp.length-1].d)+'">'+pct(sp[sp.length-1].d)+'</span>.');
-  if(nnT&&nnB) lines.push('Khối ngoại mua ròng mạnh nhất <b>'+nnT.sym+'</b> <span class="up">+'+ty(nnT.nnVal)+'</span>, '+
-    'bán ròng mạnh nhất <b>'+nnB.sym+'</b> <span class="dn">−'+ty(-nnB.nnVal)+'</span>.');
-  if(s.ath||s.nh) lines.push((s.ath?'<b>'+s.ath+'</b> mã đóng cửa ở đỉnh lịch sử kho':'')+
-    (s.ath&&s.nh?' · ':'')+(s.nh?'<b>'+s.nh+'</b> mã trong vòng 1% quanh đỉnh 52 tuần':'')+'.');
-  return lines.join('<br/>');
-}
 function sectionHead(id,t){ return '<div class="secthead" id="'+id+'">'+t+'</div>'; }
 /* bảng ngành hôm nay: 1D% bình quân theo vốn hoá + độ rộng trong ngành */
 function sectorPanel(){
@@ -326,7 +306,7 @@ function renderRadar(){
       top(c=>c.vol>0&&liq(c)>0&&liq(c)<3e8,(a,b)=>a.avgval20-b.avgval20).map(c=>row(c,ty(c.avgval20),'')),'illq'),
   ];
 
-  const tiles='<div class="stat" style="margin-bottom:15px">'
+  const tiles='<div class="stat">'
     +'<div><div class="k">Thanh khoản khớp</div><div class="v">'+ty(s.gtgd)+'</div></div>'
     +'<div><div class="k">Khối ngoại ròng</div><div class="v '+(nnTot>0?'up':'dn')+'">'+(nnTot>0?'+':'−')+ty(Math.abs(nnTot))+'</div></div>'
     +'<div><div class="k">Kịch trần · sàn</div><div class="v"><span class="ce">'+s.ce+'</span> · <span class="fo">'+s.fo+'</span></div></div>'
@@ -342,9 +322,8 @@ function renderRadar(){
     +'<i style="width:'+(s.fl/tot*100)+'%;background:var(--yellow)"></i>'
     +'<i style="width:'+(s.dn/tot*100)+'%;background:var(--red)"></i></div>'
     +'<div class="sub">▲'+s.up+' · –'+s.fl+' · ▼'+s.dn+' trên '+ST.list.length.toLocaleString('en-US')+' mã</div></div>'
-    +'<div class="panel story"><span class="dt">Chuyện phiên '+esc(ST.date)+'</span>'+recap()+'</div>'
+    +'<div style="align-self:center">'+tiles+'</div>'
     +'</div>'
-    +tiles
     +'<div class="ctl" style="margin-bottom:2px">'
     +[['r-flow','💰 Dòng tiền'],['r-power','🚀 Sức mạnh giá'],['r-risk','⚠️ Mặt tối'],['r-sec','🏭 Ngành']]
       .map(a=>'<button class="btn gh" data-go="'+a[0]+'">'+a[1]+'</button>').join('')
