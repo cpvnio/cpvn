@@ -593,7 +593,27 @@ if ptargets:
 print(f"kho hồ sơ doanh nghiệp: cào {len(ptargets)} mã, ok {pdone[1]} (chu kỳ 3 ngày)",flush=True)
 HL["profile"]={"need":len(ptargets),"ok":pdone[1]}
 
-# 9) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
+# 9) KHO LOGO assets/logo/{SYM}.webp — mã mới niêm yết tự có logo, không phải đụng tay.
+#    (Kho gốc dựng 1 lần bằng tools/fetch_logos.py; ở đây chỉ vá phần thiếu.)
+LOGO_DIR=os.path.join(BASE,"assets","logo")
+os.makedirs(LOGO_DIR,exist_ok=True)
+lmiss=[s for s in syms if stocks[s].get("img") and not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp"))]
+if lmiss:
+    try:
+        sys.path.insert(0,os.path.join(BASE,"tools"))
+        from fetch_logos import fetch_one
+        lok=0
+        for s in lmiss[:60]:                      # trần an toàn: mỗi lượt chạy tối đa 60 mã
+            if fetch_one(s,stocks[s]["img"],os.path.join(LOGO_DIR,f"{s}.webp")): lok+=1
+        print(f"kho logo: thiếu {len(lmiss)}, tải thêm {lok}",flush=True)
+        HL["logo"]={"missing":len(lmiss),"fetched":lok}
+    except ImportError as e:                      # thiếu Pillow -> bỏ qua, web tự rơi về CDN nguồn
+        print(f"kho logo: BỎ QUA ({e}) — cài Pillow để tự tải logo mã mới",flush=True)
+        HL["logo"]={"missing":len(lmiss),"fetched":0,"err":"no-pillow"}
+else:
+    HL["logo"]={"missing":0,"fetched":0}
+
+# 10) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
 runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")
 HL_ok=(HL.get("hist",{}).get("fail",9999)<len(syms)*0.2 and HL.get("snapshot",0)>=100)
 jdump({"date":sess_date,"generated":vn_now().strftime("%Y-%m-%d %H:%M:%S"),"runner":runner,

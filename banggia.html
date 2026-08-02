@@ -243,8 +243,7 @@ function render(){
   $('tb').innerHTML=slice.map((c,i)=>{
     const nn=(c.fbuy||0)-(c.fsell||0);
     const ceilHit=c.ceil>0&&c.price>0&&c.price>=c.ceil, floorHit=c.flr>0&&c.price>0&&c.price<=c.flr;
-    const logo=c.img?`<img src="${CP.esc(c.img)}" loading="lazy" onerror="this.outerHTML='<span class=noimg>${c.sym.slice(0,2)}</span>'">`
-                    :`<span class="noimg">${c.sym.slice(0,2)}</span>`;
+    const logo=CP.logoHTML(c.sym,c.img);
     return `<tr data-sym="${c.sym}">
       <td class="rank">${start+i+1}</td>
       <td class="star ${W.has(c.sym)?'on':''}" data-star="${c.sym}">${W.has(c.sym)?'★':'☆'}</td>
@@ -259,7 +258,7 @@ function render(){
   }).join('');
   document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
     if(e.target.closest('[data-star]')) return;
-    location.href='co-phieu.html?sym='+tr.dataset.sym;
+    location.href='/cophieu/'+tr.dataset.sym;
   });
   document.querySelectorAll('#tb [data-star]').forEach(td=>td.onclick=()=>{
     const on=CP.watch.toggle(td.dataset.star);

@@ -1,4 +1,9 @@
-# Cloudflare Pages tự phục vụ /banggia và /co-phieu (pretty URL cho file .html)
+# Cloudflare tự phục vụ /banggia, /cophieu (pretty URL cho file .html).
+# ĐỪNG thêm rule cho đường dẫn đã có file .html -> vòng lặp 307.
+# Link cũ (có gạch nối) chuyển vĩnh viễn sang link mới; mã không phân biệt hoa/thường.
 /bang-gia        /banggia              301
 /bang-gia.html   /banggia              301
-/co-phieu/:sym   /co-phieu?sym=:sym    200
+/co-phieu        /cophieu              301
+/co-phieu.html   /cophieu              301
+/co-phieu/:sym   /cophieu/:sym         301
+/cophieu/:sym    /cophieu?sym=:sym     200

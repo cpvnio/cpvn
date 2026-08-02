@@ -36,6 +36,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Cài Pillow (để tự tải logo mã mới niêm yết)
+        if: steps.guard.outputs.skip != 'true'
+        run: pip install --quiet Pillow
+
       # Thứ 2 chạy --full (làm mới cả SLCP/ngành/logo/PE/PB + vá NN); các ngày khác chỉ mốc giá + EOD
       - name: Cập nhật EOD
         if: steps.guard.outputs.skip != 'true'
@@ -51,7 +55,7 @@ jobs:
         run: |
           git config user.name  "cpvn-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add universe.json data/
+          git add universe.json data/ assets/logo/
           git commit -m "EOD $(TZ=Asia/Ho_Chi_Minh date +%F)" || echo "không có thay đổi"
           git pull --rebase origin main || true
           git push

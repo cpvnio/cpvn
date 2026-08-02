@@ -893,14 +893,16 @@ function colorFor(c){
 /* ---------- LOGO ---------------------------------------------------------- */
 const logoCache=new Map();
 function loadLogo(c,cb){
-  if(!c.img) return;
   if(logoCache.has(c.sym)){ const v=logoCache.get(c.sym); if(v&&v!=='loading')cb(v); return; }
   logoCache.set(c.sym,'loading');
   const im=new Image();
-  im.crossOrigin='anonymous';   // CDN Simplize cho CORS -> canvas không bị "taint", nút chụp hình dùng được
+  im.crossOrigin='anonymous';   // cùng tên miền + CDN Simplize đều cho CORS -> canvas không "taint", nút chụp hình dùng được
   im.onload=()=>{ logoCache.set(c.sym,im); cb(im); };
-  im.onerror=()=>{ logoCache.set(c.sym,null); };
-  im.src=c.img;
+  im.onerror=()=>{                 // KHO trong repo trước, CDN nguồn chỉ là lưới an toàn
+    if(!im.dataset.cdn&&c.img){ im.dataset.cdn='1'; im.src=c.img; return; }
+    logoCache.set(c.sym,null);
+  };
+  im.src='/assets/logo/'+encodeURIComponent(c.sym)+'.webp';
 }
 
 /* ---------- TƯƠNG TÁC ----------------------------------------------------- */
@@ -1100,9 +1102,10 @@ function showDetail(c){
   $('detSym').textContent=c.sym;
   $('detName').textContent=`${c.name} · ${c.ex} · ${c.sector}`;
   $('detLink').href=`https://simplize.vn/co-phieu/${c.sym}`;
-  const im=$('detImg');
-  if(c.img){ im.style.display='block'; im.src=c.img; im.onerror=()=>{im.style.display='none';}; }
-  else im.style.display='none';
+  const im=$('detImg');                       // kho repo trước -> CDN nguồn -> ẩn
+  im.style.display='block'; delete im.dataset.cdn;
+  im.onerror=()=>{ if(!im.dataset.cdn&&c.img){ im.dataset.cdn='1'; im.src=c.img; } else im.style.display='none'; };
+  im.src='/assets/logo/'+encodeURIComponent(c.sym)+'.webp';
   // nến: mặc định theo khung chính nếu hợp lệ
   candleTf=['1d','1w','1m','3m','6m','1y','5y'].includes(state.tf)?state.tf:'1d';
   setChips('candleTf',candleTf);

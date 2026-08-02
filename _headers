@@ -1,0 +1,12 @@
+# Logo doanh nghiệp: đã kho hoá trong repo, nội dung gắn liền tên mã và gần như không đổi
+# -> cho trình duyệt giữ 1 NĂM. Vào lần sau không tốn byte nào, hiện tức thì.
+/assets/logo/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Logo/icon thương hiệu CPVN
+/assets/logo-*.png
+  Cache-Control: public, max-age=604800
+
+# KHO DỮ LIỆU: đổi mỗi phiên -> KHÔNG cache dài, luôn hỏi lại máy chủ (ETag lo phần tiết kiệm)
+/data/*
+  Cache-Control: public, max-age=300, must-revalidate

@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- BẮT BUỘC: trang chạy ở URL 2 tầng /cophieu/VIC nên mọi đường dẫn tương đối
+     (assets/, data/) phải neo về gốc, nếu không sẽ thành /cophieu/assets/... -> 404 -->
+<base href="/" />
+<title>CPVN — Thông tin cổ phiếu</title>
+<meta name="description" content="Thông tin đầy đủ từng cổ phiếu Việt Nam: biểu đồ nến, báo cáo tài chính KQKD/CĐKT/LCTT, cổ tức, khối ngoại, báo cáo phân tích CTCK và tin tức." />
+<meta name="theme-color" content="#0a0a0c" />
+<link rel="icon" type="image/png" href="assets/logo-64.png" />
+<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
+<style>
+  :root{
+    --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
+    --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
+    --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
+    --hdr1:#111114; --hdr2:#0d0d10; --thead:#0e0e12;
+    --rowline:rgba(255,255,255,.06)
+  }
+  html[data-theme="light"]{
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef2; --line:#dde1e8;
+    --txt:#16181d; --muted:#66707f;
+    --green:#0b9b61; --red:#dc3644; --yellow:#a16207; --purple:#9333ea; --cyan:#0369a1;
+    --hdr1:#ffffff; --hdr2:#f0f2f5; --thead:#f0f2f5;
+    --rowline:rgba(0,0,0,.07)
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:inherit;text-decoration:none}
+  header{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);background:linear-gradient(var(--hdr1),var(--hdr2));
+    position:sticky;top:0;z-index:20}
+  .thmbtn{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:9px;
+    padding:8px 11px;font-size:15px;cursor:pointer}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:21px;white-space:nowrap}
+  .brand .mark{width:30px;height:30px;
+    border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
+  .brand b{color:#ffd60a}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:75px}
+  .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
+  .tabs a.on{color:#fff;background:var(--accent)}
+  .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
+  .spacer{flex:1}
+  #page{max-width:1320px;margin:0 auto;padding:16px}
+
+  /* ---- khối đầu: 2 bảng thông số bên TRÁI, biểu đồ bên PHẢI ---- */
+  #top{display:grid;grid-template-columns:430px 1fr;gap:16px;align-items:start}
+  #leftCol{display:flex;flex-direction:column;gap:16px}
+  #leftCol .statgrid{grid-template-columns:1fr}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .idrow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .idrow img{width:44px;height:44px;border-radius:10px;background:#fff;object-fit:contain}
+  .idrow .sym{font-size:24px;font-weight:800}
+  .idrow .ex{font-size:11px;font-weight:800;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+  .idrow .sec{font-size:11.5px;font-weight:700;color:var(--cyan);background:rgba(56,189,248,.1);border-radius:6px;padding:2px 8px}
+  .idrow .star{font-size:22px;cursor:pointer;color:#3f3f4a;margin-left:auto}
+  .idrow .star.on{color:#ffd60a}
+  .cname{color:var(--muted);font-size:13px;margin-top:4px}
+  .bigpx{display:flex;align-items:baseline;gap:12px;margin:12px 0 4px}
+  .bigpx .p{font-size:38px;font-weight:800;letter-spacing:-.5px}
+  .bigpx .b{font-size:15px;font-weight:800;border-radius:8px;padding:4px 10px}
+  /* thanh Thấp–Cao (nét CPVN) */
+  .range{margin-top:13px}
+  .range .lb{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:4px}
+  .range .bar{height:7px;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));position:relative}
+  .range .bar i{position:absolute;top:-3.5px;width:3.5px;height:14px;border-radius:2px;background:#fff;
+    box-shadow:0 0 6px rgba(255,255,255,.8)}
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  .statgrid .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;
+    padding:7.5px 0;border-bottom:1px solid var(--rowline)}
+  .statgrid .row span:first-child{color:var(--muted)}
+  .statgrid .row span:last-child{font-weight:700;text-align:right}
+  .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
+
+  /* ---- chart (cột phải, tự giãn theo chiều cao 2 bảng trái) ---- */
+  #chartCard{display:flex;flex-direction:column;min-width:0}
+  .chips{display:flex;gap:4px;flex-wrap:wrap}
+  .chips button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:7px;
+    padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer}
+  .chips button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
+  .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .chead .note{color:var(--muted);font-size:11.5px;margin-left:auto}
+  canvas#cv{width:100%;height:470px;display:block;border-radius:10px;background:rgba(255,255,255,.02)}
+
+  /* ---- tabs nội dung ---- */
+  #secTabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap}
+  #secTabs button{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:9px;
+    padding:9px 17px;font-size:14.5px;font-weight:800;cursor:pointer}
+  #secTabs button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
+  .sect{display:none}
+  .sect.on{display:block}
+  h3.t{margin:18px 0 8px;font-size:15px}
+  .finlegend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:4px 0 6px;flex-wrap:wrap}
+  .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  canvas.fin{width:100%;height:200px;display:block}
+  /* biểu đồ + bảng KQKD chung 1 khung cuộn -> cột biểu đồ thẳng hàng cột bảng */
+  .finwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  .finwrap canvas.fin{width:auto}
+  .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  /* LƯỚI CỘT CHUNG cho mọi bảng (KQKD/CĐKT/LCTT/cổ tức) -> cột kỳ thẳng hàng nhau:
+     nhãn cột 1 bọc .lb bề rộng CỐ ĐỊNH (nhãn dài không đẩy được cột), cột kỳ khai báo 106px
+     (luôn > nội dung số) -> trình duyệt tính ra cùng một lưới ở cả 4 bảng */
+  table.ft{border-collapse:collapse;font-size:12.5px;white-space:nowrap;min-width:100%}
+  table.ft th:first-child{width:250px}
+  table.ft th:not(:first-child){width:106px}
+  table.ft .lb{width:232px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  table.ft th,table.ft td{padding:7px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}
+  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  @media (max-width:640px){
+    table.ft th:first-child{width:158px}
+    table.ft .lb{width:140px}
+  }
+  table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
+  table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
+  table.ft tr.head td{font-weight:800;color:#ffd60a}
+  /* dòng LN SAU THUẾ: to + đậm để đập vào mắt ngay */
+  table.ft tr.npRow td{font-size:15px;font-weight:800}
+  .subnote{color:var(--muted);font-size:11.5px;margin-top:6px}
+  /* hồ sơ doanh nghiệp: chuẩn hoá HTML từ nguồn về font/cỡ của trang */
+  #hsBox .blk{font-size:13.5px;line-height:1.7;color:var(--txt)}
+  #hsBox .blk *{font-family:inherit!important;font-size:inherit!important;color:inherit!important;background:none!important}
+  #hsBox .blk ul{margin:6px 0;padding-left:22px}
+  #hsBox .blk li{margin:3px 0}
+  #hsBox .statgrid .row span:last-child{max-width:62%;overflow-wrap:anywhere}
+  /* bảng cổ đông / công ty con / quỹ nắm giữ */
+  #hsBox table.hst{width:100%;border-collapse:collapse;font-size:13.5px;margin:2px 0 4px}
+  #hsBox .hst th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.4px;text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  #hsBox .hst td{padding:7px 8px;border-bottom:1px solid var(--rowline);vertical-align:middle}
+  #hsBox .hst tr:last-child td{border-bottom:none}
+  #hsBox .hst .r{text-align:right}
+  #hsBox .hst a.lnk{color:var(--cyan);font-weight:800}
+  #hsBox .hst a.lnk:hover{text-decoration:underline}
+  #hsBox .hst .sub{color:var(--muted);font-size:11.5px;margin-top:1px}
+  #hsBox .pcell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  #hsBox .pbar{width:64px;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;flex:none}
+  #hsBox .pbar i{display:block;height:100%;background:var(--cyan);border-radius:3px}
+  #hsBox .tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
+  #hsBox .tag.con{background:rgba(22,199,132,.14);color:var(--green)}
+  #hsBox .tag.lk{background:rgba(192,38,211,.14);color:var(--purple)}
+  /* cơ cấu sở hữu: BIỂU ĐỒ TRÒN (donut conic-gradient) + chú giải bên cạnh */
+  #hsBox .ownwrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin:10px 0 6px}
+  #hsBox .ownpie{width:138px;height:138px;border-radius:50%;flex:none;position:relative}
+  #hsBox .ownpie::after{content:"";position:absolute;inset:27%;border-radius:50%;background:var(--panel)}
+  #hsBox .ownlg{display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--muted);min-width:0}
+  #hsBox .ownlg .d{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px;flex:none}
+  #hsBox .morebtn{display:block;width:100%;margin:6px 0 2px;padding:7px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center}
+  #hsBox .morebtn:hover{color:var(--txt)}
+  /* 2 cột: TRÁI cơ cấu + cổ đông lớn (gọn ngang) || PHẢI công ty con + quỹ nắm giữ */
+  #hsBox .hs2{display:grid;grid-template-columns:1fr 1fr;gap:2px 30px;align-items:start}
+  #hsBox .hs2>div{min-width:0}
+  @media (max-width:920px){ #hsBox .hs2{grid-template-columns:1fr} }
+  @media (max-width:640px){ #hsBox .hidem{display:none} }
+
+  /* doanh nghiệp cùng ngành: danh sách logo + giá + vốn hoá */
+  .peer{display:flex;align-items:center;gap:11px;padding:9px 8px;border-bottom:1px solid rgba(128,128,128,.12);
+    cursor:pointer;border-radius:8px}
+  .peer:hover{background:rgba(128,128,128,.08)}
+  .peer.me{background:rgba(255,214,10,.08)}
+  .peer img{width:30px;height:30px;border-radius:8px;background:#fff;object-fit:contain;flex-shrink:0}
+  .peer .noimg{width:30px;height:30px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
+  .peer .id{min-width:0}
+  .peer .id .s{font-weight:800;font-size:14.5px}
+  .peer.me .id .s{color:#eab308}
+  .peer .id .n{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+  .peer .px{margin-left:auto;text-align:right}
+  .peer .px .p{font-weight:800;font-size:13.5px}
+  .peer .px .c{font-size:11.5px;font-weight:700}
+  .peer .mc{width:118px;text-align:right;font-weight:700;font-size:13px;flex-shrink:0}
+  .peer .mc small{display:block;color:var(--muted);font-weight:600;font-size:10px}
+
+  /* tài liệu + tin */
+  .rp{padding:10px 0;border-bottom:1px solid var(--rowline)}
+  .rp .rh{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
+  .rp .rec{font-size:10.5px;font-weight:800;border-radius:4px;padding:1.5px 7px}
+  .rp .mt{font-size:12.5px;font-weight:800}
+  .rp .src{font-size:11.5px;color:#7ab7ff;font-weight:700}
+  .rp .dt{font-size:11px;color:var(--muted);margin-left:auto}
+  .rp a.rt{font-size:13px;line-height:1.45}
+  .rp a.rt:hover{color:#fff;text-decoration:underline}
+  .rp a.dl{font-size:11.5px;font-weight:800;color:var(--green);border:1px solid rgba(22,199,132,.4);
+    border-radius:6px;padding:2px 9px;margin-left:8px;white-space:nowrap}
+  .ni{padding:9px 0;border-bottom:1px solid var(--rowline)}
+  .ni a{font-size:13.5px;line-height:1.45;display:block}
+  .ni a:hover{color:#fff;text-decoration:underline}
+  .ni .meta{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .btnrow a{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;
+    font-size:13px;font-weight:700}
+  .btnrow a:hover{border-color:var(--accent);color:#fff}
+
+  footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:16px;color:var(--muted);
+    font-size:11.5px;flex-wrap:wrap;text-align:center}
+  @media(max-width:980px){
+    .tabs{margin-left:6px}
+    #top{grid-template-columns:1fr}
+    .bigpx .p{font-size:31px}
+    canvas#cv{height:330px}
+    .statgrid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="index.html"><img class="mark" src="assets/logo-128.png" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
+  <nav class="tabs">
+    <a href="index.html">Bong bóng</a>
+    <a href="banggia.html">Bảng giá</a>
+  </nav>
+  <div class="spacer"></div>
+  <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
+</header>
+
+<div id="page">
+  <div id="top">
+    <div id="leftCol">
+    <div class="card" id="heroL">
+      <div class="idrow">
+        <img id="logo" style="display:none"/>
+        <span class="sym" id="sym">…</span>
+        <span class="ex" id="ex"></span>
+        <span class="sec" id="sec" style="display:none"></span>
+        <span class="star" id="star">☆</span>
+      </div>
+      <div class="cname" id="cname"></div>
+      <div class="bigpx"><span class="p" id="px">—</span><span class="b" id="pxb">—</span></div>
+      <div class="range">
+        <div class="lb"><span>Thấp hôm nay: <b id="dLo">—</b></span><span>Cao hôm nay: <b id="dHi">—</b></span></div>
+        <div class="bar"><i id="dMark" style="left:50%"></i></div>
+      </div>
+      <div class="range">
+        <div class="lb"><span>Đáy 52 tuần: <b id="yLo">—</b></span><span>Đỉnh 52 tuần: <b id="yHi">—</b></span></div>
+        <div class="bar"><i id="yMark" style="left:50%"></i></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="statgrid" id="stats"></div>
+    </div>
+    </div>
+
+    <div class="card" id="chartCard">
+    <div class="chead">
+      <div class="chips" id="tf">
+        <button data-v="1d">1D</button><button data-v="1w">1W</button><button data-v="1m" class="on">1M</button>
+        <button data-v="3m">3M</button><button data-v="6m">6M</button><button data-v="1y">1Y</button><button data-v="5y">5Y</button>
+      </div>
+      <span class="note" id="cnote"></span>
+    </div>
+    <canvas id="cv"></canvas>
+    </div>
+  </div>
+
+  <div id="secTabs">
+    <button data-t="tc" class="on">Báo cáo tài chính</button>
+    <button data-t="hs">Hồ sơ doanh nghiệp</button>
+    <button data-t="tt">Tin tức</button>
+    <button data-t="cn">Cùng ngành</button>
+    <button data-t="tl">Tài liệu</button>
+  </div>
+
+  <div class="sect on" id="s-tc">
+    <div class="card">
+      <div class="chips" id="finP">
+        <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
+      </div>
+      <h3 class="t">Kết quả kinh doanh</h3>
+      <div class="finlegend">
+        <span><i style="background:#5b6b7a"></i>Doanh thu</span>
+        <span><i style="background:#16c784"></i>LN sau thuế</span>
+        <span><i style="background:#38bdf8;height:2.5px;width:11px;border-radius:1px;vertical-align:2px"></i>Biên ròng %</span>
+      </div>
+      <div class="finwrap">
+        <canvas class="fin" id="finCv"></canvas>
+        <div id="kqkdT"></div>
+      </div>
+      <h3 class="t">Cân đối kế toán</h3>
+      <div class="twrap" id="bsT"></div>
+      <h3 class="t">Lưu chuyển tiền tệ</h3>
+      <div class="twrap" id="cfT"></div>
+      <h3 class="t">Cổ tức các năm</h3>
+      <div class="twrap" id="divT"></div>
+      <div class="subnote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
+    </div>
+  </div>
+
+  <div class="sect" id="s-cn">
+    <div class="card">
+      <h3 class="t" style="margin-top:0" id="peerT">Doanh nghiệp cùng ngành</h3>
+      <div id="peers"></div>
+    </div>
+  </div>
+
+  <div class="sect" id="s-tl">
+    <div class="card">
+      <h3 class="t" style="margin-top:0">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
+      <div id="reps"></div>
+      <h3 class="t">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
+      <div class="subnote">Số liệu KQKD/CĐKT/LCTT đã có ở thẻ "Báo cáo tài chính". File BCTC gốc (PDF có chữ ký, thuyết minh đầy đủ) tải tại các cổng lưu trữ chính thống:</div>
+      <div class="btnrow" id="docLinks"></div>
+    </div>
+  </div>
+
+  <div class="sect" id="s-tt">
+    <div class="card"><div id="newsL">Đang tải tin…</div></div>
+  </div>
+
+  <div class="sect" id="s-hs">
+    <div class="card" id="hsBox"><div class="subnote">Đang tải hồ sơ doanh nghiệp…</div></div>
+  </div>
+</div>
+
+<footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
+
+<script src="assets/core.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const isLight=()=>document.documentElement.dataset.theme==='light';
+const GRIDC=()=>isLight()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
+const ZEROC=()=>isLight()?'rgba(0,0,0,.32)':'rgba(255,255,255,.25)';
+/* Mã lấy từ ?sym= (do _redirects viết lại) hoặc trực tiếp /cophieu/VIC — KHÔNG phân biệt hoa/thường */
+const SYM=(new URLSearchParams(location.search).get('sym')||'').toUpperCase()||
+          decodeURIComponent(location.pathname.split('/').pop()||'').toUpperCase().replace(/\.HTML$/,'');
+/* URL hiển thị + canonical luôn về dạng chuẩn /cophieu/MÃ (chữ hoa) */
+if(SYM&&/^[A-Z0-9]{2,10}$/.test(SYM)){
+  const nice='/cophieu/'+SYM;
+  if(location.pathname+location.search!==nice) history.replaceState(null,'',nice);
+  const cn=document.createElement('link');
+  cn.rel='canonical'; cn.href='https://cpvn.io'+nice;
+  document.head.appendChild(cn);
+}
+let C=null, candles=null, candleSaved=false, tf='1m', finPeriod='Q', peerK='m', finData=null;
+
+const CFG={ '1d':{res:'5',span:4*86400,sameDay:true}, '1w':{res:'30',span:12*86400},
+  '1m':{res:'1D',span:45*86400}, '3m':{res:'1D',span:100*86400}, '6m':{res:'1D',span:200*86400},
+  '1y':{res:'1D',span:400*86400,agg:5}, '5y':{res:'1D',span:2000*86400,agg:21} };
+
+/* ---------- hero ---------- */
+function renderHero(){
+  document.title=`${C.sym} ${CP.fmtD(C.price)}đ — CPVN.IO`;
+  $('sym').textContent=C.sym; $('ex').textContent=C.ex;
+  if(C.sector){ $('sec').style.display='inline'; $('sec').textContent=C.sector; }
+  $('cname').textContent=C.name;
+  const lg=$('logo');                          // kho repo trước -> CDN nguồn -> ẩn
+  lg.style.display='block'; delete lg.dataset.cdn;
+  lg.onerror=()=>{ if(!lg.dataset.cdn&&C.img){ lg.dataset.cdn='1'; lg.src=C.img; } else lg.style.display='none'; };
+  lg.src=CP.logoSrc(C.sym);
+  const st=$('star'), upd=()=>{ const on=CP.watch.has(C.sym); st.classList.toggle('on',on); st.textContent=on?'★':'☆'; };
+  st.onclick=()=>{ CP.watch.toggle(C.sym); upd(); }; upd();
+  $('px').textContent=CP.fmtD(C.price)+' đ';
+  const chg=C.chg1d, col=CP.col1d(C);
+  $('px').style.color=col;
+  $('pxb').textContent=CP.pcTxt(chg)+' hôm nay';
+  $('pxb').style.cssText=`background:${col}22;color:${col}`;
+  if(C.low&&C.high){
+    $('dLo').textContent=CP.fmtD(C.low); $('dHi').textContent=CP.fmtD(C.high);
+    const p=C.high>C.low?(C.price-C.low)/(C.high-C.low)*100:50;
+    $('dMark').style.left=Math.max(0,Math.min(100,p))+'%';
+  }
+  const rows=[
+    ['Vốn hoá',CP.fmtVnd(C.mcapLive||C.mcap)],
+    ['Khối lượng hôm nay',CP.fmtShares(C.vol)],
+    ['Giá trị giao dịch',CP.fmtVnd(C.gtgd)],
+    ['SLCP lưu hành',CP.fmtShares(C.shares)],
+    ['Tham chiếu / <span class="cel">Trần</span> / <span class="flo">Sàn</span>',
+      `<span class="tcl">${CP.fmtD(C.ref)}</span> / <span class="cel">${CP.fmtD(C.ceil)}</span> / <span class="flo">${CP.fmtD(C.flr)}</span>`],
+    ['P/E · P/B',(C.pe!=null?(+C.pe).toFixed(1):'—')+' · '+(C.pb!=null?(+C.pb).toFixed(2):'—')],
+    ['Tỷ suất cổ tức',C.divY!=null?(+C.divY).toFixed(1)+'%':'—'],
+    ['NN ròng hôm nay',nnCell((C.fbuy||0)-(C.fsell||0))],
+  ];
+  $('stats').innerHTML=rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+}
+function nnCell(v){ if(!v) return '—';
+  return `<span style="color:${v>0?'var(--green)':'var(--red)'}">${(v>0?'+':'−')+CP.fmtShares(Math.abs(v)).replace(' cp','')}</span>`; }
+
+/* 52 tuần + NN 5/22 từ kho hist */
+async function renderFromHist(){
+  const f=await CP.loadHistFile(C.sym); if(!f) return;
+  const n=f.t.length, from=Math.max(0,n-252);
+  let lo=Infinity, hi=-Infinity;
+  for(let i=from;i<n;i++){ if(f.l[i]<lo)lo=f.l[i]; if(f.h[i]>hi)hi=f.h[i]; }
+  if(C.price){ lo=Math.min(lo,C.price); hi=Math.max(hi,C.price); }
+  if(isFinite(lo)&&isFinite(hi)&&hi>lo){
+    $('yLo').textContent=CP.fmtD(lo); $('yHi').textContent=CP.fmtD(hi);
+    $('yMark').style.left=Math.max(0,Math.min(100,(C.price-lo)/(hi-lo)*100))+'%';
+  }
+}
+
+/* ---------- biểu đồ nến lớn + khối lượng + MA20 ---------- */
+async function loadChart(){
+  candles=null; candleSaved=false; drawChart();
+  const cfg=CFG[tf];
+  const r=await CP.loadCandles(C.sym,cfg.res,cfg.span);
+  if(!r){ $('cnote').textContent='Không có dữ liệu nến'; return; }
+  let rows=r.rows; candleSaved=r.saved;
+  if(cfg.sameDay&&!r.saved){
+    const day=t=>new Date(t*1000).toLocaleDateString('en-US',{timeZone:'Asia/Ho_Chi_Minh'});
+    const lastDay=day(rows[rows.length-1].t);
+    rows=rows.filter(x=>day(x.t)===lastDay);
+  }else if(cfg.sameDay&&r.saved) rows=rows.slice(-20);
+  if(cfg.agg&&rows.length>cfg.agg){
+    const out=[];
+    for(let i=0;i<rows.length;i+=cfg.agg){
+      const gp=rows.slice(i,i+cfg.agg);
+      out.push({t:gp[0].t,o:gp[0].o,c:gp[gp.length-1].c,h:Math.max(...gp.map(x=>x.h)),
+                l:Math.min(...gp.map(x=>x.l)),v:gp.reduce((s,x)=>s+(x.v||0),0)});
+    }
+    rows=out;
+  }
+  if(rows.length<2) return;
+  candles=rows;
+  $('cnote').textContent=(candleSaved?'nến ngày · kho lưu trữ CPVN':'nguồn trực tiếp')+` · ${rows.length} nến`;
+  drawChart();
+}
+function drawChart(){
+  const cvs=$('cv'), DPR=Math.min(2,window.devicePixelRatio||1);
+  const w=cvs.clientWidth||900, h=cvs.clientHeight||430;
+  cvs.width=w*DPR; cvs.height=h*DPR;
+  const g=cvs.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
+  if(!candles){ g.fillStyle='#666'; g.font='13px system-ui'; g.textAlign='center'; g.fillText('Đang tải biểu đồ…',w/2,h/2); return; }
+  const padR=64, padT=14, volH=Math.round(h*0.17), padB=volH+24, plotW=w-padR;
+  let mn=Infinity,mx=-Infinity,vmax=0;
+  for(const r of candles){ if(r.l<mn)mn=r.l; if(r.h>mx)mx=r.h; if(r.v>vmax)vmax=r.v; }
+  if(mx-mn<1e-9) mx=mn+1;
+  const y=v=>padT+(mx-v)/(mx-mn)*(h-padT-padB);
+  const n=candles.length, cw=plotW/n, bw=Math.max(1.5,Math.min(13,cw*0.62));
+  // lưới + trục giá
+  g.font='10.5px system-ui'; g.textBaseline='middle';
+  for(let i=0;i<=4;i++){
+    const v=mn+(mx-mn)*i/4, yy=y(v);
+    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
+    g.fillStyle='#8a8a99'; g.textAlign='left';
+    g.fillText(v>=1000?(v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+'K':Math.round(v), plotW+6, yy);
+  }
+  // khối lượng
+  for(let i=0;i<n;i++){
+    const r=candles[i], x=i*cw+cw/2, up=r.c>=r.o;
+    const vh=vmax?r.v/vmax*(volH-4):0;
+    g.fillStyle=up?'rgba(22,199,132,.34)':'rgba(234,57,67,.34)';
+    g.fillRect(x-bw/2,h-22-vh,bw,vh);
+  }
+  // MA20 (nét riêng: đường trung bình 20 nến màu vàng nhạt)
+  if(n>=22){
+    g.strokeStyle='rgba(234,179,8,.75)'; g.lineWidth=1.4; g.beginPath();
+    let started=false;
+    for(let i=19;i<n;i++){
+      let s=0; for(let k=i-19;k<=i;k++) s+=candles[k].c;
+      const x=i*cw+cw/2, yy=y(s/20);
+      started?g.lineTo(x,yy):g.moveTo(x,yy); started=true;
+    }
+    g.stroke();
+  }
+  // nến
+  for(let i=0;i<n;i++){
+    const r=candles[i], x=i*cw+cw/2, up=r.c>=r.o, col=up?'#16c784':'#ea3943';
+    g.strokeStyle=col; g.lineWidth=1;
+    g.beginPath(); g.moveTo(x,y(r.h)); g.lineTo(x,y(r.l)); g.stroke();
+    g.fillStyle=col;
+    const y1=y(Math.max(r.o,r.c)), y2=y(Math.min(r.o,r.c));
+    g.fillRect(x-bw/2,y1,bw,Math.max(1,y2-y1));
+  }
+  // vạch giá hiện tại
+  const lastC=candles[n-1].c, yl=y(lastC), lcol=lastC>=candles[0].o?'#16c784':'#ea3943';
+  g.setLineDash([3,3]); g.strokeStyle=lcol+'99'; g.beginPath(); g.moveTo(0,yl); g.lineTo(plotW,yl); g.stroke(); g.setLineDash([]);
+  g.fillStyle=lcol; g.fillRect(plotW,yl-8,padR,16);
+  g.fillStyle='#fff'; g.font='700 10.5px system-ui'; g.textAlign='left';
+  g.fillText(lastC>=1000?(lastC/1000).toLocaleString('en-US',{maximumFractionDigits:2})+'K':Math.round(lastC), plotW+6, yl);
+  // % kỳ + MA note
+  const pct=(lastC/candles[0].o-1)*100;
+  g.textBaseline='alphabetic'; g.font='800 14px system-ui'; g.textAlign='left';
+  g.fillStyle=pct>=0?'#16c784':'#ea3943';
+  g.fillText(`${tf.toUpperCase()}  ${pct>=0?'+':''}${pct.toFixed(2)}%`,8,20);
+  g.font='10.5px system-ui'; g.fillStyle='rgba(234,179,8,.8)'; g.fillText('— MA20',8,36);
+  // nhãn thời gian
+  g.fillStyle='#8a8a99'; g.font='10px system-ui'; g.textAlign='center';
+  const step=Math.max(1,Math.floor(n/6));
+  for(let i=0;i<n;i+=step){
+    const d=new Date(candles[i].t*1000);
+    const lb=tf==='1d'?d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Ho_Chi_Minh'})
+      :d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',timeZone:'Asia/Ho_Chi_Minh'});
+    g.fillText(lb,i*cw+cw/2,h-8);
+  }
+}
+
+/* ---------- doanh nghiệp cùng ngành: logo + giá + VỐN HOÁ ---------- */
+function renderPeers(){
+  const box=$('peers');
+  const all=[...CP.coins.values()].filter(x=>x.sector===C.sector)
+    .sort((a,b)=>(b.mcapLive||b.mcap||0)-(a.mcapLive||a.mcap||0));
+  $('peerT').textContent=`Doanh nghiệp cùng ngành: ${C.sector||'—'} (${all.length} mã)`;
+  if(!all.length){ box.innerHTML='<div class="subnote">Chưa đủ dữ liệu ngành.</div>'; return; }
+  const meIdx=all.findIndex(x=>x.sym===C.sym);
+  const show=all.slice(0,15);
+  if(meIdx>=15) show.push(all[meIdx]);
+  box.innerHTML=show.map(x=>{
+    const me=x.sym===C.sym, rank=all.indexOf(x)+1;
+    const logo=CP.logoHTML(x.sym,x.img);
+    return `<div class="peer${me?' me':''}" data-sym="${x.sym}">
+      <span style="width:24px;text-align:right;color:var(--muted);font-size:12px">${rank}</span>
+      ${logo}
+      <div class="id"><div class="s">${x.sym}${me?' · đang xem':''}</div><div class="n">${CP.esc(x.name)}</div></div>
+      <div class="px"><div class="p">${CP.fmtD(x.price)} đ</div>
+        <div class="c" style="color:${CP.col1d(x)}">${CP.pcTxt(x.chg1d)}</div></div>
+      <div class="mc">${CP.fmtVnd(x.mcapLive||x.mcap)}<small>vốn hoá</small></div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.peer').forEach(el=>el.onclick=()=>{
+    if(el.dataset.sym!==C.sym) location.href='/cophieu/'+el.dataset.sym; });
+}
+function renderDiv(d){
+  const box=$('divT');
+  if(!d||!d.length){ box.innerHTML='<div class="subnote" style="padding:10px">Chưa có dữ liệu cổ tức.</div>'; return; }
+  const rows=d.slice(0,8);
+  while(rows.length<8) rows.push({});          // đủ 8 cột -> thẳng lưới với các bảng trên
+  const pctRow=(lb,key)=>rows.some(r=>r[key]>0)
+    ?`<tr><td><div class="lb">${lb}</div></td>`+rows.map(r=>`<td>${r[key]>0?r[key].toFixed(0)+'%':(r.year?'—':'')}</td>`).join('')+'</tr>':'';
+  box.innerHTML=`<table class="ft"><thead><tr><th><div class="lb"></div></th>${rows.map(r=>`<th>${r.year||''}</th>`).join('')}</tr></thead><tbody>`+
+    `<tr><td><div class="lb">Tiền mặt</div></td>${rows.map(r=>`<td>${r.cash>0?CP.fmtD(r.cash)+' đ':r.year?'—':''}</td>`).join('')}</tr>`+
+    pctRow('Cổ tức cổ phiếu','div')+pctRow('Thưởng cổ phiếu','bonus')+`</tbody></table>`;
+}
+
+/* ---------- tài chính: KQKD chart + 3 bảng đầy đủ ---------- */
+function drawFinChart(rows){
+  /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
+  const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
+  const DPRl=Math.min(2,window.devicePixelRatio||1);
+  const w=(tbl&&tbl.offsetWidth)||cvs.parentElement.clientWidth||800, h=200;
+  cvs.width=Math.round(w*DPRl); cvs.height=h*DPRl;
+  cvs.style.width=w+'px'; cvs.style.height=h+'px';
+  const g=cvs.getContext('2d'); g.setTransform(DPRl,0,0,DPRl,0,0); g.clearRect(0,0,w,h);
+  if(!rows||!rows.length){ g.fillStyle='#666'; g.font='12px system-ui'; g.textAlign='center'; g.fillText('Chưa có dữ liệu',w/2,h/2); return; }
+  const show=rows.slice(-8).reverse();   // mới -> cũ, 8 kỳ = đúng số cột bảng (chung lưới với CĐKT/LCTT)
+  const n=show.length;
+  let centers=null,colW=70;
+  if(tbl&&tbl.tHead&&tbl.tHead.rows.length){
+    const ths=[...tbl.tHead.rows[0].cells].slice(1,1+n);
+    if(ths.length===n&&ths[0].offsetWidth>0){
+      centers=ths.map(th=>th.offsetLeft+th.offsetWidth/2);
+      colW=ths[0].offsetWidth;
+    }
+  }
+  if(!centers){ const cw=w/n; centers=show.map((_,i)=>cw*i+cw/2); colW=cw; }
+  const bw=Math.max(8,Math.min(24,(colW-14)/2));
+  let mx=0,mn=0;
+  for(const r of show){ mx=Math.max(mx,r.rev||0,r.np||0); mn=Math.min(mn,r.np||0); }
+  if(mx-mn<1e-9) mx=mn+1;
+  const padT=10,padB=6, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
+  g.font='10px system-ui'; g.textBaseline='middle';
+  for(let i=0;i<=3;i++){ const v=mn+(mx-mn)*i/3, yy=y(v);
+    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
+    if(i>0){ g.fillStyle='#71717f'; g.textAlign='left';
+      g.fillText(Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':Math.round(v),3,yy); } }
+  g.textBaseline='alphabetic';
+  const bar=(x,v,col)=>{ const yy=y(v),top=Math.min(yy,zero),hh=Math.max(1.5,Math.abs(yy-zero));
+    const gr=g.createLinearGradient(0,top,0,top+hh); gr.addColorStop(0,col); gr.addColorStop(1,col+'88');
+    g.fillStyle=gr; if(g.roundRect){ g.beginPath(); g.roundRect(x,top,bw,hh,[3,3,0,0]); g.fill(); } else g.fillRect(x,top,bw,hh); };
+  for(let i=0;i<n;i++){ const r=show[i],cx=centers[i];
+    if(r.rev!=null) bar(cx-bw-2,r.rev,'#5b6b7a');
+    if(r.np!=null)  bar(cx+2,r.np,r.np>=0?'#16c784':'#ea3943'); }
+  g.strokeStyle=ZEROC(); g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
+  const nmv=show.map(r=>r.nm).filter(v=>v!=null);
+  if(nmv.length>=2){
+    const nmn=Math.min(...nmv,0),nmx=Math.max(...nmv,1);
+    const yn=v=>h-padB-(v-nmn)/(nmx-nmn||1)*(h-padT-padB)*0.9;
+    g.strokeStyle='#38bdf8'; g.lineWidth=1.7; g.beginPath(); let st=false;
+    for(let i=0;i<n;i++){ const v=show[i].nm; if(v==null)continue;
+      st?g.lineTo(centers[i],yn(v)):g.moveTo(centers[i],yn(v)); st=true; }
+    g.stroke();
+    for(let i=0;i<n;i++){ const v=show[i].nm; if(v==null)continue;
+      g.fillStyle='#38bdf8'; g.beginPath(); g.arc(centers[i],yn(v),2.4,0,7); g.fill(); }
+  }
+  // KHÔNG vẽ nhãn kỳ: hàng kỳ của bảng nằm ngay dưới, thẳng cột với biểu đồ
+}
+function kqkdTable(rows){
+  const show=rows.slice(-8).reverse();
+  const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
+  const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td><div class="lb">${lb}</div></td>`+show.map(r=>{
+    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'</tr>';
+  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${show.map(r=>`<th>${r.label}</th>`).join('')}</tr></thead><tbody>`+
+    line('Doanh thu','rev')+line('Giá vốn','cogs')+line('Lợi nhuận gộp','gross')+
+    line('LN trước thuế','pretax')+line('LN sau thuế','np',true,true)+
+    `<tr><td><div class="lb">Biên LN ròng</div></td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}</tr>`+
+    `</tbody></table>`;
+}
+function genericTable(el,G,emph){
+  if(!G||!G.labels||!G.rows||!G.rows.length){ el.innerHTML='<div class="subnote" style="padding:10px">Nguồn chưa có dữ liệu cho mã này.</div>'; return; }
+  const idx=G.labels.map((_,i)=>i).reverse();   // mới -> cũ
+  const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
+  el.innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${idx.map(i=>`<th>${G.labels[i]}</th>`).join('')}</tr></thead><tbody>`+
+    G.rows.map(r=>{
+      const head=emph.some(k=>r.k===k||(r.n||'').toUpperCase()===k);
+      return `<tr class="${head?'head':''}"><td title="${CP.esc(r.n)}"><div class="lb">${CP.esc(r.n)}</div></td>`+
+        idx.map(i=>`<td>${cell(r.v[i])}</td>`).join('')+'</tr>';
+    }).join('')+`</tbody></table>`;
+}
+async function renderFin(){
+  finData=await CP.loadFin(C.sym);
+  const rows=finData&&finData[finPeriod]||[];
+  kqkdTable(rows); drawFinChart(rows);   // bảng TRƯỚC -> biểu đồ đo cột bảng
+  const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
+  const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
+  genericTable($('bsT'),bs,['bsa53','bsa78','TỔNG TÀI SẢN','NỢ PHẢI TRẢ','VỐN CHỦ SỞ HỮU']);
+  genericTable($('cfT'),cf,[]);
+  renderDiv(finData&&finData.div);
+}
+
+/* ---------- tài liệu + tin tức ---------- */
+async function renderDocsNews(){
+  const d=await CP.loadNews(C.sym);
+  $('repN').textContent=d.total?`· ${d.total} báo cáo`:'';
+  $('reps').innerHTML=(d.reports&&d.reports.length)?d.reports.map(r=>{
+    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${CP.recStyle(r.rec)}">${CP.esc(r.rec)}</span>`:'';
+    const mt=r.target?`<span class="mt">Mục tiêu ${CP.fmtD(r.target)}đ</span>`:'';
+    const dl=r.pdf?`<a class="dl" href="${CP.esc(r.pdf)}" target="_blank" rel="noopener">⬇ Tải PDF</a>`:'';
+    return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${CP.esc(r.source)}</span><span class="dt">${CP.esc(r.date)}</span></div>`+
+      `<a class="rt" ${r.pdf?`href="${CP.esc(r.pdf)}" target="_blank" rel="noopener"`:''}>${CP.esc(r.title)}${dl}</a></div>`;
+  }).join(''):'<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>';
+  $('docLinks').innerHTML=[
+    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
+    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
+    [`https://finance.vietstock.vn/${C.sym}/tai-tai-lieu.htm`,'📑 Tài liệu & BCTC (Vietstock)'],
+  ].map(x=>`<a href="${x[0]}" target="_blank" rel="noopener">${x[1]}</a>`).join('');
+  const nl=$('newsL');
+  nl.innerHTML=(d.news&&d.news.length)?d.news.slice(0,30).map((n,i)=>
+    `<div class="ni"><a href="#" data-i="${i}">${CP.esc(n.title)}</a>`+
+    `<div class="meta">${CP.esc(n.source)}${n.ts?' · '+CP.timeAgo(n.ts):''}</div></div>`).join('')
+    :'<div class="subnote">Chưa có tin cho mã này.</div>';
+  nl.querySelectorAll('a[data-i]').forEach(a=>a.onclick=e=>{ e.preventDefault(); CP.openNewsItem(d.news[+a.dataset.i]); });
+}
+
+/* ---------- hồ sơ doanh nghiệp (sống -> kho data/profile, chu kỳ 3 ngày) ---------- */
+let profData=null;
+function sanHTML(html){   // lọc thẻ/thuộc tính nguy hiểm từ HTML nguồn ngoài
+  return String(html||'')
+    .replace(/<\s*(script|iframe|object|embed|form|link|meta|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,'')
+    .replace(/<\s*(script|iframe|object|embed|form|link|meta|style)[^>]*\/?>/gi,'')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+    .replace(/javascript:/gi,'');
+}
+function cleanIntro(html){  // Giới thiệu chỉ nói về doanh nghiệp: bỏ các câu số liệu
+  if(!html) return html;    // kinh doanh kỳ gần nhất do nguồn tự chèn (đã có ở tab BCTC)
+  const isNum=t=>/so với cùng kỳ|ở mức\s*[\d.,-]|có giá trị bằng|biên lãi thuần|\(NIM\)|tỷ lệ nợ xấu|bao phủ nợ xấu|tỷ suất lợi nhuận trên vốn|\(ROE\)|biên lợi nhuận gộp|chi phí dự phòng rủi ro|thu nhập lãi thuần|niêm yết (và giao dịch )?trên Sở/i
+    .test(String(t).replace(/[ \s]+/g,' '));
+  const strip=txt=>{  // tách câu; dấu "." đứng trước chữ số là thập phân (2.63%), không kết câu
+    const parts=txt.match(/(?:[^.!?]|\.(?=\d))+(?:[.!?]+\s*|$)/g)||[txt];
+    return parts.filter(p=>!isNum(p)).join('');
+  };
+  const s=String(html);
+  if(!s.includes('<')) return strip(s);
+  return s.replace(/>([^<]+)</g,(m,txt)=>'>'+strip(txt)+'<');
+}
+async function loadProfile(){
+  if(profData) return renderProfile();
+  // kho trước (đã kèm cổ đông/cty con + link mã niêm yết do server nhận diện), sống đè chỉ số mới
+  let arc=null, live=null;
+  try{ arc=await fetch(`data/profile/${C.sym}.json`).then(r=>r.ok?r.json():null); }catch(e){}
+  if(!CP.OFFLINE){
+    try{
+      const j=await fetch(`https://api2.simplize.vn/api/company/summary/${C.sym}`).then(r=>r.json());
+      const x=j.data||{};
+      if(x.nameVi||x.businessOverall) live={sym:C.sym,
+        nameVi:x.nameVi,nameEn:x.nameEn,website:x.website,exchange:x.stockExchange,
+        industry:x.industryActivity,sectorParent:x.bcEconomicSectorName,
+        overview:x.businessOverall||x.businessLine,services:x.mainService,
+        strategy:x.businessStrategy,risk:x.businessRisk,
+        roe:x.roe,roa:x.roa,beta5y:x.beta5y,freeFloat:x.freeFloatRate,bookValue:x.bookValue,
+        eps:x.epsRatio,evEbitda:x.evEbitdaRatio,
+        revLtmGrowth:x.revenueLtmGrowth,npLtmGrowth:x.netIncomeLtmGrowth};
+    }catch(e){}
+  }
+  const d=live?Object.assign({},arc||{},live,{updated:arc?arc.updated:'mới nhất (trực tiếp)'}):arc;
+  if(d&&!d.sh&&!d.subs&&!CP.OFFLINE) await liveOwnership(d);   // mã mới, kho chưa kịp có
+  profData=d||{none:true};
+  renderProfile();
+}
+function vnName(nm,c){   // việt hoá gọn phía client (bản đầy đủ nằm ở server refresh_daily.py)
+  if((c||'').toLowerCase()!=='vietnam') return nm;
+  const DICT={'state bank of vietnam':'Ngân hàng Nhà nước Việt Nam',
+    'state capital investment corporation':'Tổng công ty Đầu tư và Kinh doanh vốn Nhà nước (SCIC)'};
+  const low=nm.toLowerCase().trim();
+  if(DICT[low]) return DICT[low];
+  const m=nm.trim().match(/^([A-Za-zÀ-ỹ]+)\s*\(\s*(?:Mr|Ms|Mrs|Dr)?\.?\s*([^)]+?)\s*\)$/i);
+  if(m){ const p=m[2].split(/\s+/); return (m[1]+' '+p.slice(1).join(' ')+' '+p[0]).replace(/\s+/g,' ').trim(); }
+  let n=nm.replace(/[\s,]*joint\s+stock\s+company$/i,'');
+  if(n!==nm) return 'CTCP '+n.trim();
+  n=nm.replace(/[\s,]*(company\s+limited|company\s+ltd\.?|co\.?\s*,?\s*ltd\.?|limited)$/i,'');
+  if(n!==nm) return 'Công ty TNHH '+n.trim();
+  return nm;
+}
+async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho chưa có (fallback)
+  try{
+    const j=await fetch(`https://api2.simplize.vn/api/company/ownership/shareholder-fund-details/${C.sym}?page=0&size=100`).then(r=>r.json());
+    const seen=new Set(), out=[];
+    for(const r of (j.data&&j.data.shareholderDetails)||[]){
+      const nm=(r.investorFullName||'').trim().replace(/\s+/g,' ');
+      if(!nm||seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
+      out.push({n:vnName(nm,r.countryOfInvestor),p:r.pctOfSharesOutHeld,s:r.sharesHeld,c:r.countryOfInvestor});
+    }
+    if(out.length) d.sh=out.slice(0,40);
+    const fh=((j.data&&j.data.fundHoldings)||[]).filter(f=>f.sharesHeld);
+    if(fh.length) d.funds=fh.sort((a,b)=>(b.sharesHeldValueVnd||0)-(a.sharesHeldValueVnd||0)).slice(0,12)
+      .map(f=>({n:f.fundCode,fn:f.fundName,s:f.sharesHeld,v:f.sharesHeldValueVnd,d:f.fillingDate}));
+  }catch(e){}
+  try{
+    const j=await fetch(`https://api2.simplize.vn/api/company/sub-company/${C.sym}`).then(r=>r.json());
+    const ss=(j.data||[]).filter(r=>r.companyName).map(r=>{
+      const e={n:r.companyName.trim().replace(/\s+/g,' '),p:r.ratio,cap:r.capital};
+      if(r.type==='ASSOCIATED') e.a=1;
+      const t=(r.companyTicker||'').trim().toUpperCase();
+      if(t&&CP.coins.has(t)&&t!==C.sym) e.t=t;
+      return e;
+    });
+    if(ss.length) d.subs=ss.sort((a,b)=>(b.p||0)-(a.p||0));
+  }catch(e){}
+  try{
+    const j=await fetch(`https://api2.simplize.vn/api/company/ownership/ownership-breakdown/${C.sym}`).then(r=>r.json());
+    const oo=(j.data||[]).filter(x=>x.investorType&&x.pctOfSharesOutHeldTier)
+      .map(x=>({n:x.investorType,p:x.pctOfSharesOutHeldTier}));
+    if(oo.length) d.own=oo;
+  }catch(e){}
+}
+function renderProfile(){
+  const b=$('hsBox'), d=profData;
+  if(!d||d.none){ b.innerHTML='<div class="subnote">Chưa có hồ sơ cho mã này.</div>'; return; }
+  const f1=(v,s)=>v==null||isNaN(v)?'—':(+v).toFixed(1)+(s||'');
+  // thông tin gọn theo yêu cầu: chỉ tên - website - ngành (số liệu đã có ở bảng thống kê đầu trang)
+  const rows=[
+    ['Tên đầy đủ',CP.esc(d.nameVi||C.name)],
+    ['Website',d.website?`<a href="${CP.esc(d.website)}" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:700">${CP.esc(String(d.website).replace(/^https?:\/\//,'').replace(/\/$/,''))}</a>`:'—'],
+    ['Sàn · Ngành',`${CP.esc(d.exchange||C.ex)} · ${CP.esc(d.industry||C.sector||'—')}`],
+  ];
+  /* ---- cơ cấu sở hữu / cổ đông lớn / công ty con / quỹ nắm giữ ---- */
+  const OWNC=['#38bdf8','#16c784','#eab308','#c026d3','#ea3943','#2dd4bf','#f97316'];
+  const nameCell=(n,t,sub)=>{
+    const nm=CP.esc(n||'—');
+    const core=t?`<a class="lnk" href="/cophieu/${CP.esc(t)}">${nm} <span style="opacity:.8">· ${CP.esc(t)} ↗</span></a>`:nm;
+    return `<div>${core}${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+  };
+  let ownH='';
+  if(d.own&&d.own.length){
+    const tot=d.own.reduce((a,x)=>a+(+x.p||0),0), sc=tot>100?100/tot:1;
+    let acc=0; const segs=[];
+    d.own.forEach((x,i)=>{ const w=(+x.p||0)*sc, c=OWNC[i%OWNC.length];
+      segs.push(`${c} ${acc.toFixed(2)}% ${(acc+w).toFixed(2)}%`); acc+=w; });
+    if(acc<99.9) segs.push(`var(--panel2) ${acc.toFixed(2)}% 100%`);   // phần "khác/chưa thống kê"
+    const lg=d.own.map((x,i)=>`<span><span class="d" style="background:${OWNC[i%OWNC.length]}"></span>${CP.esc(x.n)} <b style="color:var(--txt)">${f1(x.p,'%')}</b></span>`)
+      .concat(tot<99.9?[`<span><span class="d" style="background:var(--panel2)"></span>Khác / chưa thống kê <b style="color:var(--txt)">${f1(100-tot,'%')}</b></span>`]:[]);
+    ownH=`<h3 class="t">Cơ cấu sở hữu</h3>`+
+      `<div class="ownwrap"><div class="ownpie" style="background:conic-gradient(${segs.join(',')})"></div>`+
+      `<div class="ownlg">${lg.join('')}</div></div>`;
+  }
+  let shH='';
+  if(d.sh&&d.sh.length){
+    const maxP=Math.max(...d.sh.map(x=>+x.p||0),1);
+    const totP=d.sh.reduce((a,x)=>a+(+x.p||0),0);
+    const row=(x,i)=>`<tr>
+      <td style="width:26px;color:var(--muted);font-size:12px">${i+1}</td>
+      <td>${nameCell(x.n,x.t,x.c&&x.c!=='Vietnam'?CP.esc(x.c):'')}</td>
+      <td class="r hidem" style="color:var(--muted)">${x.s?CP.fmtD(Math.round(x.s)):'—'}</td>
+      <td class="r" style="width:104px"><div class="pcell"><span style="font-weight:800">${f1(x.p,'%')}</span><span class="pbar" style="width:44px"><i style="width:${Math.min(100,(+x.p||0)/maxP*100)}%"></i></span></div></td>
+    </tr>`;
+    const head=d.sh.slice(0,12), rest=d.sh.slice(12);
+    shH=`<h3 class="t">Cổ đông lớn</h3><table class="hst" id="shT"><thead><tr><th>#</th><th>Cổ đông</th><th class="r hidem">Số cổ phiếu</th><th class="r">Tỷ lệ</th></tr></thead>`+
+      `<tbody>${head.map(row).join('')}</tbody>`+
+      (rest.length?`<tbody id="shMore" style="display:none">${rest.map((x,i)=>row(x,i+12)).join('')}</tbody>`:'')+
+      `</table>`+
+      (rest.length?`<button class="morebtn" id="shBtn">Xem thêm ${rest.length} cổ đông ▾</button>`:'')+
+      `<div class="subnote" style="margin-top:4px">${d.sh.length} cổ đông thống kê nắm ${f1(totP,'%')} cổ phần · bấm tên có mã ↗ để xem</div>`;
+  }
+  let subH='';
+  if(d.subs&&d.subs.length){
+    subH=`<h3 class="t">Công ty con & liên kết (${d.subs.length})</h3><table class="hst" id="subT"><thead><tr><th>Công ty</th><th>Quan hệ</th><th class="r">Sở hữu</th><th class="r hidem">Vốn điều lệ</th></tr></thead><tbody>`+
+      d.subs.map(x=>`<tr>
+        <td>${nameCell(x.n,x.t,'')}</td>
+        <td><span class="tag ${x.a?'lk':'con'}">${x.a?'Liên kết':'Cty con'}</span></td>
+        <td class="r" style="font-weight:800">${f1(x.p,'%')}</td>
+        <td class="r hidem" style="color:var(--muted)">${x.cap?CP.fmtVnd(x.cap):'—'}</td>
+      </tr>`).join('')+`</tbody></table>`;
+  }
+  let fundH='';
+  if(d.funds&&d.funds.length){
+    fundH=`<h3 class="t">Quỹ đầu tư đang nắm giữ (${d.funds.length})</h3><table class="hst"><thead><tr><th>Quỹ</th><th class="r">Số cổ phiếu</th><th class="r">Giá trị</th><th class="r hidem">Ngày BC</th></tr></thead><tbody>`+
+      d.funds.map(x=>`<tr>
+        <td>${nameCell(x.n,null,x.fn&&x.fn!==x.n?CP.esc(x.fn):'')}</td>
+        <td class="r" style="color:var(--muted)">${x.s?CP.fmtD(Math.round(x.s)):'—'}</td>
+        <td class="r" style="font-weight:700">${x.v?CP.fmtVnd(x.v):'—'}</td>
+        <td class="r hidem" style="color:var(--muted)">${CP.esc(x.d||'—')}</td>
+      </tr>`).join('')+`</tbody></table>`;
+  }
+  const blk=(t,h)=>h?`<h3 class="t">${t}</h3><div class="blk">${sanHTML(h)}</div>`:'';
+  b.innerHTML=
+    `<h3 class="t" style="margin-top:0">Thông tin doanh nghiệp</h3>`+
+    `<div class="statgrid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}</div>`+
+    blk('Giới thiệu',cleanIntro(d.overview))+
+    ownH+
+    `<div class="hs2"><div>${shH}</div><div>${subH+fundH}</div></div>`+
+    `<div class="subnote">Nguồn: Simplize · lưu trong kho CPVN, tự làm mới mỗi 3 ngày · bản: ${CP.esc(d.updated||'—')}</div>`;
+  const btn=$('shBtn');
+  if(btn) btn.onclick=()=>{
+    const m=$('shMore'), on=m.style.display!=='none';
+    m.style.display=on?'none':'';
+    btn.textContent=on?`Xem thêm ${d.sh.length-12} cổ đông ▾`:'Thu gọn ▴';
+  };
+}
+
+/* ---------- điều khiển ---------- */
+document.querySelectorAll('#tf button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#tf button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); tf=b.dataset.v; loadChart();
+});
+document.querySelectorAll('#secTabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#secTabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.sect').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); $('s-'+b.dataset.t).classList.add('on');
+  if(b.dataset.t==='tc'&&!finData) renderFin();
+  if(b.dataset.t==='hs'&&!profData) loadProfile();
+});
+document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#finP button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); finPeriod=b.dataset.v; renderFin();
+});
+window.addEventListener('resize',()=>{ drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]); });
+const thmBtn=$('thm');
+function applyThmIcon(){ thmBtn.textContent=isLight()?'☀️':'🌙'; }
+thmBtn.onclick=()=>{ const l=!isLight();
+  document.documentElement.dataset.theme=l?'light':'';
+  localStorage.setItem('cpvn_theme',l?'light':'');
+  applyThmIcon(); drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]);
+};
+applyThmIcon();
+
+(async function init(){
+  if(!SYM){ location.href='banggia.html'; return; }
+  await CP.loadBase();
+  C=CP.coins.get(SYM);
+  if(!C){ $('sym').textContent=SYM; $('cname').textContent='Không tìm thấy mã này trong hệ thống.'; return; }
+  renderHero(); loadChart(); renderFromHist();
+  renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
+  renderPeers(); renderDocsNews();
+  const h=CP.health;
+  $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
+  CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();
+    if(tf==='1d'&&candles&&C.price){ const l=candles[candles.length-1];
+      l.c=C.price; l.h=Math.max(l.h,C.price); l.l=Math.min(l.l,C.price); drawChart(); } });
+})();
+</script>
+</body>
+</html>

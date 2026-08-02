@@ -30,6 +30,21 @@ CP.timeAgo=function(ts){ const s=(Date.now()-ts)/1000;
   if(s<86400) return Math.round(s/3600)+' giờ trước';
   return Math.round(s/86400)+' ngày trước'; };
 CP.esc=s=>String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+/* ---------- LOGO: KHO trong repo trước, CDN nguồn chỉ là lưới an toàn -------
+   assets/logo/{MÃ}.webp (96px, ~1.6KB, cache 1 năm — xem _headers). Nguồn ngoài
+   có sập/đổi đường dẫn thì web vẫn đủ logo. Chuỗi dự phòng: kho -> CDN -> chữ tắt. */
+CP.logoSrc=sym=>`/assets/logo/${encodeURIComponent(sym)}.webp`;
+CP.logoHTML=function(sym,cdn,lazy){
+  return `<img src="${CP.logoSrc(sym)}"${lazy===false?'':' loading="lazy"'} alt="${CP.esc(sym)}"`+
+    ` data-sym="${CP.esc(sym)}"${cdn?` data-cdn="${CP.esc(cdn)}"`:''} onerror="CP.logoErr(this)">`;
+};
+CP.logoErr=function(el){
+  const cdn=el.getAttribute('data-cdn');
+  if(cdn){ el.removeAttribute('data-cdn'); el.src=cdn; return; }
+  const s=el.getAttribute('data-sym')||'';
+  el.outerHTML=`<span class="noimg">${CP.esc(s.slice(0,2))}</span>`;
+};
 /* màu 1D chuẩn bảng điện: trần tím / sàn lơ / tăng xanh / giảm đỏ / TC vàng */
 CP.col1d=function(c){
   if(c.ceil>0&&c.price>0&&c.price>=c.ceil) return 'var(--purple)';
