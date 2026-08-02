@@ -628,6 +628,18 @@ function sanHTML(html){   // lọc thẻ/thuộc tính nguy hiểm từ HTML ngu
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
     .replace(/javascript:/gi,'');
 }
+function cleanIntro(html){  // Giới thiệu chỉ nói về doanh nghiệp: bỏ các câu số liệu
+  if(!html) return html;    // kinh doanh kỳ gần nhất do nguồn tự chèn (đã có ở tab BCTC)
+  const isNum=t=>/so với cùng kỳ|ở mức\s*[\d.,-]|có giá trị bằng|biên lãi thuần|\(NIM\)|tỷ lệ nợ xấu|bao phủ nợ xấu|tỷ suất lợi nhuận trên vốn|\(ROE\)|biên lợi nhuận gộp|chi phí dự phòng rủi ro|thu nhập lãi thuần|niêm yết (và giao dịch )?trên Sở/i
+    .test(String(t).replace(/[ \s]+/g,' '));
+  const strip=txt=>{  // tách câu; dấu "." đứng trước chữ số là thập phân (2.63%), không kết câu
+    const parts=txt.match(/(?:[^.!?]|\.(?=\d))+(?:[.!?]+\s*|$)/g)||[txt];
+    return parts.filter(p=>!isNum(p)).join('');
+  };
+  const s=String(html);
+  if(!s.includes('<')) return strip(s);
+  return s.replace(/>([^<]+)</g,(m,txt)=>'>'+strip(txt)+'<');
+}
 async function loadProfile(){
   if(profData) return renderProfile();
   // kho trước (đã kèm cổ đông/cty con + link mã niêm yết do server nhận diện), sống đè chỉ số mới
@@ -770,8 +782,9 @@ function renderProfile(){
   b.innerHTML=
     `<h3 class="t" style="margin-top:0">Thông tin doanh nghiệp</h3>`+
     `<div class="statgrid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}</div>`+
-    blk('Giới thiệu',d.overview)+
-    `<div class="hs2"><div>${ownH+shH}</div><div>${subH+fundH}</div></div>`+
+    blk('Giới thiệu',cleanIntro(d.overview))+
+    ownH+
+    `<div class="hs2"><div>${shH}</div><div>${subH+fundH}</div></div>`+
     `<div class="subnote">Nguồn: Simplize · lưu trong kho CPVN, tự làm mới mỗi 3 ngày · bản: ${CP.esc(d.updated||'—')}</div>`;
   const btn=$('shBtn');
   if(btn) btn.onclick=()=>{
