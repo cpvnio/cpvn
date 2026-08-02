@@ -43,6 +43,12 @@
   html[data-theme="light"] .brand{color:var(--txt)}
   .brand b{color:inherit}
   .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:75px}
+  @media(max-width:760px){
+    .tabs{order:2;width:100%;margin-left:0;overflow-x:auto;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tabs a{padding:7px 12px;font-size:13px;white-space:nowrap}
+    .brand{order:1} .spacer{display:none} .thmbtn{order:1;margin-left:auto}
+  }
   .tabs a{padding:8px 15px;font-size:15px;font-weight:700;color:var(--muted)}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}

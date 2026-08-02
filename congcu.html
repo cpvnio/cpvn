@@ -168,6 +168,7 @@ input[type=range]{accent-color:var(--teal)}
 
 /* ---------- ô thống kê ---------- */
 .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:11px}
+.stat.stat2r{grid-template-columns:repeat(3,1fr)}   /* dàn thống kê radar: 2 hàng × 3 ô */
 .stat>div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .stat .k{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 .stat .v{font-size:19px;font-weight:800;margin-top:3px;letter-spacing:-.3px}
@@ -302,11 +303,14 @@ footer{color:var(--faint);font-size:11.5px;text-align:center;padding:30px 18px 4
 
 @media(max-width:1060px){
   #hDate,#hMood{display:none}
-  header{padding:9px 11px;gap:8px}
+  header{padding:9px 11px;gap:8px;flex-wrap:wrap}
   .brand{font-size:17px}
   .brand img{width:25px;height:25px}
-  .tabs{margin-left:2px}
-  .tabs a{padding:7px 10px;font-size:12.5px}
+  /* tabs = hàng riêng cuộn ngang: Radar/Đường đua không bao giờ bị mất */
+  .tabs{order:2;width:100%;margin-left:0}
+  .tabs a{padding:8px 13px;font-size:13px;flex-shrink:0}
+  .spacer{display:none}
+  .iconbtn{margin-left:auto}
   main{padding:18px 14px 50px}
   .g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}
   .hero{grid-template-columns:1fr}
@@ -319,6 +323,7 @@ footer{color:var(--faint);font-size:11.5px;text-align:center;padding:30px 18px 4
 @media(max-width:640px){
   .g4{grid-template-columns:1fr}
   .stat{grid-template-columns:repeat(2,1fr)}
+  .stat.stat2r{grid-template-columns:repeat(2,1fr)}
   .slider{flex-wrap:wrap}.slider label{width:100%}
 }
 </style>

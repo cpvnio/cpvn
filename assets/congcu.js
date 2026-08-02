@@ -320,13 +320,12 @@ function renderRadar(){
     +'<i style="width:'+(s.fl/tot*100)+'%;background:var(--yellow)"></i>'
     +'<i style="width:'+(s.dn/tot*100)+'%;background:var(--red)"></i></div>'
     +'<div class="sub">▲'+s.up+' · –'+s.fl+' · ▼'+s.dn+' trên '+ST.list.length.toLocaleString('en-US')+' mã</div></div>'
-    +'<div style="align-self:center">'+tiles+'</div>'
+    +'<div style="align-self:center">'+tiles.replace('class="stat"','class="stat stat2r"')+'</div>'
     +'</div>'
     +'<div class="ctl" style="margin-bottom:2px">'
     +[['r-flow','💰 Dòng tiền'],['r-power','🚀 Sức mạnh giá'],['r-risk','⚠️ Mặt tối'],['r-sec','🏭 Ngành']]
       .map(a=>'<button class="btn gh" data-go="'+a[0]+'">'+a[1]+'</button>').join('')
-    +'<button class="btn gh" id="shotRadar">📷 Chụp cả radar</button>'
-    +'<span class="note" style="margin:0">Mỗi thẻ có nút 📷 riêng — đăng nhóm mỗi sáng.</span></div>'
+    +'<button class="btn gh" id="shotRadar">📷 Chụp cả radar</button></div>'
     +'<div id="radarAll">'
     +sectionHead('r-flow','💰 Dòng tiền trong phiên')+'<div class="grid g3">'+flow.join('')+'</div>'
     +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
