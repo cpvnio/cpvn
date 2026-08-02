@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="CPVN.io" />
 <meta name="twitter:card" content="summary_large_image" />
 <!-- favicon: bông 5 bong bóng — xanh lá(tăng) giữa, 4 góc vàng(TC)/đỏ(giảm)/xanh dương(sàn)/tím(trần) -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8.6' fill='%2316c784'/%3E%3Ccircle cx='13.2' cy='12.9' r='2.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='7' r='5' fill='%23eab308'/%3E%3Ccircle cx='5.6' cy='5.5' r='1.5' fill='%23fff' opacity='.38'/%3E%3Ccircle cx='25' cy='7' r='5.4' fill='%23ea3943'/%3E%3Ccircle cx='23.4' cy='5.4' r='1.7' fill='%23fff' opacity='.33'/%3E%3Ccircle cx='7' cy='25' r='4.6' fill='%2338bdf8'/%3E%3Ccircle cx='5.8' cy='23.6' r='1.4' fill='%23fff' opacity='.4'/%3E%3Ccircle cx='25' cy='25' r='5' fill='%23c026d3'/%3E%3Ccircle cx='23.5' cy='23.4' r='1.5' fill='%23fff' opacity='.33'/%3E%3C/svg%3E" />
+<link rel="icon" type="image/png" href="assets/logo-64.png" />
 <style>
   :root{
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
@@ -45,7 +45,7 @@
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
     font-size:23px}
   .brand .mark{width:32px;height:32px;flex-shrink:0;
-    filter:drop-shadow(0 0 7px rgba(22,199,132,.35)) drop-shadow(0 0 4px rgba(234,57,67,.25))}
+    border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
   .brand b{color:#ffd60a}
   .spacer{flex:1}
 
@@ -242,13 +242,7 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r="8.6" fill="#16c784"/><circle cx="13.2" cy="12.9" r="2.7" fill="#fff" opacity=".33"/>
-      <circle cx="7" cy="7" r="5" fill="#eab308"/><circle cx="5.6" cy="5.5" r="1.5" fill="#fff" opacity=".38"/>
-      <circle cx="25" cy="7" r="5.4" fill="#ea3943"/><circle cx="23.4" cy="5.4" r="1.7" fill="#fff" opacity=".33"/>
-      <circle cx="7" cy="25" r="4.6" fill="#38bdf8"/><circle cx="5.8" cy="23.6" r="1.4" fill="#fff" opacity=".4"/>
-      <circle cx="25" cy="25" r="5" fill="#c026d3"/><circle cx="23.5" cy="23.4" r="1.5" fill="#fff" opacity=".33"/>
-    </svg><span><b>CPVN</b><span class="full">.IO</span></span></div>
+    <div class="brand"><img class="mark" src="assets/logo-128.png" alt="CPVN"/><span><b>CPVN</b><span class="full">.IO</span></span></div>
     <nav class="tabs">
       <a class="on" href="index.html">Bong bóng</a>
       <a href="banggia.html">Bảng giá</a>
