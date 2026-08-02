@@ -193,8 +193,7 @@
 
 <footer>
   <span id="kho">kho dữ liệu: đang kiểm tra…</span>
-  <span>·</span><span id="liveAt"></span>
-  <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM, có kho dự phòng nên không phụ thuộc nguồn sống</span>
+  <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
 <script src="assets/core.js"></script>
@@ -333,14 +332,12 @@ function renderStats(){
   });
   const bc=$('stats').querySelector('.bclear');
   if(bc) bc.onclick=()=>{ ST.bd=null; ST.page=1; render(); renderStats(); };
-  const at=CP.lastPollAt?new Date(CP.lastPollAt).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'}):null;
-  $('liveAt').textContent=at?`giá cập nhật ${at}`:`giá phiên ${CP.eodDate||'—'} (kho)`;
 }
 function renderKho(){
   const el=$('kho'), h=CP.health;
   if(!h){ el.textContent='kho dữ liệu: phiên '+(CP.eodDate||'—'); return; }
   el.className=h.ok?'ok':'bad';
-  el.textContent=`kho dữ liệu: phiên ${h.date} · ${h.ok?'đầy đủ ✓':'thiếu một phần — dùng bản gần nhất'} · máy ${h.runner}`;
+  el.textContent=`kho dữ liệu: phiên ${h.date} · ${h.ok?'đầy đủ ✓':'thiếu một phần — dùng bản gần nhất'}`;
 }
 
 /* flash giá khi poll về */

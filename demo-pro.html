@@ -119,10 +119,11 @@ main{max-width:1500px;margin:0 auto;padding:18px}
 .row .lg{width:26px;height:26px;border-radius:7px;background:#fff;object-fit:contain;flex-shrink:0}
 .row .noimg{width:26px;height:26px;border-radius:7px;background:var(--panel3);display:flex;align-items:center;
   justify-content:center;font-size:10px;font-weight:800;color:var(--muted);flex-shrink:0}
-.row .sy{font-size:13.5px;font-weight:800;width:46px;flex-shrink:0}
-.row .nm{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
-.row .pz{font-size:12.5px;font-weight:700;text-align:right;width:62px;flex-shrink:0}
-.row .mt{font-size:12px;font-weight:800;text-align:right;width:74px;flex-shrink:0}
+.row .id{flex:1;min-width:0;line-height:1.25}
+.row .sy{display:block;font-size:13.5px;font-weight:800}
+.row .nm{display:block;font-size:10.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .pz{font-size:12.5px;font-weight:700;text-align:right;width:60px;flex-shrink:0}
+.row .mt{font-size:12px;font-weight:800;text-align:right;width:72px;flex-shrink:0}
 .up{color:var(--green)} .dn{color:var(--red)} .fl{color:var(--yellow)}
 .ce{color:var(--purple)} .fo{color:var(--cyan)}
 .pill{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11.5px;font-weight:800}
@@ -208,6 +209,10 @@ html[data-theme="light"] .tile{border-color:rgba(255,255,255,.5)}
 #cvTip .r{display:flex;justify-content:space-between;gap:13px}
 #cvTip .r i{font-style:normal;color:var(--muted)}
 #cvTip .r span{font-weight:700}
+.zoomctl{position:absolute;right:70px;top:9px;display:flex;gap:4px;z-index:8}
+.zoomctl button{width:27px;height:27px;border-radius:8px;background:var(--panel2);color:var(--muted);
+  border:1px solid var(--line);font-size:14px;font-weight:800;cursor:pointer;line-height:1;padding:0}
+.zoomctl button:hover{color:var(--txt);border-color:var(--line2)}
 .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--muted);
   padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;transition:.12s}
 .chip:hover{color:var(--txt);border-color:var(--line2)}
