@@ -688,7 +688,12 @@ function hmColor(p,cap){
   const lum=(rgb[0]*.299+rgb[1]*.587+rgb[2]*.114)/255;
   return {bg:'rgb('+rgb.join(',')+')',fg:lum>.62?'#0d1016':'#ffffff'};
 }
-function hmVal(c){ return state.tf==='1d'?(c.chg1d??null):periodReturn(c,TFK[state.tf]); }
+function hmVal(c){   // CÙNG nguồn % với bong bóng: pct Simplize (đã điều chỉnh cổ tức) trước, mốc VPS sau
+  if(state.tf==='1d') return c.chg1d??null;
+  const P=c.pct, m={'1w':'w','1m':'m','1y':'y','5y':'y5'}[state.tf];
+  if(P&&m&&P[m]!=null) return P[m];
+  return periodReturn(c,TFK[state.tf]);
+}
 function drawHeatmap(){
   const box=document.getElementById('hmap');
   if(state.view!=='heat'){ box.innerHTML=''; return; }
