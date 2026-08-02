@@ -105,23 +105,29 @@ CP.pollBoard=async function(only){
   if(polling||CP.OFFLINE) return false; polling=true;
   try{
     const syms=(only&&only.length)?only.filter(s=>CP.coins.has(s)):[...CP.coins.keys()];
+    const rows=[];
     for(let i=0;i<syms.length;i+=150){
       const arr=await fetch(BG+'/getliststockdata/'+syms.slice(i,i+150).join(',')).then(r=>r.json());
-      for(const t of arr){
-        const c=CP.coins.get(t.sym); if(!c) continue;
-        const last=(+t.lastPrice||0)*1000;
-        c.ref=(+t.r||0)*1000; c.ceil=(+t.c||0)*1000; c.flr=(+t.f||0)*1000;
-        c.vol=(+t.lot||0)*10;
-        c.traded=last>0&&c.vol>0;
-        if(last>0) c.price=last; else if(!c.price) c.price=c.ref;
-        const ave=(parseFloat(t.avePrice)||0)*1000;
-        if(ave&&c.vol) c.gtgd=ave*c.vol;
-        c.high=(parseFloat(t.highPrice)||0)*1000||c.high;
-        c.low=(parseFloat(t.lowPrice)||0)*1000||c.low;
-        c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
-        c.chg1d=c.ref>0&&c.price>0?(c.price-c.ref)/c.ref*100:c.chg1d;
-        c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
-      }
+      for(const t of arr) rows.push(t);
+    }
+    /* đêm reset bảng: VPS trả 0 cả thị trường -> chỉ nhận TC/trần/sàn, giữ số phiên gần nhất */
+    const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
+    const boardEmpty=rows.length>50&&active<rows.length*0.1;
+    for(const t of rows){
+      const c=CP.coins.get(t.sym); if(!c) continue;
+      c.ref=(+t.r||0)*1000; c.ceil=(+t.c||0)*1000; c.flr=(+t.f||0)*1000;
+      if(boardEmpty) continue;
+      const last=(+t.lastPrice||0)*1000;
+      c.vol=(+t.lot||0)*10;
+      c.traded=last>0&&c.vol>0;
+      if(last>0) c.price=last; else if(!c.price) c.price=c.ref;
+      const ave=(parseFloat(t.avePrice)||0)*1000;
+      if(ave&&c.vol) c.gtgd=ave*c.vol;
+      c.high=(parseFloat(t.highPrice)||0)*1000||c.high;
+      c.low=(parseFloat(t.lowPrice)||0)*1000||c.low;
+      c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
+      c.chg1d=c.ref>0&&c.price>0?(c.price-c.ref)/c.ref*100:c.chg1d;
+      c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     CP.lastPollAt=Date.now(); CP.liveOk=true;
     if(!(only&&only.length)) CP.lastFullAt=CP.lastPollAt;

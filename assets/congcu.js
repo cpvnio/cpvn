@@ -177,16 +177,14 @@ function sectorPerf(){
 
 /* ---------------------------------------------------------------- đăng ký */
 const MODULES=[
-  {id:'heat', ic:'🗺️', name:'Bản đồ nhiệt', tag:'Toàn cảnh thị trường trong một hình: ô to theo vốn hoá, màu theo biến động — kịch trần TÍM, kịch sàn XANH LƠ như bảng điện. Bấm ngành để phóng to, bấm mã để mở trang cổ phiếu.',
-   meta:[], render:renderHeat},
   {id:'radar', ic:'📡', name:'Radar phiên', tag:'18 nhóm tín hiệu chia 3 khu vực + bảng ngành — mở ra là thấy hết chuyện của phiên hôm nay. Bấm mã bất kỳ để xem chi tiết.',
    meta:[], render:renderRadar},
   {id:'race', ic:'🏁', name:'Đường đua vốn hoá', tag:'6,5 năm thị trường chạy lại trong 30 giây — bảng xếp hạng vốn hoá đổi ngôi theo từng tháng.',
    meta:[], render:renderRace},
 ];
 let cur=null; const done={};
-const PATHOF={heat:'/bandonhiet',radar:'/radar',race:'/duongdua'};
-const TITLEOF={heat:'Bản đồ nhiệt',radar:'Radar phiên',race:'Đường đua vốn hoá'};
+const PATHOF={radar:'/radar',race:'/duongdua'};
+const TITLEOF={radar:'Radar phiên',race:'Đường đua vốn hoá'};
 function renderNav(){
   $$('.tabs a[data-m]').forEach(e=>{
     e.classList.toggle('on',e.dataset.m===cur);
@@ -341,207 +339,6 @@ function renderRadar(){
     const el=$('#'+b.dataset.go); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); });
 }
 
-/* ========================================================== 2. BẢN ĐỒ NHIỆT */
-const HM={size:'mcap',color:'chg',scope:'all',n:300,sector:null,tiles:[],chg:null,day:0,playing:null,speed:1};
-const HM_CAP={chg:6,w:14,m:26,y:80,nn:30};
-function heatVal(c){ return HM.color==='chg'?c.chg:HM.color==='nn'?(c.nnVal/1e9):c[HM.color]; }
-function heatTxt(v){ return HM.color==='nn'?(v==null?'—':(v>0?'+':'')+fx(v,1)+' tỷ'):pct(v); }
-function drawHeat(){
-  const box=$('#hm'); if(!box) return;
-  const W=box.clientWidth, H=box.clientHeight;
-  // danh sách theo PHẠM VI (chưa lọc ngành) — dùng chung cho cột ngành bên trái
-  let base=ST.list.filter(c=>(c.mcapLive||c.mcap)>0&&c.close>0);
-  if(HM.scope==='vn30') base=base.filter(c=>ST.vn30.has(c.sym));
-  else if(HM.scope!=='all') base=base.filter(c=>c.ex===HM.scope);
-  renderHeatSide(base);
-  let L=HM.sector?base.filter(c=>c.sector===HM.sector):base;
-  const sz=c=>HM.size==='mcap'?(c.mcapLive||c.mcap):(c.gtgd||0);
-  L=L.filter(c=>sz(c)>0).sort((a,b)=>sz(b)-sz(a)).slice(0,HM.n);
-  const cap=HM_CAP[HM.color];
-  HM.tiles=[];
-  let html='';
-  const tile=(c,x,y,w,h)=>{
-    const v=heatVal(c);
-    let col=heatColor(v,cap);
-    if(HM.color==='chg'&&c.close>0){           // màu bảng điện: trần TÍM · sàn XANH LƠ
-      if(c.ceil>0&&c.close>=c.ceil)      col={bg:'#c026d3',fg:'#ffffff'};
-      else if(c.floor>0&&c.close<=c.floor) col={bg:'#0ea5e9',fg:'#ffffff'};
-    }
-    const fs=clamp(Math.min(w,h)*.3,8,22), showP=h>=32&&w>=44;
-    HM.tiles.push({sym:c.sym});
-    return '<div class="htile" data-sym="'+c.sym+'" style="left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;background:'+col.bg+'">'+
-      (w>23&&h>15?'<b style="font-size:'+fs+'px;color:'+col.fg+'">'+c.sym+'</b>':'')+
-      (showP?'<i class="hpct" style="font-size:'+clamp(fs*.58,8,12)+'px;color:'+col.fg+'">'+heatTxt(v)+'</i>':'')+'</div>';
-  };
-  if(HM.sector){
-    const rects=squarify(L.map(c=>({k:c.sym,v:sz(c),c})),0,0,W,H);
-    for(const t of rects) html+=tile(t.d.c,t.x,t.y,t.w,t.h);
-  }else{
-    const groups={};
-    for(const c of L) (groups[c.sector]=groups[c.sector]||[]).push(c);
-    // ngành chỉ còn 1-2 mã lọt top đang vẽ -> gộp vào "Ngành khác" cho bản đồ đỡ vụn
-    // (cột ngành bên trái vẫn liệt kê ĐẦY ĐỦ như trang bong bóng)
-    const small=Object.keys(groups).filter(k=>groups[k].length<3);
-    if(small.length>1){
-      const oth=[];
-      for(const k of small){ oth.push(...groups[k]); delete groups[k]; }
-      if(oth.length) groups['Ngành khác']=oth;
-    }
-    const gitems=Object.keys(groups).map(k=>({k,v:groups[k].reduce((s,c)=>s+sz(c),0)}));
-    const grects=squarify(gitems,0,0,W,H);
-    for(const g of grects){
-      const inner=squarify(groups[g.d.k].map(c=>({k:c.sym,v:sz(c),c})),
-        g.x+1,g.y+17,Math.max(0,g.w-2),Math.max(0,g.h-18));
-      let tiles='';
-      for(const t of inner) tiles+=tile(t.d.c,t.x-g.x,t.y-g.y,t.w,t.h);
-      const gj=groups[g.d.k]; let gc=0,gd=0;
-      for(const c of gj){ const cp=c.mcapLive||c.mcap||0; gc+=cp; if(c.chg!=null) gd+=c.chg*cp; }
-      const gp={d:gc?gd/gc:0};
-      html+='<div class="hgrp" style="left:'+g.x+'px;top:'+g.y+'px;width:'+g.w+'px;height:'+g.h+'px">'+
-        '<div class="gl" data-g="'+esc(g.d.k)+'" title="Bấm để phóng to ngành này">'+esc(g.d.k)+
-        (gp&&g.w>150?' <span class="'+cls(gp.d)+'">'+pct(gp.d)+'</span>':'')+'</div>'+tiles+'</div>';
-    }
-  }
-  box.innerHTML=html;
-  const tip=$('#htip');
-  box.querySelectorAll('.htile').forEach(e=>{
-    const c=ST.map.get(e.dataset.sym);
-    e.onmousemove=ev=>{
-      tip.style.display='block';
-      tip.innerHTML='<div class="t">'+c.sym+' <span class="'+cls(c.chg)+'" style="font-size:12px">'+pct(c.chg)+'</span></div>'+
-        '<div class="r" style="max-width:220px;white-space:normal;color:var(--faint)">'+esc(shortName(c.name))+'</div>'+
-        '<div class="r"><span>Giá</span><b>'+num(c.close)+'</b></div>'+
-        '<div class="r"><span>Vốn hoá</span><b>'+vnd(c.mcapLive||c.mcap)+'</b></div>'+
-        '<div class="r"><span>GTGD</span><b>'+ty(c.gtgd)+'</b></div>'+
-        '<div class="r"><span>1 tuần / 1 tháng</span><b class="'+cls(c.w)+'">'+pct(c.w)+'</b> <b class="'+cls(c.m)+'">'+pct(c.m)+'</b></div>'+
-        '<div class="r"><span>NN ròng phiên</span><b class="'+(c.nnVal>0?'up':c.nnVal<0?'dn':'')+'">'+(c.nnVal?((c.nnVal>0?'+':'−')+ty(Math.abs(c.nnVal))):'—')+'</b></div>'+
-        '<div class="r"><span>RS Rating</span><b>'+(c.rs||'—')+'</b></div>';
-      const w=tip.offsetWidth,h2=tip.offsetHeight;
-      tip.style.left=Math.min(ev.clientX+14,innerWidth-w-10)+'px';
-      tip.style.top=Math.min(ev.clientY+14,innerHeight-h2-10)+'px';
-    };
-    e.onmouseleave=()=>{ tip.style.display='none'; };
-    e.onclick=()=>{ location.href='cophieu.html?sym='+c.sym; };   // bấm ô = mở trang mã
-  });
-  box.querySelectorAll('.gl').forEach(e=>e.onclick=()=>{ HM.sector=e.dataset.g; drawHeat(); });
-}
-function replayStop(){ if(HM.playing){ clearInterval(HM.playing); HM.playing=null; }
-  const b=$('#rpPlay'); if(b) b.textContent='▶'; }
-function replayExit(){ replayStop(); $('#replayBar').classList.remove('on'); drawHeat(); }
-function replayShow(d){
-  if(!HM.chg){ HM.chg={};
-    for(const sym in ST.spark){ const a=ST.spark[sym], o=[];
-      for(let i=1;i<a.length;i++) o.push(a[i-1]?((a[i]/a[i-1]-1)*100):null);
-      HM.chg[sym]=o; } }
-  HM.day=d;
-  const lbl=ST.sparkT.length>d?tsDate(ST.sparkT[d]):('phiên '+d);
-  $('#rpDay').textContent=lbl; $('#rpSlide').value=d;
-  const cap=6;
-  $('#hm').querySelectorAll('.htile').forEach(e=>{
-    const arr=HM.chg[e.dataset.sym], v=arr?arr[d-1]:null;
-    const col=heatColor(v,cap);
-    e.style.background=col.bg;
-    const b=e.querySelector('b'); if(b) b.style.color=col.fg;
-    const i=e.querySelector('.hpct'); if(i){ i.style.color=col.fg; i.textContent=pct(v); }
-  });
-}
-/* cột ngành dọc bên trái — như thanh ngành của trang bong bóng */
-function renderHeatSide(base){
-  const el=$('#hmSide'); if(!el) return;
-  const G={};
-  let allCap=0, allD=0;
-  for(const c of base){
-    const g=G[c.sector]=G[c.sector]||{n:0,cap:0,d:0};
-    const cap=c.mcapLive||c.mcap||0;
-    g.n++; g.cap+=cap; allCap+=cap;
-    if(c.chg!=null){ g.d+=c.chg*cap; allD+=c.chg*cap; }
-  }
-  // danh sách ngành đầy đủ, xếp theo SỐ MÃ như thanh ngành trang bong bóng
-  const rows=Object.keys(G).map(k=>({k,n:G[k].n,d:G[k].cap?G[k].d/G[k].cap:0}))
-    .sort((a,b)=>b.n-a.n);
-  const item=(k,lb,n,d)=>'<div class="hsItem'+((HM.sector||'')===k?' on':'')+'" data-s="'+esc(k)+'">'+
-    '<span class="n">'+esc(lb)+'</span><span class="c">'+n+'</span>'+
-    '<span class="p '+cls(d)+'">'+pct(d)+'</span></div>';
-  el.innerHTML='<div class="hsHead">Nhóm ngành</div>'+
-    item('','Tất cả ngành',base.length,allCap?allD/allCap:0)+
-    rows.map(r=>item(r.k,r.k,r.n,r.d)).join('');
-  el.querySelectorAll('.hsItem').forEach(e=>e.onclick=()=>{
-    HM.sector=e.dataset.s||null; drawHeat(); });
-}
-function renderHeat(){
-  const m=MODULES.find(x=>x.id==='heat');
-  const seg=(id,opts,cur2)=>'<div class="seg" id="'+id+'">'+opts.map(o=>
-    '<button data-v="'+o[0]+'" class="'+(String(o[0])===String(cur2)?'on':'')+'">'+o[1]+'</button>').join('')+'</div>';
-  $('#m-heat').innerHTML=head(m)
-    +'<div class="ctl">'
-    +'<span class="lb">Ô to theo</span>'+seg('hmSize',[['mcap','Vốn hoá'],['gtgd','GTGD']],HM.size)
-    +'<span class="lb">Màu</span>'+seg('hmColor',[['chg','1 ngày'],['w','1 tuần'],['m','1 tháng'],['y','1 năm'],['nn','NN ròng']],HM.color)
-    +'<span class="lb">Phạm vi</span>'+seg('hmScope',[['all','Tất cả'],['vn30','VN30'],['HOSE','HOSE'],['HNX','HNX'],['UPCOM','UPCOM']],HM.scope)
-    +seg('hmN',[[150,'150'],[300,'300'],[500,'500']],HM.n)
-    +'<span class="legend">−'+HM_CAP[HM.color]+(HM.color==='nn'?' tỷ':'%')
-    +'<i style="background:'+heatColor(-9,6).bg+'"></i><i style="background:'+heatColor(-2.5,6).bg+'"></i>'
-    +'<i style="background:'+heatColor(0,6).bg+'"></i><i style="background:'+heatColor(2.5,6).bg+'"></i>'
-    +'<i style="background:'+heatColor(9,6).bg+'"></i>+'+HM_CAP[HM.color]+(HM.color==='nn'?' tỷ':'%')
-    +(HM.color==='chg'?' <i style="background:#c026d3"></i>trần <i style="background:#0ea5e9"></i>sàn':'')+'</span>'
-    +'</div>'
-    +'<div class="ctl"><button class="btn gh" id="hmReplay">🎬 Xem lại 30 phiên</button>'
-    +'<button class="btn gh" id="hmFull">⛶ Toàn màn hình</button>'
-    +'<button class="btn gh" id="hmShot">📷 Chụp ảnh</button>'
-    +'<span class="note" style="margin:0">Chọn ngành ở cột bên trái để xem riêng ngành đó (bấm tên ngành trên bản đồ cũng được) · rê chuột xem chi tiết mã.</span></div>'
-    +'<div id="hmWrap"><div id="hmLayout"><div id="hmSide"></div><div id="hm"></div></div>'
-    +'<div id="replayBar"><button class="btn gh" id="rpPlay" style="padding:7px 13px">▶</button>'
-    +'<span class="day" id="rpDay">—</span>'
-    +'<input type="range" id="rpSlide" min="1" max="29" step="1" value="29"/>'
-    +seg('rpSpeed',[[0.5,'chậm'],[1,'vừa'],[2,'nhanh']],1)
-    +'<button class="btn gh" id="rpExit">✕ Về trực tiếp</button></div></div>';
-  const bind=(id,k,cast,after)=>{ const box=$('#'+id); if(!box) return;
-    box.querySelectorAll('button').forEach(b=>b.onclick=()=>{
-      box.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-      HM[k]=cast?cast(b.dataset.v):b.dataset.v; if(after)after(); }); };
-  bind('hmSize','size',null,drawHeat);
-  bind('hmColor','color',null,()=>{ replayExit(); renderHeat(); });
-  bind('hmScope','scope',null,()=>{ HM.sector=null; drawHeat(); });
-  bind('hmN','n',Number,drawHeat);
-  bind('rpSpeed','speed',Number,()=>{ if(HM.playing){ replayStop(); startPlay(); } });
-  $('#hmShot').onclick=()=>shot($('#hmLayout'),'cpvn-heatmap-'+ST.date);
-  $('#hmFull').onclick=()=>{ const el=$('#hmWrap');
-    if(document.fullscreenElement) document.exitFullscreen();
-    else el.requestFullscreen&&el.requestFullscreen(); };
-  document.addEventListener('fullscreenchange',()=>{
-    const h=document.fullscreenElement?'calc(100vh - 96px)':'';
-    $('#hm').style.height=h;
-    const sd=$('#hmSide'); if(sd) sd.style.maxHeight=h;
-    drawHeat(); if($('#replayBar').classList.contains('on')) replayShow(HM.day);
-  });
-  const startPlay=()=>{
-    $('#rpPlay').textContent='⏸';
-    HM.playing=setInterval(()=>{
-      let d=HM.day+1; const mx=+$('#rpSlide').max;
-      if(d>mx){ replayStop(); return; }
-      replayShow(d);
-    },Math.round(650/HM.speed));
-  };
-  $('#hmReplay').onclick=()=>{
-    const bar=$('#replayBar');
-    if(bar.classList.contains('on')){ replayExit(); return; }
-    if(!Object.keys(ST.spark).length) return toast('Kho chưa có spark.json');
-    bar.classList.add('on');
-    const len=(ST.spark[Object.keys(ST.spark)[0]]||[]).length;
-    $('#rpSlide').max=len-1;
-    replayShow(1); replayStop(); startPlay();
-  };
-  $('#rpPlay').onclick=()=>{ if(HM.playing) replayStop(); else{
-    if(HM.day>=+$('#rpSlide').max) replayShow(1);
-    (function(){ $('#rpPlay').textContent='⏸';
-      HM.playing=setInterval(()=>{ let d=HM.day+1;
-        if(d>+$('#rpSlide').max){ replayStop(); return; } replayShow(d);
-      },Math.round(650/HM.speed)); })(); } };
-  $('#rpSlide').oninput=e=>{ replayStop(); replayShow(+e.target.value); };
-  $('#rpExit').onclick=replayExit;
-  requestAnimationFrame(drawHeat);
-}
-MODULES.find(x=>x.id==='heat').after=()=>requestAnimationFrame(drawHeat);
-
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null};
 function raceData(){
@@ -684,11 +481,11 @@ async function init(){
   });
   addEventListener('resize',(()=>{ let rt; return ()=>{ clearTimeout(rt);
     rt=setTimeout(()=>{ const m=MODULES.find(x=>x.id===cur);
-      if(m){ if(cur==='heat') drawHeat(); else if(m.after) m.after(); } },180); }; })());
+      if(m&&m.after) m.after(); },180); }; })());
   const q=new URLSearchParams(location.search).get('m');
-  const byPath={bandonhiet:'heat',radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
+  const byPath={radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
-  showMod(MODULES.some(m=>m.id===start)?start:'heat');
+  showMod(MODULES.some(m=>m.id===start)?start:'radar');
   $('#load').classList.add('off');
   setTimeout(()=>$('#load').remove(),420);
 }

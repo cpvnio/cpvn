@@ -53,8 +53,8 @@
   .spacer{flex:1}
 
   /* 2 tab điều hướng trang: Bong bóng | Bảng giá */
-  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:75px}
-  .tabs a{padding:7px 13px;font-size:15px;font-weight:700;color:var(--muted);text-decoration:none}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:42px}
+  .tabs a{padding:7px 11px;font-size:14px;font-weight:700;color:var(--muted);text-decoration:none}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .tmore{position:relative;display:flex}
@@ -67,7 +67,7 @@
   .tmenu a:hover{background:var(--panel2);color:var(--txt)}
 
   .group{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .group button{background:transparent;color:var(--muted);border:0;padding:6px 7px;font-size:14.5px;
+  .group button{background:transparent;color:var(--muted);border:0;padding:6px 5.5px;font-size:14px;
     font-weight:700;cursor:pointer;transition:.15s}
   .group button:hover{color:var(--txt);background:var(--panel2)}
   .group button.active{color:#fff;background:var(--accent)}
@@ -106,6 +106,30 @@
   #body{display:flex;flex:1;min-height:0}
   main{position:relative;flex:1;overflow:hidden;min-width:0}
   canvas#cv{display:block;width:100%;height:100%;touch-action:none}
+  /* BẢN ĐỒ NHIỆT — dạng xem thứ 2 của cùng dữ liệu/bộ lọc, phủ lên vùng bong bóng */
+  #hmap{position:absolute;inset:0;display:none;overflow:hidden;background:var(--bg,#0a0a0c)}
+  #viewmode{position:absolute;top:10px;right:12px;z-index:12;display:flex;overflow:hidden;
+    background:color-mix(in srgb,var(--panel,#15151a) 82%,transparent);backdrop-filter:blur(8px);
+    border:1px solid var(--line,#2a2a33);border-radius:10px}
+  #viewmode button{background:transparent;border:0;color:var(--muted,#8a8a99);padding:7px 13px;
+    font-size:12.5px;font-weight:700;cursor:pointer}
+  #viewmode button.active{background:var(--accent,#e11d48);color:#fff}
+  @media(max-width:640px){ #viewmode{top:8px;right:8px} #viewmode button{padding:6px 10px;font-size:11.5px} }
+  body.viewheat #hmap{display:block}
+  body.viewheat canvas#cv{visibility:hidden}
+  .hgrp{position:absolute;overflow:hidden}
+  .hgrp .gl{position:absolute;top:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:5px;
+    font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#8a8a99);
+    padding:0 6px;background:rgba(0,0,0,.35);border-bottom:1px solid rgba(255,255,255,.07);
+    white-space:nowrap;cursor:pointer}
+  html[data-theme="light"] .hgrp .gl{background:rgba(255,255,255,.6);border-bottom-color:rgba(0,0,0,.08)}
+  .hgrp .gl:hover{color:var(--txt,#fff)}
+  .htile{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    overflow:hidden;cursor:pointer;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+  html[data-theme="light"] .htile{box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+  .htile:hover{filter:brightness(1.28);z-index:3}
+  .htile b{font-weight:800;line-height:1.05;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+  .htile i{font-style:normal;color:rgba(255,255,255,.93);text-shadow:0 1px 3px rgba(0,0,0,.5);font-weight:600}
   #detCvWrap{position:relative}
   #detCandle{touch-action:pan-y;cursor:crosshair}
   #detTip{position:absolute;display:none;pointer-events:none;z-index:9;
@@ -270,7 +294,6 @@
       <a href="banggia.html">Bảng giá</a>
       <span class="tmore" id="tMore"><a>Công cụ ▾</a>
         <div class="tmenu">
-          <a href="congcu.html?m=heat">Bản đồ nhiệt</a>
           <a href="congcu.html?m=radar">Radar phiên</a>
           <a href="congcu.html?m=race">Đường đua vốn hoá</a>
         </div>
@@ -292,6 +315,7 @@
       <button data-size="signif" class="active">Nổi bật</button>
       <button data-size="mcap">Vốn hoá</button>
     </div>
+
 
     <select id="floor">
       <option value="all" selected>Tất cả sàn</option>
@@ -329,6 +353,12 @@
     <div id="sbBackdrop"></div>
   <main>
     <canvas id="cv"></canvas>
+    <div id="hmap"></div>
+    <!-- 2 DẠNG XEM cùng 1 bộ lọc — nút nổi để không phá header 1 hàng -->
+    <div id="viewmode" title="Chọn dạng hiển thị">
+      <button data-view="bub" class="active">Bong bóng</button>
+      <button data-view="heat">Bản đồ nhiệt</button>
+    </div>
     <div id="status">Đang tải universe…</div>
 
 
@@ -423,7 +453,8 @@ const ZEROC=()=>isLight()?'rgba(0,0,0,.3)':'rgba(255,255,255,.25)';
 
 const state={ tf:'1d', sizeBy:'signif', floor:'all', sector:'all', cluster:false,
   range:[0,100], search:'', coins:new Map(), vn30:new Set(), hnx30:new Set(), sectors:[],
-  eodDate:null, eodLoaded:false, savedIdx:null };
+  eodDate:null, eodLoaded:false, savedIdx:null,
+  view:localStorage.getItem('cpvn_viewmode')||'bub' };   // 'bub' bong bóng | 'heat' bản đồ nhiệt
 
 /* ---------- UNIVERSE ------------------------------------------------------ */
 /* Gộp ngành cho gọn: (1) hợp nhất các nhánh bán lẻ; (2) ngành <4 mã dồn về nhóm cha
@@ -520,22 +551,30 @@ async function pollBoard(only){
     let list=chunks;
     if(only&&only.length){ const u=[...new Set(only.filter(x=>state.coins.has(x)))];
       list=[]; for(let i=0;i<u.length;i+=150) list.push(u.slice(i,i+150).join(',')); }
+    const rows=[];
     for(const ch of list){
       const arr=await fetch(BG+'/getliststockdata/'+ch).then(r=>r.json());
-      for(const t of arr){
-        const c=state.coins.get(t.sym); if(!c) continue;
-        const last=(+t.lastPrice||0)*1000;
-        c.ref=(+t.r||0)*1000; c.ceil=(+t.c||0)*1000; c.flr=(+t.f||0)*1000;
-        c.vol=(+t.lot||0)*10;
-        c.traded=last>0&&c.vol>0;
-        c.price=last>0?last:(c.ref||c.price);
-        const ave=(parseFloat(t.avePrice)||0)*1000;
-        c.gtgd=ave*c.vol;
-        c.high=(parseFloat(t.highPrice)||0)*1000; c.low=(parseFloat(t.lowPrice)||0)*1000;
-        c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
-        c.chg1d=c.ref>0?(c.price-c.ref)/c.ref*100:0;   // changePc của VPS KHÔNG có dấu -> tự tính
-        c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
-      }
+      for(const t of arr) rows.push(t);
+    }
+    /* ĐÊM RESET BẢNG (rạng sáng trước phiên mới / cuối tuần): VPS trả lastPrice=0, lot=0
+       cho CẢ thị trường. Không được ghi đè số liệu kho -> chỉ nhận TC/trần/sàn phiên tới,
+       giữ nguyên giá/KL/%/bong bóng của phiên gần nhất. */
+    const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
+    const boardEmpty=rows.length>50&&active<rows.length*0.1&&state.eodLoaded;
+    for(const t of rows){
+      const c=state.coins.get(t.sym); if(!c) continue;
+      c.ref=(+t.r||0)*1000; c.ceil=(+t.c||0)*1000; c.flr=(+t.f||0)*1000;
+      if(boardEmpty) continue;                    // giữ nguyên số phiên gần nhất từ kho
+      const last=(+t.lastPrice||0)*1000;
+      c.vol=(+t.lot||0)*10;
+      c.traded=last>0&&c.vol>0;
+      c.price=last>0?last:(c.ref||c.price);
+      const ave=(parseFloat(t.avePrice)||0)*1000;
+      c.gtgd=ave*c.vol;
+      c.high=(parseFloat(t.highPrice)||0)*1000; c.low=(parseFloat(t.lowPrice)||0)*1000;
+      c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
+      c.chg1d=c.ref>0?(c.price-c.ref)/c.ref*100:0;   // changePc của VPS KHÔNG có dấu -> tự tính
+      c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     lastPollAt=Date.now(); if(!(only&&only.length)) lastFullAt=lastPollAt; updateLivePill();
   }catch(e){
@@ -614,6 +653,95 @@ function selectCoins(){
   if(lastPollAt>0||state.eodLoaded) list=list.filter(c=>c.traded);
   list.sort((a,b)=>(b.mcapLive||0)-(a.mcapLive||0)||b.gtgd-a.gtgd);
   return list.slice(state.range[0],state.range[1]);
+}
+
+/* ---------- BẢN ĐỒ NHIỆT (dạng xem 2 — CÙNG bộ lọc với bong bóng) --------- */
+const HM_CAP={'1d':6,'1w':14,'1m':26,'3m':40,'6m':60,'1y':80,'5y':200};
+function hmSquarify(items,X,Y,W2,H2){
+  const out=[], list=items.filter(d=>d.v>0).slice().sort((a,b)=>b.v-a.v);
+  const total=list.reduce((s2,d)=>s2+d.v,0); if(!total||W2<=0||H2<=0) return out;
+  let x=X,y=Y,w=W2,h=H2,scale=(W2*H2)/total,i=0;
+  const worst=(ar,side)=>{ const s2=ar.reduce((a,b)=>a+b,0), mx=Math.max.apply(null,ar), mn=Math.min.apply(null,ar);
+    return Math.max(side*side*mx/(s2*s2),(s2*s2)/(side*side*mn)); };
+  while(i<list.length&&w>.5&&h>.5){
+    const side=Math.min(w,h), row=[], areas=[];
+    while(i<list.length){
+      const a2=Math.max(list[i].v*scale,.0001);
+      if(areas.length&&worst(areas,side)<worst(areas.concat([a2]),side)) break;
+      areas.push(a2); row.push(list[i]); i++;
+    }
+    const sum=areas.reduce((a2,b2)=>a2+b2,0);
+    if(w>=h){ const rw=sum/h; let cy=y;
+      row.forEach((d,k)=>{ const rh=areas[k]/rw; out.push({d,x,y:cy,w:rw,h:rh}); cy+=rh; }); x+=rw; w-=rw; }
+    else{ const rh=sum/w; let cx=x;
+      row.forEach((d,k)=>{ const rw2=areas[k]/rh; out.push({d,x:cx,y,w:rw2,h:rh}); cx+=rw2; }); y+=rh; h-=rh; }
+  }
+  return out;
+}
+function hmColor(p,cap){
+  const light=isLight(), NEU=light?[189,195,204]:[52,52,62];
+  if(p==null||isNaN(p)) return {bg:'rgb('+NEU.join(',')+')',fg:light?'#10131a':'#c9c9d2'};
+  const t=Math.max(-1,Math.min(1,p/cap)), a=Math.abs(t), C=t>=0?[22,199,132]:[234,57,67];
+  const rgb=NEU.map((v,i)=>Math.round(v+(C[i]-v)*Math.pow(a,.7)));
+  const lum=(rgb[0]*.299+rgb[1]*.587+rgb[2]*.114)/255;
+  return {bg:'rgb('+rgb.join(',')+')',fg:lum>.62?'#0d1016':'#ffffff'};
+}
+function hmVal(c){ return state.tf==='1d'?(c.chg1d??null):periodReturn(c,TFK[state.tf]); }
+function drawHeatmap(){
+  const box=document.getElementById('hmap');
+  if(state.view!=='heat'){ box.innerHTML=''; return; }
+  const W2=box.clientWidth, H2=box.clientHeight;
+  if(W2<50||H2<50) return;
+  const cap=HM_CAP[state.tf]||6;
+  const L=selectCoins().filter(c=>(c.mcapLive||c.mcap)>0);
+  if(!L.length){ box.innerHTML='<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted,#888);font-size:13px">Không có mã nào khớp bộ lọc</div>'; return; }
+  const pctTxt=v=>v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
+  let html='';
+  const tile=(c,x,y,w,h)=>{
+    const v=hmVal(c);
+    let col=hmColor(v,cap);
+    if(state.tf==='1d'&&c.price>0){          // màu bảng điện: kịch trần TÍM · kịch sàn XANH LƠ
+      if(c.ceil>0&&c.price>=c.ceil) col={bg:'#c026d3',fg:'#fff'};
+      else if(c.flr>0&&c.price<=c.flr) col={bg:'#0ea5e9',fg:'#fff'};
+    }
+    const fs=Math.max(8,Math.min(22,Math.min(w,h)*.3)), showP=h>=32&&w>=44;
+    return '<div class="htile" data-sym="'+c.sym+'" title="'+c.sym+' · '+pctTxt(v)+'" '+
+      'style="left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;background:'+col.bg+'">'+
+      (w>23&&h>15?'<b style="font-size:'+fs+'px;color:'+col.fg+'">'+c.sym+'</b>':'')+
+      (showP?'<i style="font-size:'+Math.max(8,Math.min(12,fs*.58))+'px;color:'+col.fg+'">'+pctTxt(v)+'</i>':'')+'</div>';
+  };
+  const sz=c=>c.mcapLive||c.mcap||0;
+  if(state.sector!=='all'||state.search){
+    for(const t of hmSquarify(L.map(c=>({v:sz(c),c})),0,0,W2,H2)) html+=tile(t.d.c,t.x,t.y,t.w,t.h);
+  }else{
+    const groups={};
+    for(const c of L) (groups[c.sector]=groups[c.sector]||[]).push(c);
+    const small=Object.keys(groups).filter(k=>groups[k].length<3);
+    if(small.length>1){ const oth=[];
+      for(const k of small){ oth.push(...groups[k]); delete groups[k]; }
+      if(oth.length) groups['Ngành khác']=oth; }
+    const gitems=Object.keys(groups).map(k=>({k,v:groups[k].reduce((s2,c)=>s2+sz(c),0)}));
+    for(const g of hmSquarify(gitems,0,0,W2,H2)){
+      const inner=hmSquarify(groups[g.d.k].map(c=>({v:sz(c),c})),
+        g.x+1,g.y+16,Math.max(0,g.w-2),Math.max(0,g.h-17));
+      let tiles='';
+      for(const t of inner) tiles+=tile(t.d.c,t.x-g.x,t.y-g.y,t.w,t.h);
+      html+='<div class="hgrp" style="left:'+g.x+'px;top:'+g.y+'px;width:'+g.w+'px;height:'+g.h+'px">'+
+        '<div class="gl" data-g="'+g.d.k.replace(/"/g,'&quot;')+'" title="Bấm để lọc riêng ngành này">'+g.d.k+'</div>'+tiles+'</div>';
+    }
+  }
+  box.innerHTML=html;
+  box.querySelectorAll('.htile').forEach(e=>e.onclick=()=>{
+    const c=state.coins.get(e.dataset.sym); if(c) showDetail(c); });
+  box.querySelectorAll('.gl').forEach(e=>e.onclick=()=>{
+    state.sector=e.dataset.g==='Ngành khác'?state.sector:e.dataset.g;
+    markSectorActive(); rebuild(); });
+}
+function applyView(){
+  document.body.classList.toggle('viewheat',state.view==='heat');
+  document.querySelectorAll('#viewmode button').forEach(b=>
+    b.classList.toggle('active',b.dataset.view===state.view));
+  drawHeatmap();
 }
 
 /* ---------- CANVAS + PHYSICS ---------------------------------------------- */
@@ -746,6 +874,7 @@ function rebuild(){
   computeClusters();
   if(added>3) warmup(240);
   updateSecBar();
+  if(state.view==='heat') drawHeatmap();   // dạng bản đồ dùng CHUNG bộ lọc/dữ liệu
 }
 /* dải tên ngành đang chọn (mobile): hiện dưới dải chỉ số cho dễ nhận biết */
 function updateSecBar(){
@@ -1560,6 +1689,12 @@ async function snapshot(){
 $('shotBtn').onclick=snapshot;
 
 /* ---------- GIAO DIỆN SÁNG/TỐI (đồng bộ mọi trang qua localStorage) -------- */
+document.querySelectorAll('#viewmode button').forEach(b=>b.onclick=()=>{
+  state.view=b.dataset.view;
+  localStorage.setItem('cpvn_viewmode',state.view);
+  applyView();
+});
+window.addEventListener('resize',()=>{ if(state.view==='heat') drawHeatmap(); });
 const tMore=document.getElementById('tMore');
 if(tMore){ tMore.querySelector('a').onclick=e=>{ e.preventDefault(); tMore.classList.toggle('open'); };
   document.addEventListener('click',e=>{ if(!tMore.contains(e.target)) tMore.classList.remove('open'); }); }
@@ -1731,7 +1866,8 @@ async function openNews(slug){
     await loadUniverse();
     buildChunks();
     await loadEOD();       // vẽ NGAY bằng snapshot đã lưu (chỉ ~100KB — "dữ liệu hôm nay")
-    rebuild();
+    if(new URLSearchParams(location.search).get('view')==='heat') state.view='heat';
+    rebuild(); applyView();
     refreshIdxBar();
     pollBoard().then(()=>{ rebuild(); refreshIdxBar(); });   // giá trực tiếp đè lên khi có
     setInterval(rebuild, 30000);

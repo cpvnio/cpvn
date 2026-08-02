@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CPVN — Bản đồ nhiệt · Radar phiên · Đường đua vốn hoá</title>
-<meta name="description" content="Bộ công cụ thị trường CPVN: bản đồ nhiệt toàn thị trường, radar tín hiệu phiên, đường đua vốn hoá 6,5 năm. Dữ liệu HOSE · HNX · UPCOM tự cập nhật mỗi phiên."/>
+<title>CPVN — Radar phiên · Đường đua vốn hoá</title>
+<meta name="description" content="Bộ công cụ thị trường CPVN: radar tín hiệu phiên, đường đua vốn hoá 6,5 năm. Dữ liệu HOSE · HNX · UPCOM tự cập nhật mỗi phiên."/>
 <script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
 <link rel="icon" type="image/png" href="assets/logo-64.png"/>
 <style>
@@ -215,35 +215,6 @@ input[type=range]{accent-color:var(--teal)}
 .hero .story .dt{font-size:11px;font-weight:900;letter-spacing:.12em;color:var(--rose);
   text-transform:uppercase;display:block;margin-bottom:5px}
 
-/* ---------- bản đồ nhiệt ---------- */
-#hm{position:relative;width:100%;height:min(74vh,760px);min-height:500px;border-radius:var(--r);
-  overflow:hidden;border:1px solid var(--line);background:var(--solid)}
-.hgrp{position:absolute;overflow:hidden}
-.hgrp .gl{position:absolute;top:0;left:0;right:0;height:17px;display:flex;align-items:center;gap:6px;
-  font-size:9.5px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);
-  padding:0 6px;background:var(--bg2);border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer}
-.hgrp .gl:hover{color:var(--txt)}
-.htile{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  overflow:hidden;cursor:pointer;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35);
-  transition:filter .1s}
-html[data-theme="light"] .htile{box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
-.htile:hover{filter:brightness(1.3);z-index:3}
-.htile b{font-weight:800;line-height:1.04;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
-.htile i{font-style:normal;color:rgba(255,255,255,.93);text-shadow:0 1px 3px rgba(0,0,0,.5);font-weight:600}
-#htip{position:fixed;z-index:70;display:none;pointer-events:none;background:var(--solid);
-  border:1px solid var(--line2);border-radius:13px;padding:10px 13px;font-size:12px;
-  box-shadow:var(--shadow);min-width:190px}
-#htip .t{font-size:15px;font-weight:800;margin-bottom:2px}
-#htip .r{display:flex;justify-content:space-between;gap:16px;padding:1.5px 0;color:var(--mut)}
-#htip .r b{color:var(--txt);font-weight:700}
-.legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--faint);margin-left:auto}
-.legend i{width:20px;height:10px;border-radius:2.5px;display:inline-block}
-#replayBar{display:none;align-items:center;gap:10px;margin-top:11px;background:var(--card);
-  border:1px solid var(--line);border-radius:13px;padding:9px 13px;flex-wrap:wrap}
-#replayBar.on{display:flex}
-#replayBar .day{font-size:14px;font-weight:800;min-width:88px}
-#replayBar input[type=range]{flex:1;min-width:150px}
-
 /* ---------- tìm cơ hội ---------- */
 .strats{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px;margin-bottom:16px}
 .strat{background:var(--card);border:1.5px solid var(--line);border-radius:15px;padding:13px 15px;
@@ -313,35 +284,6 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .secrow .sbr{display:none}
 }
 
-/* ---------- cột ngành dọc của bản đồ nhiệt (kiểu trang bong bóng) ---------- */
-#hmLayout{display:flex;gap:12px;align-items:stretch}
-#hm{flex:1;min-width:0}
-#hmSide{width:200px;flex-shrink:0;background:var(--card);border:1px solid var(--line);
-  border-radius:var(--r);overflow-y:auto;max-height:min(74vh,760px)}
-#hmSide .hsHead{position:sticky;top:0;background:var(--solid);padding:10px 13px 8px;font-size:10px;
-  font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
-  border-bottom:1px solid var(--line);z-index:2}
-.hsItem{display:flex;align-items:center;gap:7px;padding:8px 12px;font-size:12.5px;cursor:pointer;
-  border-bottom:1px solid var(--line);transition:.12s}
-.hsItem:last-child{border-bottom:0}
-.hsItem:hover{background:var(--card2)}
-.hsItem.on{background:var(--rose);color:#fff}
-.hsItem.on .c,.hsItem.on .p{color:rgba(255,255,255,.88)!important}
-.hsItem .n{flex:1;min-width:0;line-height:1.3;font-weight:600}
-.hsItem .c{font-size:10.5px;color:var(--faint)}
-.hsItem .p{width:54px;text-align:right;font-weight:800;font-size:11.5px}
-#hmWrap:fullscreen{background:var(--bg);padding:14px}
-@media(max-width:1060px){
-  #hmLayout{flex-direction:column}
-  #hmSide{width:100%;max-height:none;display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
-  #hmSide::-webkit-scrollbar{display:none}
-  #hmSide .hsHead{display:none}
-  .hsItem{flex-shrink:0;border-bottom:0;border-right:1px solid var(--line);padding:8px 11px}
-  .hsItem .c{display:none}
-  .hsItem .n{flex:none}
-  .hsItem .p{width:auto}
-}
-
 /* ---------- toast + loader ---------- */
 #toast{position:fixed;right:18px;bottom:18px;z-index:90;display:flex;flex-direction:column;gap:8px}
 .tst{background:var(--solid);border:1px solid var(--line2);border-left:3px solid var(--teal);
@@ -390,7 +332,6 @@ footer{color:var(--faint);font-size:11.5px;text-align:center;padding:30px 18px 4
   <nav class="tabs">
     <a href="index.html">Bong bóng</a>
     <a href="banggia.html">Bảng giá</a>
-    <a data-m="heat">Bản đồ nhiệt</a>
     <a data-m="radar">Radar phiên</a>
     <a data-m="race">Đường đua</a>
   </nav>
