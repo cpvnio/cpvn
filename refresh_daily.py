@@ -613,7 +613,18 @@ if lmiss:
 else:
     HL["logo"]={"missing":0,"fetched":0}
 
-# 10) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
+# 10) DỮ LIỆU PHÂN TÍCH data/screen.json + data/market.json (Radar · Bản đồ nhiệt ·
+#     So găng · Đường đua): RSI/MA/RS Rating/điểm cơ bản/nhịp thị trường — tự tươi mỗi phiên.
+try:
+    sys.path.insert(0,os.path.join(BASE,"tools"))
+    import build_screen as _bs
+    _bs.main()
+    HL["screen"]={"ok":1}
+except Exception as e:
+    print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
+    HL["screen"]={"ok":0,"err":str(e)[:120]}
+
+# 11) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
 runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")
 HL_ok=(HL.get("hist",{}).get("fail",9999)<len(syms)*0.2 and HL.get("snapshot",0)>=100)
 jdump({"date":sess_date,"generated":vn_now().strftime("%Y-%m-%d %H:%M:%S"),"runner":runner,

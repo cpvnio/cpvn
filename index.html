@@ -57,6 +57,14 @@
   .tabs a{padding:7px 13px;font-size:15px;font-weight:700;color:var(--muted);text-decoration:none}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
+  .tmore{position:relative;display:flex}
+  .tmore>a{cursor:pointer}
+  .tmenu{display:none;position:absolute;top:100%;left:0;margin-top:6px;z-index:60;min-width:186px;
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;overflow:hidden;
+    box-shadow:0 14px 38px rgba(0,0,0,.4)}
+  .tmore:hover .tmenu,.tmore.open .tmenu{display:block}
+  .tmenu a{display:block;padding:10px 15px;font-size:14px}
+  .tmenu a:hover{background:var(--panel2);color:var(--txt)}
 
   .group{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .group button{background:transparent;color:var(--muted);border:0;padding:6px 7px;font-size:14.5px;
@@ -260,6 +268,14 @@
     <nav class="tabs">
       <a class="on" href="index.html">Bong bóng</a>
       <a href="banggia.html">Bảng giá</a>
+      <span class="tmore" id="tMore"><a>Công cụ ▾</a>
+        <div class="tmenu">
+          <a href="congcu.html?m=heat">Bản đồ nhiệt</a>
+          <a href="congcu.html?m=radar">Radar phiên</a>
+          <a href="congcu.html?m=duel">So găng 2 mã</a>
+          <a href="congcu.html?m=race">Đường đua vốn hoá</a>
+        </div>
+      </span>
     </nav>
     <div class="spacer"></div>
 
@@ -1548,6 +1564,9 @@ async function snapshot(){
 $('shotBtn').onclick=snapshot;
 
 /* ---------- GIAO DIỆN SÁNG/TỐI (đồng bộ mọi trang qua localStorage) -------- */
+const tMore=document.getElementById('tMore');
+if(tMore){ tMore.querySelector('a').onclick=e=>{ e.preventDefault(); tMore.classList.toggle('open'); };
+  document.addEventListener('click',e=>{ if(!tMore.contains(e.target)) tMore.classList.remove('open'); }); }
 function applyThm(){ $('thmBtn').textContent=isLight()?'☀️':'🌙'; }
 $('thmBtn').onclick=()=>{
   const l=!isLight();

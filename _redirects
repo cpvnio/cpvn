@@ -7,3 +7,8 @@
 /co-phieu.html   /cophieu              301
 /co-phieu/:sym   /cophieu/:sym         301
 /cophieu/:sym    /cophieu?sym=:sym     200
+# 4 công cụ dùng chung congcu.html — URL không gạch nối, mở đúng module
+/bandonhiet      /congcu?m=heat        200
+/radar           /congcu?m=radar       200
+/sogang          /congcu?m=duel        200
+/duongdua        /congcu?m=race        200
