@@ -127,7 +127,14 @@ def fetch_hist(sym,days):
         try:
             j=get(f"https://histdatafeed.vps.com.vn/tradingview/history?symbol={sym}&resolution=1D&from={NOW-days*86400}&to={NOW}")
             if j.get("s")!="ok" or not j.get("c"): return None
-            k=1000 if j["c"][-1]<500 else 1; n=len(j["t"])
+            # Xác định đơn vị giá bằng ĐỐI CHIẾU THAM CHIẾU BẢNG GIÁ (luôn đúng VND),
+            # không đoán theo ngưỡng nữa — mã giá ~500 nghìn (VNZ/HLB) từng bị đoán sai 1000 lần.
+            last=j["c"][-1]; ref=(board.get(sym) or {}).get("ref") or 0
+            if ref>0 and last>0:
+                k=1000 if abs(last*1000-ref)<abs(last-ref) else 1
+            else:
+                k=1000 if last<500 else 1
+            n=len(j["t"])
             gi=lambda a,i: (a[i] if a and i<len(a) and a[i] is not None else j["c"][i])
             return {"t":j["t"],
                     "o":[round(gi(j.get("o"),i)*k) for i in range(n)],

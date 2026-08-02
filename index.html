@@ -1175,7 +1175,8 @@ async function loadCandles(sym){
         const lastDay=day(rows[rows.length-1].t);
         rows=rows.filter(r=>day(r.t)===lastDay);
       }
-      const k=rows.length&&rows[rows.length-1].c<500?1000:1;
+      const refP=(state.coins.get(sym)||{}).ref||0, lastC=rows.length?rows[rows.length-1].c:0;
+      const k=lastC>0?(refP>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1)):1;
       if(k!==1) rows=rows.map(r=>({t:r.t,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
     }
   }catch(e){}
@@ -1277,7 +1278,11 @@ async function loadFinHist(sym){
   let out=null;
   if(!OFFLINE) try{
     const j=await fetch(`${HIST}?symbol=${sym}&resolution=1D&from=${from}&to=${to}`).then(r=>r.json());
-    if(j.s==='ok'&&j.c&&j.c.length) out={t:j.t, c:j.c.map(x=>x*(j.c[j.c.length-1]<500?1000:1))};
+    if(j.s==='ok'&&j.c&&j.c.length){
+      const refP=(state.coins.get(sym)||{}).ref||0, lastC=j.c[j.c.length-1];
+      const k=refP>0&&lastC>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1);
+      out={t:j.t, c:j.c.map(x=>x*k)};
+    }
   }catch(e){}
   if(!out){   // VPS lỗi -> dùng kho đã lưu
     const f=await loadHistFile(sym);

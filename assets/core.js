@@ -149,7 +149,8 @@ CP.loadCandles=async function(sym,res,spanSec){
     const j=await fetch(`${HIST}?symbol=${sym}&resolution=${res}&from=${to-spanSec}&to=${to}`).then(r=>r.json());
     if(j.s==='ok'&&j.t&&j.t.length>=2){
       let rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i],v:(j.v||[])[i]||0}));
-      const k=rows[rows.length-1].c<500?1000:1;
+      const refP=(CP.coins.get(sym)||{}).ref||0, lastC=rows[rows.length-1].c;
+      const k=refP>0&&lastC>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1);
       if(k!==1) rows=rows.map(r=>({...r,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
       return {rows,saved:false};
     }
