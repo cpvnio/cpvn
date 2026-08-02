@@ -118,9 +118,9 @@ const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[],
   vn30:new Set(), pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 async function loadAll(){
   const j=u=>fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
-  const [u,eod,pk,mk,sp]=await Promise.all([
+  const [u,eod,pk,mk]=await Promise.all([
     j('universe.json'), j('data/eod/latest.json'),
-    j('data/screen.json'), j('data/market.json'), j('data/spark.json')]);
+    j('data/screen.json'), j('data/market.json')]);
   if(!u||!pk) throw new Error('thiếu dữ liệu');
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
@@ -147,9 +147,13 @@ async function loadAll(){
   ST.list=Array.from(ST.map.values());
   ST.parents=Array.from(new Set(ST.list.map(c=>c.parent))).sort();
   ST.sectors=Array.from(new Set(ST.list.map(c=>c.sector))).sort();
-  if(sp&&sp.d){ ST.spark=sp.d;
+  j('data/spark.json').then(sp=>{      // sparkline tải NỀN — không bắt người dùng chờ
+    if(!sp||!sp.d) return;
+    ST.spark=sp.d;
     const len=(sp.d[Object.keys(sp.d)[0]]||[]).length;
-    ST.sparkT=(mk&&mk.t)?mk.t.slice(-len):[]; }
+    ST.sparkT=(mk&&mk.t)?mk.t.slice(-len):[];
+    drawSparks();
+  });
   $('#fdate').textContent=ST.date||'—';
 }
 function mood(){ const B=ST.market&&ST.market.breadth;
@@ -251,8 +255,6 @@ function renderRadar(){
   const L=ST.list, liq=c=>(c.avgval20||0);
   const top=(f,s,n)=>L.filter(c=>c.close>0).filter(f).sort(s).slice(0,n||5);
   const md=mood(), s=marketStats(), tot=Math.max(1,s.up+s.dn+s.fl);
-  const nnTot=L.reduce((t,c)=>t+(c.nnVal||0),0);
-  const volSpike=L.filter(c=>c.volr>=2&&liq(c)>=1e9).length;
 
   /* trần — sàn gộp 1 thẻ: ưu tiên mã thanh khoản cao */
   function ceflRows(){
@@ -304,28 +306,15 @@ function renderRadar(){
       top(c=>c.vol>0&&liq(c)>0&&liq(c)<3e8,(a,b)=>a.avgval20-b.avgval20).map(c=>row(c,ty(c.avgval20),'')),'illq'),
   ];
 
-  const tiles='<div class="stat">'
-    +'<div><div class="k">Thanh khoản khớp</div><div class="v">'+ty(s.gtgd)+'</div></div>'
-    +'<div><div class="k">Khối ngoại ròng</div><div class="v '+(nnTot>0?'up':'dn')+'">'+(nnTot>0?'+':'−')+ty(Math.abs(nnTot))+'</div></div>'
-    +'<div><div class="k">Kịch trần · sàn</div><div class="v"><span class="ce">'+s.ce+'</span> · <span class="fo">'+s.fo+'</span></div></div>'
-    +'<div><div class="k">Lập đỉnh lịch sử</div><div class="v">'+s.ath+'</div></div>'
-    +'<div><div class="k">Sát đỉnh 52T (≤1%)</div><div class="v">'+s.nh+'</div></div>'
-    +'<div><div class="k">Đột biến khối lượng</div><div class="v">'+volSpike+'</div></div></div>';
-
   $('#m-radar').innerHTML=head(m)
-    +'<div class="hero">'
+    +'<div class="hero" style="grid-template-columns:minmax(240px,430px)">'
     +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
     +'<div class="word" style="color:'+moodCol(md)+'">'+moodWord(md)+' — nhịp đập thị trường</div>'
     +'<div class="bbar"><i style="width:'+(s.up/tot*100)+'%;background:var(--green)"></i>'
     +'<i style="width:'+(s.fl/tot*100)+'%;background:var(--yellow)"></i>'
     +'<i style="width:'+(s.dn/tot*100)+'%;background:var(--red)"></i></div>'
     +'<div class="sub">▲'+s.up+' · –'+s.fl+' · ▼'+s.dn+' trên '+ST.list.length.toLocaleString('en-US')+' mã</div></div>'
-    +'<div style="align-self:center">'+tiles.replace('class="stat"','class="stat stat2r"')+'</div>'
     +'</div>'
-    +'<div class="ctl" style="margin-bottom:2px">'
-    +[['r-flow','💰 Dòng tiền'],['r-power','🚀 Sức mạnh giá'],['r-risk','⚠️ Mặt tối'],['r-sec','🏭 Ngành']]
-      .map(a=>'<button class="btn gh" data-go="'+a[0]+'">'+a[1]+'</button>').join('')
-    +'<button class="btn gh" id="shotRadar">📷 Chụp cả radar</button></div>'
     +'<div id="radarAll">'
     +sectionHead('r-flow','💰 Dòng tiền trong phiên')+'<div class="grid g3">'+flow.join('')+'</div>'
     +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
@@ -333,9 +322,6 @@ function renderRadar(){
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
     +'</div>';
   drawSparks($('#m-radar'));
-  $('#shotRadar').onclick=()=>shot($('#radarAll'),'cpvn-radar-'+ST.date);
-  $$('#m-radar [data-go]').forEach(b=>b.onclick=()=>{
-    const el=$('#'+b.dataset.go); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); });
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
