@@ -114,7 +114,7 @@ function shot(el,name){
 }
 
 /* ---------------------------------------------------------------- dữ liệu */
-const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[],
+const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
   vn30:new Set(), pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 async function loadAll(){
   const j=u=>fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
@@ -139,6 +139,7 @@ async function loadAll(){
     c.chg=c.ref>0&&c.close>0?(c.close-c.ref)/c.ref*100:null;
     c.rpos=(r.h>r.l)?(c.close-r.l)/(r.h-r.l):null;
     c.nnVal=((r.fBuy||0)-(r.fSell||0))*c.close;
+    ST.nnBuy+=(r.fBuy||0)*c.close; ST.nnSell+=(r.fSell||0)*c.close;
     c.mcapLive=c.shares?c.shares*c.close:c.mcap;
   }
   const F=pk.f;
@@ -181,7 +182,7 @@ function sectorPerf(){
 
 /* ---------------------------------------------------------------- đăng ký */
 const MODULES=[
-  {id:'radar', ic:'📡', name:'Radar phiên', tag:'18 nhóm tín hiệu chia 3 khu vực + bảng ngành — mở ra là thấy hết chuyện của phiên hôm nay. Bấm mã bất kỳ để xem chi tiết.',
+  {id:'radar', ic:'📡', name:'Radar phiên', tag:'',
    meta:[], render:renderRadar},
   {id:'race', ic:'🏁', name:'Đường đua vốn hoá', tag:'6,5 năm thị trường chạy lại trong 30 giây — bảng xếp hạng vốn hoá đổi ngôi theo từng tháng.',
    meta:[], render:renderRace},
@@ -197,7 +198,7 @@ function renderNav(){
 }
 function head(m){
   return '<div class="mhead"><span class="eyebrow">CPVN.IO — công cụ thị trường</span>'+
-    '<h1>'+m.ic+' '+m.name+'</h1><p>'+esc(m.tag)+'</p>'+
+    '<h1>'+m.ic+' '+m.name+'</h1>'+(m.tag?'<p>'+esc(m.tag)+'</p>':'')+
     (m.meta.length?'<div class="mmeta">'+m.meta.map(t=>'<span class="tagc '+(t[1]||'')+'">'+t[0]+'</span>').join('')+'</div>':'')+'</div>';
 }
 function showMod(id){
@@ -306,14 +307,33 @@ function renderRadar(){
       top(c=>c.vol>0&&liq(c)>0&&liq(c)<3e8,(a,b)=>a.avgval20-b.avgval20).map(c=>row(c,ty(c.avgval20),'')),'illq'),
   ];
 
+  const G=ST.market&&ST.market.global;
+  const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
+  const nnNet=ST.nnBuy-ST.nnSell;
+  const infoRow=(k,v)=>'<div class="rrRow"><span>'+k+'</span><b>'+v+'</b></div>';
   $('#m-radar').innerHTML=head(m)
-    +'<div class="hero" style="grid-template-columns:minmax(240px,430px)">'
+    +'<div class="hero h3c">'
     +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
-    +'<div class="word" style="color:'+moodCol(md)+'">'+moodWord(md)+' — nhịp đập thị trường</div>'
+    +'<div class="word" style="color:'+moodCol(md)+'">'+moodWord(md)+'</div>'
+    +'<div class="sub">nhịp sợ hãi thị trường TRONG NƯỚC</div>'
     +'<div class="bbar"><i style="width:'+(s.up/tot*100)+'%;background:var(--green)"></i>'
     +'<i style="width:'+(s.fl/tot*100)+'%;background:var(--yellow)"></i>'
     +'<i style="width:'+(s.dn/tot*100)+'%;background:var(--red)"></i></div>'
     +'<div class="sub">▲'+s.up+' · –'+s.fl+' · ▼'+s.dn+' trên '+ST.list.length.toLocaleString('en-US')+' mã</div></div>'
+    +'<div class="panel mood">'+(G
+      ?'<div class="big" style="color:'+moodCol(G.v)+'">'+G.v+'<small>/100</small></div>'
+      +'<div class="word" style="color:'+moodCol(G.v)+'">'+moodWord(G.v)+'</div>'
+      +'<div class="sub">nhịp sợ hãi thị trường TOÀN CẦU</div>'
+      +'<div class="sub" style="margin-top:5px;opacity:.75">'+esc(G.src||'')+'</div>'
+      :'<div class="sub">Chưa có số liệu toàn cầu</div>')+'</div>'
+    +'<div class="panel mood rrInfo">'
+    +(vni?infoRow('VNINDEX',(+vni.value).toLocaleString('en-US',{maximumFractionDigits:2})
+        +' <span class="'+cls(vni.chg)+'">'+pct(vni.chg)+'</span>'):'')
+    +infoRow('Thanh khoản ngày',ty(s.gtgd))
+    +infoRow('Khối ngoại mua','<span class="up">'+ty(ST.nnBuy)+'</span>')
+    +infoRow('Khối ngoại bán','<span class="dn">'+ty(ST.nnSell)+'</span>')
+    +infoRow('Mua bán ròng','<span class="'+(nnNet>=0?'up':'dn')+'">'+(nnNet>=0?'+':'−')+ty(Math.abs(nnNet))+'</span>')
+    +'</div>'
     +'</div>'
     +'<div id="radarAll">'
     +sectionHead('r-flow','💰 Dòng tiền trong phiên')+'<div class="grid g3">'+flow.join('')+'</div>'

@@ -43,7 +43,7 @@
   header{display:flex;align-items:center;gap:6px;padding:9px 13px;flex-wrap:wrap;
     border-bottom:1px solid var(--line);background:linear-gradient(var(--hdr1),var(--hdr2));z-index:5}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
-    font-size:26.5px}
+    font-size:26.5px;flex:0 0 160px;overflow:hidden}
   .brand .mark{width:32px;height:32px;flex-shrink:0;
     border-radius:50%;filter:drop-shadow(0 0 7px rgba(45,212,191,.45))}
   /* chữ CPVN.IO: TRẮNG toàn bộ (giao diện sáng dùng màu chữ nền sáng để còn đọc được) */
@@ -53,8 +53,8 @@
   .spacer{flex:1}
 
   /* 2 tab điều hướng trang: Bong bóng | Bảng giá */
-  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:8px}
-  .tabs a{padding:7px 11px;font-size:14px;font-weight:700;color:var(--muted);text-decoration:none}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:12px}
+  .tabs a{padding:8px 13px;font-size:14px;font-weight:700;color:var(--muted);text-decoration:none}
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .tmore{position:relative;display:flex}
@@ -76,8 +76,8 @@
   button.toggle.active{color:#fff;background:var(--accent);border-color:var(--accent)}
 
   select,input.search{background:var(--panel);color:var(--txt);border:1px solid var(--line);
-    border-radius:9px;padding:6px 6px;font-size:14px;outline:none;max-width:250px}
-  input.search{width:96px;flex-shrink:1;min-width:80px}
+    border-radius:9px;padding:6px 5px;font-size:13.5px;outline:none;max-width:250px}
+  input.search{width:84px;flex-shrink:1;min-width:74px}
   .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
   .live .pulse{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);
     animation:pulse 1.4s infinite}
