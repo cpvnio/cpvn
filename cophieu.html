@@ -86,7 +86,18 @@
   .chips button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
   .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .chead .note{color:var(--muted);font-size:11.5px;margin-left:auto}
-  canvas#cv{width:100%;height:470px;display:block;border-radius:10px;background:rgba(255,255,255,.02)}
+  #cvWrap{position:relative}
+  canvas#cv{width:100%;height:470px;display:block;border-radius:10px;background:rgba(255,255,255,.02);
+    touch-action:pan-y;cursor:crosshair}
+  /* bảng giá hiện khi rê chuột lên biểu đồ */
+  #cvTip{position:absolute;display:none;pointer-events:none;z-index:6;
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px;
+    font-size:11.5px;line-height:1.7;color:var(--txt);box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:158px}
+  #cvTip .hd{display:block;font-weight:800;font-size:12px;margin-bottom:3px}
+  #cvTip .r{display:flex;justify-content:space-between;gap:12px;white-space:nowrap}
+  #cvTip .r i{color:var(--muted);font-style:normal}
+  #cvTip .r span{font-weight:700}
+  #chelp{margin-top:7px}
 
   /* ---- tabs nội dung ---- */
   #secTabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap}
@@ -249,12 +260,13 @@
     <div class="card" id="chartCard">
     <div class="chead">
       <div class="chips" id="tf">
-        <button data-v="1d">1D</button><button data-v="1w">1W</button><button data-v="1m" class="on">1M</button>
-        <button data-v="3m">3M</button><button data-v="6m">6M</button><button data-v="1y">1Y</button><button data-v="5y">5Y</button>
+        <button data-v="i">Trong ngày</button><button data-v="D" class="on">Nến ngày</button>
+        <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
       </div>
       <span class="note" id="cnote"></span>
     </div>
-    <canvas id="cv"></canvas>
+    <div id="cvWrap"><canvas id="cv"></canvas><div id="cvTip"></div></div>
+    <div class="note" id="chelp">Cuộn chuột để phóng to · kéo ngang để trượt thời gian · rê chuột để xem giá từng phiên · bấm đúp để xem lại toàn bộ</div>
     </div>
   </div>
 
@@ -320,6 +332,7 @@
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
 <script src="assets/core.js"></script>
+<script src="assets/chart.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -337,11 +350,8 @@ if(SYM&&/^[A-Z0-9]{2,10}$/.test(SYM)){
   cn.rel='canonical'; cn.href='https://cpvn.io'+nice;
   document.head.appendChild(cn);
 }
-let C=null, candles=null, candleSaved=false, tf='1m', finPeriod='Q', peerK='m', finData=null;
-
-const CFG={ '1d':{res:'5',span:4*86400,sameDay:true}, '1w':{res:'30',span:12*86400},
-  '1m':{res:'1D',span:45*86400}, '3m':{res:'1D',span:100*86400}, '6m':{res:'1D',span:200*86400},
-  '1y':{res:'1D',span:400*86400,agg:5}, '5y':{res:'1D',span:2000*86400,agg:21} };
+let C=null, candles=null, candleSaved=false, tf='D', finPeriod='Q', peerK='m', finData=null;
+let chart=null, dailyRows=null;      // dailyRows = TOÀN BỘ nến ngày (kho ~6,5 năm) -> gộp tại chỗ
 
 /* ---------- hero ---------- */
 function renderHero(){
@@ -394,101 +404,52 @@ async function renderFromHist(){
   }
 }
 
-/* ---------- biểu đồ nến lớn + khối lượng + MA20 ---------- */
+/* ---------- biểu đồ nến LINH ĐỘNG (assets/chart.js) ----------
+   Nến ngày lấy TOÀN BỘ lịch sử từ kho (~6,5 năm) rồi gộp tại chỗ sang tuần/tháng/năm,
+   nên đổi khung là hiện ngay, không phải gọi mạng lại. "Trong ngày" mới cần nguồn trực tiếp. */
+function ensureChart(){
+  if(chart) return chart;
+  chart=CPChart($('cv'),{ tip:$('cvTip'), light:isLight,
+    label:(iv,n)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
+  return chart;
+}
 async function loadChart(){
-  candles=null; candleSaved=false; drawChart();
-  const cfg=CFG[tf];
-  const r=await CP.loadCandles(C.sym,cfg.res,cfg.span);
-  if(!r){ $('cnote').textContent='Không có dữ liệu nến'; return; }
-  let rows=r.rows; candleSaved=r.saved;
-  if(cfg.sameDay&&!r.saved){
-    const day=t=>new Date(t*1000).toLocaleDateString('en-US',{timeZone:'Asia/Ho_Chi_Minh'});
-    const lastDay=day(rows[rows.length-1].t);
-    rows=rows.filter(x=>day(x.t)===lastDay);
-  }else if(cfg.sameDay&&r.saved) rows=rows.slice(-20);
-  if(cfg.agg&&rows.length>cfg.agg){
-    const out=[];
-    for(let i=0;i<rows.length;i+=cfg.agg){
-      const gp=rows.slice(i,i+cfg.agg);
-      out.push({t:gp[0].t,o:gp[0].o,c:gp[gp.length-1].c,h:Math.max(...gp.map(x=>x.h)),
-                l:Math.min(...gp.map(x=>x.l)),v:gp.reduce((s,x)=>s+(x.v||0),0)});
+  ensureChart();
+  if(tf==='i'){                       // nến 5 phút phiên gần nhất — chỉ có ở nguồn trực tiếp
+    const r=await CP.loadCandles(C.sym,'5',4*86400);
+    if(!r||!r.rows.length){ $('cnote').textContent='Không có dữ liệu trong ngày'; return; }
+    let rows=r.rows;
+    if(!r.saved){
+      const day=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+      const last=day(rows[rows.length-1].t);
+      rows=rows.filter(x=>day(x.t)===last);
     }
-    rows=out;
+    candles=rows; candleSaved=r.saved;
+    $('cnote').textContent=(r.saved?'kho lưu trữ CPVN':'nguồn trực tiếp')+` · ${rows.length} nến 5 phút`;
+    chart.setRows(rows,'i');
+    return;
   }
-  if(rows.length<2) return;
+  if(!dailyRows){                     // tải 1 lần rồi dùng lại cho cả ngày/tuần/tháng/năm
+    const f=await CP.loadHistFile(C.sym);
+    if(f&&f.t&&f.t.length>1){
+      const ref=(CP.coins.get(C.sym)||{}).ref||0, lastC=f.c[f.c.length-1];
+      const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):(lastC<500?1000:1);
+      dailyRows=f.t.map((t,i)=>({t,o:f.o[i]*k,h:f.h[i]*k,l:f.l[i]*k,c:f.c[i]*k,v:f.v[i]||0}));
+      candleSaved=true;
+    }else{                            // kho lỗi -> lấy sống 5 năm
+      const r=await CP.loadCandles(C.sym,'1D',2000*86400);
+      if(!r){ $('cnote').textContent='Không có dữ liệu nến'; return; }
+      dailyRows=r.rows; candleSaved=r.saved;
+    }
+  }
+  const rows=CPChart.aggregate(dailyRows,tf);
+  if(rows.length<2){ $('cnote').textContent='Chưa đủ dữ liệu'; return; }
   candles=rows;
-  $('cnote').textContent=(candleSaved?'nến ngày · kho lưu trữ CPVN':'nguồn trực tiếp')+` · ${rows.length} nến`;
-  drawChart();
+  const from=CPChart.fullLabel('D',dailyRows[0].t);
+  $('cnote').textContent=`${rows.length} nến · ${candleSaved?'kho lưu trữ CPVN':'nguồn trực tiếp'} · từ ${from}`;
+  chart.setRows(rows,tf);
 }
-function drawChart(){
-  const cvs=$('cv'), DPR=Math.min(2,window.devicePixelRatio||1);
-  const w=cvs.clientWidth||900, h=cvs.clientHeight||430;
-  cvs.width=w*DPR; cvs.height=h*DPR;
-  const g=cvs.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
-  if(!candles){ g.fillStyle='#666'; g.font='13px system-ui'; g.textAlign='center'; g.fillText('Đang tải biểu đồ…',w/2,h/2); return; }
-  const padR=64, padT=14, volH=Math.round(h*0.17), padB=volH+24, plotW=w-padR;
-  let mn=Infinity,mx=-Infinity,vmax=0;
-  for(const r of candles){ if(r.l<mn)mn=r.l; if(r.h>mx)mx=r.h; if(r.v>vmax)vmax=r.v; }
-  if(mx-mn<1e-9) mx=mn+1;
-  const y=v=>padT+(mx-v)/(mx-mn)*(h-padT-padB);
-  const n=candles.length, cw=plotW/n, bw=Math.max(1.5,Math.min(13,cw*0.62));
-  // lưới + trục giá
-  g.font='10.5px system-ui'; g.textBaseline='middle';
-  for(let i=0;i<=4;i++){
-    const v=mn+(mx-mn)*i/4, yy=y(v);
-    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
-    g.fillStyle='#8a8a99'; g.textAlign='left';
-    g.fillText(v>=1000?(v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+'K':Math.round(v), plotW+6, yy);
-  }
-  // khối lượng
-  for(let i=0;i<n;i++){
-    const r=candles[i], x=i*cw+cw/2, up=r.c>=r.o;
-    const vh=vmax?r.v/vmax*(volH-4):0;
-    g.fillStyle=up?'rgba(22,199,132,.34)':'rgba(234,57,67,.34)';
-    g.fillRect(x-bw/2,h-22-vh,bw,vh);
-  }
-  // MA20 (nét riêng: đường trung bình 20 nến màu vàng nhạt)
-  if(n>=22){
-    g.strokeStyle='rgba(234,179,8,.75)'; g.lineWidth=1.4; g.beginPath();
-    let started=false;
-    for(let i=19;i<n;i++){
-      let s=0; for(let k=i-19;k<=i;k++) s+=candles[k].c;
-      const x=i*cw+cw/2, yy=y(s/20);
-      started?g.lineTo(x,yy):g.moveTo(x,yy); started=true;
-    }
-    g.stroke();
-  }
-  // nến
-  for(let i=0;i<n;i++){
-    const r=candles[i], x=i*cw+cw/2, up=r.c>=r.o, col=up?'#16c784':'#ea3943';
-    g.strokeStyle=col; g.lineWidth=1;
-    g.beginPath(); g.moveTo(x,y(r.h)); g.lineTo(x,y(r.l)); g.stroke();
-    g.fillStyle=col;
-    const y1=y(Math.max(r.o,r.c)), y2=y(Math.min(r.o,r.c));
-    g.fillRect(x-bw/2,y1,bw,Math.max(1,y2-y1));
-  }
-  // vạch giá hiện tại
-  const lastC=candles[n-1].c, yl=y(lastC), lcol=lastC>=candles[0].o?'#16c784':'#ea3943';
-  g.setLineDash([3,3]); g.strokeStyle=lcol+'99'; g.beginPath(); g.moveTo(0,yl); g.lineTo(plotW,yl); g.stroke(); g.setLineDash([]);
-  g.fillStyle=lcol; g.fillRect(plotW,yl-8,padR,16);
-  g.fillStyle='#fff'; g.font='700 10.5px system-ui'; g.textAlign='left';
-  g.fillText(lastC>=1000?(lastC/1000).toLocaleString('en-US',{maximumFractionDigits:2})+'K':Math.round(lastC), plotW+6, yl);
-  // % kỳ + MA note
-  const pct=(lastC/candles[0].o-1)*100;
-  g.textBaseline='alphabetic'; g.font='800 14px system-ui'; g.textAlign='left';
-  g.fillStyle=pct>=0?'#16c784':'#ea3943';
-  g.fillText(`${tf.toUpperCase()}  ${pct>=0?'+':''}${pct.toFixed(2)}%`,8,20);
-  g.font='10.5px system-ui'; g.fillStyle='rgba(234,179,8,.8)'; g.fillText('— MA20',8,36);
-  // nhãn thời gian
-  g.fillStyle='#8a8a99'; g.font='10px system-ui'; g.textAlign='center';
-  const step=Math.max(1,Math.floor(n/6));
-  for(let i=0;i<n;i+=step){
-    const d=new Date(candles[i].t*1000);
-    const lb=tf==='1d'?d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Ho_Chi_Minh'})
-      :d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',timeZone:'Asia/Ho_Chi_Minh'});
-    g.fillText(lb,i*cw+cw/2,h-8);
-  }
-}
+function drawChart(){ if(chart) chart.draw(); }
 
 /* ---------- doanh nghiệp cùng ngành: logo + giá + VỐN HOÁ ---------- */
 function renderPeers(){
@@ -848,8 +809,8 @@ applyThmIcon();
   const h=CP.health;
   $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
   CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();
-      if(tf==='1d'&&candles&&C.price){ const l=candles[candles.length-1];
-        l.c=C.price; l.h=Math.max(l.h,C.price); l.l=Math.min(l.l,C.price); drawChart(); }
+      if(candles&&candles.length&&C.price){ const l=candles[candles.length-1];
+        l.c=C.price; if(C.price>l.h)l.h=C.price; if(C.price<l.l)l.l=C.price; drawChart(); }
       if(document.querySelector('#secTabs button[data-t="cn"]').classList.contains('on')) renderPeers();
     },
     // mỗi phút: mã đang xem + các mã cùng ngành đang liệt kê

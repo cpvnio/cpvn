@@ -98,6 +98,17 @@
   #body{display:flex;flex:1;min-height:0}
   main{position:relative;flex:1;overflow:hidden;min-width:0}
   canvas#cv{display:block;width:100%;height:100%;touch-action:none}
+  #detCvWrap{position:relative}
+  #detCandle{touch-action:pan-y;cursor:crosshair}
+  #detTip{position:absolute;display:none;pointer-events:none;z-index:9;
+    background:var(--panel,#15151a);border:1px solid var(--line,#2a2a33);border-radius:8px;
+    padding:7px 9px;font-size:11px;line-height:1.65;color:var(--txt,#e9e9ef);
+    box-shadow:0 8px 22px rgba(0,0,0,.4);min-width:140px}
+  #detTip .hd{display:block;font-weight:800;font-size:11.5px;margin-bottom:2px}
+  #detTip .r{display:flex;justify-content:space-between;gap:10px;white-space:nowrap}
+  #detTip .r i{color:var(--muted,#8a8a99);font-style:normal}
+  #detTip .r span{font-weight:700}
+  .tinynote{color:var(--muted,#8a8a99);font-size:10.5px;margin:5px 0 2px}
 
   /* cột ngành dọc bên trái */
   #sectorbar{width:212px;flex-shrink:0;background:var(--side);border-right:1px solid var(--line);
@@ -314,12 +325,12 @@
 
       <div class="sect"><span>Biểu đồ nến</span>
         <span class="chips" id="candleTf">
-          <button data-v="1d">1D</button><button data-v="1w">1W</button><button data-v="1m">1M</button>
-          <button data-v="3m">3M</button><button data-v="6m">6M</button><button data-v="1y">1Y</button>
-          <button data-v="5y">5Y</button>
+          <button data-v="i">Trong ngày</button><button data-v="D" class="on">Ngày</button>
+          <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
         </span>
       </div>
-      <canvas id="detCandle" height="150"></canvas>
+      <div id="detCvWrap"><canvas id="detCandle" height="150"></canvas><div id="detTip"></div></div>
+      <div class="tinynote">Cuộn để phóng · kéo ngang để trượt · rê chuột xem giá từng phiên</div>
 
       <div style="margin-top:10px">
         <div class="row"><span>TC / <span class="cel">Trần</span> / <span class="flo">Sàn</span></span><span id="detRcf"></span></div>
@@ -368,6 +379,7 @@
   </div>
 </div>
 
+<script src="assets/chart.js"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -1125,7 +1137,7 @@ function showDetail(c){
   im.onerror=()=>{ if(!im.dataset.cdn&&c.img){ im.dataset.cdn='1'; im.src=c.img; } else im.style.display='none'; };
   im.src='/assets/logo/'+encodeURIComponent(c.sym)+'.webp';
   // nến: mặc định theo khung chính nếu hợp lệ
-  candleTf=['1d','1w','1m','3m','6m','1y','5y'].includes(state.tf)?state.tf:'1d';
+  candleTf='D';                      // mở panel: mặc định nến ngày
   setChips('candleTf',candleTf);
   updateDetailNumbers(c,true);
   loadCandles(c.sym);
@@ -1162,16 +1174,7 @@ function updateDetailNumbers(c,first){
 }
 
 /* ---- NẾN đa khung: VPS OHLC + gộp tuần/tháng phía client ---- */
-const CANDLE_CFG={
-  '1d':{res:'5',  span:4*86400,  sameDay:true},
-  '1w':{res:'30', span:12*86400},
-  '1m':{res:'1D', span:45*86400},
-  '3m':{res:'1D', span:100*86400},
-  '6m':{res:'1D', span:200*86400},
-  '1y':{res:'1D', span:400*86400,  agg:5},
-  '5y':{res:'1D', span:2000*86400, agg:21},
-};
-/* kho lịch sử từng mã trong repo — dự phòng khi VPS lỗi (nến, NN, vốn hoá theo kỳ) */
+/* kho lịch sử từng mã trong repo — nguồn CHÍNH cho nến ngày/tuần/tháng/năm */
 const histFileCache=new Map();
 async function loadHistFile(sym){
   if(histFileCache.has(sym)) return histFileCache.get(sym);
@@ -1182,113 +1185,66 @@ async function loadHistFile(sym){
   }catch(e){}
   histFileCache.set(sym,d); return d;
 }
-let candleSaved=false;   // true = nến đang vẽ lấy từ kho (hiện ghi chú trên biểu đồ)
+let candleSaved=false;          // true = nến lấy từ kho
+let detChart=null, detDaily=null, detDailySym=null;
+function ensureDetChart(){
+  if(detChart) return detChart;
+  detChart=CPChart($('detCandle'),{ tip:$('detTip'), light:isLight,
+    label:(iv)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
+  return detChart;
+}
+/* nến ngày tải 1 lần cho mỗi mã rồi gộp tại chỗ -> đổi tuần/tháng/năm là hiện ngay */
 async function loadCandles(sym){
-  candles=null; candleSaved=false; drawCandles();
-  const cfg=CANDLE_CFG[candleTf], to=Math.floor(Date.now()/1e3);
-  let rows=null;
-  if(!OFFLINE) try{
-    const j=await fetch(`${HIST}?symbol=${sym}&resolution=${cfg.res}&from=${to-cfg.span}&to=${to}`).then(r=>r.json());
-    if(j.s==='ok'&&j.t&&j.t.length>=2){
-      rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i]}));
-      if(cfg.sameDay){
-        const day=t=>new Date(t*1000).toLocaleDateString('en-US',{timeZone:'Asia/Ho_Chi_Minh'});
-        const lastDay=day(rows[rows.length-1].t);
-        rows=rows.filter(r=>day(r.t)===lastDay);
+  ensureDetChart();
+  if(candleTf==='i'){
+    candles=null; candleSaved=false; detChart.setRows([], 'i');
+    const to=Math.floor(Date.now()/1e3);
+    let rows=null;
+    if(!OFFLINE) try{
+      const j=await fetch(`${HIST}?symbol=${sym}&resolution=5&from=${to-4*86400}&to=${to}`).then(r=>r.json());
+      if(j.s==='ok'&&j.t&&j.t.length>=2){
+        rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i],v:(j.v||[])[i]||0}));
+        const day=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+        const last=day(rows[rows.length-1].t);
+        rows=rows.filter(r=>day(r.t)===last);
+        const refP=(state.coins.get(sym)||{}).ref||0, lastC=rows.length?rows[rows.length-1].c:0;
+        const k=lastC>0?(refP>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1)):1;
+        if(k!==1) rows=rows.map(r=>({...r,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
       }
-      const refP=(state.coins.get(sym)||{}).ref||0, lastC=rows.length?rows[rows.length-1].c:0;
-      const k=lastC>0?(refP>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1)):1;
-      if(k!==1) rows=rows.map(r=>({t:r.t,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
-    }
-  }catch(e){}
-  if(!rows||rows.length<2){            // VPS lỗi -> nến NGÀY từ kho đã lưu (giá đã là VND)
+    }catch(e){}
+    if(sym!==detailSym||!rows||rows.length<2) return;
+    candles=rows; detChart.setRows(rows,'i');
+    return;
+  }
+  if(detDailySym!==sym||!detDaily){
+    candles=null; detChart.setRows([],candleTf);
     const f=await loadHistFile(sym);
-    if(f){
-      const from=to-(cfg.sameDay?30*86400:cfg.span);   // khung 1D: ~20 phiên gần nhất
-      rows=[];
-      for(let i=0;i<f.t.length;i++)
-        if(f.t[i]>=from) rows.push({t:f.t[i],o:f.o[i],h:f.h[i],l:f.l[i],c:f.c[i]});
-      candleSaved=true;
+    if(sym!==detailSym) return;
+    if(f&&f.t&&f.t.length>1){
+      const ref=(state.coins.get(sym)||{}).ref||0, lastC=f.c[f.c.length-1];
+      const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):(lastC<500?1000:1);
+      detDaily=f.t.map((t,i)=>({t,o:f.o[i]*k,h:f.h[i]*k,l:f.l[i]*k,c:f.c[i]*k,v:f.v?(f.v[i]||0):0}));
+      detDailySym=sym; candleSaved=true;
+    }else{
+      const to=Math.floor(Date.now()/1e3);
+      try{
+        const j=await fetch(`${HIST}?symbol=${sym}&resolution=1D&from=${to-2000*86400}&to=${to}`).then(r=>r.json());
+        if(j.s==='ok'&&j.t&&j.t.length>=2){
+          let rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i],v:(j.v||[])[i]||0}));
+          const refP=(state.coins.get(sym)||{}).ref||0, lastC=rows[rows.length-1].c;
+          const k=refP>0&&lastC>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1);
+          if(k!==1) rows=rows.map(r=>({...r,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
+          detDaily=rows; detDailySym=sym; candleSaved=false;
+        }
+      }catch(e){}
     }
   }
-  if(sym!==detailSym||!rows||rows.length<2) return;
-  if(cfg.agg&&rows.length>cfg.agg){
-    const out=[];
-    for(let i=0;i<rows.length;i+=cfg.agg){
-      const gp=rows.slice(i,i+cfg.agg);
-      out.push({t:gp[0].t,o:gp[0].o,c:gp[gp.length-1].c,
-                h:Math.max(...gp.map(x=>x.h)), l:Math.min(...gp.map(x=>x.l))});
-    }
-    rows=out;
-  }
+  if(sym!==detailSym||!detDaily||detDaily.length<2) return;
+  const rows=CPChart.aggregate(detDaily,candleTf);
   if(rows.length<2) return;
-  candles=rows;
-  drawCandles();
+  candles=rows; detChart.setRows(rows,candleTf);
 }
-function axisPrice(v){                       // nhãn trục giá gọn: 67,1K / 1,23K / 950
-  if(v>=1000) return (v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+'K';
-  return Math.round(v).toLocaleString('en-US');
-}
-function drawCandles(){
-  const cvs=$('detCandle');
-  const w=cvs.clientWidth||360, h=150;
-  if(cvs.width!==w*DPR){ cvs.width=w*DPR; cvs.height=h*DPR; }
-  const g=cvs.getContext('2d'); g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
-  if(!candles){ g.fillStyle='#666'; g.font='11px system-ui'; g.textAlign='center';
-    g.fillText('Đang tải nến…',w/2,h/2); return; }
-  const c0=state.coins.get(detailSym);
-  let mn=Infinity,mx=-Infinity;
-  for(const r of candles){ if(r.l<mn)mn=r.l; if(r.h>mx)mx=r.h; }
-  if(candleTf==='1d'&&c0&&c0.ref){ mn=Math.min(mn,c0.ref); mx=Math.max(mx,c0.ref); }
-  if(mx-mn<1e-9) mx=mn+1e-9;
-  const padT=16,padB=6, padR=46;             // padR: chừa cột trục giá bên phải
-  const plotW=w-padR, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB);
-  const n=candles.length, cw=plotW/n, bw=Math.max(1,Math.min(9,cw*0.62));
-
-  // LƯỚI NGANG + NHÃN GIÁ (5 mức từ đáy tới đỉnh)
-  g.font='9px system-ui'; g.textBaseline='middle';
-  const GRID=4;
-  for(let i=0;i<=GRID;i++){
-    const v=mn+(mx-mn)*i/GRID, yy=y(v);
-    g.strokeStyle=GRIDC(); g.lineWidth=1;
-    g.beginPath(); g.moveTo(0,yy); g.lineTo(plotW,yy); g.stroke();
-    g.fillStyle='#8a8a99'; g.textAlign='left';
-    g.fillText(axisPrice(v), plotW+4, yy);
-  }
-  g.textBaseline='alphabetic';
-
-  // đường tham chiếu 1D + nhãn giá TC bên phải (vàng)
-  if(candleTf==='1d'&&c0&&c0.ref){
-    const yr=y(c0.ref);
-    g.setLineDash([3,3]); g.strokeStyle='rgba(234,179,8,.6)'; g.lineWidth=1;
-    g.beginPath(); g.moveTo(0,yr); g.lineTo(plotW,yr); g.stroke(); g.setLineDash([]);
-    g.fillStyle='rgba(234,179,8,.9)'; g.font='9px system-ui'; g.textAlign='left'; g.textBaseline='middle';
-    g.fillText(axisPrice(c0.ref), plotW+4, yr); g.textBaseline='alphabetic';
-  }
-  for(let i=0;i<n;i++){
-    const r=candles[i], x=i*cw+cw/2;
-    const up=r.c>=r.o, col=up?'#16c784':'#ea3943';
-    g.strokeStyle=col; g.lineWidth=1;
-    g.beginPath(); g.moveTo(x,y(r.h)); g.lineTo(x,y(r.l)); g.stroke();
-    g.fillStyle=col;
-    const y1=y(Math.max(r.o,r.c)), y2=y(Math.min(r.o,r.c));
-    g.fillRect(x-bw/2, y1, bw, Math.max(1,y2-y1));
-  }
-  // vạch giá hiện tại (nhấn mạnh trên trục)
-  const lastC=candles[n-1].c;
-  const yl=y(lastC), lcol=lastC>=candles[0].o?'#16c784':'#ea3943';
-  g.fillStyle=lcol; g.fillRect(plotW,yl-6,padR,12);
-  g.fillStyle='#fff'; g.font='700 9px system-ui'; g.textAlign='left'; g.textBaseline='middle';
-  g.fillText(axisPrice(lastC), plotW+4, yl); g.textBaseline='alphabetic';
-  // nhãn % kỳ (góc trái trên)
-  const pct=(lastC/candles[0].o-1)*100;
-  g.font='700 11px system-ui'; g.textAlign='left'; g.fillStyle=pct>=0?'#16c784':'#ea3943';
-  g.fillText(`${candleTf.toUpperCase()}  ${pct>=0?'+':''}${pct.toFixed(2)}%`,6,12);
-  if(candleSaved){   // đang vẽ từ kho lưu (API nến lỗi) -> ghi chú nhỏ
-    g.font='9px system-ui'; g.fillStyle='#8a8a99'; g.textAlign='right';
-    g.fillText('nến ngày · bản lưu', plotW-4, 12);
-  }
-}
+function drawCandles(){ if(detChart) detChart.draw(); }
 
 /* ---- KQKD: doanh thu / giá vốn / LNST theo quý & năm ---- */
 /* lịch sử giá dài (≈9 năm) để tính VỐN HOÁ cuối mỗi kỳ = SLCP × giá đóng cửa kỳ đó */
@@ -1536,7 +1492,7 @@ setInterval(()=>{
   if(!detailSym||$('detail').style.display!=='block') return;
   const c=state.coins.get(detailSym); if(!c) return;
   updateDetailNumbers(c);
-  if(candleTf==='1d'&&candles&&candles.length&&c.price){
+  if(candles&&candles.length&&c.price){        // giá chạy trong phiên -> cập nhật nến cuối mọi khung
     const lastR=candles[candles.length-1];
     lastR.c=c.price; lastR.h=Math.max(lastR.h,c.price); lastR.l=Math.min(lastR.l,c.price);
     drawCandles();
