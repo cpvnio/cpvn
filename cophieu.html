@@ -848,8 +848,19 @@ applyThmIcon();
   const h=CP.health;
   $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
   CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();
-    if(tf==='1d'&&candles&&C.price){ const l=candles[candles.length-1];
-      l.c=C.price; l.h=Math.max(l.h,C.price); l.l=Math.min(l.l,C.price); drawChart(); } });
+      if(tf==='1d'&&candles&&C.price){ const l=candles[candles.length-1];
+        l.c=C.price; l.h=Math.max(l.h,C.price); l.l=Math.min(l.l,C.price); drawChart(); }
+      if(document.querySelector('#secTabs button[data-t="cn"]').classList.contains('on')) renderPeers();
+    },
+    // mỗi phút: mã đang xem + các mã cùng ngành đang liệt kê
+    ()=>[SYM,...[...document.querySelectorAll('.peer')].map(e=>e.dataset.sym)]);
+
+  // TIN TỨC: tự làm mới mỗi 5 phút khi đang mở thẻ Tin tức (bỏ qua lúc tab ẩn)
+  setInterval(()=>{
+    if(document.hidden||CP.OFFLINE) return;
+    if(!document.querySelector('#secTabs button[data-t="tt"]').classList.contains('on')) return;
+    CP.newsFresh(SYM).then(()=>renderDocsNews());
+  },300000);
 })();
 </script>
 </body>

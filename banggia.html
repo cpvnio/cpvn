@@ -363,7 +363,9 @@ applyThmIcon();
     Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).map(s=>`<option>${CP.esc(s)}</option>`).join('');
   snapPrices(); render(); renderStats(); renderKho();
   CP.loadIndices().then(renderStats);
-  CP.startPolling(()=>{ flashUpdate(); });
+  // mỗi phút chỉ làm mới các mã của TRANG ĐANG XEM; 5 phút quét lại toàn bộ để xếp hạng đúng
+  CP.startPolling(()=>{ flashUpdate(); },
+    ()=>{ const st=(ST.page-1)*ST.PER; return ST.rows.slice(st,st+ST.PER).map(c=>c.sym); });
   setInterval(()=>{ CP.loadIndices().then(renderStats); },60000);
 })();
 </script>

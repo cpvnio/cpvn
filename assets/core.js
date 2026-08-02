@@ -99,10 +99,12 @@ CP.sessionOpen=function(){
   return d>=1&&d<=5&&m>=540&&m<900;
 };
 let polling=false;
-CP.pollBoard=async function(){
+CP.lastFullAt=0;
+/* only = mảng mã cần làm mới NHANH (những mã người dùng đang nhìn); bỏ trống = quét cả thị trường */
+CP.pollBoard=async function(only){
   if(polling||CP.OFFLINE) return false; polling=true;
   try{
-    const syms=[...CP.coins.keys()];
+    const syms=(only&&only.length)?only.filter(s=>CP.coins.has(s)):[...CP.coins.keys()];
     for(let i=0;i<syms.length;i+=150){
       const arr=await fetch(BG+'/getliststockdata/'+syms.slice(i,i+150).join(',')).then(r=>r.json());
       for(const t of arr){
@@ -122,15 +124,32 @@ CP.pollBoard=async function(){
       }
     }
     CP.lastPollAt=Date.now(); CP.liveOk=true;
+    if(!(only&&only.length)) CP.lastFullAt=CP.lastPollAt;
     return true;
   }catch(e){ CP.liveOk=false; return false; }
   finally{ polling=false; }
 };
-CP.startPolling=function(onUpdate){
-  const tick=async()=>{ if(await CP.pollBoard()&&onUpdate) onUpdate(); };
-  tick();
-  setInterval(()=>{ const gap=CP.sessionOpen()?300000:1800000;
-    if(Date.now()-CP.lastPollAt>=gap) tick(); },20000);
+/* NHỊP CẬP NHẬT (9–15h T2–T6):
+   · mỗi 1 PHÚT: làm mới mã ĐANG HIỂN THỊ trên màn hình — 1 lượt gọi, giá nhảy gần như trực tiếp
+   · mỗi 5 PHÚT: quét TOÀN BỘ thị trường (xếp hạng/lọc/thống kê luôn đúng)
+   Chia 2 tầng để không nện nguồn dữ liệu 11 lượt gọi mỗi phút -> tránh bị chặn IP.
+   Tab ẩn thì NGỪNG hẳn, quay lại tab là làm mới ngay. Ngoài giờ: 30 phút/lần. */
+CP.startPolling=function(onUpdate,visibleSyms){
+  const tick=async(fast)=>{
+    const only=fast&&typeof visibleSyms==='function'?visibleSyms():null;
+    if(await CP.pollBoard(only)&&onUpdate) onUpdate();
+  };
+  tick(false);
+  setInterval(()=>{
+    if(document.hidden) return;
+    const now=Date.now();
+    if(!CP.sessionOpen()){ if(now-CP.lastPollAt>=1800000) tick(false); return; }
+    if(now-CP.lastFullAt>=300000) tick(false);
+    else if(now-CP.lastPollAt>=60000) tick(true);
+  },5000);
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&CP.sessionOpen()&&Date.now()-CP.lastPollAt>=60000) tick(true);
+  });
 };
 
 /* ---------- chỉ số VNINDEX/VN30/HNX/UPCOM (sống -> kho) -------------------- */
@@ -210,6 +229,7 @@ CP.loadFin=async function(sym){
 
 /* ---------- tin tức + báo cáo CTCK (sống -> kho news) ---------------------- */
 const newsCache=new Map();
+CP.newsFresh=function(sym){ newsCache.delete(sym); return CP.loadNews(sym); };  // ép lấy tin mới
 CP.loadNews=async function(sym){
   if(newsCache.has(sym)&&Date.now()-newsCache.get(sym).at<300000) return newsCache.get(sym).d;
   let news=null, reports=null, total=0;

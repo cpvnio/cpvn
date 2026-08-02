@@ -485,10 +485,15 @@ function buildChunks(){
   const syms=[...state.coins.keys()]; chunks=[];
   for(let i=0;i<syms.length;i+=150) chunks.push(syms.slice(i,i+150).join(','));
 }
-async function pollBoard(){
+let lastFullAt=0;
+/* only = mảng mã đang hiển thị (làm mới nhanh); bỏ trống = quét cả thị trường */
+async function pollBoard(only){
   if(polling||OFFLINE) return; polling=true;
   try{
-    for(const ch of chunks){
+    let list=chunks;
+    if(only&&only.length){ const u=[...new Set(only.filter(x=>state.coins.has(x)))];
+      list=[]; for(let i=0;i<u.length;i+=150) list.push(u.slice(i,i+150).join(',')); }
+    for(const ch of list){
       const arr=await fetch(BG+'/getliststockdata/'+ch).then(r=>r.json());
       for(const t of arr){
         const c=state.coins.get(t.sym); if(!c) continue;
@@ -505,7 +510,7 @@ async function pollBoard(){
         c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
       }
     }
-    lastPollAt=Date.now(); updateLivePill();
+    lastPollAt=Date.now(); if(!(only&&only.length)) lastFullAt=lastPollAt; updateLivePill();
   }catch(e){
     setStatus(state.eodLoaded&&!lastPollAt
       ?`Bảng giá trực tiếp lỗi — đang dùng số liệu lưu phiên ${state.eodDate||''}`
@@ -530,11 +535,21 @@ function updateLivePill(){
   const open=sessionOpen();
   el.classList.toggle('off',!open);
   const ts=new Date(lastPollAt).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'});
-  document.getElementById('liveTxt').textContent=(open?'Đang cập nhật · 5 phút':'Đóng cửa')+' · '+ts;
+  document.getElementById('liveTxt').textContent=(open?'Đang cập nhật · 1 phút':'Đóng cửa')+' · '+ts;
 }
-// 9–15h T2–6: poll mỗi 5 phút (300s). Ngoài giờ: 30 phút/lần (dữ liệu không đổi).
-setInterval(()=>{ const gap=sessionOpen()?300000:1800000;
-  if(Date.now()-lastPollAt>=gap) pollBoard(); },20000);
+/* 9–15h T2–T6: bong bóng ĐANG HIỂN THỊ làm mới mỗi 1 PHÚT (1 lượt gọi),
+   toàn thị trường quét lại mỗi 5 PHÚT. Ngoài giờ 30 phút/lần. Tab ẩn thì ngừng. */
+setInterval(()=>{
+  if(document.hidden) return;
+  const now=Date.now();
+  if(!sessionOpen()){ if(now-lastPollAt>=1800000) pollBoard(); return; }
+  if(now-lastFullAt>=300000) pollBoard();
+  else if(now-lastPollAt>=60000) pollBoard(bubbles.map(b=>b.sym).concat(detailSym||[]));
+},5000);
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&sessionOpen()&&Date.now()-lastPollAt>=60000)
+    pollBoard(bubbles.map(b=>b.sym).concat(detailSym||[]));
+});
 
 /* ---------- % THEO KHUNG (từ mốc đã cào 1 lần) ---------------------------- */
 const TFK={'1w':'w1','1m':'m1','3m':'m3','6m':'m6','1y':'y1','5y':'y5'};
