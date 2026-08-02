@@ -1,0 +1,11 @@
+# Không upload các file/thư mục hệ thống lên Cloudflare Workers assets
+# (fix lỗi "Asset too large": wrangler từng nuốt cả .git 26.9MB > giới hạn 25MB)
+.git
+.github
+.gitignore
+.assetsignore
+wrangler.jsonc
+__pycache__
+*.pyc
+.DS_Store
+refresh_daily.py
