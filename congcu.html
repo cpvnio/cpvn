@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CPVN — Bản đồ nhiệt · Radar · So găng · Đường đua</title>
-<meta name="description" content="Bộ công cụ thị trường CPVN: bản đồ nhiệt toàn thị trường, radar tín hiệu phiên, so găng 2 cổ phiếu, đường đua vốn hoá 6,5 năm. Dữ liệu HOSE · HNX · UPCOM tự cập nhật mỗi phiên."/>
+<title>CPVN — Bản đồ nhiệt · Radar phiên · Đường đua vốn hoá</title>
+<meta name="description" content="Bộ công cụ thị trường CPVN: bản đồ nhiệt toàn thị trường, radar tín hiệu phiên, đường đua vốn hoá 6,5 năm. Dữ liệu HOSE · HNX · UPCOM tự cập nhật mỗi phiên."/>
 <script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
 <link rel="icon" type="image/png" href="assets/logo-64.png"/>
 <style>
@@ -278,30 +278,6 @@ details.acc .accb{padding:4px 15px 14px;border-top:1px solid var(--line)}
 .meter .bar{height:9px;border-radius:5px;background:var(--card2);overflow:hidden;position:relative}
 .meter .bar i{position:absolute;top:0;bottom:0;left:0;border-radius:5px}
 
-/* ---------- so găng ---------- */
-.duelrow{display:grid;grid-template-columns:1fr 118px 1fr;gap:8px;align-items:center;
-  padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}
-.duelrow:first-child{border-top:0}
-.duelrow .mid{text-align:center;font-size:10.5px;font-weight:900;letter-spacing:.05em;
-  color:var(--faint);text-transform:uppercase;line-height:1.3}
-.duelrow .side{display:flex;align-items:center;gap:8px}
-.duelrow .side.a{justify-content:flex-end}
-.duelrow .val{font-weight:800;font-size:13px;white-space:nowrap}
-.duelrow .bar{height:9px;border-radius:5px;background:var(--card2);overflow:hidden;flex:1;max-width:190px;position:relative}
-.duelrow .bar i{position:absolute;top:0;bottom:0;border-radius:5px}
-.duelrow .bar.a i{right:0}.duelrow .bar.b i{left:0}
-.duelrow .win{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0;
-  box-shadow:0 0 8px var(--gold)}
-.duelrow .win.off{background:transparent;box-shadow:none}
-.dhead{display:flex;align-items:center;gap:12px;justify-content:center;padding:6px 0 12px}
-.dhead .dbox{display:flex;align-items:center;gap:10px}
-.dhead .lgw{width:44px;height:44px;border-radius:12px;background:#fff;overflow:hidden;
-  display:flex;align-items:center;justify-content:center}
-.dhead img{width:100%;height:100%;object-fit:contain}
-.dhead .nm b{font-size:19px;font-weight:800;display:block}
-.dhead .nm i{font-style:normal;font-size:11px;color:var(--faint)}
-.dhead .vs{font-size:13px;font-weight:900;color:var(--rose);padding:0 6px}
-
 /* ---------- canvas chung ---------- */
 canvas.block{display:block;width:100%}
 
@@ -416,7 +392,6 @@ footer{color:var(--faint);font-size:11.5px;text-align:center;padding:30px 18px 4
     <a href="banggia.html">Bảng giá</a>
     <a data-m="heat">Bản đồ nhiệt</a>
     <a data-m="radar">Radar phiên</a>
-    <a data-m="duel">So găng</a>
     <a data-m="race">Đường đua</a>
   </nav>
   <div class="spacer"></div>

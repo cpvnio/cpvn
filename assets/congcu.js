@@ -152,13 +152,6 @@ async function loadAll(){
     ST.sparkT=(mk&&mk.t)?mk.t.slice(-len):[]; }
   $('#fdate').textContent=ST.date||'—';
 }
-async function histOf(sym){
-  if(ST.hist.has(sym)) return ST.hist.get(sym);
-  const d=await fetch('data/hist/'+sym+'.json').then(r=>r.ok?r.json():null).catch(()=>null);
-  let rows=null;
-  if(d&&d.t&&d.t.length) rows=d.t.map((t,i)=>({t,o:d.o[i],h:d.h[i],l:d.l[i],c:d.c[i],v:d.v[i]||0}));
-  ST.hist.set(sym,rows); return rows;
-}
 function mood(){ const B=ST.market&&ST.market.breadth;
   return (B&&B.mood.length)?B.mood[B.mood.length-1]:null; }
 const moodWord=v=>v==null?'—':v>=75?'Hưng phấn':v>=60?'Lạc quan':v>=40?'Trung tính':v>=25?'Thận trọng':'Sợ hãi';
@@ -188,14 +181,12 @@ const MODULES=[
    meta:[], render:renderHeat},
   {id:'radar', ic:'📡', name:'Radar phiên', tag:'18 nhóm tín hiệu chia 3 khu vực + bảng ngành — mở ra là thấy hết chuyện của phiên hôm nay. Bấm mã bất kỳ để xem chi tiết.',
    meta:[], render:renderRadar},
-  {id:'duel', ic:'⚔️', name:'So găng 2 mã', tag:'Đặt 2 cổ phiếu cạnh nhau: biểu đồ so sánh từ 1 tháng đến 5 năm + chấm ● từng hạng mục có số liệu tốt hơn.',
-   meta:[], render:renderDuel},
   {id:'race', ic:'🏁', name:'Đường đua vốn hoá', tag:'6,5 năm thị trường chạy lại trong 30 giây — bảng xếp hạng vốn hoá đổi ngôi theo từng tháng.',
    meta:[], render:renderRace},
 ];
 let cur=null; const done={};
-const PATHOF={heat:'/bandonhiet',radar:'/radar',duel:'/sogang',race:'/duongdua'};
-const TITLEOF={heat:'Bản đồ nhiệt',radar:'Radar phiên',duel:'So găng 2 mã',race:'Đường đua vốn hoá'};
+const PATHOF={heat:'/bandonhiet',radar:'/radar',race:'/duongdua'};
+const TITLEOF={heat:'Bản đồ nhiệt',radar:'Radar phiên',race:'Đường đua vốn hoá'};
 function renderNav(){
   $$('.tabs a[data-m]').forEach(e=>{
     e.classList.toggle('on',e.dataset.m===cur);
@@ -409,6 +400,14 @@ function drawHeat(){
   }else{
     const groups={};
     for(const c of L) (groups[c.sector]=groups[c.sector]||[]).push(c);
+    // ngành chỉ còn 1-2 mã lọt top đang vẽ -> gộp vào "Ngành khác" cho bản đồ đỡ vụn
+    // (cột ngành bên trái vẫn liệt kê ĐẦY ĐỦ như trang bong bóng)
+    const small=Object.keys(groups).filter(k=>groups[k].length<3);
+    if(small.length>1){
+      const oth=[];
+      for(const k of small){ oth.push(...groups[k]); delete groups[k]; }
+      if(oth.length) groups['Ngành khác']=oth;
+    }
     const gitems=Object.keys(groups).map(k=>({k,v:groups[k].reduce((s,c)=>s+sz(c),0)}));
     const grects=squarify(gitems,0,0,W,H);
     for(const g of grects){
@@ -564,109 +563,8 @@ function renderHeat(){
 }
 MODULES.find(x=>x.id==='heat').after=()=>requestAnimationFrame(drawHeat);
 
-/* ============================================================ 3. SO GĂNG 2 MÃ */
-const DU={a:'FPT',b:'VNM',tf:'1y'};
-const DU_TF={'1m':22,'3m':66,'6m':132,'1y':250,'3y':750,'5y':1250};
-async function duelChart(cv,A,B2){
-  const [ra,rb]=await Promise.all([histOf(A),histOf(B2)]);
-  if(!ra||!rb) return;
-  const ma=new Map(ra.map(r=>[r.t,r.c])), mb=new Map(rb.map(r=>[r.t,r.c]));
-  const ts=ra.map(r=>r.t).filter(t=>mb.has(t)).slice(-(DU_TF[DU.tf]||250));
-  if(ts.length<10) return;
-  const a0=ma.get(ts[0]), b0=mb.get(ts[0]);
-  const sa=ts.map(t=>(ma.get(t)/a0-1)*100), sb=ts.map(t=>(mb.get(t)/b0-1)*100);
-  const W=cv.clientWidth||800, H=cv.clientHeight||250, x=dpr(cv,W,H);
-  const all=sa.concat(sb); let mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
-  const pd=(mx-mn)*.08||1; mn-=pd; mx+=pd;
-  const pad=44, plotW=W-pad, Y=v=>12+(mx-v)/(mx-mn)*(H-36), X=i=>i/(ts.length-1)*plotW;
-  x.font='10px system-ui';
-  for(let k=0;k<=3;k++){ const v=mn+(mx-mn)*k/3, yy=Y(v);
-    x.strokeStyle=isLight()?'rgba(0,0,0,.08)':'rgba(255,255,255,.06)';
-    x.beginPath(); x.moveTo(0,yy); x.lineTo(plotW,yy); x.stroke();
-    x.fillStyle=isLight()?'#9aa0af':'#5d5f70'; x.textAlign='left'; x.textBaseline='middle';
-    x.fillText((v>0?'+':'')+v.toFixed(0)+'%',plotW+5,yy); }
-  if(mn<0&&mx>0){ x.strokeStyle=isLight()?'rgba(0,0,0,.2)':'rgba(255,255,255,.18)'; x.setLineDash([4,4]);
-    x.beginPath(); x.moveTo(0,Y(0)); x.lineTo(plotW,Y(0)); x.stroke(); x.setLineDash([]); }
-  const draw=(s,col)=>{ x.strokeStyle=col; x.lineWidth=2.1; x.beginPath();
-    s.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v))); x.stroke(); };
-  draw(sb,'#f5b40a'); draw(sa,'#2dd4bf');
-  x.textBaseline='alphabetic'; x.font='800 12.5px system-ui'; x.textAlign='left';
-  x.fillStyle='#2dd4bf'; x.fillText(A+' '+pct(sa[sa.length-1]),8,17);
-  x.fillStyle='#f5b40a'; x.fillText(B2+' '+pct(sb[sb.length-1]),8+x.measureText(A+' '+pct(sa[sa.length-1])).width+18,17);
-  x.fillStyle=isLight()?'#9aa0af':'#5d5f70'; x.font='10px system-ui';
-  x.fillText('Khung '+DU.tf.toUpperCase()+' · chuẩn hoá về 0% từ '+tsDate(ts[0])+' · '+ts.length+' phiên',8,H-5);
-}
-function duelMetricRow(name,va,vb,fmt,better){
-  const has=va!=null&&vb!=null&&!isNaN(va)&&!isNaN(vb);
-  let winA=false,winB=false;
-  if(has&&better){ if(better==='hi'){winA=va>vb;winB=vb>va;} else {winA=va<vb;winB=vb<va;} }
-  const mA=Math.max(Math.abs(va||0),Math.abs(vb||0))||1;
-  const bar=(v,side,win)=>'<span class="bar '+side+'"><i style="width:'+(has?Math.abs(v)/mA*100:0)+
-    '%;background:'+(win?'linear-gradient(90deg,var(--teal),#14b8a6)':'var(--faint)')+';opacity:'+(win?1:.45)+'"></i></span>';
-  return '<div class="duelrow">'+
-    '<span class="side a"><span class="val" style="color:'+(winA?'var(--teal)':'var(--mut)')+'">'+(va==null?'—':fmt(va))+'</span>'+
-    bar(va,'a',winA)+'<span class="win'+(winA?'':' off')+'"></span></span>'+
-    '<span class="mid">'+name+'</span>'+
-    '<span class="side b"><span class="win'+(winB?'':' off')+'"></span>'+bar(vb,'b',winB)+
-    '<span class="val" style="color:'+(winB?'var(--teal)':'var(--mut)')+'">'+(vb==null?'—':fmt(vb))+'</span></span></div>';
-}
-function renderDuel(){
-  const m=MODULES.find(x=>x.id==='duel');
-  $('#m-duel').innerHTML=head(m)
-    +'<div class="ctl"><input type="search" id="duA" list="symlist" value="'+DU.a+'" style="width:110px"/>'
-    +'<button class="iconbtn" id="duSwap" title="Đổi chỗ">⇄</button>'
-    +'<input type="search" id="duB" list="symlist" value="'+DU.b+'" style="width:110px"/>'
-    +'<button class="btn" id="duGo">So găng</button>'
-    +'<span class="lb" style="margin-left:6px">Khung</span>'
-    +'<div class="seg" id="duTf">'+Object.keys(DU_TF).map(k=>
-      '<button data-v="'+k+'" class="'+(k===DU.tf?'on':'')+'">'+k.toUpperCase()+'</button>').join('')+'</div>'
-    +'<button class="btn gh" id="duShot">📷 Chụp ảnh</button></div>'
-    +'<div class="panel" id="duBox"><div class="empty">Đang tải…</div></div>'
-    +'<div class="note">Chỉ đặt số liệu cạnh nhau theo từng hạng mục — chấm ● cho bên có con số tốt hơn ở hạng mục đó. Không phải xếp hạng nên mua mã nào.</div>';
-  const go=async()=>{
-    const A=($('#duA').value||'').trim().toUpperCase(), B2=($('#duB').value||'').trim().toUpperCase();
-    if(!ST.map.has(A)||!ST.map.has(B2)) return toast('Không có mã '+esc(!ST.map.has(A)?A:B2));
-    if(A===B2) return toast('Chọn 2 mã khác nhau');
-    DU.a=A; DU.b=B2;
-    const a=ST.map.get(A), b=ST.map.get(B2);
-    const rows=[
-      duelMetricRow('RS Rating',a.rs,b.rs,v=>String(v),'hi'),
-      duelMetricRow('Điểm cơ bản',a.fs,b.fs,v=>Math.round(v)+'/100','hi'),
-      duelMetricRow('1 năm',a.r250,b.r250,pct,'hi'),
-      duelMetricRow('1 tháng',a.r20,b.r20,pct,'hi'),
-      duelMetricRow('Cách đỉnh 52T',a.dhi,b.dhi,v=>fx(v,1)+'%','hi'),
-      duelMetricRow('P/E (thấp hơn)', (a.pe>0?a.pe:null),(b.pe>0?b.pe:null),v=>fx(v,1),'lo'),
-      duelMetricRow('Cổ tức',a.divY,b.divY,v=>fx(v,1)+'%','hi'),
-      duelMetricRow('GTGD TB20',a.avgval20,b.avgval20,ty,'hi'),
-      duelMetricRow('NN 30 phiên',a.nn20,b.nn20,v=>(v>0?'+':'')+ty(v),'hi'),
-      duelMetricRow('Biên độ ATR',a.atrp,b.atrp,v=>fx(v,1)+'%',null),
-      duelMetricRow('Vốn hoá',a.mcapLive,b.mcapLive,vnd,null),
-    ];
-    $('#duBox').innerHTML='<div class="pb" style="padding:16px">'
-      +'<div class="dhead">'
-      +'<a class="dbox" href="cophieu.html?sym='+A+'" title="Mở trang '+A+'">'+logoHTML(a)+'<span class="nm"><b style="color:var(--teal)">'+A+'</b><i>'+esc(shortName(a.name))+'</i></span></a>'
-      +'<span class="vs">VS</span>'
-      +'<a class="dbox" href="cophieu.html?sym='+B2+'" title="Mở trang '+B2+'" style="text-align:right"><span class="nm" style="text-align:right"><b style="color:var(--gold)">'+B2+'</b><i>'+esc(shortName(b.name))+'</i></span>'+logoHTML(b)+'</a>'
-      +'</div>'
-      +'<canvas id="cvDuel" class="block" style="height:250px;margin-bottom:12px"></canvas>'
-      +rows.join('')+'</div>';
-    requestAnimationFrame(()=>duelChart($('#cvDuel'),A,B2));
-  };
-  $('#duGo').onclick=go;
-  $('#duTf').querySelectorAll('button').forEach(bx=>bx.onclick=()=>{
-    $('#duTf').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-    bx.classList.add('on'); DU.tf=bx.dataset.v;
-    const cv=$('#cvDuel'); if(cv) duelChart(cv,DU.a,DU.b);   // chỉ vẽ lại biểu đồ
-  });
-  $('#duSwap').onclick=()=>{ const t=$('#duA').value; $('#duA').value=$('#duB').value; $('#duB').value=t; go(); };
-  $('#duA').onkeydown=e=>{ if(e.key==='Enter') go(); };
-  $('#duB').onkeydown=e=>{ if(e.key==='Enter') go(); };
-  $('#duShot').onclick=()=>shot($('#duBox'),'cpvn-sogang-'+DU.a+'-'+DU.b);
-  go();
-}
-
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
-const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0};
+const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null};
 function raceData(){
   if(RA.data) return RA.data;
   const R=ST.market&&ST.market.race; if(!R) return null;
@@ -680,8 +578,6 @@ function raceData(){
   const COL=['#2dd4bf','#f43f5e','#f5b40a','#38bdf8','#a78bfa','#16c784','#fb923c','#e879f9',
              '#4ade80','#60a5fa','#f87171','#facc15','#34d399','#c084fc','#fbbf24','#22d3ee'];
   const cols={}; syms.forEach((s,i)=>cols[s]=COL[i%COL.length]);
-  syms.forEach(s=>{ if(!RA.imgs[s]){ const im=new Image();
-    im.onerror=()=>{ RA.imgs[s]=null; }; im.src='assets/logo/'+s+'.webp'; RA.imgs[s]=im; } });
   RA.data={labels:R.labels,series,syms,cols,note:R.note};
   return RA.data;
 }
@@ -696,11 +592,16 @@ function drawRace(){
   const val=s=>{ const a=D.series[s][i0], b=D.series[s][i1];
     if(a==null&&b==null) return null; if(a==null) return b; if(b==null) return a;
     return a+(b-a)*tt; };
-  const rows2=D.syms.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0)
-    .sort((a,b)=>b.v-a.v).slice(0,12);
-  if(!rows2.length) return;
+  let pool=D.syms;
+  if(RA.sector) pool=pool.filter(s=>{ const c=ST.map.get(s); return c&&c.sector===RA.sector; });
+  const rows2=pool.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0)
+    .sort((a,b)=>b.v-a.v).slice(0,10);          // tối đa 10 công ty trong cuộc đua
+  if(!rows2.length){ x.fillStyle=isLight()?'#5d6272':'#9092a3'; x.font='13px system-ui';
+    x.textAlign='center'; x.fillText('Ngành này chưa đủ dữ liệu đua',W/2,H/2); return; }
+  for(const r of rows2) if(RA.imgs[r.s]===undefined){ const im=new Image();
+    im.onerror=()=>{ RA.imgs[r.s]=null; }; im.src='assets/logo/'+r.s+'.webp'; RA.imgs[r.s]=im; }
   const mx=rows2[0].v*1.06;
-  const top=16, rowH=(H-top-46)/12, labX=118, barX=labX+10, barW=W-barX-130;
+  const top=16, rowH=(H-top-46)/10, labX=118, barX=labX+10, barW=W-barX-130;
   rows2.forEach((r,rank)=>{
     const ty2=top+rank*rowH;
     if(RA.curY[r.s]==null) RA.curY[r.s]=ty2;
@@ -747,14 +648,20 @@ function renderRace(){
   const m=MODULES.find(x=>x.id==='race');
   const D=raceData();
   if(!D){ $('#m-race').innerHTML=head(m)+'<div class="empty">Chưa có dữ liệu đua — chạy lại demo-build-screen.py</div>'; return; }
+  const secCnt={};
+  for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
+  const secOpts=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a])
+    .map(k=>'<option value="'+esc(k)+'"'+(RA.sector===k?' selected':'')+'>'+esc(k)+'</option>').join('');
   $('#m-race').innerHTML=head(m)
     +'<div class="ctl"><button class="btn" id="raPlay">▶ Bắt đầu đua</button>'
+    +'<span class="lb">Nhóm ngành</span>'
+    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts+'</select>'
     +'<div class="seg" id="raSpeed"><button data-v="0.5">chậm</button><button data-v="1" class="on">vừa</button>'
     +'<button data-v="2">nhanh</button><button data-v="4">rất nhanh</button></div>'
     +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0" style="flex:1;min-width:170px"/>'
     +'<span class="note" style="margin:0">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
     +'<div class="panel" style="padding:12px"><canvas id="cvRace" class="block" style="height:520px"></canvas></div>'
-    +'<div class="note">Top 12 vốn hoá lớn nhất tại từng thời điểm, trong 40 mã lớn nhất hiện nay. '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>';
+    +'<div class="note">Top 10 vốn hoá lớn nhất tại từng thời điểm (chọn nhóm ngành để đua riêng ngành đó). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>';
   $('#raPlay').onclick=()=>{
     if(RA.playing){ RA.playing=false; $('#raPlay').textContent='▶ Tiếp tục'; return; }
     if(RA.f>=D.labels.length-1.01) RA.f=0;
@@ -766,6 +673,7 @@ function renderRace(){
     b.classList.add('on'); RA.speed=+b.dataset.v; });
   $('#raSlide').oninput=e=>{ RA.playing=false; $('#raPlay').textContent='▶ Tiếp tục';
     RA.f=+e.target.value; drawRace(); };
+  $('#raSec').onchange=e=>{ RA.sector=e.target.value||null; RA.curY={}; drawRace(); };
   RA.f=0; RA.curY={};
   requestAnimationFrame(drawRace);
 }
@@ -778,10 +686,6 @@ async function init(){
   const mn=$('#mn');
   for(const m of MODULES){ const s=document.createElement('section');
     s.className='mod'; s.id='m-'+m.id; mn.appendChild(s); }
-  const dl=document.createElement('datalist'); dl.id='symlist';
-  dl.innerHTML=ST.list.slice().sort((a,b)=>(b.mcapLive||0)-(a.mcapLive||0)).slice(0,400)
-    .map(c=>'<option value="'+c.sym+'">'+esc(shortName(c.name))+'</option>').join('');
-  document.body.appendChild(dl);
   const md=mood();
   $('#hMood').innerHTML='Nhịp đập <b style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'</b> · '+
     '<span style="color:'+moodCol(md)+';font-weight:700">'+moodWord(md)+'</span>';
@@ -803,7 +707,7 @@ async function init(){
     rt=setTimeout(()=>{ const m=MODULES.find(x=>x.id===cur);
       if(m){ if(cur==='heat') drawHeat(); else if(m.after) m.after(); } },180); }; })());
   const q=new URLSearchParams(location.search).get('m');
-  const byPath={bandonhiet:'heat',radar:'radar',sogang:'duel',duongdua:'race'}[location.pathname.replace(/\//g,'')];
+  const byPath={bandonhiet:'heat',radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
   showMod(MODULES.some(m=>m.id===start)?start:'heat');
   $('#load').classList.add('off');

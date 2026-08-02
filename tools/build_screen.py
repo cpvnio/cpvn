@@ -235,9 +235,17 @@ def main():
     t0 = time.time()
     uni = json.load(open(os.path.join(ROOT, 'universe.json'), encoding='utf-8'))
     meta = {s['sym']: s for s in uni['stocks']}
-    # đường đua vốn hoá: lấy mẫu giá theo THÁNG cho 40 mã vốn hoá lớn nhất
+    # đường đua vốn hoá: giá theo THÁNG cho top 40 toàn thị trường + TOP 10 MỖI NGÀNH
+    # (để web đua riêng từng nhóm ngành — danh sách ngành chung với trang bong bóng)
     race_set = {s['sym'] for s in sorted(uni['stocks'], key=lambda x: -(x.get('mcap') or 0))[:40]
                 if s.get('shares')}
+    by_sec = defaultdict(list)
+    for s2 in uni['stocks']:
+        if s2.get('shares') and (s2.get('mcap') or 0) > 0:
+            by_sec[s2.get('sector') or 'Khác'].append(s2)
+    for arr in by_sec.values():
+        arr.sort(key=lambda x: -(x.get('mcap') or 0))
+        race_set.update(x['sym'] for x in arr[:10])
     races = {}
     files = sorted(f for f in os.listdir(HIST) if f.endswith('.json'))
     print(f'Đọc {len(files)} file kho hist…')

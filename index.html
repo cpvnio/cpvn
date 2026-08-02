@@ -272,7 +272,6 @@
         <div class="tmenu">
           <a href="congcu.html?m=heat">Bản đồ nhiệt</a>
           <a href="congcu.html?m=radar">Radar phiên</a>
-          <a href="congcu.html?m=duel">So găng 2 mã</a>
           <a href="congcu.html?m=race">Đường đua vốn hoá</a>
         </div>
       </span>
@@ -1039,26 +1038,23 @@ async function loadMarket(){
 /* CHỈ SỐ TÂM LÝ (0-100) — tổng hợp đa thành phần theo phương pháp kiểu CNN Fear&Greed.
    (CK Việt Nam KHÔNG có nguồn công khai nào phát chỉ số này -> tự tổng hợp từ dữ liệu thật:
    50% độ rộng PHIÊN NAY (mã tăng/giảm + trần/sàn) · 25% độ rộng 1 TUẦN · 25% 1 THÁNG) */
-function fearGreed(){
-  let up=0,down=0,ceil=0,floor=0,n=0, wUp=0,wN=0, mUp=0,mN=0;
-  for(const c of state.coins.values()){
-    if(c.pct){
-      if(c.pct.w!=null){ wN++; if(c.pct.w>0) wUp++; }
-      if(c.pct.m!=null){ mN++; if(c.pct.m>0) mUp++; }
+/* CHỈ SỐ TÂM LÝ — MỘT NGUỒN CHUNG với Radar phiên: mood trong data/market.json
+   (25% mã trên MA50 + 15% trên MA200 + 20% đỉnh/đáy 52T + 15% tiền vào phiên tăng
+   + 25% quán tính chỉ số — build_screen.py tính lại sau mỗi phiên). */
+let moodCache, moodAt=0;
+async function fearGreed(){
+  if(Date.now()-moodAt<300000&&moodCache!==undefined) return moodCache;
+  moodCache=null;
+  try{
+    const j=await fetch('data/market.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null);
+    const B=j&&j.breadth, v=B&&B.mood&&B.mood.length?B.mood[B.mood.length-1]:null;
+    if(v!=null){
+      const lab=v>=75?'Hưng phấn':v>=60?'Lạc quan':v>=40?'Trung tính':v>=25?'Thận trọng':'Sợ hãi';
+      const col=v>=60?'#16c784':v>=40?'#eab308':v>=25?'#f97316':'#ea3943';
+      moodCache={score:Math.round(v),lab,col};
     }
-    if(!c.traded) continue; n++;
-    if(c.ceil>0&&c.price>=c.ceil) ceil++; else if(c.flr>0&&c.price<=c.flr) floor++;
-    if(c.chg1d>0.01) up++; else if(c.chg1d<-0.01) down++;
-  }
-  if(n<20) return null;
-  let day=up/Math.max(1,up+down)*100 + (ceil-floor)/Math.max(1,up+down)*60;
-  day=Math.max(0,Math.min(100,day));
-  const wk=wN>30 ? wUp/wN*100 : day;      // % mã tăng trong 1 tuần
-  const mo=mN>30 ? mUp/mN*100 : day;      // % mã tăng trong 1 tháng
-  const score=Math.max(0,Math.min(100,Math.round(day*0.5+wk*0.25+mo*0.25)));
-  const lab=score<25?'Sợ hãi tột độ':score<45?'Sợ hãi':score<55?'Trung tính':score<75?'Tham lam':'Tham lam tột độ';
-  const col=score<25?'#ea3943':score<45?'#f0932b':score<55?'#eab308':score<75?'#7ac74f':'#16c784';
-  return {score,lab,col};
+  }catch(e){}
+  moodAt=Date.now(); return moodCache;
 }
 /* tổng GIÁ TRỊ giao dịch toàn thị trường trong ngày (đồng) */
 function totalGtgd(){ let s=0; for(const c of state.coins.values()) if(c.traded) s+=(c.gtgd||0); return s; }
@@ -1076,8 +1072,8 @@ async function refreshIdxBar(){
   if(mkt.gold) extra.push(idx('Vàng', tr(mkt.gold.vnd)||'—', mkt.gold.chg));
   if(mkt.btc) extra.push(idx('BTC', '$'+mkt.btc.usd.toLocaleString('en-US',{maximumFractionDigits:0}), mkt.btc.chg));
   if(extra.length) html+='<span class="idxsep"></span>'+extra.join('');
-  const fg=fearGreed();
-  if(fg) html+=`<span class="idxsep"></span><span class="idx fng" title="Chỉ số tâm lý CPVN tổng hợp từ độ rộng thị trường: phiên nay 50% + 1 tuần 25% + 1 tháng 25% — ${fg.lab}"><span class="nm">Chỉ số tâm lý</span>`+
+  const fg=await fearGreed();
+  if(fg) html+=`<span class="idxsep"></span><span class="idx fng" title="Nhịp đập thị trường — chung công thức với Radar phiên: % mã trên MA50/MA200, đỉnh-đáy 52T, dòng tiền và quán tính · ${fg.lab}"><span class="nm">Chỉ số tâm lý</span>`+
     `<span class="val" style="color:${fg.col}">${fg.score}</span><span class="chg" style="color:${fg.col}">${fg.lab}</span></span>`;
   bar.innerHTML=html;
 }
