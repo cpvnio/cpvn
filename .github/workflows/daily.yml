@@ -1,6 +1,6 @@
 name: CPVN daily EOD refresh
 
-# DỰ PHÒNG TỰ ĐỘNG cho server chính (103.165.144.161, Scheduled Task 15:15 T2–T6):
+# DỰ PHÒNG TỰ ĐỘNG cho server chính (VPS Windows riêng, Scheduled Task 15:15 T2–T6):
 # 16:05 giờ VN (09:05 UTC) Actions kiểm tra — hôm nay server ĐÃ push "EOD <ngày>" thì thôi,
 # CHƯA có (server hỏng/tắt) thì Actions tự cào và push thay. Hai máy không bao giờ đụng nhau.
 # Bấm "Run workflow" ở tab Actions để chạy tay bất cứ lúc nào (chạy tay bỏ qua kiểm tra).
