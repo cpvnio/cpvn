@@ -454,6 +454,58 @@ def resolve_listed(name,self_sym=None):
         t=NAME2SYM.get(k)
         if t and t!=self_sym: return t
     return None
+# Việt hoá tên cổ đông (nguồn Simplize trả tiếng Anh): mã niêm yết -> tên SSI chuẩn;
+# tổ chức nhà nước/quen thuộc -> từ điển; cá nhân "Họ (Tên Đệm...)" -> "Họ Đệm... Tên";
+# hậu tố pháp lý JSC/Ltd -> CTCP/Công ty TNHH. CHỈ áp cho cổ đông Việt Nam.
+VN_ORG={
+ "state bank of vietnam":"Ngân hàng Nhà nước Việt Nam",
+ "state capital investment corporation":"Tổng công ty Đầu tư và Kinh doanh vốn Nhà nước (SCIC)",
+ "state capital investment corporation (scic)":"Tổng công ty Đầu tư và Kinh doanh vốn Nhà nước (SCIC)",
+ "ministry of finance":"Bộ Tài chính","ministry of industry and trade":"Bộ Công Thương",
+ "ministry of construction":"Bộ Xây dựng","ministry of health":"Bộ Y tế",
+ "ministry of transport":"Bộ Giao thông Vận tải","ministry of defence":"Bộ Quốc phòng",
+ "ministry of agriculture and rural development":"Bộ Nông nghiệp và Phát triển nông thôn",
+ "vietnam national oil and gas group":"Tập đoàn Dầu khí Việt Nam (PVN)",
+ "vietnam oil and gas group":"Tập đoàn Dầu khí Việt Nam (PVN)",
+ "vietnam electricity":"Tập đoàn Điện lực Việt Nam (EVN)",
+ "vietnam national coal - mineral industries holding corporation limited":"Tập đoàn Than - Khoáng sản Việt Nam (TKV)",
+ "vietnam national coal-mineral industries holding corporation limited":"Tập đoàn Than - Khoáng sản Việt Nam (TKV)",
+ "vietnam national chemical group":"Tập đoàn Hoá chất Việt Nam (Vinachem)",
+ "vietnam rubber group":"Tập đoàn Công nghiệp Cao su Việt Nam",
+ "vietnam posts and telecommunications group":"Tập đoàn Bưu chính Viễn thông Việt Nam (VNPT)",
+ "vietnam national textile and garment group":"Tập đoàn Dệt may Việt Nam (Vinatex)",
+ "vietnam airlines corporation":"Tổng công ty Hàng không Việt Nam",
+ "vietnam maritime corporation":"Tổng công ty Hàng hải Việt Nam (VIMC)",
+ "vietnam national shipping lines":"Tổng công ty Hàng hải Việt Nam (VIMC)",
+ "vietnam railway corporation":"Tổng công ty Đường sắt Việt Nam",
+ "vietnam northern food corporation":"Tổng công ty Lương thực miền Bắc",
+ "vietnam southern food corporation":"Tổng công ty Lương thực miền Nam",
+ "vietnam investment group joint stock company":"CTCP Tập đoàn Đầu tư Việt Nam",
+ "masan corporation":"Tập đoàn Masan","masan corp":"Tập đoàn Masan",
+ "hanoi people's committee":"UBND Thành phố Hà Nội",
+ "ho chi minh city people's committee":"UBND TP. Hồ Chí Minh",
+ "vietnam bank for agriculture and rural development":"Ngân hàng Nông nghiệp và PTNT Việt Nam (Agribank)",
+ "viettel group":"Tập đoàn Công nghiệp - Viễn thông Quân đội (Viettel)",
+ "military telecommunications group":"Tập đoàn Công nghiệp - Viễn thông Quân đội (Viettel)",
+}
+def _fixcaps(s):
+    if not s.isupper() or len(s)<8: return s     # tên VIẾT HOA TOÀN BỘ -> hoa chữ đầu
+    w=s.split()
+    return " ".join([w[0]]+[x.capitalize() if len(x)>3 else x.lower() for x in w[1:]])
+def viet_name(nm,country,tick=None):
+    if tick and tick in stocks and stocks[tick].get("name"): return stocks[tick]["name"]
+    if (country or "").strip().lower() not in ("vietnam","việt nam","viet nam"): return nm
+    low=_pnorm(nm)
+    if low in VN_ORG: return VN_ORG[low]
+    m=re.match(r"^([A-Za-zÀ-ỹ]+)\s*\(\s*(?:mr|ms|mrs|dr)?\.?\s*([^)]+?)\s*\)$",nm.strip(),re.I)
+    if m:  # cá nhân: "Họ (Tên Đệm...)" -> "Họ Đệm... Tên"
+        p=m.group(2).split()
+        return (m.group(1)+" "+" ".join(p[1:])+" "+p[0]).replace("  "," ").strip()
+    n=re.sub(r"[\s,]*joint\s+stock\s+company$","",nm,flags=re.I)
+    if n!=nm: return "CTCP "+_fixcaps(n.strip(" ,."))
+    n=re.sub(r"[\s,]*(company\s+limited|company\s+ltd\.?|co\.?\s*,?\s*ltd\.?|limited)$","",nm,flags=re.I)
+    if n!=nm: return "Công ty TNHH "+_fixcaps(n.strip(" ,."))
+    return _fixcaps(nm)
 def prof_stale(s):
     p=os.path.join(PROF_DIR,f"{s}.json")
     try:
@@ -473,8 +525,9 @@ def fetch_ownership(sym,o):
             nm=re.sub(r"\s+"," ",(r.get("investorFullName") or "").strip())
             if not nm or nm.lower() in seen: continue
             seen.add(nm.lower())
-            e={"n":nm,"p":rnd(r.get("pctOfSharesOutHeld")),"s":r.get("sharesHeld"),"c":r.get("countryOfInvestor")}
             t=resolve_listed(nm,sym)
+            e={"n":viet_name(nm,r.get("countryOfInvestor"),t),
+               "p":rnd(r.get("pctOfSharesOutHeld")),"s":r.get("sharesHeld"),"c":r.get("countryOfInvestor")}
             if t: e["t"]=t
             out.append({k:v for k,v in e.items() if v is not None})
         if out: o["sh"]=out[:40]

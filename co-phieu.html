@@ -147,6 +147,10 @@
   #hsBox .morebtn{display:block;width:100%;margin:6px 0 2px;padding:7px;background:var(--panel2);
     border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center}
   #hsBox .morebtn:hover{color:var(--txt)}
+  /* 2 cột: TRÁI cơ cấu + cổ đông lớn (gọn ngang) || PHẢI công ty con + quỹ nắm giữ */
+  #hsBox .hs2{display:grid;grid-template-columns:1fr 1fr;gap:2px 30px;align-items:start}
+  #hsBox .hs2>div{min-width:0}
+  @media (max-width:920px){ #hsBox .hs2{grid-template-columns:1fr} }
   @media (max-width:640px){ #hsBox .hidem{display:none} }
 
   /* doanh nghiệp cùng ngành: danh sách logo + giá + vốn hoá */
@@ -648,6 +652,20 @@ async function loadProfile(){
   profData=d||{none:true};
   renderProfile();
 }
+function vnName(nm,c){   // việt hoá gọn phía client (bản đầy đủ nằm ở server refresh_daily.py)
+  if((c||'').toLowerCase()!=='vietnam') return nm;
+  const DICT={'state bank of vietnam':'Ngân hàng Nhà nước Việt Nam',
+    'state capital investment corporation':'Tổng công ty Đầu tư và Kinh doanh vốn Nhà nước (SCIC)'};
+  const low=nm.toLowerCase().trim();
+  if(DICT[low]) return DICT[low];
+  const m=nm.trim().match(/^([A-Za-zÀ-ỹ]+)\s*\(\s*(?:Mr|Ms|Mrs|Dr)?\.?\s*([^)]+?)\s*\)$/i);
+  if(m){ const p=m[2].split(/\s+/); return (m[1]+' '+p.slice(1).join(' ')+' '+p[0]).replace(/\s+/g,' ').trim(); }
+  let n=nm.replace(/[\s,]*joint\s+stock\s+company$/i,'');
+  if(n!==nm) return 'CTCP '+n.trim();
+  n=nm.replace(/[\s,]*(company\s+limited|company\s+ltd\.?|co\.?\s*,?\s*ltd\.?|limited)$/i,'');
+  if(n!==nm) return 'Công ty TNHH '+n.trim();
+  return nm;
+}
 async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho chưa có (fallback)
   try{
     const j=await fetch(`https://api2.simplize.vn/api/company/ownership/shareholder-fund-details/${C.sym}?page=0&size=100`).then(r=>r.json());
@@ -655,7 +673,7 @@ async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho ch
     for(const r of (j.data&&j.data.shareholderDetails)||[]){
       const nm=(r.investorFullName||'').trim().replace(/\s+/g,' ');
       if(!nm||seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
-      out.push({n:nm,p:r.pctOfSharesOutHeld,s:r.sharesHeld,c:r.countryOfInvestor});
+      out.push({n:vnName(nm,r.countryOfInvestor),p:r.pctOfSharesOutHeld,s:r.sharesHeld,c:r.countryOfInvestor});
     }
     if(out.length) d.sh=out.slice(0,40);
     const fh=((j.data&&j.data.fundHoldings)||[]).filter(f=>f.sharesHeld);
@@ -684,19 +702,11 @@ function renderProfile(){
   const b=$('hsBox'), d=profData;
   if(!d||d.none){ b.innerHTML='<div class="subnote">Chưa có hồ sơ cho mã này.</div>'; return; }
   const f1=(v,s)=>v==null||isNaN(v)?'—':(+v).toFixed(1)+(s||'');
+  // thông tin gọn theo yêu cầu: chỉ tên - website - ngành (số liệu đã có ở bảng thống kê đầu trang)
   const rows=[
     ['Tên đầy đủ',CP.esc(d.nameVi||C.name)],
-    ['Tên tiếng Anh',CP.esc(d.nameEn||'—')],
     ['Website',d.website?`<a href="${CP.esc(d.website)}" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:700">${CP.esc(String(d.website).replace(/^https?:\/\//,'').replace(/\/$/,''))}</a>`:'—'],
     ['Sàn · Ngành',`${CP.esc(d.exchange||C.ex)} · ${CP.esc(d.industry||C.sector||'—')}`],
-    ['ROE · ROA',f1(d.roe,'%')+' · '+f1(d.roa,'%')],
-    ['Beta 5 năm',d.beta5y??'—'],
-    ['Free-float',f1(d.freeFloat,'%')],
-    ['Giá trị sổ sách/CP',d.bookValue?CP.fmtD(d.bookValue)+' đ':'—'],
-    ['EPS',d.eps?CP.fmtD(d.eps)+' đ':'—'],
-    ['EV/EBITDA',d.evEbitda!=null?f1(d.evEbitda):'—'],
-    ['Tăng trưởng doanh thu 4 quý',f1(d.revLtmGrowth,'%')],
-    ['Tăng trưởng lợi nhuận 4 quý',f1(d.npLtmGrowth,'%')],
   ];
   /* ---- cơ cấu sở hữu / cổ đông lớn / công ty con / quỹ nắm giữ ---- */
   const OWNC=['#38bdf8','#16c784','#eab308','#c026d3','#ea3943','#2dd4bf','#f97316'];
@@ -726,7 +736,7 @@ function renderProfile(){
       <td style="width:26px;color:var(--muted);font-size:12px">${i+1}</td>
       <td>${nameCell(x.n,x.t,x.c&&x.c!=='Vietnam'?CP.esc(x.c):'')}</td>
       <td class="r hidem" style="color:var(--muted)">${x.s?CP.fmtD(Math.round(x.s)):'—'}</td>
-      <td class="r" style="width:126px"><div class="pcell"><span style="font-weight:800">${f1(x.p,'%')}</span><span class="pbar"><i style="width:${Math.min(100,(+x.p||0)/maxP*100)}%"></i></span></div></td>
+      <td class="r" style="width:104px"><div class="pcell"><span style="font-weight:800">${f1(x.p,'%')}</span><span class="pbar" style="width:44px"><i style="width:${Math.min(100,(+x.p||0)/maxP*100)}%"></i></span></div></td>
     </tr>`;
     const head=d.sh.slice(0,12), rest=d.sh.slice(12);
     shH=`<h3 class="t">Cổ đông lớn</h3><table class="hst" id="shT"><thead><tr><th>#</th><th>Cổ đông</th><th class="r hidem">Số cổ phiếu</th><th class="r">Tỷ lệ</th></tr></thead>`+
@@ -760,11 +770,8 @@ function renderProfile(){
   b.innerHTML=
     `<h3 class="t" style="margin-top:0">Thông tin doanh nghiệp</h3>`+
     `<div class="statgrid">${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}</div>`+
-    ownH+shH+subH+fundH+
     blk('Giới thiệu',d.overview)+
-    blk('Sản phẩm & dịch vụ chính',d.services)+
-    blk('Chiến lược kinh doanh',d.strategy)+
-    blk('Rủi ro kinh doanh',d.risk)+
+    `<div class="hs2"><div>${ownH+shH}</div><div>${subH+fundH}</div></div>`+
     `<div class="subnote">Nguồn: Simplize · lưu trong kho CPVN, tự làm mới mỗi 3 ngày · bản: ${CP.esc(d.updated||'—')}</div>`;
   const btn=$('shBtn');
   if(btn) btn.onclick=()=>{
