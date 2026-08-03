@@ -161,11 +161,27 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #scrClear:hover{color:var(--txt)}
   /* cờ đỏ trong bảng */
   .redflag{display:inline-block;margin-left:5px;font-size:12px;cursor:help}
+  /* toast cờ đỏ: mobile không có hover -> CHẠM ⚠ hiện chi tiết */
+  #scrToast{position:fixed;left:12px;right:12px;bottom:16px;z-index:80;display:none;
+    background:var(--panel);color:var(--txt);border:1.5px solid var(--red);border-radius:12px;
+    padding:11px 14px;font-size:12.5px;line-height:1.6;box-shadow:0 10px 32px rgba(0,0,0,.35)}
+  #scrToast b{color:var(--red)}
+  #scrToast .x{float:right;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0 0 4px 10px}
+  @media(min-width:761px){ #scrToast{left:auto;max-width:420px} }
   @media(max-width:760px){
     #scrPanel{padding:8px 10px}
     .scrLb{width:100%;margin-bottom:-3px}
-    .prewrap{grid-template-columns:1fr 1fr}
-    .pre .nm{font-size:12px}
+    /* MOBILE GỌN: chips 2 hàng CUỘN NGANG + preset 2 hàng CUỘN NGANG -> panel thấp,
+       chọn xong là THẤY NGAY bảng kết quả thay vì phải kéo qua cả rừng nút */
+    .chipbar{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;
+      gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+    .chipbar::-webkit-scrollbar{display:none}
+    .chipbar button{white-space:nowrap}
+    .prewrap{display:grid;grid-template-columns:none;grid-template-rows:repeat(2,auto);
+      grid-auto-flow:column;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+    .prewrap::-webkit-scrollbar{display:none}
+    .pre{min-width:196px;padding:7px 9px}
+    .pre .nm{font-size:11.8px}
   }
 
   /* phân trang */
@@ -211,7 +227,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260806a"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260806b"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -288,14 +304,15 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   </table>
 </div>
 <div id="pager"></div>
+<div id="scrToast"></div>
 
 <footer>
   <span id="kho">kho dữ liệu: đang kiểm tra…</span>
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260806a"></script>
-<script src="assets/screener.js?v=20260806a"></script>
+<script src="assets/core.js?v=20260806b"></script>
+<script src="assets/screener.js?v=20260806b"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -482,6 +499,16 @@ function render(){
   }).join('');
   document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
     if(e.target.closest('[data-star]')) return;
+    if(e.target.closest('.redflag')){            // chạm ⚠ (mobile không hover được title)
+      e.stopPropagation();
+      const c=CP.coins.get(tr.dataset.sym), fl=CPScreen.flags(c);
+      const t=$('scrToast');
+      t.innerHTML='<span class="x">✕</span><b>⚠ '+c.sym+' — cờ đỏ chất lượng lợi nhuận</b><br>· '+fl.join('<br>· ');
+      t.style.display='block';
+      t.querySelector('.x').onclick=()=>t.style.display='none';
+      clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',6000);
+      return;
+    }
     location.href='/cophieu/'+tr.dataset.sym;
   });
   document.querySelectorAll('#tb [data-star]').forEach(td=>td.onclick=()=>{
@@ -604,6 +631,11 @@ function scrBuild(){
     const p=CPScreen.presets.find(x=>x.id===SCR.preset);
     $('scrDesc').textContent=p?p.ds:'';
     ST.page=1; render();
+    // mobile: panel + rừng nút chiếm gần trọn màn hình -> chọn xong tự đưa xuống kết quả
+    // (cuộn thẳng, không smooth — smooth bị nhiều môi trường nuốt mất animation)
+    if(SCR.preset&&window.innerWidth<=760)
+      setTimeout(()=>{ const y=$('wrap').getBoundingClientRect().top+window.scrollY-52;
+        window.scrollTo(0,Math.max(0,y)); },120);
   });
   scrPaintCounts();
 }
