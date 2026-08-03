@@ -513,9 +513,7 @@ function renderRadar(){
     +(vni?infoRow('VNINDEX',(+vni.value).toLocaleString('en-US',{maximumFractionDigits:2})
         +' · '+pct(vni.chg), vni.chg>0.005?'bUp':vni.chg<-0.005?'bDn':'bFl'):'')
     +infoRow('Thanh khoản ngày',ty(s.gtgd),'bGold')
-    +infoRow('Khối ngoại mua',ty(ST.nnBuy),'bUp')
-    +infoRow('Khối ngoại bán',ty(ST.nnSell),'bDn')
-    +infoRow('Mua bán ròng',(nnNet>=0?'+':'−')+ty(Math.abs(nnNet)),nnNet>=0?'bUp':'bDn')
+    +infoRow('Khối ngoại mua ròng',(nnNet>=0?'+':'−')+ty(Math.abs(nnNet)),nnNet>=0?'bUp':'bDn')
     +'</div>'
     +'</div>'
     +'<div id="radarAll">'
