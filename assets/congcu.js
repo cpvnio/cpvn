@@ -157,6 +157,75 @@ async function loadAll(){
   });
   $('#fdate').textContent=ST.date||'—';
 }
+/* ---- GIÁ SỐNG trong phiên: radar không đi chậm hơn thị trường ----
+   Mỗi 60s (tab hiện + 9-15h T2-T6) kéo bảng VPS, cập nhật close/chg/GTGD/NN/volr/rpos
+   của từng mã rồi vẽ lại module đang mở. Ngoài giờ giữ số kho. */
+function sessionOpenVN(){
+  const vn=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+  const d=vn.getDay(), m=vn.getHours()*60+vn.getMinutes();
+  return d>=1&&d<=5&&m>=540&&m<900;
+}
+let liveAt=0, livePolling=false;
+const FORCE_LIVE=/[?&]forcelive/.test(location.search);   // cờ kiểm thử: poll cả khi tab ẩn
+async function pollLive(){
+  if(livePolling) return false; livePolling=true;
+  try{
+    const syms=[...ST.map.keys()], rows=[];
+    for(let i=0;i<syms.length;i+=150){
+      const arr=await fetch('https://bgapidatafeed.vps.com.vn/getliststockdata/'+syms.slice(i,i+150).join(','))
+        .then(r=>r.json());
+      for(const t of arr) rows.push(t);
+    }
+    const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
+    if(rows.length<50||active<rows.length*0.1) return false;   // bảng đêm rỗng -> giữ kho
+    let nnB=0,nnS=0;
+    for(const t of rows){
+      const c=ST.map.get(t.sym); if(!c) continue;
+      const last=(+t.lastPrice||0)*1000, ref=(+t.r||0)*1000;
+      c.ceil=(+t.c||0)*1000; c.floor=(+t.f||0)*1000; if(ref>0) c.ref=ref;
+      const vol=(+t.lot||0)*10;
+      if(last>0){ c.close=last; c.chg=ref>0?(last-ref)/ref*100:c.chg; }
+      if(vol>0){ c.vol=vol;
+        const ave=(parseFloat(t.avePrice)||0)*1000;
+        c.gtgd=(ave||last)*vol;
+        if(c.avgv20) c.volr=+(vol/c.avgv20).toFixed(2);   // đột biến KL theo giá sống
+      }
+      const hi=(parseFloat(t.highPrice)||0)*1000, lo=(parseFloat(t.lowPrice)||0)*1000;
+      if(hi>lo&&last>0) c.rpos=(last-lo)/(hi-lo);
+      const fb=(parseFloat(t.fBVol)||0)*10, fs=(parseFloat(t.fSVolume)||0)*10;
+      if(last>0){ c.nnVal=(fb-fs)*last; nnB+=fb*last; nnS+=fs*last; }
+      c.mcapLive=c.shares?c.shares*(last||c.close):c.mcapLive;
+    }
+    if(nnB||nnS){ ST.nnBuy=nnB; ST.nnSell=nnS; }
+    try{   // chỉ số sống (VNINDEX/VN30/HNX/UPCOM) cho cột thông tin
+      const IDX=[['10','VNINDEX'],['11','VN30'],['02','HNX'],['03','UPCOM']];
+      const arr=await fetch('https://bgapidatafeed.vps.com.vn/getlistindexdetail/10,11,02,03').then(r=>r.json());
+      const out=[];
+      for(const d of arr||[]){
+        const m=IDX.find(x=>x[0]===String(d.indexId||d.mc||'')); if(!m) continue;
+        const v=+d.cIndex||0, o=+d.oIndex||0;
+        if(v>0) out.push({name:m[1], value:v, chg:o>0?(v-o)/o*100:null});
+      }
+      if(out.length) ST.indices=out;
+    }catch(e){}
+    liveAt=Date.now();
+    return true;
+  }catch(e){ return false; }
+  finally{ livePolling=false; }
+}
+function startLive(){
+  const tick=async()=>{
+    if((document.hidden&&!FORCE_LIVE)||!sessionOpenVN()) return;
+    if(Date.now()-liveAt<55000) return;
+    if(await pollLive()&&cur==='radar'){
+      MODULES.find(x=>x.id==='radar').render();   // vẽ lại tại chỗ, KHÔNG cuộn trang
+    }
+  };
+  tick();
+  setInterval(tick,10000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) tick(); });
+}
+
 function mood(){ const B=ST.market&&ST.market.breadth;
   return (B&&B.mood.length)?B.mood[B.mood.length-1]:null; }
 const moodWord=v=>v==null?'—':v>=75?'Hưng phấn':v>=60?'Lạc quan':v>=40?'Trung tính':v>=25?'Thận trọng':'Sợ hãi';
@@ -491,6 +560,7 @@ async function init(){
   const byPath={radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
   showMod(MODULES.some(m=>m.id===start)?start:'radar');
+  startLive();   // giá sống trong phiên — radar bám sát thị trường
   $('#load').classList.add('off');
   setTimeout(()=>$('#load').remove(),420);
 }
