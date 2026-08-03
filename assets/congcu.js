@@ -166,6 +166,46 @@ function sessionOpenVN(){
   return d>=1&&d<=5&&m>=540&&m<900;
 }
 let liveAt=0, livePolling=false;
+/* áp bộ nhớ giá sống chung (do bong bóng/bảng giá/chính trang này ghi) — mở là có ngay */
+function applyLiveCache(){
+  try{
+    const j=JSON.parse(sessionStorage.getItem('cpvn_live')||'null');
+    if(!j||!j.d||Date.now()-j.at>10*60000) return false;
+    let n=0,nnB=0,nnS=0;
+    for(const sym in j.d){
+      const c=ST.map.get(sym); if(!c) continue;
+      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
+      if(!(last>0)) continue;
+      c.close=last; if(ref>0){ c.ref=ref; c.chg=(last-ref)/ref*100; }
+      if(vol>0){ c.vol=vol; c.gtgd=gtgd||c.gtgd;
+        if(c.avgv20) c.volr=+(vol/c.avgv20).toFixed(2); }
+      if(hi>lo&&last>0) c.rpos=(last-lo)/(hi-lo);
+      if(ce>0) c.ceil=ce; if(fl>0) c.floor=fl;
+      c.nnVal=((fb||0)-(fs||0))*last; nnB+=(fb||0)*last; nnS+=(fs||0)*last;
+      c.mcapLive=c.shares?c.shares*last:c.mcapLive;
+      n++;
+    }
+    if(n<100) return false;
+    if(nnB||nnS){ ST.nnBuy=nnB; ST.nnSell=nnS; }
+    if(j.idx&&j.idx.length) ST.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
+    liveAt=j.at;
+    return true;
+  }catch(e){ return false; }
+}
+function saveLiveCache(){
+  try{
+    const d={};
+    for(const c of ST.list){
+      if(!(c.close>0)) continue;
+      d[c.sym]=[c.close,c.ref||0,c.vol||0,Math.round(c.gtgd||0),0,0,0,0,c.ceil||0,c.floor||0];
+    }
+    // fb/fs/hi/lo không giữ dạng thô ở đây -> để 0, KHÔNG ghi đè bản đầy đủ mới hơn của trang khác
+    const cur=JSON.parse(sessionStorage.getItem('cpvn_live')||'null');
+    if(cur&&cur.at>=liveAt) return;
+    sessionStorage.setItem('cpvn_live',JSON.stringify({at:liveAt,
+      idx:(ST.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
+  }catch(e){}
+}
 const FORCE_LIVE=/[?&]forcelive/.test(location.search);   // cờ kiểm thử: poll cả khi tab ẩn
 async function pollLive(){
   if(livePolling) return false; livePolling=true;
@@ -592,7 +632,8 @@ async function init(){
   const q=new URLSearchParams(location.search).get('m');
   const byPath={radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
-  if(sessionOpenVN()) await pollLive();   // trong phiên: lấy giá sống TRƯỚC khi vẽ — không lộ số chốt cũ
+  const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
+  if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
   showMod(MODULES.some(m=>m.id===start)?start:'radar');
   startLive();   // rồi giữ nhịp mỗi phút
   $('#load').classList.add('off');

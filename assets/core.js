@@ -130,11 +130,25 @@ CP.pollBoard=async function(only){
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     CP.lastPollAt=Date.now(); CP.liveOk=true;
-    if(!(only&&only.length)) CP.lastFullAt=CP.lastPollAt;
+    if(!(only&&only.length)){ CP.lastFullAt=CP.lastPollAt; CP.saveLive(); }
     return true;
   }catch(e){ CP.liveOk=false; return false; }
   finally{ polling=false; }
 };
+/* BỘ NHỚ GIÁ SỐNG DÙNG CHUNG (sessionStorage 'cpvn_live'): trang nào poll xong cũng ghi,
+   trang khác mở ra là CÓ NGAY số sống gần nhất — không phải chờ mạng, không lóe số cũ. */
+CP.saveLive=function(){
+  try{
+    const d={};
+    for(const c of CP.coins.values()){
+      if(!(c.price>0)) continue;
+      d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr];
+    }
+    sessionStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
+      idx:(CP.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
+  }catch(e){}
+};
+
 /* NHỊP CẬP NHẬT (9–15h T2–T6):
    · mỗi 1 PHÚT: làm mới mã ĐANG HIỂN THỊ trên màn hình — 1 lượt gọi, giá nhảy gần như trực tiếp
    · mỗi 5 PHÚT: quét TOÀN BỘ thị trường (xếp hạng/lọc/thống kê luôn đúng)

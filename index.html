@@ -293,7 +293,7 @@
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260804c"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260804d"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -433,7 +433,7 @@
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260804c"></script>
+<script src="assets/chart.js?v=20260804d"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -553,6 +553,18 @@ function buildChunks(){
   for(let i=0;i<syms.length;i+=150) chunks.push(syms.slice(i,i+150).join(','));
 }
 let lastFullAt=0;
+/* BỘ NHỚ GIÁ SỐNG dùng chung 3 trang (sessionStorage cpvn_live) — trang khác mở là có ngay */
+function saveLiveShared(){
+  try{
+    const d={};
+    for(const c of state.coins.values()){
+      if(!(c.price>0)) continue;
+      d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd||0),c.fbuy||0,c.fsell||0,c.high||0,c.low||0,c.ceil||0,c.flr||0];
+    }
+    sessionStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
+      idx:(window._lastIdx||[]).map(i=>[i.name,i.value,i.chg]), d}));
+  }catch(e){}
+}
 /* only = mảng mã đang hiển thị (làm mới nhanh); bỏ trống = quét cả thị trường */
 async function pollBoard(only){
   if(polling||OFFLINE) return; polling=true;
@@ -585,7 +597,9 @@ async function pollBoard(only){
       c.chg1d=c.ref>0?(c.price-c.ref)/c.ref*100:0;   // changePc của VPS KHÔNG có dấu -> tự tính
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
-    lastPollAt=Date.now(); if(!(only&&only.length)) lastFullAt=lastPollAt; updateLivePill();
+    lastPollAt=Date.now();
+    if(!(only&&only.length)){ lastFullAt=lastPollAt; if(!boardEmpty) saveLiveShared(); }
+    updateLivePill();
   }catch(e){
     setStatus(state.eodLoaded&&!lastPollAt
       ?`Bảng giá trực tiếp lỗi — đang dùng số liệu lưu phiên ${state.eodDate||''}`
@@ -1204,6 +1218,7 @@ function totalGtgd(){ let s=0; for(const c of state.coins.values()) if(c.traded)
 async function refreshIdxBar(){
   let [data,mkt]=await Promise.all([loadIndices(), loadMarket()]);
   if(!data||!data.length) data=state.savedIdx||[];   // VPS lỗi -> chỉ số từ snapshot đã lưu
+  window._lastIdx=data;
   const bar=$('idxbar'); bar.style.display='flex';
   const idx=(name,val,chg)=>`<span class="idx"><span class="nm">${name}</span><span class="val">${val}</span>`+
     (chg!=null?`<span class="chg" style="color:${pcCol(chg)}">${pcTxt(chg)}</span>`:'')+`</span>`;
