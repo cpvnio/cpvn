@@ -205,6 +205,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     padding:2.5px 7px;font-size:11px;font-weight:700;cursor:pointer}
   .chips button.active{color:#fff;background:var(--accent);border-color:var(--accent)}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
+  /* chọn kỳ dòng tiền khối ngoại ngay trên dòng NN (dùng lại kiểu chips của panel) */
+  #nnTf{display:inline-flex;margin-left:6px;vertical-align:-2px}
+  #nnTf button{padding:1.5px 6px;font-size:10px}
+  #detail .row i#detNNlb{font-style:normal;opacity:.75}
   .subnote{color:var(--muted);font-size:11px;margin-top:4px}
   .finlegend{display:flex;gap:12px;font-size:10.5px;color:var(--muted);margin:2px 0 4px}
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
@@ -310,7 +314,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260805c"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260805d"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -408,8 +412,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <div class="row"><span>KLGD · GTGD</span><span id="detVolGt"></span></div>
         <div class="row"><span>Vốn hoá · SLCP</span><span id="detMcap"></span></div>
         <div class="row"><span>P/E · P/B</span><span id="detPePb"></span></div>
-        <div class="row" title="Khối ngoại (nhà đầu tư nước ngoài) mua và bán trong phiên hôm nay — tỷ đồng"><span>NN mua – bán (trong ngày)</span><span id="detNNday"></span></div>
-        <div class="row" title="Khối ngoại mua ròng (mua − bán) cộng dồn 5 phiên và 22 phiên gần nhất — tỷ đồng"><span>NN ròng (tuần · tháng)</span><span id="detNN"></span></div>
+        <div class="row" title="Khối ngoại (nhà đầu tư nước ngoài) mua vào và bán ra — cộng dồn theo kỳ đã chọn, đơn vị tỷ đồng">
+          <span>Khối ngoại
+            <span class="chips" id="nnTf"><button data-v="1" class="active">1D</button><button data-v="7">7D</button><button data-v="30">30D</button></span>
+          </span>
+          <span id="detNNday"></span>
+        </div>
+        <div class="row" title="Mua ròng = tiền mua trừ tiền bán của khối ngoại trong kỳ đã chọn"><span>NN ròng <i id="detNNlb">trong ngày</i></span><span id="detNN"></span></div>
       </div>
 
       <div class="sect"><span>Kết quả kinh doanh</span>
@@ -451,7 +460,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260805c"></script>
+<script src="assets/chart.js?v=20260805d"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -1384,7 +1393,8 @@ setInterval(refreshIdxBar, 30000);
 let detailSym=null, candles=null, candleTf='1d', finData=null, finPeriod='Q', peerKey='m1';
 let newsTimer=null, lastShownPrice=null;
 const finCache=new Map(), newsCache=new Map();
-const flowSeries={};   // {sym: [{date,fBuy,fSell,vol}...] } — 30 phiên gần nhất (24hMoney)
+const flowSeries={};   // {sym: [{date,fBuy,fSell,vol,close}...] } — ~40 phiên gần nhất
+let nnDays=1;          // kỳ đang xem của dòng tiền khối ngoại: 1D | 7D | 30D
 async function loadFlow(sym){
   renderFlow(state.coins.get(sym));
   let d=null;
@@ -1442,35 +1452,42 @@ function renderDiv(sym){
 const tyTxt=v=>{ const a=Math.abs(v);
   return (a/1e9).toLocaleString('en-US',{maximumFractionDigits:a>=1e11?0:1}); };
 const dayOfTs=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
-/* net từng phiên (đồng), MỚI -> CŨ; phiên đang chạy lấy số sống nên tuần/tháng luôn kịp hôm nay */
-function flowNets(c){
+/* TIỀN MUA & TIỀN BÁN của khối ngoại từng phiên (đồng), MỚI -> CŨ.
+   Phiên đang chạy lấy số sống từ bảng giá nên 7D/30D luôn tính cả hôm nay
+   (khử trùng theo ngày: số sống thắng số kho). */
+function flowRows(c){
   const out=[], seen=new Set();
-  const live=((c.fbuy||0)-(c.fsell||0))*(c.price||0);
-  if(c.traded&&live){ out.push(live); seen.add(dayOfTs(Math.floor(Date.now()/1000))); }
+  const lb=(c.fbuy||0)*(c.price||0), ls=(c.fsell||0)*(c.price||0);
+  if(c.traded&&(lb||ls)){ out.push({b:lb,s:ls}); seen.add(dayOfTs(Math.floor(Date.now()/1000))); }
   const ser=flowSeries[c.sym]||[];
   for(let i=ser.length-1;i>=0;i--){
     const r=ser[i], d=dayOfTs(r.date);
     if(seen.has(d)) continue; seen.add(d);
-    out.push(((r.fBuy||0)-(r.fSell||0))*(r.close||0));
+    out.push({b:(r.fBuy||0)*(r.close||0), s:(r.fSell||0)*(r.close||0)});
   }
   return out;
 }
+const NN_LBL={1:'trong ngày',7:'7 phiên',30:'30 phiên'};
 function renderFlow(c){
-  const el=$('detNN'), ed=$('detNNday');
-  if(!el) return;
-  if(!c){ el.textContent=''; if(ed) ed.textContent=''; return; }
+  const el=$('detNN'), ed=$('detNNday'), lb=$('detNNlb');
+  if(!el||!ed) return;
+  if(lb) lb.textContent=NN_LBL[nnDays]||'';
+  if(!c){ el.textContent=''; ed.textContent=''; return; }
   const muted=t=>`<span style="color:var(--muted);font-weight:400">${t}</span>`;
-  if(ed){          // TRONG NGÀY: mua và bán nằm CÙNG 1 DÒNG để đối chiếu ngay bên nào lớn hơn
-    const b=(c.fbuy||0)*(c.price||0), s=(c.fsell||0)*(c.price||0);
-    ed.innerHTML=(b||s)
-      ? `<b style="color:var(--green)">${tyTxt(b)}</b> ${muted('–')} <b style="color:var(--red)">${tyTxt(s)}</b> ${muted('tỷ')}`
-      : muted('—');
+  if(nnDays>1&&!flowSeries[c.sym]){                 // 7D/30D cần lịch sử -> chờ kho nạp xong
+    ed.innerHTML=muted('đang tải…'); el.innerHTML=muted('đang tải…'); return;
   }
-  if(!flowSeries[c.sym]){ el.innerHTML='<span style="color:var(--muted)">đang tải…</span>'; return; }
-  const nets=flowNets(c), sum=n=>nets.slice(0,n).reduce((a,b)=>a+b,0);
-  const chip=v=>Math.abs(v)<5e7 ? muted('0')      // <0,05 tỷ: coi như không đáng kể, để mờ cho đỡ rối
-    : `<b style="color:${v>0?'var(--green)':'var(--red)'}">${v>0?'+':'−'}${tyTxt(v)}</b>`;
-  el.innerHTML=chip(sum(5))+' '+muted('·')+' '+chip(sum(22))+' '+muted('tỷ');
+  const rows=flowRows(c).slice(0,nnDays);
+  let b=0,s=0; for(const r of rows){ b+=r.b; s+=r.s; }
+  if(!b&&!s){ ed.innerHTML=muted('—'); el.innerHTML=muted('—'); return; }
+  // MUA và BÁN tách bạch, xanh/đỏ tương ứng -> liếc phát biết bên nào áp đảo.
+  // Mỗi vế bọc nowrap: màn hình hẹp có xuống dòng thì con số vẫn dính nhãn của nó.
+  const side=(lbl,v,col,tail)=>`<span style="white-space:nowrap">${muted(lbl)} `+
+    `<b style="color:${col}">${tyTxt(v)}</b> ${muted(tail)}</span>`;
+  ed.innerHTML=side('NN mua',b,'var(--green)','–')+' '+side('NN bán',s,'var(--red)','tỷ');
+  const net=b-s;
+  el.innerHTML=(Math.abs(net)<5e7 ? muted('0')      // <0,05 tỷ: coi như không đáng kể
+    : `<b style="color:${net>0?'var(--green)':'var(--red)'}">${net>0?'+':'−'}${tyTxt(net)}</b>`)+' '+muted('tỷ');
 }
 
 function showDetail(c){
@@ -1834,6 +1851,9 @@ document.querySelectorAll('#finPeriod button').forEach(b=>b.onclick=()=>{
   finPeriod=b.dataset.v; setChips('finPeriod',finPeriod); if(detailSym) renderProfit(detailSym); });
 document.querySelectorAll('#peerTf button').forEach(b=>b.onclick=()=>{
   peerKey=b.dataset.v; setChips('peerTf',peerKey); if(detailSym) renderPeers(); });
+document.querySelectorAll('#nnTf button').forEach(b=>b.onclick=()=>{
+  nnDays=+b.dataset.v; setChips('nnTf',b.dataset.v);
+  if(detailSym) renderFlow(state.coins.get(detailSym)); });
 
 let peerTick=0;
 setInterval(()=>{
