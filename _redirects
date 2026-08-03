@@ -1,14 +1,18 @@
-# Cloudflare tự phục vụ /banggia, /cophieu (pretty URL cho file .html).
+# Cloudflare tự phục vụ /cophieu, /bubbles, /congcu (pretty URL cho file .html).
 # ĐỪNG thêm rule cho đường dẫn đã có file .html -> vòng lặp 307.
-# Link cũ (có gạch nối) chuyển vĩnh viễn sang link mới; mã không phân biệt hoa/thường.
-/bang-gia        /banggia              301
-/bang-gia.html   /banggia              301
+# TRANG CHỦ nay là BẢNG GIÁ (index.html); trang bong bóng chuyển sang /bubbles.
+/banggia         /                     301
+/banggia.html    /                     301
+/bang-gia        /                     301
+/bang-gia.html   /                     301
+/bongbong        /bubbles              301
+/bong-bong       /bubbles              301
 /co-phieu        /cophieu              301
 /co-phieu.html   /cophieu              301
 /co-phieu/:sym   /cophieu/:sym         301
 /cophieu/:sym    /cophieu?sym=:sym     200
 # 4 công cụ dùng chung congcu.html — URL không gạch nối, mở đúng module
-/bandonhiet      /?view=heat           301
+/bandonhiet      /bubbles?view=heat    301
 /radar           /congcu?m=radar       200
 /sogang          /bandonhiet           301
 /duongdua        /congcu?m=race        200

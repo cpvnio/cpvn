@@ -2,7 +2,7 @@
    CPVN core.js — lõi dữ liệu dùng chung cho trang Bảng giá + trang Chi tiết mã.
    Nguyên tắc: API sống trước, KHO trong repo là lưới an toàn — mọi hàm đều có
    fallback để "không bao giờ lỗi khi gặp sự cố". Thêm ?offline vào URL để ép
-   chạy 100% từ kho. Trang bong bóng (index.html) độc lập, không dùng file này.
+   chạy 100% từ kho. Trang bong bóng (bubbles.html) độc lập, không dùng file này.
    ========================================================================== */
 'use strict';
 const CP={};
