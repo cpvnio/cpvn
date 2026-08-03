@@ -1,6 +1,6 @@
 /* ============================================================================
    CPScreen — BỘ LỌC bảng giá CPVN: van an toàn + chips 1 chạm + 9 preset triết lý
-   + cờ đỏ chất lượng lợi nhuận. Dữ liệu: data/fund.json (dẫn xuất từ kho BCTC,
+   Dữ liệu: data/fund.json (dẫn xuất từ kho BCTC,
    build_screen.py tự sinh mỗi phiên) + data/screen.json (kỹ thuật). Nạp LƯỜI khi
    người dùng mở panel lần đầu — không tốn tải trang cho người không dùng lọc.
    ========================================================================== */
@@ -186,17 +186,4 @@ CPScreen.pass=function(id,c){
   }
 };
 
-/* ---------- CỜ ĐỎ chất lượng lợi nhuận (lớp phủ định) ---------------------- */
-CPScreen.flags=function(c){
-  const f=CPScreen.F[c.sym]; if(!f) return [];
-  const out=[];
-  if(!f.fin){
-    if((f.accr??0)>10)     out.push('Dồn tích cao: LNST vượt xa tiền thật (Sloan '+f.accr+'% tổng TS)');
-    if((f.cfoNegQ||0)>=5)  out.push('Dòng tiền HĐKD âm '+f.cfoNegQ+'/8 quý gần nhất');
-    if((f.recRev??0)>40)   out.push('Phải thu phình nhanh hơn doanh thu +'+Math.round(f.recRev)+' điểm %');
-    if((f.aGrow??0)>50&&nz(f.cfoNp3,0)<0.5) out.push('Tổng tài sản phình +'+Math.round(f.aGrow)+'%/năm mà tiền không về theo');
-  }
-  if((f.shDil??0)>15)      out.push('Pha loãng mạnh: cổ tức CP/thưởng ~'+f.shDil+'%/năm (EPS bị bào mòn)');
-  return out;
-};
 })();
