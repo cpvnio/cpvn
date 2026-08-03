@@ -100,8 +100,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   td.star{width:34px;font-size:16px;color:#3f3f4a;cursor:pointer;text-align:center}
   td.star.on{color:#ffd60a}
   .co{display:flex;align-items:center;gap:10px}
-  .co img{width:37px;height:37px;border-radius:9px;background:#fff;object-fit:contain;flex-shrink:0}
-  .co .noimg{width:37px;height:37px;border-radius:9px;background:var(--panel2);display:flex;
+  .co img{width:35px;height:35px;border-radius:9px;background:#fff;object-fit:contain;flex-shrink:0}
+  .co .noimg{width:35px;height:35px;border-radius:9px;background:var(--panel2);display:flex;
     align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
   .co .sym{font-weight:800;font-size:20px}
   .co .ex{font-size:10.5px;font-weight:800;color:var(--muted);border:1px solid var(--line);
@@ -132,7 +132,16 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
   /* ---- BỘ LỌC: van an toàn + chips + preset triết lý ---- */
   .thmbtn .ic{width:15px;height:15px;fill:currentColor;vertical-align:-2px;margin-right:5px}
-  #scrBtn{display:inline-flex;align-items:center;font-size:13.5px;font-weight:700;white-space:nowrap}
+  /* nút BỘ LỌC: tô màu nổi hẳn khỏi các nút xám + nhãn "pro" sáng ở góc 1 giờ */
+  #scrBtn{position:relative;display:inline-flex;align-items:center;font-size:13.5px;font-weight:800;
+    white-space:nowrap;color:var(--accent);border-color:rgba(225,29,72,.5);
+    background:linear-gradient(180deg,rgba(225,29,72,.13),rgba(225,29,72,.05))}
+  #scrBtn:hover{border-color:var(--accent);
+    background:linear-gradient(180deg,rgba(225,29,72,.22),rgba(225,29,72,.10))}
+  #scrBtn .pro{position:absolute;top:-7px;right:-9px;font-style:normal;font-size:8.5px;
+    font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:#fff;padding:1.5px 5px;
+    border-radius:7px;background:linear-gradient(135deg,#fbbf24,#f97316);
+    box-shadow:0 1px 5px rgba(249,115,22,.5);pointer-events:none}
   #scrBtn .ic{margin-right:5px}
   #scrBtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #scrPanel{display:none;padding:10px 16px 12px;border-bottom:1px solid var(--line);background:var(--hdr2)}
@@ -221,21 +230,25 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     input.search::placeholder{opacity:.75}
     /* ép cột Cổ phiếu chỉ ~1/3 màn hình: khoá cứng bề rộng, phần dư dồn về cột số */
     table{min-width:640px}
-    td.rank{width:24px;padding:8px 4px;font-size:10.5px}
-    th:nth-child(1){padding:9px 4px}
-    th:nth-child(3),td:nth-child(3){width:150px;min-width:150px;max-width:150px}
+    td.rank{width:19px;padding:8px 1px;font-size:10.5px}
+    th:nth-child(1),td:nth-child(1){width:19px;min-width:19px;padding:9px 1px}
+    /* ô Cổ phiếu gọn còn ~1/4 bề ngang (trước 150px ≈ 40% màn hình 375px) */
+    th:nth-child(3),td:nth-child(3){width:88px;min-width:88px;max-width:88px;padding-left:4px;padding-right:4px}
     th:nth-child(1),td:nth-child(1){left:0}
     .co{gap:6px}
-    .co img,.co .noimg{width:34px;height:34px}
+    .co img,.co .noimg{width:29px;height:29px}
+    .co{gap:4px}
+    /* ẩn nhãn sàn: đã có bộ lọc "Tất cả sàn", nhường chỗ cho GIÁ hiện sớm hơn */
+    .co .ex{display:none}
     .co .sym{font-size:18px}
     .co .ex{font-size:8.5px;padding:0 3px;margin-left:4px}
     table{min-width:1120px;font-size:12.5px}
     /* ghim cột hạng + mã khi cuộn ngang (kiểu bảng coin mobile) */
     th:nth-child(1),td:nth-child(1){position:sticky;left:0;background:var(--sticky);z-index:6}
-    th:nth-child(2),td:nth-child(2){position:sticky;left:24px;background:var(--sticky);z-index:6}
-    th:nth-child(3),td:nth-child(3){position:sticky;left:54px;background:var(--sticky);z-index:6}
+    th:nth-child(2),td:nth-child(2){position:sticky;left:19px;background:var(--sticky);z-index:6}
+    th:nth-child(3),td:nth-child(3){position:sticky;left:42px;background:var(--sticky);z-index:6}
     /* cột sao PHẢI hiện: nó chính là chỗ thêm/bớt danh mục theo dõi */
-    th:nth-child(2),td:nth-child(2){width:30px;min-width:30px;padding:8px 2px;font-size:15px}
+    th#thStar,td.star{width:23px;min-width:23px;padding:8px 0;font-size:15px}
     td{padding:8px 7px}
   }
 </style>
@@ -264,7 +277,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <select id="sector"><option value="all">Tất cả ngành</option></select>
   <span id="cnt"></span>
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
-  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: van an toàn + lọc nhanh + 9 bộ lọc triết lý đầu tư"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Lọc</span></button>
+  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: van an toàn + lọc nhanh + 9 bộ lọc triết lý đầu tư"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Lọc</span></button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
@@ -425,7 +438,11 @@ function fitNumCols(){
   css.push(`#wrap table tr>*:nth-child(3){width:${lw}px}`);
   const fixed=head[0].getBoundingClientRect().width+
               (head[1]?head[1].getBoundingClientRect().width:0)+lw;
-  const avail=(tbl.parentElement.clientWidth||tbl.clientWidth)-fixed;
+  /* Chỗ trống phải tính theo BỀ RỘNG BẢNG THẬT, không theo bề ngang màn hình: trên mobile
+     bảng rộng 1120px và cuộn ngang, lấy 375px thì thiếu ~750px -> phần thừa đó bị trình duyệt
+     dồn ngược vào 3 cột ghim (hạng/sao/mã), làm khối trái phình 54% màn hình. */
+  const minW=parseFloat(getComputedStyle(tbl).minWidth)||0;
+  const avail=Math.max(tbl.parentElement.clientWidth||0,minW)-fixed;
   const G=Math.max(22,Math.floor((avail-cw.reduce((a,b)=>a+b,0))/NCOLS.length));
   NCOLS.forEach((i,k)=>css.push(`#wrap table thead tr>*:nth-child(${i+1}){width:${cw[k]+G}px}`));
   const out=css.join('');
