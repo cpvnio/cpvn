@@ -155,7 +155,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260805e"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260805f"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -198,10 +198,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <th data-k="mcap">Vốn hoá</th>
         <th data-k="chg1d">1D %</th>
         <th data-k="gtgd">GTGD hôm nay</th>
-        <th data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất">Tiền mặt (tỷ)</th>
-        <th data-k="np" id="thNp" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất">LNST (tỷ)</th>
-        <th data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng">NN mua (tỷ)</th>
-        <th data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng">NN bán (tỷ)</th>
+        <th data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất">Tiền mặt</th>
+        <th data-k="np" id="thNp" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất">LNST</th>
+        <th data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng">NN mua</th>
+        <th data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng">NN bán</th>
         <th data-k="pe" title="P/E tính sống theo giá hiện tại = giá / EPS">P/E</th>
         <th data-k="eps" title="EPS 4 quý gần nhất — đồng/cổ phiếu">EPS</th>
       </tr>
@@ -216,7 +216,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260805e"></script>
+<script src="assets/core.js?v=20260805f"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -226,16 +226,21 @@ const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, pa
 /* KHỐI NGOẠI quy ra TIỀN (đồng): MUA và BÁN trong ngày tính riêng, không bù trừ. */
 const nnBuy =c=>(c.fbuy ||0)*(c.price||0);
 const nnSell=c=>(c.fsell||0)*(c.price||0);
-const tyTxt=v=>{ const a=Math.abs(v);
-  if(a<5e7) return '';                                  // <0,05 tỷ: coi như không đáng kể
-  return (a/1e9).toLocaleString('en-US',{maximumFractionDigits:a>=1e11?0:1}); };
-/* Cột CƠ BẢN (tiền mặt / LNST) — số đã ở đơn vị TỶ. Khác tyTxt ở 2 điểm quan trọng:
-   GIỮ DẤU ÂM (doanh nghiệp lỗ phải ra số âm) và phân biệt 0 (có số, bằng 0) với
-   thiếu dữ liệu (null -> gạch mờ). */
-const tyF=v=>v==null?'':(Math.abs(v)>=100?Math.round(v).toLocaleString('en-US')
-  :v.toLocaleString('en-US',{maximumFractionDigits:1}));
-/* P/E SỐNG = giá hiện tại / EPS -> nhảy theo giá suốt phiên. Thiếu EPS thì dùng P/E kho. */
-const peLive=c=>(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:null);
+/* Cột TIỀN (tiền mặt / LNST / NN mua / NN bán) — hiển thị GIỐNG CỘT VỐN HOÁ:
+   đơn vị tr/tỷ/nghìn tỷ nằm ngay cạnh con số. fmtVnd giữ sẵn dấu âm (doanh nghiệp
+   lỗ ra số âm). zeroDash=true -> 0 hiện gạch (khối ngoại không giao dịch);
+   ngược lại 0 hiện "0" mờ để phân biệt CÓ số liệu bằng 0 với KHÔNG có số liệu. */
+const DASH='<span class="dash">—</span>';
+function money(v,zeroDash){
+  if(v==null) return DASH;
+  if(!v) return zeroDash?DASH:'<span class="dash">0</span>';
+  const t=CP.fmtVnd(v); return t==='—'?DASH:t;
+}
+/* P/E SỐNG = giá hiện tại / EPS -> nhảy theo giá suốt phiên. Thiếu EPS thì dùng P/E kho.
+   P/E ÂM (đang lỗ) hoặc quá dị (>1000, EPS gần 0) là vô nghĩa -> trả null: hiện "—",
+   sort luôn nằm cuối — bấm "P/E rẻ nhất" không bị mã lỗ chen lên đầu. */
+const peLive=c=>{ const p=(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:null);
+  return p!=null&&p>0&&p<1000?p:null; };
 
 /* giá trị sort/hiển thị cho từng mã */
 function val(c,k){
@@ -308,14 +313,12 @@ function render(){
       :ST.scope==='watch'?'Chưa có mã nào trong danh sách theo dõi. Bấm dấu ☆ ở đầu mỗi dòng để lưu mã bạn quan tâm.'
       :ST.bd?'Không có mã nào thuộc nhóm này trong phiên hôm nay.'
       :'Không có dữ liệu phù hợp bộ lọc hiện tại.';
-    $('tb').innerHTML=`<tr><td colspan="12" style="text-align:center;padding:34px 16px;color:var(--muted);font-size:13.5px">${msg}</td></tr>`;
+    $('tb').innerHTML=`<tr><td colspan="13" style="text-align:center;padding:34px 16px;color:var(--muted);font-size:13.5px">${msg}</td></tr>`;
     renderPager(1); return;
   }
   const W=CP.watch.get();
   const BDN={up:'đang tăng',flat:'đứng giá',down:'đang giảm',ceil:'giá trần',floor:'giá sàn'};
   $('cnt').textContent=ST.bd?`${total} mã ${BDN[ST.bd]}`:`${total.toLocaleString('en-US')} mã`;
-  const DASH='<span class="dash">—</span>';
-  const tyd=v=>tyTxt(v)||DASH;                       // tỷ đồng, rỗng -> gạch mờ
   $('tb').innerHTML=slice.map((c,i)=>{
     const ceilHit=c.ceil>0&&c.price>0&&c.price>=c.ceil, floorHit=c.flr>0&&c.price>0&&c.price<=c.flr;
     const logo=CP.logoHTML(c.sym,c.img);
@@ -328,10 +331,10 @@ function render(){
       <td>${CP.fmtVnd(c.mcapLive||c.mcap)}</td>
       <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
       <td>${CP.fmtVnd(c.gtgd)}</td>
-      <td class="fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${tyF(c.cash)||DASH}</td>
-      <td class="fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${tyF(c.np)||DASH}</td>
-      <td class="nn pos" data-nnb>${tyd(nnBuy(c))}</td>
-      <td class="nn neg" data-nns>${tyd(nnSell(c))}</td>
+      <td class="fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${money(c.cash==null?null:c.cash*1e9)}</td>
+      <td class="fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
+      <td class="nn pos" data-nnb>${money(nnBuy(c),true)}</td>
+      <td class="nn neg" data-nns>${money(nnSell(c),true)}</td>
       <td data-pe>${pe!=null?pe.toFixed(1):'—'}</td>
       <td>${c.eps!=null?CP.fmtD(c.eps):'—'}</td>
     </tr>`;
@@ -404,10 +407,10 @@ function flashUpdate(){
   renderStats();
   document.querySelectorAll('#tb tr').forEach(tr=>{
     const c=CP.coins.get(tr.dataset.sym); if(!c) return;
-    const DASH='<span class="dash">—</span>';     // khối ngoại + P/E cũng chạy theo giá trong phiên
+    // khối ngoại + P/E cũng chạy theo giá trong phiên
     const b=tr.querySelector('[data-nnb]'), s=tr.querySelector('[data-nns]'), pe=tr.querySelector('[data-pe]');
-    if(b) b.innerHTML=tyTxt(nnBuy(c))||DASH;
-    if(s) s.innerHTML=tyTxt(nnSell(c))||DASH;
+    if(b) b.innerHTML=money(nnBuy(c),true);
+    if(s) s.innerHTML=money(nnSell(c),true);
     if(pe){ const p=peLive(c); pe.textContent=p!=null?p.toFixed(1):'—'; }
     const cell=tr.querySelector('[data-price]'); if(!cell) return;
     const old=prevPrice.get(c.sym);
@@ -454,7 +457,7 @@ applyThmIcon();
   // tiêu đề cột LNST ghi rõ NĂM (lấy năm phổ biến nhất trong kho) -> tự đổi khi có BCTC năm mới
   const yc={}; for(const c of CP.coins.values()) if(c.npY) yc[c.npY]=(yc[c.npY]||0)+1;
   const yTop=Object.keys(yc).sort((a,b)=>yc[b]-yc[a])[0];
-  if(yTop) $('thNp').textContent='LNST '+yTop+' (tỷ)';
+  if(yTop) $('thNp').textContent='LNST '+yTop;
   snapPrices(); render(); renderStats(); renderKho();
   CP.loadIndices().then(renderStats);
   // mỗi phút chỉ làm mới các mã của TRANG ĐANG XEM; 5 phút quét lại toàn bộ để xếp hạng đúng
