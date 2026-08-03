@@ -71,6 +71,8 @@ CP.loadBase=async function(){
       sym:s.sym, ex:s.ex, name:s.name, shares:s.shares||null, mcap:s.mcap||null,
       sector:s.sector||'Khác', img:s.img||null, pe:s.pe??null, pb:s.pb??null,
       anc:s.anc||null, pct:s.pct||null, divY:s.divY??null,
+      // chỉ số cơ bản rút từ kho tài chính (refresh_daily bước 6b) — tự cập nhật mỗi phiên
+      eps:s.eps??null, cash:s.cash??null, cashQ:s.cashQ||null, np:s.np??null, npY:s.npY||null,
       price:0, ref:0, ceil:0, flr:0, chg1d:null, vol:0, gtgd:0, traded:false,
       high:0, low:0, fbuy:0, fsell:0, mcapLive:s.mcap||null, o:0,
     });

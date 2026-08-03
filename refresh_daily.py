@@ -63,7 +63,9 @@ def fetch_simplize(sym):
     for att in range(2):
         try:
             d=get(f"https://api2.simplize.vn/api/company/summary/{sym}")["data"]
-            o={"mcap":d.get("marketCap"),
+            # epsS lấy MỖI NGÀY (cùng 1 response, không tốn thêm request): EPS chuẩn của
+            # Simplize = LNST cổ đông công ty mẹ / SLCP -> web tính P/E sống = giá / EPS
+            o={"mcap":d.get("marketCap"),"epsS":d.get("epsRatio"),
                "pct":{"w":d.get("pricePctChg7d"),"m":d.get("pricePctChg30d"),
                       "y":d.get("pricePctChg1y"),"y5":d.get("pricePctChg5y")}}
             if FULL:
@@ -360,6 +362,51 @@ if need:
         list(pool.map(work_fin,need))
 print(f"kho tài chính (KQKD+CĐKT+LCTT+cổ tức): cào {len(need)} mã, có dữ liệu {fdone[1]}",flush=True)
 HL["fin"]={"need":len(need),"ok":fdone[1]}
+
+# 6b) RÚT 3 CHỈ SỐ CƠ BẢN TỪ KHO TÀI CHÍNH -> universe.json (bảng giá đọc 1 lần, không phải
+#     tải 1.500 file lẻ). Không tốn thêm lượt gọi mạng nào — đọc lại file vừa ghi ở bước 6.
+#       cash  = tiền và tương đương tiền, KỲ GẦN NHẤT (tỷ đồng)   [bsa2]
+#       np    = LNST NĂM ĐÃ HOÀN THÀNH gần nhất (tỷ đồng) + npY = năm đó
+#       eps   = LNST 4 QUÝ GẦN NHẤT / SLCP (đồng/cp) -> P/E trên web tính sống = giá / eps
+def _lastval(rows,labels,keys,names):
+    r=None
+    for k in keys:
+        r=next((x for x in rows if x.get("k")==k),None)
+        if r: break
+    if not r and names:
+        r=next((x for x in rows if any(n in (x.get("n") or "").lower() for n in names)),None)
+    if not r: return None,None
+    v=r.get("v") or []
+    for i in range(min(len(labels),len(v))-1,-1,-1):
+        if v[i] is not None: return v[i],labels[i]
+    return None,None
+fx={"cash":0,"np":0,"eps":0,"epsTTM":0}
+for sym,s in stocks.items():
+    try:
+        with open(os.path.join(FIN_DIR,f"{sym}.json"),encoding="utf-8") as fh: fin=json.load(fh)
+    except Exception:
+        continue
+    bs=fin.get("bsQ") or fin.get("bsY") or {}
+    if bs.get("rows") and bs.get("labels"):
+        v,lb=_lastval(bs["rows"],bs["labels"],["bsa2"],["tiền và tương đương tiền"])
+        if v is not None: s["cash"]=rnd(v,1); s["cashQ"]=lb; fx["cash"]+=1
+    Y=fin.get("Y") or []
+    for r in reversed(Y):
+        if r.get("np") is not None:
+            s["np"]=rnd(r["np"],1); s["npY"]=r.get("label"); fx["np"]+=1; break
+    # EPS: ưu tiên số CHUẨN của Simplize (LNST cổ đông công ty mẹ) để khớp các trang khác;
+    # thiếu thì tự tính LNST 4 quý gần nhất / SLCP. Tính lại mỗi phiên nên không bao giờ cũ.
+    ttm=None
+    Q=[r for r in (fin.get("Q") or []) if r.get("np") is not None]
+    sh=s.get("shares") or 0
+    if len(Q)>=4 and sh>0: ttm=round(sum(r["np"] for r in Q[-4:])*1e9/sh)
+    eps=s.get("epsS") or ttm
+    if eps: s["eps"]=int(round(eps)); fx["eps"]+=1; fx["epsTTM"]+=0 if s.get("epsS") else 1
+    else: s.pop("eps",None)
+jdump(u,UNIV)      # ghi đè universe.json với 3 chỉ số vừa rút
+print(f"chỉ số cơ bản -> universe: tiền mặt {fx['cash']}, LNST năm {fx['np']}, "
+      f"EPS {fx['eps']} (tự tính {fx['epsTTM']})",flush=True)
+HL["basics"]=dict(fx)
 
 # 7) KHO TIN TỨC + BÁO CÁO CTCK data/news/{SYM}.json — web tự rơi về đây khi nguồn sống chết
 #    Hằng ngày: top 200 GTGD (tin đổi nhanh); --full T2: TOÀN BỘ mã.

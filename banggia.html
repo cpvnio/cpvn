@@ -78,7 +78,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   /* bảng xếp hạng — FULL bề ngang màn hình; cột Cổ phiếu khoá hẹp (chỉ còn logo + mã)
      nên cột Giá nằm ngay sát mã, không còn khoảng trống dài khó dò mắt */
   #wrap{overflow-x:auto;padding:0 8px 10px}
-  table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+  table{border-collapse:collapse;width:100%;min-width:1020px;font-size:13.5px}
   th.l,td.l{width:150px;max-width:150px}
   thead th[data-k="price"],tbody td.price{width:92px}
   thead th{position:sticky;top:0;background:var(--thead);color:var(--muted);font-size:12px;
@@ -109,6 +109,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   canvas.spark{width:118px;height:34px;display:block;margin-left:auto}
   td.nn.pos{color:var(--green);font-weight:700} td.nn.neg{color:var(--red);font-weight:700}
   td.nn .dash{color:var(--muted);font-weight:400;opacity:.5}
+  td.fund{font-weight:600} td.fund.neg{color:var(--red)}
+  td .dash{color:var(--muted);font-weight:400;opacity:.5}
 
   /* phân trang */
   #pager{display:flex;gap:6px;align-items:center;justify-content:center;padding:14px;flex-wrap:wrap}
@@ -143,7 +145,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .co img,.co .noimg{width:26px;height:26px}
     .co .sym{font-size:14.5px}
     .co .ex{font-size:8.5px;padding:0 3px;margin-left:4px}
-    table{min-width:940px;font-size:12.5px}
+    table{min-width:1120px;font-size:12.5px}
     /* ghim cột hạng + mã khi cuộn ngang (kiểu bảng coin mobile) */
     th:nth-child(1),td:nth-child(1){position:sticky;left:0;background:var(--sticky);z-index:6}
     th:nth-child(3),td:nth-child(3){position:sticky;left:38px;background:var(--sticky);z-index:6}
@@ -153,7 +155,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260805d"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260805e"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -196,9 +198,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <th data-k="mcap">Vốn hoá</th>
         <th data-k="chg1d">1D %</th>
         <th data-k="gtgd">GTGD hôm nay</th>
-        <th data-k="nnb" title="Khối ngoại mua ròng — tỷ đồng">NN mua ròng</th>
-        <th data-k="nns" title="Khối ngoại bán ròng — tỷ đồng">NN bán ròng</th>
-        <th data-k="pe">P/E</th>
+        <th data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất">Tiền mặt (tỷ)</th>
+        <th data-k="np" id="thNp" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất">LNST (tỷ)</th>
+        <th data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng">NN mua (tỷ)</th>
+        <th data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng">NN bán (tỷ)</th>
+        <th data-k="pe" title="P/E tính sống theo giá hiện tại = giá / EPS">P/E</th>
+        <th data-k="eps" title="EPS 4 quý gần nhất — đồng/cổ phiếu">EPS</th>
       </tr>
     </thead>
     <tbody id="tb"></tbody>
@@ -211,32 +216,42 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260805d"></script>
+<script src="assets/core.js?v=20260805e"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[], bd:null };
 // bd = lọc theo độ rộng thị trường: 'up'|'flat'|'down'|'ceil'|'floor' (bấm chip màu ở hàng thống kê)
 
-/* KHỐI NGOẠI quy ra TIỀN (đồng) — người xem cần biết dòng tiền bao nhiêu tỷ,
-   không phải bao nhiêu cổ phiếu. GT ròng = (KL mua − KL bán) × giá khớp hiện tại. */
-const nnVal=c=>((c.fbuy||0)-(c.fsell||0))*(c.price||0);
+/* KHỐI NGOẠI quy ra TIỀN (đồng): MUA và BÁN trong ngày tính riêng, không bù trừ. */
+const nnBuy =c=>(c.fbuy ||0)*(c.price||0);
+const nnSell=c=>(c.fsell||0)*(c.price||0);
 const tyTxt=v=>{ const a=Math.abs(v);
   if(a<5e7) return '';                                  // <0,05 tỷ: coi như không đáng kể
   return (a/1e9).toLocaleString('en-US',{maximumFractionDigits:a>=1e11?0:1}); };
+/* Cột CƠ BẢN (tiền mặt / LNST) — số đã ở đơn vị TỶ. Khác tyTxt ở 2 điểm quan trọng:
+   GIỮ DẤU ÂM (doanh nghiệp lỗ phải ra số âm) và phân biệt 0 (có số, bằng 0) với
+   thiếu dữ liệu (null -> gạch mờ). */
+const tyF=v=>v==null?'':(Math.abs(v)>=100?Math.round(v).toLocaleString('en-US')
+  :v.toLocaleString('en-US',{maximumFractionDigits:1}));
+/* P/E SỐNG = giá hiện tại / EPS -> nhảy theo giá suốt phiên. Thiếu EPS thì dùng P/E kho. */
+const peLive=c=>(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:null);
 
 /* giá trị sort/hiển thị cho từng mã */
 function val(c,k){
   switch(k){
     case 'sym':   return c.sym;
     case 'price': return c.price||0;
-    case 'chg1d': return c.chg1d==null?-1e9:c.chg1d;
-    case 'w': case 'm': case 'y': return c.pct&&c.pct[k]!=null?c.pct[k]:-1e9;
+    case 'chg1d': return c.chg1d==null?null:c.chg1d;
+    case 'w': case 'm': case 'y': return c.pct&&c.pct[k]!=null?c.pct[k]:null;
     case 'mcap':  return c.mcapLive||c.mcap||0;
     case 'gtgd':  return c.gtgd||0;
-    case 'nnb':   return Math.max(0, nnVal(c));     // mua ròng: chỉ phần dương
-    case 'nns':   return Math.max(0,-nnVal(c));     // bán ròng: chỉ phần âm (đổi dấu)
-    case 'pe':    return c.pe==null?1e9:+c.pe;
+    case 'cash':  return c.cash??null;
+    case 'np':    return c.np??null;
+    case 'nnb':   return nnBuy(c);
+    case 'nns':   return nnSell(c);
+    case 'pe':    return peLive(c);
+    case 'eps':   return c.eps??null;
     default:      return 0;
   }
 }
@@ -263,8 +278,13 @@ function filterRows(){
     });
   }
   const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
+  /* Mã THIẾU DỮ LIỆU luôn nằm CUỐI dù sắp xếp tăng hay giảm — bấm P/E mà một loạt
+     dấu "—" nhảy lên đầu bảng thì coi như cột đó vô dụng. */
   list.sort((a,b)=>{ const va=val(a,k), vb=val(b,k);
-    return (typeof va==='string') ? dir*va.localeCompare(vb) : dir*(va-vb); });
+    if(typeof va==='string'||typeof vb==='string') return dir*String(va).localeCompare(String(vb));
+    const na=va==null||!isFinite(va), nb=vb==null||!isFinite(vb);
+    if(na||nb) return na&&nb?0:(na?1:-1);
+    return dir*(va-vb); });
   ST.rows=list;
 }
 function badge(v,extra){
@@ -288,16 +308,18 @@ function render(){
       :ST.scope==='watch'?'Chưa có mã nào trong danh sách theo dõi. Bấm dấu ☆ ở đầu mỗi dòng để lưu mã bạn quan tâm.'
       :ST.bd?'Không có mã nào thuộc nhóm này trong phiên hôm nay.'
       :'Không có dữ liệu phù hợp bộ lọc hiện tại.';
-    $('tb').innerHTML=`<tr><td colspan="10" style="text-align:center;padding:34px 16px;color:var(--muted);font-size:13.5px">${msg}</td></tr>`;
+    $('tb').innerHTML=`<tr><td colspan="12" style="text-align:center;padding:34px 16px;color:var(--muted);font-size:13.5px">${msg}</td></tr>`;
     renderPager(1); return;
   }
   const W=CP.watch.get();
   const BDN={up:'đang tăng',flat:'đứng giá',down:'đang giảm',ceil:'giá trần',floor:'giá sàn'};
   $('cnt').textContent=ST.bd?`${total} mã ${BDN[ST.bd]}`:`${total.toLocaleString('en-US')} mã`;
+  const DASH='<span class="dash">—</span>';
+  const tyd=v=>tyTxt(v)||DASH;                       // tỷ đồng, rỗng -> gạch mờ
   $('tb').innerHTML=slice.map((c,i)=>{
-    const nn=nnVal(c), nnb=nn>0?tyTxt(nn):'', nns=nn<0?tyTxt(nn):'';
     const ceilHit=c.ceil>0&&c.price>0&&c.price>=c.ceil, floorHit=c.flr>0&&c.price>0&&c.price<=c.flr;
     const logo=CP.logoHTML(c.sym,c.img);
+    const pe=peLive(c);
     return `<tr data-sym="${c.sym}">
       <td class="rank">${start+i+1}</td>
       <td class="star ${W.has(c.sym)?'on':''}" data-star="${c.sym}">${W.has(c.sym)?'★':'☆'}</td>
@@ -306,9 +328,12 @@ function render(){
       <td>${CP.fmtVnd(c.mcapLive||c.mcap)}</td>
       <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
       <td>${CP.fmtVnd(c.gtgd)}</td>
-      <td class="nn pos" data-nnb>${nnb||'<span class="dash">—</span>'}</td>
-      <td class="nn neg" data-nns>${nns||'<span class="dash">—</span>'}</td>
-      <td>${c.pe!=null?(+c.pe).toFixed(1):'—'}</td>
+      <td class="fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${tyF(c.cash)||DASH}</td>
+      <td class="fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${tyF(c.np)||DASH}</td>
+      <td class="nn pos" data-nnb>${tyd(nnBuy(c))}</td>
+      <td class="nn neg" data-nns>${tyd(nnSell(c))}</td>
+      <td data-pe>${pe!=null?pe.toFixed(1):'—'}</td>
+      <td>${c.eps!=null?CP.fmtD(c.eps):'—'}</td>
     </tr>`;
   }).join('');
   document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
@@ -379,10 +404,11 @@ function flashUpdate(){
   renderStats();
   document.querySelectorAll('#tb tr').forEach(tr=>{
     const c=CP.coins.get(tr.dataset.sym); if(!c) return;
-    const nn=nnVal(c), DASH='<span class="dash">—</span>';   // khối ngoại cũng chạy theo phiên
-    const b=tr.querySelector('[data-nnb]'), s=tr.querySelector('[data-nns]');
-    if(b) b.innerHTML=(nn>0?tyTxt(nn):'')||DASH;
-    if(s) s.innerHTML=(nn<0?tyTxt(nn):'')||DASH;
+    const DASH='<span class="dash">—</span>';     // khối ngoại + P/E cũng chạy theo giá trong phiên
+    const b=tr.querySelector('[data-nnb]'), s=tr.querySelector('[data-nns]'), pe=tr.querySelector('[data-pe]');
+    if(b) b.innerHTML=tyTxt(nnBuy(c))||DASH;
+    if(s) s.innerHTML=tyTxt(nnSell(c))||DASH;
+    if(pe){ const p=peLive(c); pe.textContent=p!=null?p.toFixed(1):'—'; }
     const cell=tr.querySelector('[data-price]'); if(!cell) return;
     const old=prevPrice.get(c.sym);
     cell.textContent=CP.fmtD(c.price); cell.style.color=CP.col1d(c);
@@ -425,6 +451,10 @@ applyThmIcon();
   for(const c of CP.coins.values()) cnt[c.sector]=(cnt[c.sector]||0)+1;
   $('sector').innerHTML='<option value="all">Tất cả ngành</option>'+
     Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).map(s=>`<option>${CP.esc(s)}</option>`).join('');
+  // tiêu đề cột LNST ghi rõ NĂM (lấy năm phổ biến nhất trong kho) -> tự đổi khi có BCTC năm mới
+  const yc={}; for(const c of CP.coins.values()) if(c.npY) yc[c.npY]=(yc[c.npY]||0)+1;
+  const yTop=Object.keys(yc).sort((a,b)=>yc[b]-yc[a])[0];
+  if(yTop) $('thNp').textContent='LNST '+yTop+' (tỷ)';
   snapPrices(); render(); renderStats(); renderKho();
   CP.loadIndices().then(renderStats);
   // mỗi phút chỉ làm mới các mã của TRANG ĐANG XEM; 5 phút quét lại toàn bộ để xếp hạng đúng
