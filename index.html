@@ -155,19 +155,17 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #sectorList .si{display:flex;justify-content:space-between;align-items:center;gap:6px;
     padding:7px 12px;font-size:13.8px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03)}
   #sectorList .si:hover{background:var(--panel2)}
-  #sectorList .si.active{background:var(--accent);color:#fff;font-weight:700}
+  #sectorList .si.active{background:var(--accent);font-weight:700}
   #sectorList .si .n{line-height:1.3}   /* cho phép xuống dòng -> luôn thấy đủ tên ngành */
   #sectorList .si .c{color:var(--muted);font-size:12px;flex-shrink:0}
-  #sectorList .si.active .c{color:rgba(255,255,255,.8)}
-  /* NGÀNH LỚN (tổng vốn hoá > 100.000 tỷ): tô màu + đậm để mắt bắt ngay, khỏi phải dò cả cột.
-     Vàng hổ phách hợp cả nền tối lẫn nền sáng và không lẫn với màu đỏ của mục đang chọn. */
-  #sectorList .si.big{background:rgba(234,179,8,.09)}
-  #sectorList .si.big .n{color:#d9a406;font-weight:800}
-  html[data-theme="light"] #sectorList .si.big .n{color:#9a6b00}
-  #sectorList .si.big .c{color:#c08f05;font-weight:700}
-  #sectorList .si.big.active,#sectorList .si.active .n{background:none}
-  #sectorList .si.active .n,#sectorList .si.active .c{color:#fff}
-  #sectorList .si.big.active{background:var(--accent)}
+  /* MỖI NGÀNH MỘT MÀU CHỮ RIÊNG (chỉ chữ, không tô nền ô).
+     --cl/--cd sinh sẵn ở JS cho giao diện sáng/tối -> đổi sáng/tối không phải dựng lại cột. */
+  #sectorList .si .n{color:var(--cd,var(--txt));font-weight:600}
+  html[data-theme="light"] #sectorList .si .n{color:var(--cl,var(--txt))}
+  #sectorList .si.big .n{font-weight:800}     /* ngành > 100.000 tỷ: đậm hơn */
+  /* ĐANG CHỌN: nền đỏ -> chữ TRẮNG cho nổi bật (thắng cả luật theo giao diện ở trên) */
+  #sectorList .si.active .n,html[data-theme="light"] #sectorList .si.active .n{color:#fff}
+  #sectorList .si.active .c{color:rgba(255,255,255,.85)}
   #sbBackdrop{display:none}
   button.toggle#sectorToggle{display:none}
   @media(max-width:640px){
@@ -545,20 +543,47 @@ function buildSectorBar(){
     cnt[c.sector]=(cnt[c.sector]||0)+1;
     cap[c.sector]=(cap[c.sector]||0)+(c.mcapLive||c.mcap||0);
   }
-  state.sectors=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+  state.sectors=Object.keys(cnt).sort((a,b)=>(cap[b]||0)-(cap[a]||0));   // VỐN HOÁ giảm dần
   const list=document.getElementById('sectorList'); list.innerHTML='';
-  const mk=(val,label,count,big,tip)=>{
+  const mk=(val,label,count,big,tip,col)=>{
     const d=document.createElement('div');
     d.className='si'+(state.sector===val?' active':'')+(big?' big':''); d.dataset.sec=val;
     if(tip) d.title=tip;
+    if(col){ d.style.setProperty('--cl',col[0]); d.style.setProperty('--cd',col[1]); }
     d.innerHTML=`<span class="n">${label}</span><span class="c">${count}</span>`;
     d.onclick=()=>{ state.sector=val; markSectorActive(); rebuild(); closeSectorBar(); };
     return d;
   };
-  list.appendChild(mk('all','Tất cả ngành', state.coins.size,false,''));
-  for(const s of state.sectors)
+  list.appendChild(mk('all','Tất cả ngành', state.coins.size,false,'',null));
+  state.sectors.forEach((s,i)=>
     list.appendChild(mk(s,s,cnt[s], cap[s]>=SECTOR_BIG,
-      `${s} · tổng vốn hoá ${fmtVnd(cap[s])}`));
+      `${s} · ${cnt[s]} mã · tổng vốn hoá ${fmtVnd(cap[s])}`, sectorColor(i))));
+}
+/* MÀU RIÊNG TỪNG NGÀNH: xoay tông theo góc vàng 137,5° -> 2 ngành cạnh nhau luôn lệch
+   màu rõ rệt. Trả về [màu cho nền sáng, màu cho nền tối]; dải vàng-lục và dải lam được
+   chỉnh độ sáng riêng để dòng nào cũng đọc rõ trên cả 2 giao diện. */
+const _hsl2rgb=(h,s,l)=>{ s/=100; l/=100;
+  const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));
+  return [f(0),f(8),f(4)].map(v=>v*255); };
+const _lum=rgb=>{ const c=rgb.map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});
+  return .2126*c[0]+.7152*c[1]+.0722*c[2]; };
+const _ratio=(a,b)=>(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+const BG_LIGHT=_lum([247,248,250]), BG_DARK=_lum([12,12,15]);   // nền cột ngành 2 giao diện
+/* Dò độ sáng cho tới khi tương phản với nền đạt >= 4.6 (chuẩn dễ đọc WCAG AA).
+   Nhờ vậy MỌI tông màu — kể cả vàng/lục vốn rất sáng — đều đọc rõ, không phải chỉnh tay. */
+function _fitL(h,s,bg,up){
+  let l=up?64:38;
+  for(let k=0;k<30&&l>10&&l<94;k++){
+    if(_ratio(_lum(_hsl2rgb(h,s,l)),bg)>=4.6) break;
+    l+=up?2:-2;
+  }
+  return l;
+}
+function sectorColor(i){
+  const h=Math.round((i*137.508)%360), s=74;
+  return [`hsl(${h},${s}%,${_fitL(h,s,BG_LIGHT,false)}%)`,   // nền sáng: chữ tối dần tới khi đủ rõ
+          `hsl(${h},${s}%,${_fitL(h,s,BG_DARK,true)}%)`];    // nền tối:  chữ sáng dần tới khi đủ rõ
 }
 function markSectorActive(){
   document.querySelectorAll('#sectorList .si').forEach(d=>d.classList.toggle('active', d.dataset.sec===state.sector));
