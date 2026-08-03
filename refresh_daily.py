@@ -380,33 +380,42 @@ def _lastval(rows,labels,keys,names):
     for i in range(min(len(labels),len(v))-1,-1,-1):
         if v[i] is not None: return v[i],labels[i]
     return None,None
-fx={"cash":0,"np":0,"eps":0,"epsTTM":0}
-for sym,s in stocks.items():
-    try:
-        with open(os.path.join(FIN_DIR,f"{sym}.json"),encoding="utf-8") as fh: fin=json.load(fh)
-    except Exception:
-        continue
-    bs=fin.get("bsQ") or fin.get("bsY") or {}
-    if bs.get("rows") and bs.get("labels"):
-        v,lb=_lastval(bs["rows"],bs["labels"],["bsa2"],["tiền và tương đương tiền"])
-        if v is not None: s["cash"]=rnd(v,1); s["cashQ"]=lb; fx["cash"]+=1
-    Y=fin.get("Y") or []
-    for r in reversed(Y):
-        if r.get("np") is not None:
-            s["np"]=rnd(r["np"],1); s["npY"]=r.get("label"); fx["np"]+=1; break
-    # EPS: ưu tiên số CHUẨN của Simplize (LNST cổ đông công ty mẹ) để khớp các trang khác;
-    # thiếu thì tự tính LNST 4 quý gần nhất / SLCP. Tính lại mỗi phiên nên không bao giờ cũ.
-    ttm=None
-    Q=[r for r in (fin.get("Q") or []) if r.get("np") is not None]
-    sh=s.get("shares") or 0
-    if len(Q)>=4 and sh>0: ttm=round(sum(r["np"] for r in Q[-4:])*1e9/sh)
-    eps=s.get("epsS") or ttm
-    if eps: s["eps"]=int(round(eps)); fx["eps"]+=1; fx["epsTTM"]+=0 if s.get("epsS") else 1
-    else: s.pop("eps",None)
-jdump(u,UNIV)      # ghi đè universe.json với 3 chỉ số vừa rút
-print(f"chỉ số cơ bản -> universe: tiền mặt {fx['cash']}, LNST năm {fx['np']}, "
-      f"EPS {fx['eps']} (tự tính {fx['epsTTM']})",flush=True)
-HL["basics"]=dict(fx)
+def _basics():
+    """Rút chỉ số cơ bản. Đây là bước LÀM GIÀU THÊM, không phải bước sống còn — nên mọi
+    lỗi đều nuốt gọn: hỏng 1 mã thì bỏ mã đó, hỏng cả bước thì vẫn chạy tiếp 7-10."""
+    fx={"cash":0,"np":0,"eps":0,"epsTTM":0}
+    for sym,s in stocks.items():
+        try:
+            with open(os.path.join(FIN_DIR,f"{sym}.json"),encoding="utf-8") as fh: fin=json.load(fh)
+            bs=fin.get("bsQ") or fin.get("bsY") or {}
+            if bs.get("rows") and bs.get("labels"):
+                v,lb=_lastval(bs["rows"],bs["labels"],["bsa2"],["tiền và tương đương tiền"])
+                if isinstance(v,(int,float)): s["cash"]=rnd(v,1); s["cashQ"]=lb; fx["cash"]+=1
+            for r in reversed(fin.get("Y") or []):
+                if isinstance(r.get("np"),(int,float)):
+                    s["np"]=rnd(r["np"],1); s["npY"]=r.get("label"); fx["np"]+=1; break
+            # EPS: ưu tiên số CHUẨN của Simplize (LNST cổ đông công ty mẹ) cho khớp các trang
+            # khác; thiếu thì tự tính LNST 4 quý gần nhất / SLCP. Tính lại mỗi phiên.
+            ttm=None
+            Q=[r for r in (fin.get("Q") or []) if isinstance(r.get("np"),(int,float))]
+            sh=s.get("shares") or 0
+            if len(Q)>=4 and sh>0: ttm=round(sum(r["np"] for r in Q[-4:])*1e9/sh)
+            e=s.get("epsS") if isinstance(s.get("epsS"),(int,float)) else None
+            eps=e or ttm
+            if eps: s["eps"]=int(round(eps)); fx["eps"]+=1; fx["epsTTM"]+=0 if e else 1
+            else: s.pop("eps",None)
+        except Exception:
+            continue                      # mã lỗi -> bỏ qua, KHÔNG chặn cả bước
+    jdump(u,UNIV)
+    return fx
+try:
+    _fx=_basics()
+    print(f"chỉ số cơ bản -> universe: tiền mặt {_fx['cash']}, LNST năm {_fx['np']}, "
+          f"EPS {_fx['eps']} (tự tính {_fx['epsTTM']})",flush=True)
+    HL["basics"]=dict(_fx)
+except Exception as e:
+    print(f"chỉ số cơ bản LỖI (không chặn pipeline): {e}",flush=True)
+    HL["basics"]={"err":str(e)[:120]}
 
 # 7) KHO TIN TỨC + BÁO CÁO CTCK data/news/{SYM}.json — web tự rơi về đây khi nguồn sống chết
 #    Hằng ngày: top 200 GTGD (tin đổi nhanh); --full T2: TOÀN BỘ mã.
