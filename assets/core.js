@@ -14,11 +14,10 @@ CP.OFFLINE=/[?&]offline/.test(location.search);
 /* ---------- tiện ích định dạng (chuẩn hiển thị Việt Nam) ------------------- */
 CP.fmtD=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US');
 CP.fmtVnd=function(n){ if(n==null||isNaN(n)||n===0)return '—';
-  const a=Math.abs(n), sg=n<0?'-':'';
-  if(a>=1e12) return sg+(a/1e12).toLocaleString('en-US',{maximumFractionDigits:1})+' nghìn tỷ';
-  if(a>=1e9)  return sg+(a/1e9).toLocaleString('en-US',{maximumFractionDigits:1})+' tỷ';
-  if(a>=1e6)  return sg+(a/1e6).toFixed(1)+' tr';
-  return n.toLocaleString('en-US'); };
+  // MỘT ĐƠN VỊ DUY NHẤT "tỷ" cho toàn site: viết hẳn số ra (1,100 tỷ) thay vì đổi bậc
+  // (1.1 nghìn tỷ) — gọn hơn, và cả cột cùng đơn vị nên so sánh bằng mắt là ra ngay.
+  const v=n/1e9, a=Math.abs(v);
+  return v.toLocaleString('en-US',{maximumFractionDigits:a>=100?0:a>=1?1:2})+' tỷ'; };
 CP.fmtShares=function(n){ if(!n)return '—';
   if(n>=1e9) return (n/1e9).toFixed(2)+' tỷ cp';
   if(n>=1e6) return (n/1e6).toFixed(1)+' tr cp';

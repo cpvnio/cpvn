@@ -14,15 +14,10 @@ const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','
 const num=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US');
 const fx=(n,d)=>n==null||isNaN(n)?'—':(+n).toFixed(d==null?2:d);
 const vnd=function(n){ if(n==null||isNaN(n)||!n) return '—';
-  const a=Math.abs(n), s=n<0?'-':'';
-  if(a>=1e15) return s+(a/1e15).toLocaleString('en-US',{maximumFractionDigits:2})+' triệu tỷ';
-  if(a>=1e12) return s+(a/1e12).toLocaleString('en-US',{maximumFractionDigits:1})+' nghìn tỷ';
-  if(a>=1e9)  return s+(a/1e9).toLocaleString('en-US',{maximumFractionDigits:1})+' tỷ';
-  if(a>=1e6)  return s+(a/1e6).toFixed(1)+' tr';
-  return num(n); };
-const ty=n=>{ if(n==null||isNaN(n)) return '—';
-  const a=Math.abs(n); if(a<1e9||a>=1e12) return vnd(n);
-  return (n/1e9).toLocaleString('en-US',{maximumFractionDigits:1})+' tỷ'; };
+  // MỘT ĐƠN VỊ DUY NHẤT "tỷ" cho toàn site (xem chú thích ở assets/core.js)
+  const v=n/1e9, a=Math.abs(v);
+  return v.toLocaleString('en-US',{maximumFractionDigits:a>=100?0:a>=1?1:2})+' tỷ'; };
+const ty=n=>n==null||isNaN(n)?'—':vnd(n);   // vnd đã thống nhất đơn vị tỷ
 const pct=v=>v==null||isNaN(v)?'—':(v>0?'+':'')+(+v).toFixed(2)+'%';
 const cls=v=>v==null||isNaN(v)?'':Math.abs(v)<0.005?'fl':v>0?'up':'dn';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -543,8 +538,8 @@ function raceData(){
   RA.data={labels:R.labels,series,syms,cols,note:R.note};
   return RA.data;
 }
-function raceFmt(v){ if(v==null) return '—';
-  return v>=1000?(v/1000).toFixed(2)+' triệu tỷ':Math.round(v)+' nghìn tỷ'; }
+function raceFmt(v){ if(v==null) return '—';   // v tính bằng NGHÌN TỶ -> quy về tỷ
+  return Math.round(v*1000).toLocaleString('en-US')+' tỷ'; }
 function drawRace(){
   const cv=$('#cvRace'); if(!cv) return;
   const D=raceData(); if(!D) return;
