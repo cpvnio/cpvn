@@ -592,8 +592,9 @@ async function init(){
   const q=new URLSearchParams(location.search).get('m');
   const byPath={radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
+  if(sessionOpenVN()) await pollLive();   // trong phiên: lấy giá sống TRƯỚC khi vẽ — không lộ số chốt cũ
   showMod(MODULES.some(m=>m.id===start)?start:'radar');
-  startLive();   // giá sống trong phiên — radar bám sát thị trường
+  startLive();   // rồi giữ nhịp mỗi phút
   $('#load').classList.add('off');
   setTimeout(()=>$('#load').remove(),420);
 }
