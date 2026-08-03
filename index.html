@@ -120,11 +120,13 @@
   body.viewheat #hmap{display:block}
   body.viewheat canvas#cv{visibility:hidden}
   .hgrp{position:absolute;overflow:hidden}
-  .hgrp .gl{position:absolute;top:0;left:0;right:0;height:18px;display:flex;align-items:center;gap:5px;
-    font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#fff;
-    padding:0 7px;background:rgba(0,0,0,.62);border-bottom:1px solid rgba(255,255,255,.12);
-    text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap;cursor:pointer}
-  html[data-theme="light"] .hgrp .gl{background:rgba(255,255,255,.9);border-bottom-color:rgba(0,0,0,.1);color:#101321;text-shadow:none}
+  .hgrp .gl{position:absolute;top:0;left:0;right:0;height:20px;display:flex;align-items:center;gap:4px;
+    font-size:11.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+    padding:0 8px;background:rgba(0,0,0,.78);border-bottom:1px solid rgba(255,255,255,.14);
+    text-shadow:0 1px 2px rgba(0,0,0,.8);white-space:nowrap;overflow:hidden;cursor:pointer}
+  .hgrp .gl:hover{background:rgba(0,0,0,.92)}
+  html[data-theme="light"] .hgrp .gl{background:rgba(255,255,255,.92);text-shadow:none;
+    border-bottom-color:rgba(0,0,0,.12)}
   .hgrp .gl:hover{color:var(--txt,#fff)}
   .htile{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
     overflow:hidden;cursor:pointer;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
@@ -293,7 +295,7 @@
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260804k"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260804m"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -367,6 +369,7 @@
     <div id="viewmode" title="Chọn dạng hiển thị">
       <button data-view="bub" class="active">Bong bóng</button>
       <button data-view="heat">Bản đồ nhiệt</button>
+      <button data-view="nn" title="Bản đồ khối ngoại mua/bán ròng trong ngày">NN ròng</button>
     </div>
     <div id="status">Đang tải universe…</div>
 
@@ -433,7 +436,7 @@
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260804k"></script>
+<script src="assets/chart.js?v=20260804m"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -743,18 +746,20 @@ function hmVal(c){   // CÙNG nguồn % với bong bóng: pct Simplize (đã đi
 }
 function drawHeatmap(){
   const box=document.getElementById('hmap');
-  if(state.view!=='heat'){ box.innerHTML=''; return; }
+  if(state.view==='bub'){ box.innerHTML=''; return; }
+  const NN=state.view==='nn';           // bản đồ KHỐI NGOẠI: net mua/bán ròng TRONG NGÀY
   const W2=box.clientWidth, H2=box.clientHeight;
   if(W2<50||H2<50) return;
-  const cap=HM_CAP[state.tf]||6;
+  const cap=NN?30:(HM_CAP[state.tf]||6);   // NN: thang ±30 tỷ
   const L=selectCoins().filter(c=>(c.mcapLive||c.mcap)>0);
   if(!L.length){ box.innerHTML='<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted,#888);font-size:13px">Không có mã nào khớp bộ lọc</div>'; return; }
-  const pctTxt=v=>v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
+  const pctTxt=NN?(v=>v==null?'—':(v>0?'+':'−')+Math.abs(v).toFixed(1)+' tỷ')
+              :(v=>v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%');
   let html='';
   const tile=(c,x,y,w,h)=>{
-    const v=hmVal(c);
+    const v=NN?(c.price>0&&((c.fbuy||0)||(c.fsell||0))?((c.fbuy||0)-(c.fsell||0))*c.price/1e9:null):hmVal(c);
     let col=hmColor(v,cap);
-    if(state.tf==='1d'&&c.price>0){          // màu bảng điện: kịch trần TÍM · kịch sàn XANH LƠ
+    if(!NN&&state.tf==='1d'&&c.price>0){     // màu bảng điện: kịch trần TÍM · kịch sàn XANH LƠ
       if(c.ceil>0&&c.price>=c.ceil) col={bg:'#c026d3',fg:'#fff'};
       else if(c.flr>0&&c.price<=c.flr) col={bg:'#0ea5e9',fg:'#fff'};
     }
@@ -777,11 +782,20 @@ function drawHeatmap(){
     const gitems=Object.keys(groups).map(k=>({k,v:groups[k].reduce((s2,c)=>s2+sz(c),0)}));
     for(const g of hmSquarify(gitems,0,0,W2,H2)){
       const inner=hmSquarify(groups[g.d.k].map(c=>({v:sz(c),c})),
-        g.x+1,g.y+18,Math.max(0,g.w-2),Math.max(0,g.h-19));
+        g.x+1,g.y+20,Math.max(0,g.w-2),Math.max(0,g.h-21));
       let tiles='';
       for(const t of inner) tiles+=tile(t.d.c,t.x-g.x,t.y-g.y,t.w,t.h);
+      // % ngành (bình quân vốn hoá) -> tên nhóm TÔ MÀU tăng/giảm cho dễ nhận
+      let gc=0,gd=0;
+      for(const c of groups[g.d.k]){ const cp=c.mcapLive||c.mcap||0; gc+=cp;
+        if(c.chg1d!=null) gd+=c.chg1d*cp; }
+      const gp=gc?gd/gc:0;
+      const gcol=gp>0.005?'#2ee6a8':gp<-0.005?'#ff6b76':'#eab308';
       html+='<div class="hgrp" style="left:'+g.x+'px;top:'+g.y+'px;width:'+g.w+'px;height:'+g.h+'px">'+
-        '<div class="gl" data-g="'+g.d.k.replace(/"/g,'&quot;')+'" title="Bấm để lọc riêng ngành này">'+g.d.k+'</div>'+tiles+'</div>';
+        '<div class="gl" data-g="'+g.d.k.replace(/"/g,'&quot;')+'" title="Bấm để lọc riêng ngành này">'+
+        '<span style="color:'+gcol+'">'+g.d.k+'</span>'+
+        (g.w>120?'<b style="color:'+gcol+';margin-left:5px">'+(gp>0?'+':'')+gp.toFixed(1)+'%</b>':'')+
+        '</div>'+tiles+'</div>';
     }
   }
   box.innerHTML=html;
@@ -792,7 +806,7 @@ function drawHeatmap(){
     markSectorActive(); rebuild(); });
 }
 function applyView(){
-  document.body.classList.toggle('viewheat',state.view==='heat');
+  document.body.classList.toggle('viewheat',state.view!=='bub');
   document.querySelectorAll('#viewmode button').forEach(b=>
     b.classList.toggle('active',b.dataset.view===state.view));
   drawHeatmap();
@@ -928,7 +942,7 @@ function rebuild(){
   computeClusters();
   if(added>3) warmup(240);
   updateSecBar();
-  if(state.view==='heat') drawHeatmap();   // dạng bản đồ dùng CHUNG bộ lọc/dữ liệu
+  if(state.view!=='bub') drawHeatmap();   // dạng bản đồ dùng CHUNG bộ lọc/dữ liệu
 }
 /* dải tên ngành đang chọn (mobile): hiện dưới dải chỉ số cho dễ nhận biết */
 function updateSecBar(){
@@ -1796,7 +1810,7 @@ document.querySelectorAll('#viewmode button').forEach(b=>b.onclick=()=>{
   localStorage.setItem('cpvn_viewmode',state.view);
   applyView();
 });
-window.addEventListener('resize',()=>{ if(state.view==='heat') drawHeatmap(); });
+window.addEventListener('resize',()=>{ if(state.view!=='bub') drawHeatmap(); });
 function applyThm(){ $('thmBtn').textContent=isLight()?'☀️':'🌙'; }
 $('thmBtn').onclick=()=>{
   const l=!isLight();
