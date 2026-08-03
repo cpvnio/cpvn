@@ -100,6 +100,29 @@ function squarify(items,X,Y,W,H){
   }
   return out;
 }
+function shotView(){   // chụp đúng KHUNG ĐANG NHÌN (viewport) + đóng dấu
+  const run=()=>{ toast('Đang dựng ảnh…');
+    window.html2canvas(document.body,{
+      backgroundColor:isLight()?'#eef0f4':'#07070b', scale:2, logging:false, useCORS:true,
+      x:scrollX, y:scrollY, width:innerWidth, height:innerHeight,
+      windowWidth:innerWidth, windowHeight:innerHeight,
+    }).then(cv=>{
+      const g=cv.getContext('2d'); g.setTransform(1,0,0,1,0,0);
+      const W=cv.width,H=cv.height,k=W/innerWidth;
+      g.textAlign='center'; g.shadowColor=isLight()?'rgba(255,255,255,.8)':'rgba(0,0,0,.85)'; g.shadowBlur=5*k;
+      g.font='800 '+Math.round(22*k)+'px system-ui'; g.fillStyle=isLight()?'rgba(23,26,33,.92)':'rgba(255,255,255,.95)';
+      g.fillText('CPVN.IO',W/2,H-14*k); g.shadowBlur=0;
+      g.textAlign='right'; g.font='600 '+Math.round(10*k)+'px system-ui';
+      g.fillStyle=isLight()?'rgba(23,26,33,.5)':'rgba(255,255,255,.45)';
+      g.fillText('phiên '+ST.date,W-10*k,H-8*k);
+      const a=document.createElement('a'); a.download='CPVN_'+(TITLEOF[cur]||'congcu').replace(/\s+/g,'-')+'_'+ST.date+'.png';
+      a.href=cv.toDataURL('image/png'); a.click(); toast('Đã tải ảnh về máy ✓');
+    }).catch(()=>toast('Không dựng được ảnh'));
+  };
+  if(window.html2canvas) return run();
+  const sc=document.createElement('script'); sc.src='html2canvas.min.js';
+  sc.onload=run; sc.onerror=()=>toast('Thiếu html2canvas.min.js'); document.head.appendChild(sc);
+}
 function shot(el,name){
   const run=()=>{ toast('Đang dựng ảnh…');
     window.html2canvas(el,{backgroundColor:isLight()?'#eef0f4':'#07070b',scale:2,logging:false}).then(cv=>{
@@ -257,15 +280,22 @@ async function pollLive(){
   }catch(e){ return false; }
   finally{ livePolling=false; }
 }
+function updateHeadChips(){
+  const md=moodLive();
+  const hm=$('#hMood');
+  if(hm&&md!=null) hm.innerHTML='Nhịp đập <b style="color:'+moodCol(md)+'">'+Math.round(md)+'</b> · '+
+    '<span style="color:'+moodCol(md)+';font-weight:700">'+moodWord(md)+'</span>';
+  const hd=$('#hDate');
+  if(hd) hd.innerHTML=liveAt>0
+    ? 'trực tiếp <b>'+dayVN().split('-').reverse().join('/')+'</b>'
+    : 'phiên <b>'+esc(ST.date)+'</b>';
+}
 function startLive(){
   const tick=async()=>{
     if((document.hidden&&!FORCE_LIVE)||!sessionOpenVN()) return;
     if(Date.now()-liveAt<55000) return;
     if(await pollLive()){
-      const md=moodLive();
-      const hm=$('#hMood');
-      if(hm&&md!=null) hm.innerHTML='Nhịp đập <b style="color:'+moodCol(md)+'">'+Math.round(md)+'</b> · '+
-        '<span style="color:'+moodCol(md)+';font-weight:700">'+moodWord(md)+'</span>';
+      updateHeadChips();
       if(cur==='radar') MODULES.find(x=>x.id==='radar').render();   // vẽ lại tại chỗ, KHÔNG cuộn
     }
   };
@@ -618,10 +648,8 @@ async function init(){
   const mn=$('#mn');
   for(const m of MODULES){ const s=document.createElement('section');
     s.className='mod'; s.id='m-'+m.id; mn.appendChild(s); }
-  const md=mood();
-  $('#hMood').innerHTML='Nhịp đập <b style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'</b> · '+
-    '<span style="color:'+moodCol(md)+';font-weight:700">'+moodWord(md)+'</span>';
-  $('#hDate').innerHTML='phiên <b>'+esc(ST.date)+'</b>';
+  updateHeadChips();
+  $('#btnShot').onclick=shotView;
   $('#btnThm').textContent=isLight()?'☀️':'🌙';
   $('#btnThm').onclick=()=>{
     const light=!isLight();
@@ -644,7 +672,8 @@ async function init(){
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
   showMod(MODULES.some(m=>m.id===start)?start:'radar');
-  startLive();   // rồi giữ nhịp mỗi phút
+  updateHeadChips();   // chip nhịp đập + ngày đúng NGAY (kể cả khi dùng bản đệm)
+  startLive();         // rồi giữ nhịp mỗi phút
   $('#load').classList.add('off');
   setTimeout(()=>$('#load').remove(),420);
 }
