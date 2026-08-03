@@ -492,7 +492,8 @@ function renderRadar(){
   const G=ST.market&&ST.market.global;
   const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
   const nnNet=ST.nnBuy-ST.nnSell;
-  const infoRow=(k,v)=>'<div class="rrRow"><span>'+k+'</span><b>'+v+'</b></div>';
+  const infoRow=(k,v,cls2)=>'<div class="rrRow"><span>'+k+'</span>'+
+    '<b class="bdg '+(cls2||'')+'">'+v+'</b></div>';
   $('#m-radar').innerHTML=head(m)
     +'<div class="hero h3c">'
     +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
@@ -510,11 +511,11 @@ function renderRadar(){
       :'<div class="sub">Chưa có số liệu toàn cầu</div>')+'</div>'
     +'<div class="panel mood rrInfo">'
     +(vni?infoRow('VNINDEX',(+vni.value).toLocaleString('en-US',{maximumFractionDigits:2})
-        +' <span class="'+cls(vni.chg)+'">'+pct(vni.chg)+'</span>'):'')
-    +infoRow('Thanh khoản ngày',ty(s.gtgd))
-    +infoRow('Khối ngoại mua','<span class="up">'+ty(ST.nnBuy)+'</span>')
-    +infoRow('Khối ngoại bán','<span class="dn">'+ty(ST.nnSell)+'</span>')
-    +infoRow('Mua bán ròng','<span class="'+(nnNet>=0?'up':'dn')+'">'+(nnNet>=0?'+':'−')+ty(Math.abs(nnNet))+'</span>')
+        +' · '+pct(vni.chg), vni.chg>0.005?'bUp':vni.chg<-0.005?'bDn':'bFl'):'')
+    +infoRow('Thanh khoản ngày',ty(s.gtgd),'bGold')
+    +infoRow('Khối ngoại mua',ty(ST.nnBuy),'bUp')
+    +infoRow('Khối ngoại bán',ty(ST.nnSell),'bDn')
+    +infoRow('Mua bán ròng',(nnNet>=0?'+':'−')+ty(Math.abs(nnNet)),nnNet>=0?'bUp':'bDn')
     +'</div>'
     +'</div>'
     +'<div id="radarAll">'
