@@ -115,7 +115,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   canvas.spark{width:118px;height:34px;display:block;margin-left:auto}
   td.nn.pos{color:var(--green)} td.nn.neg{color:var(--red)}
   td.nn .dash{color:var(--muted);font-weight:400;opacity:.5}
-  td.fund.neg{color:var(--red)}
+  /* LNST: lãi XANH LÁ, lỗ ĐỎ — nhìn phát biết doanh nghiệp làm ăn ra sao */
+  td.fund.pos{color:var(--green)} td.fund.neg{color:var(--red)}
   /* KHỐI SỐ bề rộng CỐ ĐỊNH rồi CANH GIỮA ô: chữ số vẫn căn phải bên trong nên các
      dòng thẳng cột nhau, mà cả khối lại nằm giữa -> tiêu đề đứng ngay trên đầu dãy số,
      hết cảnh tiêu đề dài thò hẳn sang trái so với con số (GTGD trước lệch tới 62px). */
@@ -536,7 +537,7 @@ function render(){
       <td class="chg">${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
       <td class="m">${money(c.gtgd,true)}</td>
       <td class="m fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${money(c.cash==null?null:c.cash*1e9)}</td>
-      <td class="m fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
+      <td class="m fund ${c.np==null?'':(c.np<0?'neg':'pos')}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
       <td class="m nn pos" data-nnb>${money(nnBuy(c),true)}</td>
       <td class="m nn neg" data-nns>${money(nnSell(c),true)}</td>
       <td class="m"><span class="n" data-pe>${pe!=null?pe.toFixed(1):'—'}</span></td>

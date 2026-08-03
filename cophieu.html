@@ -163,8 +163,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   table.ft tr.debt td{font-weight:800;color:var(--red)}
   /* cổ tức gộp vào bảng KQKD, ngăn bằng 1 vạch đậm cho dễ đọc */
   table.ft tr.divsep td{border-top:2px solid var(--line)}
-  table.ft tr.divrow td{color:var(--cyan)}
-  table.ft tr.divrow td:first-child{color:var(--muted)}
+  /* CỔ TỨC: cỡ chữ BẰNG dòng LN sau thuế, số in đậm — đây là tiền thực về túi
+     cổ đông nên phải đập vào mắt ngang với lợi nhuận, không để chữ nhỏ lọt thỏm */
+  table.ft tr.divrow td{color:var(--cyan);font-size:15px;font-weight:800}
+  table.ft tr.divrow td:first-child{color:var(--muted);font-weight:700}
+  table.ft tr.divrow td i{font-size:12px;font-weight:600}
   /* dòng LN SAU THUẾ: to + đậm để đập vào mắt ngay */
   table.ft tr.npRow td{font-size:15px;font-weight:800}
   .subnote{color:var(--muted);font-size:11.5px;margin-top:6px}
