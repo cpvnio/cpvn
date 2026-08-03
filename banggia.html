@@ -83,8 +83,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      lệch dù mép phải đã căn đúng. tabular-nums ép mọi chữ số cùng bề rộng -> thành lưới. */
   table{border-collapse:collapse;width:100%;min-width:1020px;font-size:13.5px;
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
-  th.l,td.l{width:150px;max-width:150px}
-  thead th[data-k="price"],tbody td.price{width:92px}
+  th.l,td.l{width:168px;max-width:168px}
   thead th{position:sticky;top:0;background:var(--thead);color:var(--muted);font-size:12px;
     font-weight:700;text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);
     cursor:pointer;user-select:none;white-space:nowrap;z-index:5}
@@ -101,10 +100,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   td.star{width:30px;font-size:15px;color:#3f3f4a;cursor:pointer;text-align:center}
   td.star.on{color:#ffd60a}
   .co{display:flex;align-items:center;gap:10px}
-  .co img{width:29px;height:29px;border-radius:7px;background:#fff;object-fit:contain;flex-shrink:0}
-  .co .noimg{width:29px;height:29px;border-radius:7px;background:var(--panel2);display:flex;
+  .co img{width:34px;height:34px;border-radius:8px;background:#fff;object-fit:contain;flex-shrink:0}
+  .co .noimg{width:34px;height:34px;border-radius:8px;background:var(--panel2);display:flex;
     align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0}
-  .co .sym{font-weight:800;font-size:16px}
+  .co .sym{font-weight:800;font-size:18px}
   .co .ex{font-size:10.5px;font-weight:800;color:var(--muted);border:1px solid var(--line);
     border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
   td.price{font-weight:800;font-size:13.5px}
@@ -121,10 +120,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      dòng thẳng cột nhau, mà cả khối lại nằm giữa -> tiêu đề đứng ngay trên đầu dãy số,
      hết cảnh tiêu đề dài thò hẳn sang trái so với con số (GTGD trước lệch tới 62px). */
   thead th.m,tbody td.m{text-align:center}
+  /* 1D%: thẻ % và tiêu đề cùng canh giữa, cột khoá hẹp để nằm sát ngay cột Vốn hoá */
+  thead th[data-k="chg1d"],tbody td.chg{text-align:center}
   .m .n{display:inline-block;text-align:right}
   thead th.m .n{text-align:center;font-weight:700}
   /* ô ĐƠN VỊ rộng cố định, căn trái -> chữ số của cả cột dừng ở cùng một mốc */
-  i.u{display:inline-block;width:24px;text-align:left;padding-left:5px;font-style:normal;
+  i.u{display:inline-block;text-align:left;padding-left:6px;font-style:normal;
     font-weight:400;font-size:11.5px;color:var(--muted)}
   thead th i.u{font-size:12px}
   td .dash{color:var(--muted);font-weight:400;opacity:.5}
@@ -211,11 +212,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     table{min-width:640px}
     td.rank{width:24px;padding:8px 4px;font-size:10.5px}
     th:nth-child(1){padding:9px 4px}
-    th:nth-child(3),td:nth-child(3){width:122px;min-width:122px;max-width:122px;left:32px}
+    th:nth-child(3),td:nth-child(3){width:142px;min-width:142px;max-width:142px;left:32px}
     th:nth-child(1),td:nth-child(1){left:0}
     .co{gap:6px}
-    .co img,.co .noimg{width:26px;height:26px}
-    .co .sym{font-size:14.5px}
+    .co img,.co .noimg{width:31px;height:31px}
+    .co .sym{font-size:16.5px}
     .co .ex{font-size:8.5px;padding:0 3px;margin-left:4px}
     table{min-width:1120px;font-size:12.5px}
     /* ghim cột hạng + mã khi cuộn ngang (kiểu bảng coin mobile) */
@@ -288,16 +289,16 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <th data-k="rank">#</th>
         <th>⭐</th>
         <th class="l" data-k="sym">Cổ phiếu</th>
-        <th data-k="price">Giá (đ)</th>
-        <th class="m" data-k="mcap"><span class="n">Vốn hoá</span><i class="u"></i></th>
+        <th class="m" data-k="price"><span class="n">Giá (đ)</span></th>
+        <th class="m" data-k="mcap"><span class="n">Vốn hoá</span></th>
         <th data-k="chg1d">1D %</th>
-        <th class="m" data-k="gtgd" title="Giá trị giao dịch hôm nay"><span class="n">GTGD</span><i class="u"></i></th>
-        <th class="m" data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất"><span class="n">Tiền mặt</span><i class="u"></i></th>
-        <th class="m" data-k="np" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất"><span class="n" id="thNp">LNST</span><i class="u"></i></th>
-        <th class="m" data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng"><span class="n">NN mua</span><i class="u"></i></th>
-        <th class="m" data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng"><span class="n">NN bán</span><i class="u"></i></th>
-        <th data-k="pe" title="P/E tính sống theo giá hiện tại = giá / EPS">P/E</th>
-        <th data-k="eps" title="EPS 4 quý gần nhất — đồng/cổ phiếu">EPS</th>
+        <th class="m" data-k="gtgd" title="Giá trị giao dịch hôm nay"><span class="n">GTGD</span></th>
+        <th class="m" data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất"><span class="n">Tiền mặt</span></th>
+        <th class="m" data-k="np" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất"><span class="n" id="thNp">LNST</span></th>
+        <th class="m" data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng"><span class="n">NN mua</span></th>
+        <th class="m" data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng"><span class="n">NN bán</span></th>
+        <th class="m" data-k="pe" title="P/E tính sống theo giá hiện tại = giá / EPS"><span class="n">P/E</span></th>
+        <th class="m" data-k="eps" title="EPS 4 quý gần nhất — đồng/cổ phiếu"><span class="n">EPS</span></th>
       </tr>
     </thead>
     <tbody id="tb"></tbody>
@@ -366,25 +367,55 @@ const peLive=c=>{ const p=(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:n
    tiêu đề) rồi khoá đúng bấy nhiêu. Chữ số các dòng vẫn căn phải nên thẳng cột, mà khối
    không còn thừa chỗ trống -> tiêu đề nằm sát ngay trên dãy số.
    Chạy lại sau mỗi lần dựng bảng (đổi trang / lọc / sắp xếp). */
-const MCOLS=[4,6,7,8,9,10];
+const MCOLS=[4,6,7,8,9,10];          // 6 cột tiền (số + đơn vị)
+const PCOLS=[3,11,12];              // cột số KHÔNG có đơn vị (Giá, P/E, EPS)
+const NCOLS=[3,4,5,6,7,8,9,10,11,12];  // toàn bộ cột số, dùng để chia đều khoảng cách
 function fitNumCols(){
   const rows=[...document.querySelectorAll('#tb tr')];
   if(!rows.length) return;
-  // đo BỀ RỘNG THẬT của chữ đã render (Range), không đoán bằng canvas: canvas không áp
-  // tabular-nums và trả sai cỡ/độ đậm -> từng đo hụt cột Vốn hoá 72px thành 47px.
   const rg=document.createRange();
   const wOf=el=>{ rg.selectNodeContents(el); return rg.getBoundingClientRect().width; };
-  const css=MCOLS.map(i=>{
-    // CHỈ đo theo CON SỐ, KHÔNG tính chữ tiêu đề: tiêu đề dài hơn thì cứ để nó tràn
-    // đều 2 bên khối (vì cả hai đều canh giữa) -> tâm tiêu đề trùng tâm dãy số.
+  /* "894 tỷ" là MỘT CỤM, không phải số 894 rồi chữ tỷ rời ra. Nên tiêu đề canh giữa theo
+     CẢ CỤM (số + đơn vị) chứ không phải giữa riêng phần số — đó là chỗ trước còn lệch.
+     Cả bảng dùng chung đơn vị "tỷ" nên chỉ cần đo bề rộng đơn vị một lần. */
+  let uw=0;
+  for(const tr of rows){ const u=tr.querySelector('td.m i.u');
+    if(u&&u.textContent.trim()){ uw=wOf(u); break; } }
+  const UW=Math.ceil(uw)+6;                      // + khoảng thở giữa số và đơn vị
+  const css=[`#wrap table i.u{width:${UW}px}`];
+  for(const i of MCOLS){
+    let w=0;                                     // chỉ đo theo CON SỐ (tiêu đề tự tràn đều 2 bên)
+    for(const tr of rows){ const n=tr.cells[i]&&tr.cells[i].querySelector('.n');
+      if(n){ const t=wOf(n); if(t>w) w=t; } }
+    w=Math.ceil(w)+2;
+    css.push(`#wrap table tbody tr>*:nth-child(${i+1}) .n{min-width:${w}px}`);
+    css.push(`#wrap table thead tr>*:nth-child(${i+1}) .n{min-width:${w+UW}px}`);
+  }
+  for(const i of PCOLS){
     let w=0;
     for(const tr of rows){ const n=tr.cells[i]&&tr.cells[i].querySelector('.n');
       if(n){ const t=wOf(n); if(t>w) w=t; } }
-    return `#wrap table tr>*:nth-child(${i+1}) .n{min-width:${Math.ceil(w)+2}px}`;
-  }).join('');
+    w=Math.ceil(w)+2;
+    css.push(`#wrap table tr>*:nth-child(${i+1}) .n{min-width:${w}px}`);
+  }
+  /* KHOẢNG CÁCH CÁC CỘT CHIA ĐỀU: trình duyệt vốn chia chỗ thừa theo TỶ LỆ bề rộng nên
+     cột nội dung dài được nhiều, cột ngắn được ít -> khe hở chênh nhau 48–103px.
+     Tự tính: mỗi cột = bề rộng nội dung + CÙNG một lượng đệm G. */
+  const tbl=document.querySelector('#wrap table');
+  const head=[...document.querySelectorAll('thead th')];
+  const cw=NCOLS.map(i=>{
+    let w=wOf(head[i]);
+    for(const tr of rows){ const c=tr.cells[i]; if(c){ const t=wOf(c); if(t>w) w=t; } }
+    return Math.ceil(w);
+  });
+  const fixed=[0,1,2].reduce((a,i)=>a+(head[i]?head[i].getBoundingClientRect().width:0),0);
+  const avail=(tbl.parentElement.clientWidth||tbl.clientWidth)-fixed;
+  const G=Math.max(22,Math.floor((avail-cw.reduce((a,b)=>a+b,0))/NCOLS.length));
+  NCOLS.forEach((i,k)=>css.push(`#wrap table thead tr>*:nth-child(${i+1}){width:${cw[k]+G}px}`));
+  const out=css.join('');
   let st=$('numw');
   if(!st){ st=document.createElement('style'); st.id='numw'; document.head.appendChild(st); }
-  if(st.textContent!==css) st.textContent=css;
+  if(st.textContent!==out) st.textContent=out;
 }
 
 /* giá trị sort/hiển thị cho từng mã */
@@ -485,16 +516,16 @@ function render(){
       <td class="rank">${start+i+1}</td>
       <td class="star ${W.has(c.sym)?'on':''}" data-star="${c.sym}">${W.has(c.sym)?'★':'☆'}</td>
       <td class="l" title="${CP.esc(c.name)}"><div class="co">${logo}<div><span class="sym">${c.sym}</span><span class="ex">${c.ex}</span>${redFlag(c)}</div></div></td>
-      <td class="price" data-price style="color:${CP.col1d(c)}">${CP.fmtD(c.price)}</td>
+      <td class="m price" style="color:${CP.col1d(c)}"><span class="n" data-price>${CP.fmtD(c.price)}</span></td>
       <td class="m">${money(c.mcapLive||c.mcap,true)}</td>
-      <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
+      <td class="chg">${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
       <td class="m">${money(c.gtgd,true)}</td>
       <td class="m fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${money(c.cash==null?null:c.cash*1e9)}</td>
       <td class="m fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
       <td class="m nn pos" data-nnb>${money(nnBuy(c),true)}</td>
       <td class="m nn neg" data-nns>${money(nnSell(c),true)}</td>
-      <td data-pe>${pe!=null?pe.toFixed(1):'—'}</td>
-      <td>${c.eps!=null?CP.fmtD(c.eps):'—'}</td>
+      <td class="m"><span class="n" data-pe>${pe!=null?pe.toFixed(1):'—'}</span></td>
+      <td class="m"><span class="n">${c.eps!=null?CP.fmtD(c.eps):'—'}</span></td>
     </tr>`;
   }).join('');
   document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
@@ -582,11 +613,11 @@ function flashUpdate(){
     if(s) s.innerHTML=money(nnSell(c),true);
     if(pe){ const p=peLive(c); pe.textContent=p!=null?p.toFixed(1):'—'; }
     const cell=tr.querySelector('[data-price]'); if(!cell) return;
-    const old=prevPrice.get(c.sym);
-    cell.textContent=CP.fmtD(c.price); cell.style.color=CP.col1d(c);
+    const old=prevPrice.get(c.sym), td=cell.parentElement;
+    cell.textContent=CP.fmtD(c.price); td.style.color=CP.col1d(c);
     if(old&&c.price&&old!==c.price){
-      cell.classList.remove('up','down'); void cell.offsetWidth;
-      cell.classList.add(c.price>old?'up':'down');
+      td.classList.remove('up','down'); void td.offsetWidth;
+      td.classList.add(c.price>old?'up':'down');
     }
   });
   snapPrices();
