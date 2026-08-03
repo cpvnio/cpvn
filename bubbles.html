@@ -316,7 +316,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260806c"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260806d"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -462,7 +462,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260806c"></script>
+<script src="assets/chart.js?v=20260806d"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -932,14 +932,13 @@ class Bubble{
     // 2) RUỘT bong bóng: theo nền — tối cho theme tối, trắng sữa cho theme sáng
     const body=g.createRadialGradient(cx,cy,r*0.1,cx,cy,r);
     if(isLight()){
-      /* Lên màu ĐỀU từ tâm ra mép (trước nhảy cóc: trắng tới 0.82 rồi mới ăn màu, nên
-         quả bóng nhìn ra cái VÒNG DẸT và mọi đốm sáng trắng đều chìm mất). Có dải màu
-         chuyển mượt thì mới thành mặt cầu để đánh sáng lên trên. */
-      body.addColorStop(0,   `hsla(${h},${s}%,98%,0.52)`);
-      body.addColorStop(0.42,`hsla(${h},${s}%,${Math.min(96,l+42)}%,0.60)`);
-      body.addColorStop(0.70,`hsla(${h},${s}%,${Math.min(90,l+30)}%,0.70)`);
-      body.addColorStop(0.90,`hsla(${h},${s}%,${Math.min(80,l+14)}%,0.82)`);
-      body.addColorStop(1,   `hsla(${h},${s}%,${Math.max(28,l-6)}%,0.92)`);
+      /* RUỘT TRONG TRẺO, màu dồn ra VÀNH — đây mới là chất bong bóng xà phòng thật.
+         (Đã thử tô màu đều từ tâm ra mép: thành quả cầu đặc, mất hẳn vẻ trong.) */
+      body.addColorStop(0,   `hsla(${h},${s}%,99%,0.6)`);
+      body.addColorStop(0.55,`hsla(${h},${s}%,96%,0.65)`);
+      body.addColorStop(0.82,`hsla(${h},${s}%,${Math.min(92,l+26)}%,0.78)`);
+      body.addColorStop(0.96,`hsla(${h},${s}%,${l}%,0.85)`);
+      body.addColorStop(1,   `hsla(${h},${s}%,${Math.max(28,l-8)}%,0.92)`);
     }else{
       body.addColorStop(0,   `hsla(${h},${s}%,14%,0.22)`);   // giữa: tối, gần trong suốt -> nền lộ qua
       body.addColorStop(0.55,`hsla(${h},${s}%,18%,0.30)`);
@@ -957,47 +956,40 @@ class Bubble{
     g.beginPath(); g.arc(cx,cy,r-g.lineWidth*0.5,0,7); g.stroke();
     g.restore();
 
-    /* 4) BÓNG LOÁNG NHƯ BONG BÓNG THẬT — 4 lớp ánh sáng chồng nhau:
-       (a) quầng sáng lớn trên-trái  (b) đốm chói nhỏ sắc nét — thứ khiến mắt nhận ra
-       ngay đây là quả bóng  (c) ánh hắt lại ở bụng dưới-phải  (d) vành Fresnel mảnh
-       sát mép. Nền sáng thì đốm trắng chìm mất nên dùng ánh màu đậm hơn để vẫn nổi. */
+    /* 4) BÓNG LOÁNG — đánh sáng lên VÀNH, không rắc đốm vào ruột trong (rắc giữa
+       thì chìm mất vì ruột gần như trong suốt). Ba nét sáng đúng như bong bóng thật:
+       (a) vệt chói ôm vành trên-trái  (b) đốm chói nhỏ trên dải màu  (c) vệt hắt lại
+       ở vành dưới-phải — ánh sáng xuyên qua bụng bóng rồi dội ngược ra. */
     if(r>9){
       const LT=isLight();
-      disc(); g.save(); g.clip();
+      g.save(); g.lineCap='round';
 
-      // (a) quầng sáng môi trường tán trong màng bóng
-      const hx=cx-r*0.34, hy=cy-r*0.46, hr=r*0.66;
-      const hl=g.createRadialGradient(hx,hy,0,hx,hy,hr);
-      hl.addColorStop(0,   LT?'rgba(255,255,255,0.92)':'rgba(255,255,255,0.34)');
-      hl.addColorStop(0.45,LT?'rgba(255,255,255,0.34)':'rgba(255,255,255,0.11)');
-      hl.addColorStop(1,   'rgba(255,255,255,0)');
-      g.fillStyle=hl; g.fillRect(0,0,size,size);
+      // (a) vệt chói ôm vành TRÊN-TRÁI
+      g.lineWidth=Math.max(1,r*0.085);
+      g.strokeStyle=LT?'rgba(255,255,255,0.98)':'rgba(255,255,255,0.75)';
+      g.shadowColor='rgba(255,255,255,0.9)'; g.shadowBlur=r*0.20;
+      g.beginPath(); g.arc(cx,cy,r*0.87,Math.PI*1.04,Math.PI*1.44); g.stroke();
 
-      // (b) đốm chói nhỏ, hơi dẹt và nghiêng — điểm nhấn "thuỷ tinh"
-      if(r>13){
-        const sr=r*0.21;
-        g.save(); g.translate(cx-r*0.37,cy-r*0.50); g.rotate(-0.55); g.scale(1,0.60);
-        const sp=g.createRadialGradient(0,0,0,0,0,sr);
-        sp.addColorStop(0,   LT?'rgba(255,255,255,1)':'rgba(255,255,255,0.92)');
-        sp.addColorStop(0.45,LT?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.40)');
-        sp.addColorStop(1,   'rgba(255,255,255,0)');
-        g.fillStyle=sp; g.beginPath(); g.arc(0,0,sr,0,7); g.fill(); g.restore();
-      }
-
-      // (c) ánh hắt lại ở bụng dưới-phải (ánh sáng xuyên qua rồi dội ngược)
-      const bx=cx+r*0.30, by=cy+r*0.44, br=r*0.78;
-      const bl=g.createRadialGradient(bx,by,r*0.16,bx,by,br);
-      bl.addColorStop(0,'rgba(255,255,255,0)');
-      bl.addColorStop(0.70,`hsla(${h},${s}%,${Math.min(94,l+30)}%,${LT?0.20:0.14}`+`)`);
-      bl.addColorStop(1,   `hsla(${h},${s}%,${Math.min(97,l+38)}%,${LT?0.42:0.32}`+`)`);
-      g.fillStyle=bl; g.fillRect(0,0,size,size);
-
-      // (d) vành Fresnel mảnh sát mép — màng bóng mỏng luôn sáng viền
-      g.lineWidth=Math.max(0.7,r*0.035);
-      g.strokeStyle=LT?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.26)';
-      g.beginPath(); g.arc(cx,cy,r-r*0.10,0,7); g.stroke();
-
+      // (c) vệt hắt lại ở vành DƯỚI-PHẢI, mảnh và dịu hơn
+      const gl=`hsla(${h},${s}%,${Math.min(96,l+40)}%,`;
+      g.lineWidth=Math.max(0.8,r*0.058);
+      g.strokeStyle=gl+(LT?'0.95':'0.7')+')';
+      g.shadowColor=gl+'0.85)'; g.shadowBlur=r*0.18;
+      g.beginPath(); g.arc(cx,cy,r*0.85,Math.PI*0.09,Math.PI*0.47); g.stroke();
       g.restore();
+
+      // (b) đốm chói nhỏ, dẹt và nghiêng — nằm TRÊN dải màu nên mới nổi
+      if(r>14){
+        disc(); g.save(); g.clip();
+        const sr=r*0.19;
+        g.translate(cx-r*0.44,cy-r*0.50); g.rotate(-0.62); g.scale(1,0.55);
+        const sp=g.createRadialGradient(0,0,0,0,0,sr);
+        sp.addColorStop(0,'rgba(255,255,255,1)');
+        sp.addColorStop(0.5,'rgba(255,255,255,0.5)');
+        sp.addColorStop(1,'rgba(255,255,255,0)');
+        g.fillStyle=sp; g.beginPath(); g.arc(0,0,sr,0,7); g.fill();
+        g.restore();
+      }
     }
 
     // 6) logo — vùng tròn, GIỮ TỈ LỆ ảnh (contain) để không méo
