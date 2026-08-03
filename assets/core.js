@@ -89,6 +89,7 @@ CP.loadBase=async function(){
   }
   if(sp&&sp.d) CP.spark=sp.d;
   CP.health=he;
+  CP.applyLive();     // bản đệm trong phiên (nếu có, cùng ngày) đè lên snapshot hôm trước
   return u;
 };
 
@@ -130,23 +131,52 @@ CP.pollBoard=async function(only){
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     CP.lastPollAt=Date.now(); CP.liveOk=true;
-    if(!(only&&only.length)){ CP.lastFullAt=CP.lastPollAt; CP.saveLive(); }
+    if(!(only&&only.length)) CP.lastFullAt=CP.lastPollAt;
+    if(!boardEmpty) CP.saveLive();           // ghi đệm LIÊN TỤC trong phiên (cả tầng 1 phút)
     return true;
   }catch(e){ CP.liveOk=false; return false; }
   finally{ polling=false; }
 };
 /* BỘ NHỚ GIÁ SỐNG DÙNG CHUNG (sessionStorage 'cpvn_live'): trang nào poll xong cũng ghi,
    trang khác mở ra là CÓ NGAY số sống gần nhất — không phải chờ mạng, không lóe số cũ. */
+CP.dayVN=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
 CP.saveLive=function(){
+  if(!CP.sessionOpen()) return;              // chỉ ghi SỐ TRONG PHIÊN (9-15h)
   try{
     const d={};
     for(const c of CP.coins.values()){
       if(!(c.price>0)) continue;
       d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr];
     }
-    sessionStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
+    localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(), sess:CP.dayVN(),
       idx:(CP.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
   }catch(e){}
+};
+/* áp BẢN ĐỆM TRONG PHIÊN lên coins: dùng khi kho EOD chưa chốt ngày hôm nay.
+   Sau 15h15 server đẩy kho ngày mới -> kho chính thức THẮNG, bản đệm bị bỏ qua. */
+CP.applyLive=function(){
+  try{
+    const j=JSON.parse(localStorage.getItem('cpvn_live')||'null');
+    if(!j||!j.d||j.sess!==CP.dayVN()) return false;   // khác ngày phiên -> bỏ
+    if(CP.eodDate===j.sess) return false;             // kho ĐÃ chốt hôm nay -> kho thắng
+    let n=0;
+    for(const sym in j.d){
+      const c=CP.coins.get(sym); if(!c) continue;
+      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
+      if(!(last>0)) continue;
+      c.price=last; if(ref>0) c.ref=ref;
+      c.vol=vol||0; c.gtgd=gtgd||0; c.fbuy=fb||0; c.fsell=fs||0;
+      if(hi) c.high=hi; if(lo) c.low=lo; if(ce) c.ceil=ce; if(fl) c.flr=fl;
+      c.traded=last>0&&(vol||0)>0;
+      c.chg1d=c.ref>0?(last-c.ref)/c.ref*100:c.chg1d;
+      c.mcapLive=c.shares?c.shares*last:c.mcapLive;
+      n++;
+    }
+    if(n<100) return false;
+    if(j.idx&&j.idx.length) CP.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
+    CP.lastPollAt=j.at;                                // nhịp hiển thị nối tiếp từ bản đệm
+    return true;
+  }catch(e){ return false; }
 };
 
 /* NHỊP CẬP NHẬT (9–15h T2–T6):

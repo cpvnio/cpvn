@@ -169,10 +169,11 @@ function sessionOpenVN(){
 }
 let liveAt=0, livePolling=false;
 /* áp bộ nhớ giá sống chung (do bong bóng/bảng giá/chính trang này ghi) — mở là có ngay */
+const dayVN=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
 function applyLiveCache(){
   try{
-    const j=JSON.parse(sessionStorage.getItem('cpvn_live')||'null');
-    if(!j||!j.d||Date.now()-j.at>10*60000) return false;
+    const j=JSON.parse(localStorage.getItem('cpvn_live')||'null');
+    if(!j||!j.d||j.sess!==dayVN()) return false;   // bản đệm phải CÙNG ngày phiên
     let n=0,nnB=0,nnS=0;
     for(const sym in j.d){
       const c=ST.map.get(sym); if(!c) continue;
@@ -199,12 +200,12 @@ function saveLiveCache(){
     const d={};
     for(const c of ST.list){
       if(!(c.close>0)) continue;
-      d[c.sym]=[c.close,c.ref||0,c.vol||0,Math.round(c.gtgd||0),0,0,0,0,c.ceil||0,c.floor||0];
+      d[c.sym]=[c.close,c.ref||0,c.vol||0,Math.round(c.gtgd||0),
+        c._fb||0,c._fs||0,c._hi||0,c._lo||0,c.ceil||0,c.floor||0];
     }
-    // fb/fs/hi/lo không giữ dạng thô ở đây -> để 0, KHÔNG ghi đè bản đầy đủ mới hơn của trang khác
-    const cur=JSON.parse(sessionStorage.getItem('cpvn_live')||'null');
+    const cur=JSON.parse(localStorage.getItem('cpvn_live')||'null');
     if(cur&&cur.at>=liveAt) return;
-    sessionStorage.setItem('cpvn_live',JSON.stringify({at:liveAt,
+    localStorage.setItem('cpvn_live',JSON.stringify({at:liveAt, sess:dayVN(),
       idx:(ST.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
   }catch(e){}
 }
@@ -235,6 +236,7 @@ async function pollLive(){
       const hi=(parseFloat(t.highPrice)||0)*1000, lo=(parseFloat(t.lowPrice)||0)*1000;
       if(hi>lo&&last>0) c.rpos=(last-lo)/(hi-lo);
       const fb=(parseFloat(t.fBVol)||0)*10, fs=(parseFloat(t.fSVolume)||0)*10;
+      c._fb=fb; c._fs=fs; c._hi=(parseFloat(t.highPrice)||0)*1000; c._lo=(parseFloat(t.lowPrice)||0)*1000;
       if(last>0){ c.nnVal=(fb-fs)*last; nnB+=fb*last; nnS+=fs*last; }
       c.mcapLive=c.shares?c.shares*(last||c.close):c.mcapLive;
     }
