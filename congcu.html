@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>CPVN — Radar phiên · Đường đua vốn hoá</title>
 <meta name="description" content="Bộ công cụ thị trường CPVN: radar tín hiệu phiên, đường đua vốn hoá 6,5 năm. Dữ liệu HOSE · HNX · UPCOM tự cập nhật mỗi phiên."/>
-<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
+<script>(function(){/* MẶC ĐỊNH GIAO DIỆN SÁNG; chỉ theo lựa chọn đã lưu nếu người dùng từng đổi */
+var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=(t===null?'light':t);})();</script>
 <link rel="icon" type="image/png" href="assets/logo-64.png?v=2"/>
 <style>
 /* ============================================================================
@@ -378,6 +379,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260804p"></script>
+<script src="assets/congcu.js?v=20260805a"></script>
 </body>
 </html>

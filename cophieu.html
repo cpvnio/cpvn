@@ -8,9 +8,10 @@
 <base href="/" />
 <title>CPVN — Thông tin cổ phiếu</title>
 <meta name="description" content="Thông tin đầy đủ từng cổ phiếu Việt Nam: biểu đồ nến, báo cáo tài chính KQKD/CĐKT/LCTT, cổ tức, khối ngoại, báo cáo phân tích CTCK và tin tức." />
-<meta name="theme-color" content="#0a0a0c" />
+<meta name="theme-color" content="#f4f5f7" />
 <link rel="icon" type="image/png" href="assets/logo-64.png?v=2" />
-<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
+<script>(function(){/* MẶC ĐỊNH GIAO DIỆN SÁNG; chỉ theo lựa chọn đã lưu nếu người dùng từng đổi */
+var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=(t===null?'light':t);})();</script>
 <style>
   :root{
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
@@ -55,9 +56,11 @@
   .spacer{flex:1}
   #page{max-width:1320px;margin:0 auto;padding:16px}
 
-  /* ---- khối đầu: 2 bảng thông số bên TRÁI, biểu đồ bên PHẢI ---- */
-  #top{display:grid;grid-template-columns:430px 1fr;gap:16px;align-items:start}
+  /* ---- khối đầu: 2 bảng thông số bên TRÁI, biểu đồ bên PHẢI ----
+     2 cột LUÔN CAO BẰNG NHAU: chiều cao do cột trái quyết định, biểu đồ tự co giãn vừa khít */
+  #top{display:grid;grid-template-columns:430px 1fr;gap:16px;align-items:stretch}
   #leftCol{display:flex;flex-direction:column;gap:16px}
+  #leftCol .card:last-child{flex:1}
   #leftCol .statgrid{grid-template-columns:1fr}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
   .idrow{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
@@ -83,6 +86,13 @@
   .statgrid .row span:first-child{color:var(--muted)}
   .statgrid .row span:last-child{font-weight:700;text-align:right}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
+  .statgrid .row.hi span:last-child{color:var(--green)}   /* tiền mặt + LN sau thuế: xanh lá */
+  /* chọn kỳ dòng tiền khối ngoại ngay trên dòng NN */
+  .nnseg{display:inline-flex;gap:3px;margin-left:7px;vertical-align:-1px}
+  .nnseg b{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:5px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+  .nnseg b.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .nnseg b:not(.on):hover{color:var(--txt)}
 
   /* ---- chart (cột phải, tự giãn theo chiều cao 2 bảng trái) ---- */
   #chartCard{display:flex;flex-direction:column;min-width:0}
@@ -92,9 +102,12 @@
   .chips button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
   .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .chead .note{color:var(--muted);font-size:11.5px;margin-left:auto}
-  #cvWrap{position:relative}
-  canvas#cv{width:100%;height:470px;display:block;border-radius:10px;background:rgba(255,255,255,.02);
-    touch-action:pan-y;cursor:crosshair}
+  /* canvas trải tuyệt đối trong khung -> cao đúng bằng phần còn lại của thẻ, không cần chiều cao cứng */
+  #cvWrap{position:relative;flex:1;min-height:392px}
+  /* PHẢI khai báo width/height 100%: canvas là phần tử thay thế, chỉ inset:0 thì nó
+     lấy kích thước nội tại (thuộc tính width/height) -> vẽ tràn ra ngoài thẻ */
+  canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
+    border-radius:10px;background:rgba(255,255,255,.02);touch-action:pan-y;cursor:crosshair}
   /* bảng giá hiện khi rê chuột lên biểu đồ */
   #cvTip{position:absolute;display:none;pointer-events:none;z-index:6;
     background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px;
@@ -123,19 +136,33 @@
   /* LƯỚI CỘT CHUNG cho mọi bảng (KQKD/CĐKT/LCTT/cổ tức) -> cột kỳ thẳng hàng nhau:
      nhãn cột 1 bọc .lb bề rộng CỐ ĐỊNH (nhãn dài không đẩy được cột), cột kỳ khai báo 106px
      (luôn > nội dung số) -> trình duyệt tính ra cùng một lưới ở cả 4 bảng */
-  table.ft{border-collapse:collapse;font-size:12.5px;white-space:nowrap;min-width:100%}
-  table.ft th:first-child{width:250px}
+  /* table-layout:fixed -> bề rộng cột khai báo được tôn trọng TUYỆT ĐỐI, cả 4 bảng
+     dùng chung đúng một lưới; min-width giữ lưới nguyên vẹn, màn hình hẹp thì cuộn ngang */
+  table.ft{border-collapse:collapse;font-size:12.5px;white-space:nowrap;
+    table-layout:fixed;width:100%;min-width:1020px}
+  /* cột nhãn HẸP + cho XUỐNG DÒNG: tên dài (lưu chuyển tiền tệ) không còn đẩy
+     các cột kỳ ra xa biểu đồ — tiết kiệm ~80px bề ngang cho cả 3 bảng */
+  table.ft th:first-child{width:172px}
   table.ft th:not(:first-child){width:106px}
-  table.ft .lb{width:232px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  table.ft .lb{width:154px;white-space:normal;line-height:1.25;overflow-wrap:anywhere}
+  /* cột đệm cuối HÚT hết bề ngang dư -> các cột thật giữ ĐÚNG bề rộng khai báo,
+     không bị màn hình rộng kéo giãn ra xa (và 3 bảng luôn chung một lưới cột) */
+  table.ft th.sp,table.ft td.sp{width:100%;min-width:0;padding:0;border-bottom:0}
   table.ft th,table.ft td{padding:7px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05)}
-  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  table.ft th:first-child,table.ft td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);vertical-align:middle}
   @media (max-width:640px){
-    table.ft th:first-child{width:158px}
-    table.ft .lb{width:140px}
+    table.ft th:first-child{width:132px}
+    table.ft .lb{width:114px}
   }
   table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
+  /* NỢ PHẢI TRẢ: luôn đỏ — nhìn là biết ngay khoản phải trả nặng hay nhẹ */
+  table.ft tr.debt td{font-weight:800;color:var(--red)}
+  /* cổ tức gộp vào bảng KQKD, ngăn bằng 1 vạch đậm cho dễ đọc */
+  table.ft tr.divsep td{border-top:2px solid var(--line)}
+  table.ft tr.divrow td{color:var(--cyan)}
+  table.ft tr.divrow td:first-child{color:var(--muted)}
   /* dòng LN SAU THUẾ: to + đậm để đập vào mắt ngay */
   table.ft tr.npRow td{font-size:15px;font-weight:800}
   .subnote{color:var(--muted);font-size:11.5px;margin-top:6px}
@@ -220,13 +247,13 @@
     .tabs{margin-left:6px}
     #top{grid-template-columns:1fr}
     .bigpx .p{font-size:31px}
-    canvas#cv{height:330px}
+    #cvWrap{min-height:330px}
     .statgrid{grid-template-columns:1fr}
   }
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260804p"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260805a"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -311,8 +338,6 @@
       <div class="twrap" id="bsT"></div>
       <h3 class="t">Lưu chuyển tiền tệ</h3>
       <div class="twrap" id="cfT"></div>
-      <h3 class="t">Cổ tức các năm</h3>
-      <div class="twrap" id="divT"></div>
       <div class="subnote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
     </div>
   </div>
@@ -345,8 +370,8 @@
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260804p"></script>
-<script src="assets/chart.js?v=20260804p"></script>
+<script src="assets/core.js?v=20260805a"></script>
+<script src="assets/chart.js?v=20260805a"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -365,6 +390,8 @@ if(SYM&&/^[A-Z0-9]{2,10}$/.test(SYM)){
   document.head.appendChild(cn);
 }
 let C=null, candles=null, candleSaved=false, tf='D', finPeriod='Q', peerK='m', finData=null;
+/* số liệu rút từ BCTC đưa lên bảng thống kê đầu trang (tiền mặt + LN sau thuế năm gần nhất) */
+const FIN={cash:null,cashLb:'',np:null,npLb:''};
 let chart=null, dailyRows=null;      // dailyRows = TOÀN BỘ nến ngày (kho ~6,5 năm) -> gộp tại chỗ
 
 /* ---------- hero ---------- */
@@ -389,21 +416,86 @@ function renderHero(){
     const p=C.high>C.low?(C.price-C.low)/(C.high-C.low)*100:50;
     $('dMark').style.left=Math.max(0,Math.min(100,p))+'%';
   }
+  /* Chỉ giữ những con số người xem thật sự cần. Khối lượng quy ra TIỀN (tỷ đồng) —
+     "bao nhiêu tỷ" dễ hình dung hơn "bao nhiêu cổ phiếu". */
   const rows=[
-    ['Vốn hoá',CP.fmtVnd(C.mcapLive||C.mcap)],
-    ['Khối lượng hôm nay',CP.fmtShares(C.vol)],
-    ['Giá trị giao dịch',CP.fmtVnd(C.gtgd)],
-    ['SLCP lưu hành',CP.fmtShares(C.shares)],
-    ['Tham chiếu / <span class="cel">Trần</span> / <span class="flo">Sàn</span>',
-      `<span class="tcl">${CP.fmtD(C.ref)}</span> / <span class="cel">${CP.fmtD(C.ceil)}</span> / <span class="flo">${CP.fmtD(C.flr)}</span>`],
-    ['P/E · P/B',(C.pe!=null?(+C.pe).toFixed(1):'—')+' · '+(C.pb!=null?(+C.pb).toFixed(2):'—')],
-    ['Tỷ suất cổ tức',C.divY!=null?(+C.divY).toFixed(1)+'%':'—'],
-    ['NN ròng hôm nay',nnCell((C.fbuy||0)-(C.fsell||0))],
+    ['Vốn hoá',CP.fmtVnd(C.mcapLive||C.mcap),''],
+    ['Khối lượng giao dịch',CP.fmtVnd(C.gtgd),''],
+    ['SLCP lưu hành',CP.fmtShares(C.shares),''],
   ];
-  $('stats').innerHTML=rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  if(FIN.cash!=null) rows.push(['Tiền mặt <span style="opacity:.7">'+CP.esc(FIN.cashLb)+'</span>',CP.fmtVnd(FIN.cash*1e9),'hi']);
+  if(FIN.np!=null)   rows.push(['LN sau thuế <span style="opacity:.7">'+CP.esc(FIN.npLb)+'</span>',CP.fmtVnd(FIN.np*1e9),'hi']);
+  rows.push(
+    ['P/E · P/B',(C.pe!=null?(+C.pe).toFixed(1):'—')+' · '+(C.pb!=null?(+C.pb).toFixed(2):'—'),''],
+    ['Tỷ suất cổ tức',C.divY!=null?(+C.divY).toFixed(1)+'%':'—',''],
+    ['NN mua – bán ròng'+nnSegHTML(),`<span id="nnVal">${nnCell()}</span>`,''],
+  );
+  $('stats').innerHTML=rows.map(r=>`<div class="row ${r[2]}"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  bindNnSeg();
 }
-function nnCell(v){ if(!v) return '—';
-  return `<span style="color:${v>0?'var(--green)':'var(--red)'}">${(v>0?'+':'−')+CP.fmtShares(Math.abs(v)).replace(' cp','')}</span>`; }
+
+/* ---------- DÒNG TIỀN KHỐI NGOẠI 1D / 7D / 30D (đơn vị: tỷ đồng) ----------
+   1D lấy từ bảng giá trực tiếp (chạy theo phiên). 7D/30D cộng dồn giá trị mua–bán
+   ròng từng phiên: nguồn sống VNDirect (CORS mở) -> kho data/nn.json khi nguồn lỗi. */
+let nnPeriod=1, nnHist=null, nnHistTried=false, nnLoading=false;
+const nnSegHTML=()=>`<span class="nnseg" id="nnSeg">`+
+  [[1,'1D'],[7,'7D'],[30,'30D']].map(([v,t])=>`<b data-p="${v}"${nnPeriod===v?' class="on"':''}>${t}</b>`).join('')+`</span>`;
+function nnToday(){ return ((C.fbuy||0)-(C.fsell||0))*(C.price||0); }   // đồng
+function nnSum(days){
+  if(days<=1) return {v:nnToday(),n:1};
+  if(!nnHist) return null;
+  const today=CP.dayVN(), live=nnToday();
+  const seen=new Set(), arr=[];
+  if(C.traded&&live){ arr.push(live); seen.add(today); }   // phiên đang chạy: số sống thắng
+  for(const x of nnHist){                                   // rồi tới các phiên cũ (mới -> cũ)
+    if(seen.has(x.d)) continue; seen.add(x.d); arr.push(x.v);
+    if(arr.length>=days) break;
+  }
+  if(!arr.length) return null;
+  return {v:arr.reduce((a,b)=>a+b,0), n:arr.length};
+}
+function nnCell(){
+  const r=nnSum(nnPeriod);
+  if(!r) return `<span style="color:var(--muted);font-weight:400">${nnHistTried?'chưa có dữ liệu':'đang tải…'}</span>`;
+  const v=r.v;
+  if(Math.abs(v)<5e7) return `<span style="color:var(--muted)">0 tỷ</span>`;
+  const col=v>0?'var(--green)':'var(--red)';
+  const num=(Math.abs(v)/1e9).toLocaleString('en-US',{maximumFractionDigits:Math.abs(v)>=1e11?0:1});
+  const tip=r.n<nnPeriod?` title="mới có ${r.n} phiên trong kho"`:'';
+  return `<span style="color:${col}"${tip}>${v>0?'+':'−'}${num} tỷ</span>`;
+}
+function paintNn(){ const el=$('nnVal'); if(el) el.innerHTML=nnCell(); }
+function bindNnSeg(){
+  const seg=$('nnSeg'); if(!seg) return;
+  seg.querySelectorAll('b').forEach(b=>b.onclick=()=>{
+    nnPeriod=+b.dataset.p;
+    seg.querySelectorAll('b').forEach(x=>x.classList.toggle('on',x===b));
+    paintNn(); if(nnPeriod>1) loadNnHist();
+  });
+}
+async function loadNnHist(){
+  if(nnHist||nnLoading||nnHistTried) return; nnLoading=true;
+  const dayOf=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+  try{      // KHO CPVN: data/hist đã lưu sẵn KL khối ngoại mua/bán TỪNG PHIÊN (fb/fs)
+    const f=await CP.loadHistFile(C.sym);    // -> không tốn thêm lượt gọi nào, không phụ thuộc nguồn ngoài
+    if(f&&f.t&&f.t.length&&(f.fb||f.fs)){
+      const n=f.t.length, ref=(C&&C.ref)||0, lastC=f.c[n-1];
+      const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):1;
+      const a=[];
+      for(let i=Math.max(0,n-45);i<n;i++)
+        a.push({d:dayOf(f.t[i]), v:(((f.fb||[])[i]||0)-((f.fs||[])[i]||0))*f.c[i]*k});
+      if(a.length){ a.reverse(); nnHist=a; }   // mới -> cũ
+    }
+  }catch(e){}
+  if(!nnHist&&!CP.OFFLINE) try{               // lưới an toàn: VNDirect (CORS mở), 1 lượt gọi ~45 phiên
+    const from=new Date(Date.now()-70*86400e3).toISOString().slice(0,10);
+    const j=await fetch(`https://api-finfo.vndirect.com.vn/v4/foreigns?q=code:${C.sym}~tradingDate:gte:${from}`+
+      `&size=60&sort=tradingDate:desc&fields=tradingDate,netVal`).then(r=>r.json());
+    const a=(j.data||[]).filter(x=>x.tradingDate).map(x=>({d:x.tradingDate,v:+x.netVal||0}));
+    if(a.length) nnHist=a;
+  }catch(e){}
+  nnLoading=false; nnHistTried=true; paintNn();
+}
 
 /* 52 tuần + NN 5/22 từ kho hist */
 async function renderFromHist(){
@@ -490,18 +582,6 @@ function renderPeers(){
   box.querySelectorAll('.peer').forEach(el=>el.onclick=()=>{
     if(el.dataset.sym!==C.sym) location.href='/cophieu/'+el.dataset.sym; });
 }
-function renderDiv(d){
-  const box=$('divT');
-  if(!d||!d.length){ box.innerHTML='<div class="subnote" style="padding:10px">Chưa có dữ liệu cổ tức.</div>'; return; }
-  const rows=d.slice(0,8);
-  while(rows.length<8) rows.push({});          // đủ 8 cột -> thẳng lưới với các bảng trên
-  const pctRow=(lb,key)=>rows.some(r=>r[key]>0)
-    ?`<tr><td><div class="lb">${lb}</div></td>`+rows.map(r=>`<td>${r[key]>0?r[key].toFixed(0)+'%':(r.year?'—':'')}</td>`).join('')+'</tr>':'';
-  box.innerHTML=`<table class="ft"><thead><tr><th><div class="lb"></div></th>${rows.map(r=>`<th>${r.year||''}</th>`).join('')}</tr></thead><tbody>`+
-    `<tr><td><div class="lb">Tiền mặt</div></td>${rows.map(r=>`<td>${r.cash>0?CP.fmtD(r.cash)+' đ':r.year?'—':''}</td>`).join('')}</tr>`+
-    pctRow('Cổ tức cổ phiếu','div')+pctRow('Thưởng cổ phiếu','bonus')+`</tbody></table>`;
-}
-
 /* ---------- tài chính: KQKD chart + 3 bảng đầy đủ ---------- */
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
@@ -554,37 +634,66 @@ function drawFinChart(rows){
   }
   // KHÔNG vẽ nhãn kỳ: hàng kỳ của bảng nằm ngay dưới, thẳng cột với biểu đồ
 }
-function kqkdTable(rows){
+function kqkdTable(rows,div){
   const show=rows.slice(-8).reverse();
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
   const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td><div class="lb">${lb}</div></td>`+show.map(r=>{
-    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'</tr>';
-  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${show.map(r=>`<th>${r.label}</th>`).join('')}</tr></thead><tbody>`+
+    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';
+  /* CỔ TỨC gộp thẳng vào bảng KQKD, ngay dưới Biên LN ròng — người xem thấy luôn
+     "làm ra bao nhiêu / chia về túi mình bao nhiêu" mà không phải kéo xuống mục khác.
+     Cổ tức công bố THEO NĂM nên cột quý sẽ lấy đúng số của năm chứa quý đó. */
+  const dv=(div||[]).reduce((m,r)=>{ if(r&&r.year) m[String(r.year)]=r; return m; },{});
+  const yearOf=lb=>{ const m=String(lb).match(/(\d{4})$/)||String(lb).match(/\/(\d{2})$/);
+    return m?(m[1].length===4?m[1]:'20'+m[1]):null; };
+  const has=k=>show.some(r=>{ const y=dv[yearOf(r.label)]; return y&&y[k]>0; });
+  let divH='';
+  if(has('cash')||has('div')||has('bonus')){
+    const drow=(lb,k,fmt,first)=>`<tr class="divrow${first?' divsep':''}"><td><div class="lb">${lb}</div></td>`+
+      show.map(r=>{ const y=dv[yearOf(r.label)]; return `<td>${y&&y[k]>0?fmt(y[k]):'—'}</td>`; }).join('')+'<td class="sp"></td></tr>';
+    let first=true;
+    const add=(lb,k,fmt)=>{ if(!has(k)) return ''; const h=drow(lb,k,fmt,first); first=false; return h; };
+    divH=add('Cổ tức tiền mặt <i style="font-style:normal;opacity:.65">(năm)</i>','cash',v=>CP.fmtD(v)+' đ')
+       + add('Cổ tức cổ phiếu <i style="font-style:normal;opacity:.65">(năm)</i>','div',v=>v.toFixed(0)+'%')
+       + add('Thưởng cổ phiếu <i style="font-style:normal;opacity:.65">(năm)</i>','bonus',v=>v.toFixed(0)+'%');
+  }
+  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${show.map(r=>`<th>${r.label}</th>`).join('')}<th class="sp"></th></tr></thead><tbody>`+
     line('Doanh thu','rev')+line('Giá vốn','cogs')+line('Lợi nhuận gộp','gross')+
     line('LN trước thuế','pretax')+line('LN sau thuế','np',true,true)+
-    `<tr><td><div class="lb">Biên LN ròng</div></td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}</tr>`+
-    `</tbody></table>`;
+    `<tr><td><div class="lb">Biên LN ròng</div></td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}<td class="sp"></td></tr>`+
+    divH+`</tbody></table>`;
 }
 function genericTable(el,G,emph){
   if(!G||!G.labels||!G.rows||!G.rows.length){ el.innerHTML='<div class="subnote" style="padding:10px">Nguồn chưa có dữ liệu cho mã này.</div>'; return; }
   const idx=G.labels.map((_,i)=>i).reverse();   // mới -> cũ
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
-  el.innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${idx.map(i=>`<th>${G.labels[i]}</th>`).join('')}</tr></thead><tbody>`+
+  el.innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${idx.map(i=>`<th>${G.labels[i]}</th>`).join('')}<th class="sp"></th></tr></thead><tbody>`+
     G.rows.map(r=>{
       const head=emph.some(k=>r.k===k||(r.n||'').toUpperCase()===k);
-      return `<tr class="${head?'head':''}"><td title="${CP.esc(r.n)}"><div class="lb">${CP.esc(r.n)}</div></td>`+
-        idx.map(i=>`<td>${cell(r.v[i])}</td>`).join('')+'</tr>';
+      const debt=r.k==='bsa54'||/^nợ phải trả$/i.test((r.n||'').trim());   // NỢ PHẢI TRẢ -> đỏ
+      return `<tr class="${debt?'debt':head?'head':''}"><td title="${CP.esc(r.n)}"><div class="lb">${CP.esc(r.n)}</div></td>`+
+        idx.map(i=>`<td>${cell(r.v[i])}</td>`).join('')+'<td class="sp"></td></tr>';
     }).join('')+`</tbody></table>`;
+}
+/* tiền mặt (kỳ gần nhất) + LN sau thuế năm gần nhất -> đưa lên bảng thống kê đầu trang */
+function pickFinHighlights(){
+  FIN.cash=null; FIN.np=null;
+  const bs=(finData&&(finData.bsQ||finData.bsY))||null;
+  if(bs&&bs.rows&&bs.labels){
+    const r=bs.rows.find(x=>x.k==='bsa2')||bs.rows.find(x=>/^tiền và tương đương tiền/i.test(x.n||''));
+    if(r) for(let i=bs.labels.length-1;i>=0;i--) if(r.v[i]!=null){ FIN.cash=r.v[i]; FIN.cashLb=bs.labels[i]; break; }
+  }
+  const Y=(finData&&finData.Y)||[];
+  for(let i=Y.length-1;i>=0;i--) if(Y[i].np!=null){ FIN.np=Y[i].np; FIN.npLb=Y[i].label; break; }
 }
 async function renderFin(){
   finData=await CP.loadFin(C.sym);
   const rows=finData&&finData[finPeriod]||[];
-  kqkdTable(rows); drawFinChart(rows);   // bảng TRƯỚC -> biểu đồ đo cột bảng
+  kqkdTable(rows,finData&&finData.div); drawFinChart(rows);   // bảng TRƯỚC -> biểu đồ đo cột bảng
   const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
-  genericTable($('bsT'),bs,['bsa53','bsa78','TỔNG TÀI SẢN','NỢ PHẢI TRẢ','VỐN CHỦ SỞ HỮU']);
+  genericTable($('bsT'),bs,['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);
   genericTable($('cfT'),cf,[]);
-  renderDiv(finData&&finData.div);
+  pickFinHighlights(); if(C) renderHero();
 }
 
 /* ---------- tài liệu + tin tức ---------- */
@@ -803,6 +912,11 @@ document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
   b.classList.add('on'); finPeriod=b.dataset.v; renderFin();
 });
 window.addEventListener('resize',()=>{ drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]); });
+/* biểu đồ cao bằng cột trái -> cột trái đổi chiều cao (thêm dòng tiền mặt/LNST) thì vẽ lại */
+if(window.ResizeObserver){
+  let t=0;
+  new ResizeObserver(()=>{ clearTimeout(t); t=setTimeout(drawChart,60); }).observe($('cvWrap'));
+}
 const thmBtn=$('thm');
 function applyThmIcon(){ thmBtn.textContent=isLight()?'☀️':'🌙'; }
 thmBtn.onclick=()=>{ const l=!isLight();
@@ -819,6 +933,7 @@ applyThmIcon();
   if(!C){ $('sym').textContent=SYM; $('cname').textContent='Không tìm thấy mã này trong hệ thống.'; return; }
   renderHero(); loadChart(); renderFromHist();
   renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
+  loadNnHist();         // dòng tiền khối ngoại 7D/30D: nạp ngầm, bấm là có ngay
   renderPeers(); renderDocsNews();
   const h=CP.health;
   $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;

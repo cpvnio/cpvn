@@ -4,9 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>CPVN — Thông tin chứng khoán Việt Nam</title>
-<script>(function(){var t=localStorage.getItem('cpvn_theme');if(t)document.documentElement.dataset.theme=t;})();</script>
+<script>(function(){/* MẶC ĐỊNH GIAO DIỆN SÁNG; chỉ theo lựa chọn đã lưu nếu người dùng từng đổi */
+var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=(t===null?'light':t);})();</script>
 <meta name="description" content="Toàn cảnh chứng khoán Việt Nam dạng bong bóng: HOSE + HNX real-time, biến động theo ngày/tuần/tháng/năm, vốn hoá, KQKD, báo cáo phân tích CTCK và tin tức theo mã." />
-<meta name="theme-color" content="#0a0a0c" />
+<meta name="theme-color" content="#f4f5f7" />
 <meta name="author" content="CPVN.io" />
 <link rel="canonical" href="https://cpvn.io/" />
 <meta property="og:type" content="website" />
@@ -152,12 +153,21 @@
   #sectorbar .sbhead{position:sticky;top:0;background:var(--side);padding:8px 12px 6px;font-size:11px;
     font-weight:800;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);z-index:1}
   #sectorList .si{display:flex;justify-content:space-between;align-items:center;gap:6px;
-    padding:6px 12px;font-size:12px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03)}
+    padding:7px 12px;font-size:13.8px;color:var(--txt);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03)}
   #sectorList .si:hover{background:var(--panel2)}
   #sectorList .si.active{background:var(--accent);color:#fff;font-weight:700}
   #sectorList .si .n{line-height:1.3}   /* cho phép xuống dòng -> luôn thấy đủ tên ngành */
-  #sectorList .si .c{color:var(--muted);font-size:10.5px;flex-shrink:0}
+  #sectorList .si .c{color:var(--muted);font-size:12px;flex-shrink:0}
   #sectorList .si.active .c{color:rgba(255,255,255,.8)}
+  /* NGÀNH LỚN (tổng vốn hoá > 100.000 tỷ): tô màu + đậm để mắt bắt ngay, khỏi phải dò cả cột.
+     Vàng hổ phách hợp cả nền tối lẫn nền sáng và không lẫn với màu đỏ của mục đang chọn. */
+  #sectorList .si.big{background:rgba(234,179,8,.09)}
+  #sectorList .si.big .n{color:#d9a406;font-weight:800}
+  html[data-theme="light"] #sectorList .si.big .n{color:#9a6b00}
+  #sectorList .si.big .c{color:#c08f05;font-weight:700}
+  #sectorList .si.big.active,#sectorList .si.active .n{background:none}
+  #sectorList .si.active .n,#sectorList .si.active .c{color:#fff}
+  #sectorList .si.big.active{background:var(--accent)}
   #sbBackdrop{display:none}
   button.toggle#sectorToggle{display:none}
   @media(max-width:640px){
@@ -295,7 +305,7 @@
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260804p"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260805a"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -435,7 +445,7 @@
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260804p"></script>
+<script src="assets/chart.js?v=20260805a"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -528,19 +538,27 @@ async function loadEOD(){
   }catch(e){}
 }
 /* ---------- CỘT NGÀNH bên trái ------------------------------------------- */
+const SECTOR_BIG=1e14;      // 100.000 tỷ đồng — mốc "ngành lớn" được tô màu trong cột ngành
 function buildSectorBar(){
-  const cnt={}; for(const c of state.coins.values()) cnt[c.sector]=(cnt[c.sector]||0)+1;
+  const cnt={}, cap={};
+  for(const c of state.coins.values()){
+    cnt[c.sector]=(cnt[c.sector]||0)+1;
+    cap[c.sector]=(cap[c.sector]||0)+(c.mcapLive||c.mcap||0);
+  }
   state.sectors=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
   const list=document.getElementById('sectorList'); list.innerHTML='';
-  const mk=(val,label,count)=>{
+  const mk=(val,label,count,big,tip)=>{
     const d=document.createElement('div');
-    d.className='si'+(state.sector===val?' active':''); d.dataset.sec=val;
+    d.className='si'+(state.sector===val?' active':'')+(big?' big':''); d.dataset.sec=val;
+    if(tip) d.title=tip;
     d.innerHTML=`<span class="n">${label}</span><span class="c">${count}</span>`;
     d.onclick=()=>{ state.sector=val; markSectorActive(); rebuild(); closeSectorBar(); };
     return d;
   };
-  list.appendChild(mk('all','Tất cả ngành', state.coins.size));
-  for(const s of state.sectors) list.appendChild(mk(s,s,cnt[s]));
+  list.appendChild(mk('all','Tất cả ngành', state.coins.size,false,''));
+  for(const s of state.sectors)
+    list.appendChild(mk(s,s,cnt[s], cap[s]>=SECTOR_BIG,
+      `${s} · tổng vốn hoá ${fmtVnd(cap[s])}`));
 }
 function markSectorActive(){
   document.querySelectorAll('#sectorList .si').forEach(d=>d.classList.toggle('active', d.dataset.sec===state.sector));
