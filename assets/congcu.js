@@ -217,8 +217,12 @@ function startLive(){
   const tick=async()=>{
     if((document.hidden&&!FORCE_LIVE)||!sessionOpenVN()) return;
     if(Date.now()-liveAt<55000) return;
-    if(await pollLive()&&cur==='radar'){
-      MODULES.find(x=>x.id==='radar').render();   // vẽ lại tại chỗ, KHÔNG cuộn trang
+    if(await pollLive()){
+      const md=moodLive();
+      const hm=$('#hMood');
+      if(hm&&md!=null) hm.innerHTML='Nhịp đập <b style="color:'+moodCol(md)+'">'+Math.round(md)+'</b> · '+
+        '<span style="color:'+moodCol(md)+';font-weight:700">'+moodWord(md)+'</span>';
+      if(cur==='radar') MODULES.find(x=>x.id==='radar').render();   // vẽ lại tại chỗ, KHÔNG cuộn
     }
   };
   tick();
@@ -228,6 +232,35 @@ function startLive(){
 
 function mood(){ const B=ST.market&&ST.market.breadth;
   return (B&&B.mood.length)?B.mood[B.mood.length-1]:null; }
+/* Nhịp sợ hãi TRONG NƯỚC tính SỐNG trong phiên — cùng công thức build_screen:
+   25% mã trên MA50 + 15% trên MA200 + 20% đỉnh/đáy 52T (3 thành phần này tính lại
+   từ GIÁ ĐANG CHẠY so với MA/mốc của từng mã trong kho screen.json) + 15% dòng tiền
+   20 phiên (thành phần chậm, lấy chốt gần nhất) + 25% quán tính (suy từ chốt gần nhất
+   cộng biến động VNINDEX hôm nay). Chưa có giá sống -> dùng số chốt phiên trước. */
+function moodLive(){
+  const base=mood();
+  if(!liveAt) return base;
+  const B=ST.market&&ST.market.breadth;
+  let n50=0,a50=0,n200=0,a200=0,nh=0,nl=0;
+  for(const c of ST.list){
+    if(!(c.close>0)) continue;
+    if(c.ma50){ n50++; if(c.close>c.ma50) a50++; }
+    if(c.ma200){ n200++; if(c.close>c.ma200) a200++; }
+    if(c.hi52&&c.close>=c.hi52*0.999) nh++;
+    if(c.lo52&&c.close<=c.lo52*1.001) nl++;
+  }
+  if(n50<100) return base;
+  const c50=a50/n50*100, c200=n200?a200/n200*100:50;
+  const hl=50+50*(nh-nl)/Math.max(1,nh+nl);
+  const ud=B&&B.ud&&B.ud.length?B.ud[B.ud.length-1]:50;
+  let mom=B&&B.mom&&B.mom.length?B.mom[B.mom.length-1]:50;
+  const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
+  if(vni&&vni.chg!=null){
+    const x=1+(mom-50)/1000;
+    mom=50+clamp((x*(1+vni.chg/100)-1)*1000,-50,50);
+  }
+  return Math.round((.25*c50+.15*c200+.20*hl+.15*ud+.25*mom)*10)/10;
+}
 const moodWord=v=>v==null?'—':v>=75?'Hưng phấn':v>=60?'Lạc quan':v>=40?'Trung tính':v>=25?'Thận trọng':'Sợ hãi';
 const moodCol=v=>v==null?'var(--mut)':v>=60?'var(--green)':v>=40?'var(--yellow)':v>=25?'#f97316':'var(--red)';
 function marketStats(){
@@ -324,7 +357,7 @@ function renderRadar(){
   const m=MODULES.find(x=>x.id==='radar');
   const L=ST.list, liq=c=>(c.avgval20||0);
   const top=(f,s,n)=>L.filter(c=>c.close>0).filter(f).sort(s).slice(0,n||5);
-  const md=mood(), s=marketStats(), tot=Math.max(1,s.up+s.dn+s.fl);
+  const md=moodLive(), s=marketStats(), tot=Math.max(1,s.up+s.dn+s.fl);
 
   /* trần — sàn gộp 1 thẻ: ưu tiên mã thanh khoản cao */
   function ceflRows(){
