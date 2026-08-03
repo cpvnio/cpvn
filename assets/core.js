@@ -76,6 +76,7 @@ CP.loadBase=async function(){
       high:0, low:0, fbuy:0, fsell:0, mcapLive:s.mcap||null, o:0,
     });
   }
+  CP.consolidateSectors();     // gộp ngành GIỐNG HỆT trang bong bóng -> cả site chung 1 cách chia
   CP.vn30=new Set(u.vn30||[]); CP.hnx30=new Set(u.hnx30||[]);
   if(eod&&eod.data){
     CP.eodDate=eod.date; CP.indices=eod.indices||[];
@@ -92,6 +93,25 @@ CP.loadBase=async function(){
   CP.health=he;
   CP.applyLive();     // bản đệm trong phiên (nếu có, cùng ngày) đè lên snapshot hôm trước
   return u;
+};
+
+/* ---------- GỘP NGÀNH: dùng CHUNG một cách chia với trang bong bóng ---------
+   (1) hợp nhất các nhánh vụn về nhóm cha; (2) ngành dưới 4 mã dồn về "Khác" cho bớt
+   phân mảnh. Giữ y hệt bubbles.html để bấm cùng một tên ngành ở bất kỳ trang nào
+   cũng ra đúng bấy nhiêu mã. */
+const SECTOR_EXPLICIT={
+  'Bán lẻ chuyên dụng':'Bán lẻ','Bán lẻ thực phẩm và thuốc':'Bán lẻ','Bán lẻ tổng hợp':'Bán lẻ',
+  'Dược phẩm':'Dược phẩm & Y tế','Dịch vụ chăm sóc sức khỏe':'Dược phẩm & Y tế','Thiết bị vật tư Y tế':'Dược phẩm & Y tế',
+  'Phần mềm và dịch vụ CNTT':'Công nghệ & Điện tử','Chất bán dẫn & Thiết bị bán dẫn':'Công nghệ & Điện tử',
+  'Thiết bị & Phụ tùng điện tử':'Công nghệ & Điện tử','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Điện tử',
+  'Thiết bị văn phòng':'Công nghệ & Điện tử',
+  'Dịch vụ Viễn thông':'Viễn thông & Truyền thông','Truyền thông & Mạng':'Viễn thông & Truyền thông',
+  'Truyền thông và Xuất bản':'Viễn thông & Truyền thông',
+};
+CP.consolidateSectors=function(){
+  for(const c of CP.coins.values()) c.sector=SECTOR_EXPLICIT[c.sector]||c.sector||'Khác';
+  const cnt={}; for(const c of CP.coins.values()) cnt[c.sector]=(cnt[c.sector]||0)+1;
+  for(const c of CP.coins.values()) if(cnt[c.sector]<4) c.sector='Khác';
 };
 
 /* ---------- bảng giá trực tiếp VPS (poll 5 phút trong phiên) --------------- */
