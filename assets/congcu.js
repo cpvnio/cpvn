@@ -106,6 +106,7 @@ function shotView(){   // chụp đúng KHUNG ĐANG NHÌN (viewport) + đóng d�
       backgroundColor:isLight()?'#eef0f4':'#07070b', scale:2, logging:false, useCORS:true,
       x:scrollX, y:scrollY, width:innerWidth, height:innerHeight,
       windowWidth:innerWidth, windowHeight:innerHeight,
+      onclone:doc=>{ doc.body.classList.add('shotmode'); },   // tắt lớp nền/toast gây mờ ảnh
     }).then(cv=>{
       const g=cv.getContext('2d'); g.setTransform(1,0,0,1,0,0);
       const W=cv.width,H=cv.height,k=W/innerWidth;
