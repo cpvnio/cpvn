@@ -293,7 +293,7 @@
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260804d"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260804e"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -433,7 +433,7 @@
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260804d"></script>
+<script src="assets/chart.js?v=20260804e"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -489,7 +489,7 @@ function consolidateSectors(){
   for(const c of state.coins.values()) if(cnt[c.sector]<4) c.sector='Khác';  // ngành quá nhỏ -> gom "Khác"
 }
 async function loadUniverse(){
-  const u=await fetch('universe.json',{cache:'no-cache'}).then(r=>r.json());
+  const u=await fetch('universe.json').then(r=>r.json());
   for(const s of u.stocks){
     state.coins.set(s.sym,{
       sym:s.sym, ex:s.ex, name:s.name, shares:s.shares||null, mcap:s.mcap||null,
@@ -509,7 +509,7 @@ async function loadUniverse(){
    bảng giá trực tiếp (nếu sống) sẽ đè lên sau. */
 async function loadEOD(){
   try{
-    const j=await fetch('data/eod/latest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null);
+    const j=await fetch('data/eod/latest.json').then(r=>r.ok?r.json():null);
     if(!j||!j.data) return;
     state.eodDate=j.date; state.savedIdx=j.indices&&j.indices.length?j.indices:null;
     for(const r of j.data){
@@ -1203,7 +1203,7 @@ async function fearGreed(){
   if(Date.now()-moodAt<300000&&moodCache!==undefined) return moodCache;
   moodCache=null;
   try{
-    const j=await fetch('data/market.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null);
+    const j=await fetch('data/market.json').then(r=>r.ok?r.json():null);
     const B=j&&j.breadth, v=B&&B.mood&&B.mood.length?B.mood[B.mood.length-1]:null;
     if(v!=null){
       const lab=v>=75?'Hưng phấn':v>=60?'Lạc quan':v>=40?'Trung tính':v>=25?'Thận trọng':'Sợ hãi';

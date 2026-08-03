@@ -10,3 +10,7 @@
 # KHO DỮ LIỆU: đổi mỗi phiên -> KHÔNG cache dài, luôn hỏi lại máy chủ (ETag lo phần tiết kiệm)
 /data/*
   Cache-Control: public, max-age=300, must-revalidate
+
+# universe: đổi 1 lần/ngày -> cache 5 phút như data/ (F5 không tải lại 600KB)
+/universe.json
+  Cache-Control: public, max-age=300, must-revalidate

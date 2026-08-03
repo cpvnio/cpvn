@@ -61,10 +61,10 @@ CP.lastPollAt=0; CP.liveOk=false;
 /* ---------- nạp nền tảng: universe + snapshot + spark (tất cả từ kho) ------ */
 CP.loadBase=async function(){
   const [u,eod,sp,he]=await Promise.all([
-    fetch('universe.json',{cache:'no-cache'}).then(r=>r.json()),
-    fetch('data/eod/latest.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null),
-    fetch('data/spark.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null),
-    fetch('data/health.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('universe.json').then(r=>r.json()),
+    fetch('data/eod/latest.json').then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('data/spark.json').then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('data/health.json').then(r=>r.ok?r.json():null).catch(()=>null),
   ]);
   for(const s of u.stocks){
     CP.coins.set(s.sym,{

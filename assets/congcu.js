@@ -51,22 +51,24 @@ function toast(msg){ const t=document.createElement('div'); t.className='tst'; t
 function dpr(cv,W,H){ const r=Math.min(2,devicePixelRatio||1);
   cv.width=Math.round(W*r); cv.height=Math.round(H*r);
   const x=cv.getContext('2d'); x.setTransform(r,0,0,r,0,0); x.clearRect(0,0,W,H); return x; }
-function drawSpark(cv,vals){
+function drawSpark(cv,vals,forceCol){
   if(!cv||!vals||vals.length<2) return;
   const W=cv.clientWidth||74, H=cv.clientHeight||26, x=dpr(cv,W,H);
   let mn=Infinity,mx=-Infinity; for(const v of vals){ if(v<mn)mn=v; if(v>mx)mx=v; }
   if(mx-mn<1e-9) mx=mn+1;
-  const up=vals[vals.length-1]>=vals[0], col=up?'#16c784':'#ea3943';
+  const up=vals[vals.length-1]>=vals[0], col=forceCol||(up?'#16c784':'#ea3943');
   const X=i=>i/(vals.length-1)*(W-2)+1, Y=v=>H-2-(v-mn)/(mx-mn)*(H-4);
   x.beginPath(); vals.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));
   x.strokeStyle=col; x.lineWidth=1.6; x.lineJoin='round'; x.stroke();
   const g=x.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,up?'rgba(22,199,132,.22)':'rgba(234,57,67,.22)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  const fillTop=forceCol?(forceCol==='#c026d3'?'rgba(192,38,211,.25)':'rgba(14,165,233,.25)')
+    :(up?'rgba(22,199,132,.22)':'rgba(234,57,67,.22)');
+  g.addColorStop(0,fillTop); g.addColorStop(1,'rgba(0,0,0,0)');
   x.lineTo(X(vals.length-1),H); x.lineTo(X(0),H); x.closePath(); x.fillStyle=g; x.fill();
 }
 function drawSparks(root){
   (root||document).querySelectorAll('canvas.rs').forEach(cv=>{
-    const a=ST.spark[cv.dataset.s]; if(a) drawSpark(cv,a);
+    const a=ST.spark[cv.dataset.s]; if(a) drawSpark(cv,a,cv.dataset.col||null);
   });
 }
 function heatColor(p,cap){
@@ -117,7 +119,7 @@ function shot(el,name){
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
   vn30:new Set(), pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 async function loadAll(){
-  const j=u=>fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
   const [u,eod,pk,mk]=await Promise.all([
     j('universe.json'), j('data/eod/latest.json'),
     j('data/screen.json'), j('data/market.json')]);
@@ -357,11 +359,16 @@ function showMod(id){
 
 /* ============================================================ 1. RADAR PHIÊN */
 function row(c,metric,mcls){
+  // KỊCH TRẦN: cả dòng TÍM (mã, đồ thị, giá, chỉ số) · KỊCH SÀN: cả dòng XANH LƠ — như bảng điện
+  const ce=c.ceil>0&&c.close>0&&c.close>=c.ceil, fo=c.floor>0&&c.close>0&&c.close<=c.floor;
+  const pcls=ce?'ce':fo?'fo':cls(c.chg);
+  const sym=ce?'<b class="ce">'+c.sym+'</b>':fo?'<b class="fo">'+c.sym+'</b>':'<b>'+c.sym+'</b>';
+  const spark=ce?'#c026d3':fo?'#0ea5e9':'';
   return '<div class="rw" data-sym="'+c.sym+'" title="Bấm mở trang '+c.sym+'">'+logoHTML(c)+
-    '<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name))+'</i></span>'+
-    '<canvas class="rs" data-s="'+c.sym+'"></canvas>'+
-    '<span class="pz '+cls(c.chg)+'">'+num(c.close)+'</span>'+
-    '<span class="mt '+(mcls||'')+'">'+metric+'</span></div>';
+    '<span class="idn">'+sym+'<i>'+esc(shortName(c.name))+'</i></span>'+
+    '<canvas class="rs" data-s="'+c.sym+'"'+(spark?' data-col="'+spark+'"':'')+'></canvas>'+
+    '<span class="pz '+pcls+'">'+num(c.close)+'</span>'+
+    '<span class="mt '+(ce?'ce':fo?'fo':(mcls||''))+'">'+metric+'</span></div>';
 }
 function radarCard(ic,title,rows,id){
   return '<div class="panel" id="rc-'+id+'"><div class="ph"><span>'+ic+'</span>'+title+
