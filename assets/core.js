@@ -68,7 +68,7 @@ CP.loadBase=async function(){
   for(const s of u.stocks){
     CP.coins.set(s.sym,{
       sym:s.sym, ex:s.ex, name:s.name, shares:s.shares||null, mcap:s.mcap||null,
-      sector:s.sector||'Khác', img:s.img||null, pe:s.pe??null, pb:s.pb??null,
+      sector:s.sector||'Khác', parent:s.parent||null, img:s.img||null, pe:s.pe??null, pb:s.pb??null,
       anc:s.anc||null, pct:s.pct||null, divY:s.divY??null,
       // chỉ số cơ bản rút từ kho tài chính (refresh_daily bước 6b) — tự cập nhật mỗi phiên
       eps:s.eps??null, cash:s.cash??null, cashQ:s.cashQ||null, np:s.np??null, npY:s.npY||null,

@@ -28,6 +28,9 @@ FIELDS = [
     'r5','r20','r60','r120','r250','rs',
     'nn20','streak','cross','ath','nsess',
     'fs','fg1','fg2','fg3','fg4','fg5',   # điểm cơ bản tổng + 5 thành phần
+    # CHỈ THÊM VÀO CUỐI (client đọc theo f.indexOf nên nối đuôi là an toàn):
+    'ma150','m200s',                      # MA150 + độ dốc MA200 21 phiên (%) — Trend Template
+    'nn60','nnr20','nnr60',               # NN ròng 60 phiên (đồng) + chuẩn hoá theo GTGD (%)
 ]
 
 
@@ -102,7 +105,7 @@ def analyse(d, acc):
     fb, fs = d.get('fb') or [], d.get('fs') or []
 
     S = {}
-    for w in (20, 50, 200):
+    for w in (20, 50, 150, 200):
         S['ma%d' % w] = roll_mean(c, w) if n >= w else [None] * n
     S['v20'] = roll_mean(v, 20) if n >= 20 else [None] * n
     S['rsi'] = rsi_series(c)
@@ -145,6 +148,18 @@ def analyse(d, acc):
     nn20 = 0.0
     for j in range(max(0, n - 30), n):
         if j < len(fb) and j < len(fs): nn20 += ((fb[j] or 0) - (fs[j] or 0)) * (c[j] or 0)
+    # NN 60 phiên + chuẩn hoá theo tổng GTGD cùng cửa sổ -> so được mã lớn với mã nhỏ
+    nn60 = 0.0
+    for j in range(max(0, n - 60), n):
+        if j < len(fb) and j < len(fs): nn60 += ((fb[j] or 0) - (fs[j] or 0)) * (c[j] or 0)
+    val30 = sum((c[j] or 0) * (v[j] or 0) for j in range(max(0, n - 30), n))
+    val60 = sum((c[j] or 0) * (v[j] or 0) for j in range(max(0, n - 60), n))
+    nnr20 = nn20 / val30 * 100 if val30 > 0 else None
+    nnr60 = nn60 / val60 * 100 if val60 > 0 else None
+    # độ dốc MA200: đang đi lên hay đi xuống trong ~1 tháng (điều kiện Trend Template)
+    m200s = None
+    if S['ma200'][i] and i >= 21 and S['ma200'][i - 21]:
+        m200s = (S['ma200'][i] / S['ma200'][i - 21] - 1) * 100
     streak = 0
     for j in range(n - 1, 0, -1):
         s = 1 if c[j] > c[j - 1] else (-1 if c[j] < c[j - 1] else 0)
@@ -174,6 +189,8 @@ def analyse(d, acc):
         'rs': None, 'nn20': nn20, 'streak': streak, 'cross': cross,
         'ath': 1 if c[i] >= max(c) * 0.999 else 0, 'nsess': n,
         'fs': None, 'fg1': None, 'fg2': None, 'fg3': None, 'fg4': None, 'fg5': None,
+        'ma150': S['ma150'][i], 'm200s': m200s,
+        'nn60': nn60, 'nnr20': nnr20, 'nnr60': nnr60,
     }
     # chuỗi lợi nhuận ngày — để dựng chỉ số thị trường (thành phần quán tính của mood)
     rets = [(t[j], c[j] / c[j - 1] - 1) for j in range(max(1, n - 520), n) if c[j - 1]]
@@ -228,6 +245,215 @@ def fundamental(sym, is_bank):
     tot_max = sum(m for m, x in zip(maxes, parts) if x is not None)
     return dict(fs=(sum(got) / tot_max * 100 if tot_max else None),
                 fg1=g1, fg2=g2, fg3=g3, fg4=g4, fg5=g5)
+
+
+# ------------------------------------------------ BỘ LỌC: dẫn xuất cơ bản (fund.json)
+# Toàn bộ tính từ kho data/fin đã có (BCTC 8 năm + 8 quý) — 0 request mạng.
+# Client (assets/screener.js) dùng các trường này dựng 9 preset triết lý + cờ đỏ.
+FUND_FIELDS = [
+    'fin','cyc',                                  # 1=tài chính (NH/CK/BH); 1=ngành chu kỳ
+    'roe','roeMin5','roa','eqA',                  # sinh lời: TTM %, ROE năm thấp nhất 5 năm, ROA TTM, VCSH/TS
+    'de','cr','ltdNwc',                           # nợ vay/VCSH · thanh toán hiện hành · nợ DH/vốn lưu động ròng
+    'cfoT','cfoNp3','cfoNegQ',                    # CFO TTM (tỷ) · CFO/LNST 3 năm · số quý CFO<0 trong 8
+    'npQ','revQ','npCagr3','npCagr5','revCagr3','npChg1',  # tăng trưởng %
+    'yrsProfit','qLoss8',                         # chuỗi năm có lãi · số quý lỗ trong 8
+    'divYears','divCash',                         # chuỗi năm trả cổ tức tiền · đ/cp năm hoàn thành gần nhất
+    'eps3','nm','nmAvg5',                         # EPS bq 3 năm (đ) · biên ròng TTM · biên ròng bq 5 năm
+    'ptx','evDebt','evCash','roc',                # LNTT TTM (tỷ) · nợ vay (tỷ) · tiền (tỷ) · ROC %
+    'accr','recRev','invRev','shDil','aGrow',     # cờ đỏ: dồn tích·phải thu·tồn kho·pha loãng·TS phình
+    'fsc','fmx',                                  # điểm Piotroski đạt / tối đa khả dụng
+]
+_CYC_RE = ('kim loại','khai khoáng','hóa chất','dầu','khí đốt','vận chuyển','vận tải',
+           'chứng khoán','vật liệu xây dựng','cao su','nông','thủy sản','phân bón')
+
+def _lab_qy(lb):        # 'Q2/26' -> (2, 2026); '2025' -> (None, 2025)
+    lb = str(lb)
+    if lb.startswith('Q'):
+        try: q, y = lb[1:].split('/'); return int(q), 2000 + int(y)
+        except Exception: return None, None
+    try: return None, int(lb)
+    except Exception: return None, None
+
+def build_fund(meta):
+    stats = {'files': 0, 'roe': 0, 'fsc': 0, 'div': 0}
+    out = {}
+    for sym, m in meta.items():
+        p = os.path.join(FIN, sym + '.json')
+        if not os.path.exists(p): continue
+        try: d = json.load(open(p, encoding='utf-8'))
+        except Exception: continue
+        stats['files'] += 1
+        F = dict.fromkeys(FUND_FIELDS)
+        sec = ((m.get('sector') or '') + ' ' + (m.get('parent') or '')).lower()
+        F['fin'] = 1 if ('ngân hàng' in sec or 'chứng khoán' in sec or 'bảo hiểm' in sec
+                         or m.get('parent') == 'Tài chính') else 0
+        F['cyc'] = 1 if any(k in sec for k in _CYC_RE) else 0
+        shares = m.get('shares') or 0
+
+        Q = d.get('Q') or []; Y = d.get('Y') or []
+        bsQ = d.get('bsQ') or {}; bsY = d.get('bsY') or {}
+        cfQ = d.get('cfQ') or {}; cfY = d.get('cfY') or {}
+        rq = {r['k']: r['v'] for r in (bsQ.get('rows') or [])}
+        ry = {r['k']: r['v'] for r in (bsY.get('rows') or [])}
+        cq = {r['k']: r['v'] for r in (cfQ.get('rows') or [])}
+        cy = {r['k']: r['v'] for r in (cfY.get('rows') or [])}
+        g  = lambda rows, k, i=-1: (rows.get(k) or [None])[i] if rows.get(k) and len(rows[k]) >= abs(i) else None
+        # tổng 4 quý (TTM); đòi đủ 4 giá trị để không cộng thiếu kỳ
+        def ttm(key, rows=Q, off=0):
+            src = rows[-4 + off: len(rows) + off] if off else rows[-4:]
+            vs = [r.get(key) for r in src]
+            return sum(vs) if len(vs) == 4 and all(x is not None for x in vs) else None
+        npT, revT, ptxT = ttm('np'), ttm('rev'), ttm('pretax')
+        npT0, revT0 = ttm('np', Q, -4), ttm('rev', Q, -4)     # TTM kỳ trước (dịch 4 quý)
+
+        # --- cân đối quý gần nhất + cùng kỳ năm trước
+        a1, a0 = g(rq, 'bsa53', -1), g(rq, 'bsa53', -5)
+        eq1, eq0 = g(rq, 'bsa78', -1), g(rq, 'bsa78', -5)
+        F['evDebt'] = round((g(rq, 'bsa56', -1) or 0) + (g(rq, 'bsa71', -1) or 0), 1) or None
+        F['evCash'] = g(rq, 'bsa2', -1)
+        if eq1 and eq1 > 0:
+            F['de'] = round(((g(rq, 'bsa56', -1) or 0) + (g(rq, 'bsa71', -1) or 0)) / eq1, 2)
+        b1, b5 = g(rq, 'bsa1', -1), g(rq, 'bsa55', -1)
+        if b1 is not None and b5 and b5 > 0: F['cr'] = round(b1 / b5, 2)
+        if b1 is not None and b5 is not None:
+            nwc = b1 - b5
+            ltd = g(rq, 'bsa71', -1) or 0
+            F['ltdNwc'] = round(ltd / nwc, 2) if nwc > 0 else (99 if ltd > 0 else 0)
+        if a1 and a1 > 0:
+            if eq1 is not None: F['eqA'] = round(eq1 / a1 * 100, 1)
+            if npT is not None: F['roa'] = round(npT / a1 * 100, 1)
+        avq = ((eq1 or 0) + (eq0 or 0)) / 2 if (eq1 and eq0) else eq1
+        if npT is not None and avq and avq > 0: F['roe'] = round(npT / avq * 100, 1)
+        ava = ((a1 or 0) + (a0 or 0)) / 2 if (a1 and a0) else a1
+        # --- dòng tiền: cfa18 thường / cfb64 ngân hàng (trực tiếp, trước thuế — chỉ so nội bộ)
+        ck = 'cfa18' if cq.get('cfa18') else ('cfb64' if cq.get('cfb64') else None)
+        cky = 'cfa18' if cy.get('cfa18') else ('cfb64' if cy.get('cfb64') else None)
+        cfoT = None
+        if ck and len(cq[ck]) >= 4:
+            vs = [x for x in cq[ck][-4:] if x is not None]
+            if len(vs) == 4: cfoT = sum(vs)
+        if cfoT is None and cky and cy[cky] and cy[cky][-1] is not None:
+            cfoT = cy[cky][-1]                    # lưới an toàn: CFO năm gần nhất
+        if cfoT is not None: F['cfoT'] = round(cfoT, 1)
+        if ck and len(cq[ck]) >= 8:
+            F['cfoNegQ'] = sum(1 for x in cq[ck][-8:] if x is not None and x < 0)
+        if cky and cy[cky] and len(cy[cky]) >= 3 and Y:
+            cf3 = [x for x in cy[cky][-3:] if x is not None]
+            np3 = [r.get('np') for r in Y[-3:] if r.get('np') is not None]
+            if len(cf3) == 3 and len(np3) == 3 and sum(np3) > 0:
+                F['cfoNp3'] = round(sum(cf3) / sum(np3), 2)
+        # dồn tích Sloan (TTM)
+        if npT is not None and cfoT is not None and ava and ava > 0 and ck == 'cfa18':
+            F['accr'] = round((npT - cfoT) / ava * 100, 1)
+
+        # --- tăng trưởng
+        if Q:
+            q1, y1 = _lab_qy(Q[-1].get('label'))
+            if q1:
+                prev = next((r for r in Q if _lab_qy(r.get('label')) == (q1, y1 - 1)), None)
+                if prev:
+                    if prev.get('np') and prev['np'] > 0 and Q[-1].get('np') is not None:
+                        F['npQ'] = round((Q[-1]['np'] / prev['np'] - 1) * 100, 1)
+                    if prev.get('rev') and prev['rev'] > 0 and Q[-1].get('rev') is not None:
+                        F['revQ'] = round((Q[-1]['rev'] / prev['rev'] - 1) * 100, 1)
+        def cagr(key, yrs):
+            if len(Y) < yrs + 1: return None
+            a, b = Y[-1 - yrs].get(key), Y[-1].get(key)
+            if a and b and a > 0 and b > 0:
+                return round(((b / a) ** (1 / yrs) - 1) * 100, 1)
+            return None
+        F['npCagr3'] = cagr('np', 3); F['npCagr5'] = cagr('np', 5); F['revCagr3'] = cagr('rev', 3)
+        if len(Y) >= 2 and Y[-2].get('np') and Y[-2]['np'] > 0 and Y[-1].get('np') is not None:
+            F['npChg1'] = round((Y[-1]['np'] / Y[-2]['np'] - 1) * 100, 1)
+        yp = 0
+        for r in reversed(Y):
+            if r.get('np') is not None and r['np'] > 0: yp += 1
+            else: break
+        F['yrsProfit'] = yp
+        F['qLoss8'] = sum(1 for r in Q[-8:] if r.get('np') is not None and r['np'] < 0) if Q else None
+
+        # --- ROE năm thấp nhất 5 năm (xuyên chu kỳ — chuẩn Buffett)
+        if ry.get('bsa78') and bsY.get('labels') and Y:
+            eqy = dict(zip(bsY['labels'], ry['bsa78']))
+            roes = []
+            for r in Y[-5:]:
+                e = eqy.get(str(r.get('label')))
+                if e and e > 0 and r.get('np') is not None:
+                    roes.append(r['np'] / e * 100)
+            if len(roes) >= 4: F['roeMin5'] = round(min(roes), 1)
+            if len(roes) >= 4: stats['roe'] += 1
+
+        # --- cổ tức: năm hoàn thành gần nhất = năm BCTC năm cuối
+        divs = d.get('div') or []
+        y0 = None
+        if Y: _, y0 = _lab_qy(Y[-1].get('label'))
+        if divs and y0:
+            by = {int(x['year']): x for x in divs if x.get('year')}
+            F['divCash'] = int(round((by.get(y0) or {}).get('cash') or 0)) or None
+            dy = 0; yy = y0
+            while by.get(yy) and (by[yy].get('cash') or 0) > 0: dy += 1; yy -= 1
+            F['divYears'] = dy
+            if dy: stats['div'] += 1
+            # pha loãng từ cổ tức CP + thưởng 3 năm gần nhất (%/năm, gần đúng)
+            mul = 1.0
+            for yy2 in range(y0 - 2, y0 + 1):
+                x = by.get(yy2)
+                if x: mul *= (1 + ((x.get('div') or 0) + (x.get('bonus') or 0)) / 100)
+            if mul > 1: F['shDil'] = round((mul ** (1 / 3) - 1) * 100, 1)
+
+        # --- định giá nền
+        if len(Y) >= 3 and shares > 0:
+            np3v = [r.get('np') for r in Y[-3:] if r.get('np') is not None]
+            if len(np3v) == 3 and sum(np3v) > 0:
+                F['eps3'] = int(round(sum(np3v) / 3 * 1e9 / shares))
+        if npT is not None and revT and revT > 0: F['nm'] = round(npT / revT * 100, 1)
+        nms = [r.get('nm') for r in Y[-5:] if r.get('nm') is not None]
+        if len(nms) >= 3: F['nmAvg5'] = round(sum(nms) / len(nms), 1)
+        if ptxT is not None: F['ptx'] = round(ptxT, 1)
+        # ROC kiểu Greenblatt (proxy LNTT): vốn lưu động ròng dương + tài sản cố định
+        if not F['fin'] and ptxT is not None and b1 is not None and b5 is not None:
+            denom = max(b1 - b5, 0) + (g(rq, 'bsa29', -1) or 0)
+            if denom > 0: F['roc'] = round(ptxT / denom * 100, 1)
+
+        # --- cờ đỏ phụ: phải thu / tồn kho phình vs doanh thu; tổng TS phình
+        r1, r0 = g(rq, 'bsa8', -1), g(rq, 'bsa8', -5)
+        if r1 and r0 and r0 > 0 and revT and revT0 and revT0 > 0:
+            F['recRev'] = round((r1 / r0 - 1) * 100 - (revT / revT0 - 1) * 100, 1)
+        i1, i0 = g(rq, 'bsa15', -1), g(rq, 'bsa15', -5)
+        if i1 and i0 and i0 > 0 and revT and revT0 and revT0 > 0:
+            F['invRev'] = round((i1 / i0 - 1) * 100 - (revT / revT0 - 1) * 100, 1)
+        ay1, ay0 = g(ry, 'bsa53', -1), g(ry, 'bsa53', -2)
+        if ay1 and ay0 and ay0 > 0: F['aGrow'] = round((ay1 / ay0 - 1) * 100, 1)
+
+        # --- Piotroski F (bản VN 8 tín hiệu — bỏ F7 phát hành CP vì nguồn không tách được;
+        #     ngân hàng thiếu current ratio + biên gộp -> chấm trên 6)
+        if len(Y) >= 2 and ry.get('bsa53') and len(ry['bsa53']) >= 2:
+            npy1, npy0 = Y[-1].get('np'), Y[-2].get('np')
+            ra1, ra0 = ry['bsa53'][-1], ry['bsa53'][-2]
+            cf1 = cy[cky][-1] if (cky and cy.get(cky)) else None
+            if npy1 is not None and ra1 and ra1 > 0:
+                fsc = 0; fmx = 0
+                roa1 = npy1 / ra1
+                roa0 = (npy0 / ra0) if (npy0 is not None and ra0 and ra0 > 0) else None
+                fmx += 1; fsc += 1 if roa1 > 0 else 0                                  # F1
+                if cf1 is not None: fmx += 1; fsc += 1 if cf1 > 0 else 0               # F2
+                if roa0 is not None: fmx += 1; fsc += 1 if roa1 > roa0 else 0          # F3
+                if cf1 is not None: fmx += 1; fsc += 1 if cf1 > npy1 else 0            # F4
+                l1 = (g(ry, 'bsa71', -1) or 0) / ra1 if ra1 else None                  # F5
+                l0 = (g(ry, 'bsa71', -2) or 0) / ra0 if (ra0 and ra0 > 0) else None
+                if l0 is not None: fmx += 1; fsc += 1 if l1 < l0 else 0
+                cr1y = (g(ry, 'bsa1', -1) or 0) / (g(ry, 'bsa55', -1) or 0) if g(ry, 'bsa55', -1) else None
+                cr0y = (g(ry, 'bsa1', -2) or 0) / (g(ry, 'bsa55', -2) or 0) if g(ry, 'bsa55', -2) else None
+                if cr1y and cr0y: fmx += 1; fsc += 1 if cr1y > cr0y else 0             # F6
+                gm1, gm0 = Y[-1].get('gm'), Y[-2].get('gm')
+                if gm1 is not None and gm0 is not None: fmx += 1; fsc += 1 if gm1 > gm0 else 0  # F8
+                rv1, rv0 = Y[-1].get('rev'), Y[-2].get('rev')
+                at1 = rv1 / ra1 if (rv1 and ra1) else None                             # F9
+                at0 = rv0 / ra0 if (rv0 and ra0 and ra0 > 0) else None
+                if at1 and at0: fmx += 1; fsc += 1 if at1 > at0 else 0
+                if fmx >= 5: F['fsc'] = fsc; F['fmx'] = fmx; stats['fsc'] += 1
+        out[sym] = [F[k] for k in FUND_FIELDS]
+    return out, stats
 
 
 # ---------------------------------------------------------------------- chính
@@ -303,8 +529,8 @@ def main():
         if fd: res[s].update(fd)
 
     # ---- ghi demo-screen.json
-    intish = {'c','ma20','ma50','ma200','avgv20','avgval20','hi52','lo52',
-              'nn20','streak','cross','rs','ath','nsess','fs','fg1','fg2','fg3','fg4','fg5'}
+    intish = {'c','ma20','ma50','ma200','ma150','avgv20','avgval20','hi52','lo52',
+              'nn20','nn60','streak','cross','rs','ath','nsess','fs','fg1','fg2','fg3','fg4','fg5'}
     def rd(x, k):
         if x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))): return None
         return round(x, 0 if k in intish else 2)
@@ -315,6 +541,14 @@ def main():
                 d={s: [rd(r[k], k) for k in FIELDS] for s, r in res.items()})
     json.dump(out1, open(os.path.join(OUT, 'screen.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, separators=(',', ':'))
+
+    # ---- fund.json: dẫn xuất cơ bản cho BỘ LỌC (đọc lại kho fin, 0 request mạng)
+    print('Dẫn xuất chỉ số cơ bản cho bộ lọc…')
+    fund, fstats = build_fund(meta)
+    json.dump(dict(date=date, f=FUND_FIELDS, d=fund),
+              open(os.path.join(OUT, 'fund.json'), 'w', encoding='utf-8'),
+              ensure_ascii=False, separators=(',', ':'))
+    print(f"   fund: {len(fund)} mã (ROE 5 năm {fstats['roe']} · F-score {fstats['fsc']} · cổ tức {fstats['div']})")
 
     # ---- demo-market.json: NHỊP THỊ TRƯỜNG 250 phiên + ĐƯỜNG ĐUA vốn hoá
     keep = 520
@@ -378,7 +612,7 @@ def main():
 
     kb = lambda p: os.path.getsize(os.path.join(OUT, p)) / 1024
     print(f'✓ screen: {len(res)} mã · {time.time()-t0:.1f}s')
-    for p in ('screen.json', 'market.json'):
+    for p in ('screen.json', 'market.json', 'fund.json'):
         print(f'   data/{p}: {kb(p):.0f} KB')
     if B['mood']:
         print(f"   · Nhịp thị trường hiện tại: {B['mood'][-1]:.0f}/100")

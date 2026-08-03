@@ -117,11 +117,56 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   td.nn.pos{color:var(--green)} td.nn.neg{color:var(--red)}
   td.nn .dash{color:var(--muted);font-weight:400;opacity:.5}
   td.fund.neg{color:var(--red)}
+  /* KHỐI SỐ bề rộng CỐ ĐỊNH rồi CANH GIỮA ô: chữ số vẫn căn phải bên trong nên các
+     dòng thẳng cột nhau, mà cả khối lại nằm giữa -> tiêu đề đứng ngay trên đầu dãy số,
+     hết cảnh tiêu đề dài thò hẳn sang trái so với con số (GTGD trước lệch tới 62px). */
+  thead th.m,tbody td.m{text-align:center}
+  .m .n{display:inline-block;text-align:right}
+  thead th.m .n{text-align:center;font-weight:700}
   /* ô ĐƠN VỊ rộng cố định, căn trái -> chữ số của cả cột dừng ở cùng một mốc */
   i.u{display:inline-block;width:24px;text-align:left;padding-left:5px;font-style:normal;
     font-weight:400;font-size:11.5px;color:var(--muted)}
   thead th i.u{font-size:12px}
   td .dash{color:var(--muted);font-weight:400;opacity:.5}
+
+  /* ---- BỘ LỌC: van an toàn + chips + preset triết lý ---- */
+  #scrBtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  #scrPanel{display:none;padding:10px 16px 12px;border-bottom:1px solid var(--line);background:var(--hdr2)}
+  #scrPanel.on{display:block}
+  .scrRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:7px 0}
+  .scrLb{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);
+    width:92px;flex-shrink:0}
+  .scrRow select{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:7px;
+    padding:5px 8px;font-size:12.5px;outline:none}
+  .scrRow label.ck{display:inline-flex;gap:5px;align-items:center;font-size:12.5px;color:var(--txt);
+    cursor:pointer;user-select:none}
+  .chipbar{display:flex;gap:5px;flex-wrap:wrap}
+  .chipbar button{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:14px;
+    padding:4.5px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .chipbar button:hover{color:var(--txt)}
+  .chipbar button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .prewrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:7px;margin-top:4px}
+  .pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 11px;
+    cursor:pointer;display:flex;gap:8px;align-items:center}
+  .pre:hover{border-color:var(--accent)}
+  .pre.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
+  .pre .ic{font-size:18px;flex-shrink:0}
+  .pre .nm{font-size:12.8px;font-weight:800;line-height:1.25}
+  .pre .ct{margin-left:auto;flex-shrink:0;font-size:11.5px;font-weight:800;color:var(--muted);
+    background:var(--panel2);border-radius:9px;padding:2px 8px}
+  .pre.on .ct{background:var(--accent);color:#fff}
+  #scrDesc{font-size:12px;color:var(--muted);line-height:1.55;margin-top:7px;min-height:16px}
+  #scrClear{background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--muted);
+    padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  #scrClear:hover{color:var(--txt)}
+  /* cờ đỏ trong bảng */
+  .redflag{display:inline-block;margin-left:5px;font-size:12px;cursor:help}
+  @media(max-width:760px){
+    #scrPanel{padding:8px 10px}
+    .scrLb{width:100%;margin-bottom:-3px}
+    .prewrap{grid-template-columns:1fr 1fr}
+    .pre .nm{font-size:12px}
+  }
 
   /* phân trang */
   #pager{display:flex;gap:6px;align-items:center;justify-content:center;padding:14px;flex-wrap:wrap}
@@ -166,7 +211,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260805i"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260806a"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -193,10 +238,32 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <select id="sector"><option value="all">Tất cả ngành</option></select>
   <span id="cnt"></span>
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
+  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: van an toàn + lọc nhanh + 9 bộ lọc triết lý đầu tư">⚡ Lọc</button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
 <div id="stats"></div>
+
+<div id="scrPanel">
+  <div class="scrRow">
+    <span class="scrLb">Van an toàn</span>
+    <select id="scrGtgd" title="Thanh khoản bình quân 20 phiên — lớp lọc số 1: chặn mã không giao dịch được">
+      <option value="0">GTGD: tắt</option><option value="1e9">GTGD ≥ 1 tỷ/phiên</option>
+      <option value="5e9" selected>GTGD ≥ 5 tỷ/phiên</option><option value="15e9">GTGD ≥ 15 tỷ/phiên</option>
+    </select>
+    <select id="scrMcap" title="Vốn hoá tối thiểu — 2.000/5.000 tỷ là 2 mốc trong quy tắc VN Diamond của HOSE">
+      <option value="0">Vốn hoá: tắt</option><option value="5e11">Vốn hoá ≥ 500 tỷ</option>
+      <option value="2e12" selected>Vốn hoá ≥ 2.000 tỷ</option><option value="5e12">Vốn hoá ≥ 5.000 tỷ</option>
+    </select>
+    <label class="ck" title="Loại penny dưới mệnh giá"><input type="checkbox" id="scrP10" checked/>Giá ≥ 10.000đ</label>
+    <label class="ck" title="Ẩn mã đang dính cờ đỏ chất lượng lợi nhuận (dồn tích cao, CFO âm kéo dài, phải thu phình, pha loãng mạnh)"><input type="checkbox" id="scrRed"/>⚠ Ẩn mã có cờ đỏ</label>
+    <button id="scrClear">✕ Xoá hết lọc</button>
+  </div>
+  <div class="scrRow"><span class="scrLb">Lọc nhanh</span><div class="chipbar" id="scrChips"></div></div>
+  <div class="scrRow" style="align-items:flex-start"><span class="scrLb">Triết lý</span>
+    <div style="flex:1;min-width:0"><div class="prewrap" id="scrPre"></div><div id="scrDesc"></div></div>
+  </div>
+</div>
 
 <div id="wrap">
   <table>
@@ -206,13 +273,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <th>⭐</th>
         <th class="l" data-k="sym">Cổ phiếu</th>
         <th data-k="price">Giá (đ)</th>
-        <th data-k="mcap">Vốn hoá<i class="u"></i></th>
+        <th class="m" data-k="mcap"><span class="n">Vốn hoá</span><i class="u"></i></th>
         <th data-k="chg1d">1D %</th>
-        <th data-k="gtgd">GTGD hôm nay<i class="u"></i></th>
-        <th data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất">Tiền mặt<i class="u"></i></th>
-        <th data-k="np" id="thNp" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất">LNST<i class="u"></i></th>
-        <th data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng">NN mua<i class="u"></i></th>
-        <th data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng">NN bán<i class="u"></i></th>
+        <th class="m" data-k="gtgd" title="Giá trị giao dịch hôm nay"><span class="n">GTGD</span><i class="u"></i></th>
+        <th class="m" data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất"><span class="n">Tiền mặt</span><i class="u"></i></th>
+        <th class="m" data-k="np" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất"><span class="n" id="thNp">LNST</span><i class="u"></i></th>
+        <th class="m" data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng"><span class="n">NN mua</span><i class="u"></i></th>
+        <th class="m" data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng"><span class="n">NN bán</span><i class="u"></i></th>
         <th data-k="pe" title="P/E tính sống theo giá hiện tại = giá / EPS">P/E</th>
         <th data-k="eps" title="EPS 4 quý gần nhất — đồng/cổ phiếu">EPS</th>
       </tr>
@@ -227,11 +294,28 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260805i"></script>
+<script src="assets/core.js?v=20260806a"></script>
+<script src="assets/screener.js?v=20260806a"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[], bd:null };
+/* trạng thái BỘ LỌC (assets/screener.js): van an toàn + chips + preset + ẩn cờ đỏ */
+const SCR={ on:false, gtgd:5e9, mcap:2e12, p10:true, red:false, chips:new Set(), preset:null };
+function scrVan(c){                       // van an toàn — lớp chạy TRƯỚC mọi tiêu chí
+  const t=CPScreen.T[c.sym]||{};
+  if(SCR.gtgd&&(t.avgval20||0)<SCR.gtgd) return false;
+  if(SCR.mcap&&(c.mcapLive||c.mcap||0)<SCR.mcap) return false;
+  if(SCR.p10&&(c.price||0)<10000) return false;
+  return true;
+}
+function scrPass(c){
+  if(!scrVan(c)) return false;
+  for(const id of SCR.chips) if(!CPScreen.chip(id,c)) return false;
+  if(SCR.preset&&!CPScreen.pass(SCR.preset,c)) return false;
+  if(SCR.red&&CPScreen.flags(c).length) return false;
+  return true;
+}
 // bd = lọc theo độ rộng thị trường: 'up'|'flat'|'down'|'ceil'|'floor' (bấm chip màu ở hàng thống kê)
 
 /* KHỐI NGOẠI quy ra TIỀN (đồng): MUA và BÁN trong ngày tính riêng, không bù trừ. */
@@ -247,18 +331,44 @@ const DASH='<span class="dash">—</span>';
    (số dài ngắn khác nhau, để dính liền đơn vị thì cột chữ số sẽ so le). */
 const U='<i class="u"></i>';                 // ô đơn vị rỗng: giữ chỗ cho "—", "0", tiêu đề
 function money(v,zeroDash){
-  if(v==null) return DASH+U;
-  if(!v) return (zeroDash?DASH:'<span class="dash">0</span>')+U;
+  const N=x=>`<span class="n">${x}</span>`;
+  if(v==null) return N(DASH)+U;
+  if(!v) return N(zeroDash?DASH:'<span class="dash">0</span>')+U;
   const t=CP.fmtVnd(v);
-  if(t==='—') return DASH+U;
+  if(t==='—') return N(DASH)+U;
   const m=/^(-?[\d.,]+)\s*(.*)$/.exec(t);
-  return m?`${m[1]}<i class="u">${m[2]}</i>`:t+U;
+  return m?N(m[1])+`<i class="u">${m[2]}</i>`:N(t)+U;
 }
 /* P/E SỐNG = giá hiện tại / EPS -> nhảy theo giá suốt phiên. Thiếu EPS thì dùng P/E kho.
    P/E ÂM (đang lỗ) hoặc quá dị (>1000, EPS gần 0) là vô nghĩa -> trả null: hiện "—",
    sort luôn nằm cuối — bấm "P/E rẻ nhất" không bị mã lỗ chen lên đầu. */
 const peLive=c=>{ const p=(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:null);
   return p!=null&&p>0&&p<1000?p:null; };
+
+/* BỀ RỘNG KHỐI SỐ TỰ CO THEO TỪNG CỘT: đo con số dài nhất đang hiển thị (và cả chữ
+   tiêu đề) rồi khoá đúng bấy nhiêu. Chữ số các dòng vẫn căn phải nên thẳng cột, mà khối
+   không còn thừa chỗ trống -> tiêu đề nằm sát ngay trên dãy số.
+   Chạy lại sau mỗi lần dựng bảng (đổi trang / lọc / sắp xếp). */
+const MCOLS=[4,6,7,8,9,10];
+function fitNumCols(){
+  const rows=[...document.querySelectorAll('#tb tr')];
+  if(!rows.length) return;
+  // đo BỀ RỘNG THẬT của chữ đã render (Range), không đoán bằng canvas: canvas không áp
+  // tabular-nums và trả sai cỡ/độ đậm -> từng đo hụt cột Vốn hoá 72px thành 47px.
+  const rg=document.createRange();
+  const wOf=el=>{ rg.selectNodeContents(el); return rg.getBoundingClientRect().width; };
+  const css=MCOLS.map(i=>{
+    // CHỈ đo theo CON SỐ, KHÔNG tính chữ tiêu đề: tiêu đề dài hơn thì cứ để nó tràn
+    // đều 2 bên khối (vì cả hai đều canh giữa) -> tâm tiêu đề trùng tâm dãy số.
+    let w=0;
+    for(const tr of rows){ const n=tr.cells[i]&&tr.cells[i].querySelector('.n');
+      if(n){ const t=wOf(n); if(t>w) w=t; } }
+    return `#wrap table tr>*:nth-child(${i+1}) .n{min-width:${Math.ceil(w)+2}px}`;
+  }).join('');
+  let st=$('numw');
+  if(!st){ st=document.createElement('style'); st.id='numw'; document.head.appendChild(st); }
+  if(st.textContent!==css) st.textContent=css;
+}
 
 /* giá trị sort/hiển thị cho từng mã */
 function val(c,k){
@@ -300,7 +410,13 @@ function filterRows(){
       }
     });
   }
+  if(SCR.on&&CPScreen.loaded) list=list.filter(scrPass);   // BỘ LỌC (van + chips + preset + cờ đỏ)
   const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
+  /* preset Greenblatt: khi chưa đổi cột sắp xếp thì hiện ĐÚNG THỨ HẠNG của công thức */
+  if(SCR.on&&SCR.preset==='mf'&&k==='mcap'&&CPScreen.mfRank){
+    list.sort((a,b)=>(CPScreen.mfRank[a.sym]||99)-(CPScreen.mfRank[b.sym]||99));
+    ST.rows=list; return;
+  }
   /* Mã THIẾU DỮ LIỆU luôn nằm CUỐI dù sắp xếp tăng hay giảm — bấm P/E mà một loạt
      dấu "—" nhảy lên đầu bảng thì coi như cột đó vô dụng. */
   list.sort((a,b)=>{ const va=val(a,k), vb=val(b,k);
@@ -309,6 +425,12 @@ function filterRows(){
     if(na||nb) return na&&nb?0:(na?1:-1);
     return dir*(va-vb); });
   ST.rows=list;
+}
+/* ⚠ cờ đỏ chất lượng lợi nhuận cạnh mã — chỉ hiện khi đã nạp dữ liệu bộ lọc */
+function redFlag(c){
+  if(!CPScreen.loaded) return '';
+  const fl=CPScreen.flags(c);
+  return fl.length?`<span class="redflag" title="CỜ ĐỎ chất lượng lợi nhuận:&#10;· ${fl.join('&#10;· ')}">⚠️</span>`:'';
 }
 function badge(v,extra){
   if(v==null||v===-1e9) return '<span class="badge" style="color:var(--muted)">—</span>';
@@ -330,6 +452,7 @@ function render(){
     const msg=ST.q?`Không tìm thấy mã nào khớp “${CP.esc(ST.q)}” — thử gõ mã (VD FPT) hoặc một phần tên công ty.`
       :ST.scope==='watch'?'Chưa có mã nào trong danh sách theo dõi. Bấm dấu ☆ ở đầu mỗi dòng để lưu mã bạn quan tâm.'
       :ST.bd?'Không có mã nào thuộc nhóm này trong phiên hôm nay.'
+      :SCR.on?'Không mã nào đạt bộ tiêu chí này — lọc siêu việt vốn rất khắt khe. Thử nới van an toàn, bỏ bớt chip, hoặc đổi bộ lọc.'
       :'Không có dữ liệu phù hợp bộ lọc hiện tại.';
     $('tb').innerHTML=`<tr><td colspan="13" style="text-align:center;padding:34px 16px;color:var(--muted);font-size:13.5px">${msg}</td></tr>`;
     renderPager(1); return;
@@ -344,15 +467,15 @@ function render(){
     return `<tr data-sym="${c.sym}">
       <td class="rank">${start+i+1}</td>
       <td class="star ${W.has(c.sym)?'on':''}" data-star="${c.sym}">${W.has(c.sym)?'★':'☆'}</td>
-      <td class="l" title="${CP.esc(c.name)}"><div class="co">${logo}<div><span class="sym">${c.sym}</span><span class="ex">${c.ex}</span></div></div></td>
+      <td class="l" title="${CP.esc(c.name)}"><div class="co">${logo}<div><span class="sym">${c.sym}</span><span class="ex">${c.ex}</span>${redFlag(c)}</div></div></td>
       <td class="price" data-price style="color:${CP.col1d(c)}">${CP.fmtD(c.price)}</td>
-      <td>${money(c.mcapLive||c.mcap,true)}</td>
+      <td class="m">${money(c.mcapLive||c.mcap,true)}</td>
       <td>${badge(c.chg1d, ceilHit?'ceil':floorHit?'floor':null)}</td>
-      <td>${money(c.gtgd,true)}</td>
-      <td class="fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${money(c.cash==null?null:c.cash*1e9)}</td>
-      <td class="fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
-      <td class="nn pos" data-nnb>${money(nnBuy(c),true)}</td>
-      <td class="nn neg" data-nns>${money(nnSell(c),true)}</td>
+      <td class="m">${money(c.gtgd,true)}</td>
+      <td class="m fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${money(c.cash==null?null:c.cash*1e9)}</td>
+      <td class="m fund ${c.np<0?'neg':''}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
+      <td class="m nn pos" data-nnb>${money(nnBuy(c),true)}</td>
+      <td class="m nn neg" data-nns>${money(nnSell(c),true)}</td>
       <td data-pe>${pe!=null?pe.toFixed(1):'—'}</td>
       <td>${c.eps!=null?CP.fmtD(c.eps):'—'}</td>
     </tr>`;
@@ -367,6 +490,7 @@ function render(){
     if(ST.scope==='watch') render();
   });
   document.querySelectorAll('thead th').forEach(th=>th.classList.toggle('sorted',th.dataset.k===ST.sort));
+  fitNumCols();
   renderPager(pages);
 }
 function renderPager(pages){
@@ -455,6 +579,64 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
   ST.page=1; render();
 });
 
+/* ---------- PANEL BỘ LỌC ---------- */
+function scrCount(fn){ let n=0; for(const c of CP.coins.values()) if(scrVan(c)&&fn(c)) n++; return n; }
+function scrPaintCounts(){
+  document.querySelectorAll('#scrPre .pre').forEach(el=>{
+    el.querySelector('.ct').textContent=scrCount(c=>CPScreen.pass(el.dataset.id,c));
+  });
+}
+function scrBuild(){
+  $('scrChips').innerHTML=CPScreen.chips.map(x=>
+    `<button data-id="${x.id}" title="${x.g}">${x.nm}</button>`).join('');
+  $('scrPre').innerHTML=CPScreen.presets.map(p=>
+    `<div class="pre" data-id="${p.id}"><span class="ic">${p.ic}</span><span class="nm">${p.nm}</span><span class="ct">…</span></div>`).join('');
+  document.querySelectorAll('#scrChips button').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.id;
+    SCR.chips.has(id)?SCR.chips.delete(id):SCR.chips.add(id);
+    b.classList.toggle('on',SCR.chips.has(id));
+    ST.page=1; render();
+  });
+  document.querySelectorAll('#scrPre .pre').forEach(el=>el.onclick=()=>{
+    const id=el.dataset.id;
+    SCR.preset=SCR.preset===id?null:id;
+    document.querySelectorAll('#scrPre .pre').forEach(x=>x.classList.toggle('on',x.dataset.id===SCR.preset));
+    const p=CPScreen.presets.find(x=>x.id===SCR.preset);
+    $('scrDesc').textContent=p?p.ds:'';
+    ST.page=1; render();
+  });
+  scrPaintCounts();
+}
+$('scrBtn').onclick=async()=>{
+  const open=!$('scrPanel').classList.contains('on');
+  $('scrPanel').classList.toggle('on',open);
+  $('scrBtn').classList.toggle('on',open);
+  if(open){
+    if(!CPScreen.loaded){
+      $('scrDesc').textContent='Đang nạp dữ liệu bộ lọc…';
+      if(!await CPScreen.load()){ $('scrDesc').textContent='Không nạp được dữ liệu bộ lọc — thử tải lại trang.'; return; }
+      $('scrDesc').textContent='';
+      CPScreen.rebuild(scrVan);   // xếp hạng Piotroski/Greenblatt TRONG vũ trụ đã qua van
+      scrBuild();
+    }
+    SCR.on=true;
+  } else SCR.on=false;          // đóng panel = tắt lọc, bảng về nguyên trạng
+  ST.page=1; render();
+};
+const scrVanChanged=()=>{ CPScreen.rebuild(scrVan); ST.page=1; render(); scrPaintCounts(); };
+$('scrGtgd').onchange=e=>{ SCR.gtgd=+e.target.value; scrVanChanged(); };
+$('scrMcap').onchange=e=>{ SCR.mcap=+e.target.value; scrVanChanged(); };
+$('scrP10').onchange=e=>{ SCR.p10=e.target.checked; scrVanChanged(); };
+$('scrRed').onchange=e=>{ SCR.red=e.target.checked; ST.page=1; render(); };
+$('scrClear').onclick=()=>{
+  SCR.chips.clear(); SCR.preset=null; SCR.red=false;
+  SCR.gtgd=5e9; SCR.mcap=2e12; SCR.p10=true;
+  $('scrGtgd').value='5e9'; $('scrMcap').value='2e12'; $('scrP10').checked=true; $('scrRed').checked=false;
+  document.querySelectorAll('#scrChips button,#scrPre .pre').forEach(x=>x.classList.remove('on'));
+  $('scrDesc').textContent='';
+  CPScreen.rebuild(scrVan); ST.page=1; render(); scrPaintCounts();
+};
+
 /* giao diện sáng/tối — lưu lựa chọn, dùng chung cho các trang CPVN */
 const thmBtn=$('thm');
 function applyThmIcon(){ thmBtn.textContent=document.documentElement.dataset.theme==='light'?'☀️':'🌙'; }
@@ -475,7 +657,7 @@ applyThmIcon();
   // tiêu đề cột LNST ghi rõ NĂM (lấy năm phổ biến nhất trong kho) -> tự đổi khi có BCTC năm mới
   const yc={}; for(const c of CP.coins.values()) if(c.npY) yc[c.npY]=(yc[c.npY]||0)+1;
   const yTop=Object.keys(yc).sort((a,b)=>yc[b]-yc[a])[0];
-  if(yTop) $('thNp').innerHTML='LNST '+yTop+'<i class="u"></i>';
+  if(yTop) $('thNp').textContent='LNST '+yTop;
   snapPrices(); render(); renderStats(); renderKho();
   CP.loadIndices().then(renderStats);
   // mỗi phút chỉ làm mới các mã của TRANG ĐANG XEM; 5 phút quét lại toàn bộ để xếp hạng đúng
