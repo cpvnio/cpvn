@@ -212,6 +212,9 @@ CP.loadIndices=async function(){
       const v=+x.cIndex||0, ref=+x.oIndex||0;
       return {name:nameOf[x.mc]||x.mc, value:v, chg:ref?(v-ref)/ref*100:0};
     }).filter(d=>d.value>0);
+    // đêm reset: mọi chỉ số +0.00% giả -> giữ % PHIÊN GẦN NHẤT từ kho
+    if(out.length&&!CP.sessionOpen()&&out.every(d=>Math.abs(d.chg||0)<0.005)
+       &&CP.indices&&CP.indices.length) return CP.indices;
     if(out.length){ CP.indices=out; return out; }
   }catch(e){}
   return CP.indices;   // kho: đã nạp từ latest.json
