@@ -192,8 +192,15 @@ const dayVN=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
 function applyLiveCache(){
   try{
     const j=JSON.parse(localStorage.getItem('cpvn_live')||'null');
-    if(!j||!j.d||j.sess!==dayVN()) return false;   // bản đệm phải CÙNG ngày phiên
+    if(!j||!j.d||!j.sess||j.sess>dayVN()) return false;
+    // đệm chỉ THẮNG khi mới hơn kho EOD (luật chung với core.js và bubbles.html).
+    // Bản cũ đòi đệm phải đúng ngày HÔM NAY: sau 15h15 kho đã chốt vẫn bị đệm giữa
+    // phiên đè lên, còn sáng hôm sau kho trễ một phiên thì lại vứt đệm sát hơn.
+    if(!(j.sess>(ST.date||''))) return false;
+    // ĐẾM TRƯỚC rồi mới ghi đè, kẻo đệm thiếu mã thì ST.map bị trộn nửa sống nửa kho
     let n=0,nnB=0,nnS=0;
+    for(const sym in j.d) if(ST.map.get(sym)&&j.d[sym]&&j.d[sym][0]>0) n++;
+    if(n<100) return false;
     for(const sym in j.d){
       const c=ST.map.get(sym); if(!c) continue;
       const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
@@ -205,9 +212,7 @@ function applyLiveCache(){
       if(ce>0) c.ceil=ce; if(fl>0) c.floor=fl;
       c.nnVal=((fb||0)-(fs||0))*last; nnB+=(fb||0)*last; nnS+=(fs||0)*last;
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
-      n++;
     }
-    if(n<100) return false;
     if(nnB||nnS){ ST.nnBuy=nnB; ST.nnSell=nnS; }
     if(j.idx&&j.idx.length) ST.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
     liveAt=j.at;
