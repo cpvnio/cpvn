@@ -94,6 +94,13 @@ giá sai hoặc giá nhảy — đừng đẩy.
 - **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **10 phần tử đúng
   thứ tự** `[price, ref, vol, gtgd, fbuy, fsell, high, low, ceil, flr]`. Ba nơi đọc/ghi:
   `core.js`, `bubbles.html`, `congcu.js`. Đổi thứ tự là hỏng giá cả 4 trang.
+- **Mã CHƯA KHỚP LỆNH phiên này mang cờ `nt`** — giá của nó là giá khớp cuối cùng của một
+  phiên CŨ (mã thanh khoản kém đứng im hàng tháng). Tuyệt đối không lấy giá cũ đó trừ tham
+  chiếu HÔM NAY ra phần trăm, không tô nhãn trần/sàn, không đếm vào độ rộng. Từng để lọt:
+  639/1522 mã lệch phiên → 88 mã hiện 1D% giả (NDC −18,65% dù khớp lệnh cuối 23/06), 19 mã
+  bị tô trần/sàn giả, hàng Độ rộng đếm 1.422 mã "có giao dịch" trong khi thật sự 883.
+  Cờ này do `refresh_daily.py` bước 5 sinh ra và được `core.js`, `bubbles.html`, `congcu.js`,
+  `index.html` cùng tôn trọng.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 
 ## Quy ước toàn site
