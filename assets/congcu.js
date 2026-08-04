@@ -345,7 +345,7 @@ function marketStats(){
     if(c.dhi!=null&&c.dhi>=-1&&(c.avgval20||0)>=5e8) nh++;
     if(!c.vol) continue;
     gtgd+=c.gtgd;
-    if(c.ceil&&c.close>=c.ceil) ce++; else if(c.floor&&c.close<=c.floor) fo++;
+    if(!c.nt&&c.ceil&&c.close>=c.ceil) ce++; else if(!c.nt&&c.floor&&c.close<=c.floor) fo++;
     if(c.chg>0.01) up++; else if(c.chg<-0.01) dn++; else fl++;
   }
   return {up,dn,fl,ce,fo,gtgd,ath,nh};
@@ -393,7 +393,7 @@ function showMod(id){
 /* ============================================================ 1. RADAR PHIÊN */
 function row(c,metric,mcls){
   // KỊCH TRẦN: cả dòng TÍM (mã, đồ thị, giá, chỉ số) · KỊCH SÀN: cả dòng XANH LƠ — như bảng điện
-  const ce=c.ceil>0&&c.close>0&&c.close>=c.ceil, fo=c.floor>0&&c.close>0&&c.close<=c.floor;
+  const ce=!c.nt&&c.ceil>0&&c.close>0&&c.close>=c.ceil, fo=!c.nt&&c.floor>0&&c.close>0&&c.close<=c.floor;
   const pcls=ce?'ce':fo?'fo':cls(c.chg);
   const sym=ce?'<b class="ce">'+c.sym+'</b>':fo?'<b class="fo">'+c.sym+'</b>':'<b>'+c.sym+'</b>';
   const spark=ce?'#c026d3':fo?'#0ea5e9':'';
@@ -441,7 +441,7 @@ function renderRadar(){
 
   /* trần — sàn gộp 1 thẻ: ưu tiên mã thanh khoản cao */
   function ceflRows(){
-    const ces=L.filter(c=>c.close>0&&c.ceil>0&&c.close>=c.ceil).sort((a,b)=>b.gtgd-a.gtgd);
+    const ces=L.filter(c=>!c.nt&&c.close>0&&c.ceil>0&&c.close>=c.ceil).sort((a,b)=>b.gtgd-a.gtgd);
     const fls=L.filter(c=>c.close>0&&c.floor>0&&c.close<=c.floor).sort((a,b)=>b.gtgd-a.gtgd);
     const a=ces.slice(0,3).map(c=>row(c,'TRẦN','ce'));
     return a.concat(fls.slice(0,6-a.length).map(c=>row(c,'SÀN','fo'))).slice(0,6);

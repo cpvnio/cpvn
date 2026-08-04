@@ -247,9 +247,20 @@ snap=[]
 for sym in syms:
     p,b=prices.get(sym),board.get(sym,{})
     if not p: continue
-    snap.append({"sym":sym,"close":p["close"],"o":p["o"],"h":p["h"],"l":p["l"],"vol":p["vol"],
-        "ref":b.get("ref"),"ceil":b.get("ceil"),"floor":b.get("floor"),"fBuy":b.get("fBuy"),
-        "fSell":b.get("fSell"),"gtgd":b.get("gtgd")})
+    # CHƯA KHỚP LỆNH PHIÊN NÀY: nến cuối của mã nằm ở ngày khác ngày phiên (mã thanh
+    # khoản kém có thể đứng im hàng tháng). Giá vẫn là giá khớp cuối cùng — đúng — NHƯNG
+    # tham chiếu/trần/sàn lại là của HÔM NAY. Ghép hai thứ khác phiên rồi để client tự
+    # tính (giá - tham chiếu)/tham chiếu là đẻ ra một biến động CHƯA TỪNG XẢY RA:
+    # đo trên latest.json phiên 04/08 — 639/1522 mã lệch phiên, 88 mã sinh 1D% giả
+    # (NDC -18,65% dù khớp lệnh lần cuối 23/06), 19 mã bị tô nhãn trần/sàn giả.
+    # Nên đánh dấu nt=1 để client hiện "—" thay vì bịa số, và khối lượng phiên này là 0.
+    nt = vn_day(p["ts"]) != sess_date
+    r={"sym":sym,"close":p["close"],"o":p["o"],"h":p["h"],"l":p["l"],
+       "vol":0 if nt else p["vol"],
+       "ref":b.get("ref"),"ceil":b.get("ceil"),"floor":b.get("floor"),"fBuy":b.get("fBuy"),
+       "fSell":b.get("fSell"),"gtgd":b.get("gtgd")}
+    if nt: r["nt"]=1
+    snap.append(r)
 # BẢNG GIÁ CÓ SỐNG KHÔNG? snap dựng từ KHO NẾN nên luôn đủ 100 mã kể cả khi bảng giá
 # rỗng — mà trần/sàn/tham chiếu/khối ngoại/GTGD thì lấy từ BẢNG GIÁ. Ngày lễ hoặc VPS
 # trả rỗng mà vẫn ghi thì latest.json của phiên trước bị thay bằng bản NN = null,

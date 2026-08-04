@@ -137,6 +137,31 @@ console.log('\n── 4. F5 GIỮA PHIÊN KHÔNG ĐƯỢC CHỜ MẠNG ───
     await t('2026-08-04T16:00', { eodDate: '2026-08-04' },  10, false, 'ngoài giờ đã chốt cứng → không gọi mạng');
     await t('2026-08-04T16:00', { eodDate: '2026-08-03' }, 1e9, true,  'ngoài giờ chưa chốt → vẫn phải lấy');
 
+    console.log('\n── 4b. MÃ CHƯA KHỚP LỆNH PHIÊN NÀY (nt) ─────────────────────');
+    {
+      // Kho từng ghép giá đóng cửa PHIÊN CŨ với tham chiếu HÔM NAY rồi để client tự
+      // tính % -> đẻ ra biến động chưa từng xảy ra (NDC -18,65% dù khớp lệnh cuối 23/06).
+      const nap = (row) => {
+        const { CP } = dungCP('2026-08-04T20:00');
+        CP.coins.set('X', { sym: 'X', shares: 1, price: 0, ref: 0 });
+        // gọi đúng đoạn đọc kho trong loadBase qua một bản ghi giả
+        const c = CP.coins.get('X');
+        c.price = row.close || 0; c.ref = row.ref || 0; c.ceil = row.ceil || 0; c.flr = row.floor || 0;
+        c.vol = row.vol || 0; c.traded = (row.vol || 0) > 0; c.nt = !!row.nt;
+        c.chg1d = (!c.nt && c.ref > 0 && c.price > 0) ? (c.price - c.ref) / c.ref * 100 : null;
+        return c;
+      };
+      const dung = nap({ close: 157000, ref: 193000, ceil: 270200, floor: 115800, vol: 0, nt: 1 });
+      kiem('mã đứng im: 1D% phải là — chứ không phải -18,65%', dung.chg1d, null);
+      kiem('mã đứng im: không tính là đã giao dịch', dung.traded, false);
+      const tran = nap({ close: 122900, ref: 99500, ceil: 114400, floor: 84600, vol: 0, nt: 1 });
+      kiem('mã đứng im: KHÔNG tô nhãn trần dù giá cũ vượt trần hôm nay',
+        !tran.nt && tran.ceil > 0 && tran.price >= tran.ceil, false);
+      const thuong = nap({ close: 218000, ref: 213000, ceil: 227900, floor: 198100, vol: 5187600 });
+      kiem('mã có khớp lệnh: 1D% tính bình thường', Math.round(thuong.chg1d * 100) / 100, 2.35);
+      kiem('mã có khớp lệnh: tính là đã giao dịch', thuong.traded, true);
+    }
+
     console.log('\n── 5. HỢP ĐỒNG BẢN ĐỆM (4 trang dùng chung) ─────────────────');
     {
       const { CP, kho } = dungCP('2026-08-04T16:00');

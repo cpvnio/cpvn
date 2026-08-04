@@ -85,7 +85,11 @@ CP.loadBase=async function(){
       c.price=r.close||0; c.ref=r.ref||0; c.ceil=r.ceil||0; c.flr=r.floor||0;
       c.vol=r.vol||0; c.gtgd=r.gtgd||0; c.high=r.h||0; c.low=r.l||0; c.o=r.o||0;
       c.fbuy=r.fBuy||0; c.fsell=r.fSell||0; c.traded=(r.vol||0)>0;
-      c.chg1d=c.ref>0&&c.price>0?(c.price-c.ref)/c.ref*100:null;
+      /* nt = CHƯA KHỚP LỆNH phiên này (giá là giá khớp cuối cùng của một phiên cũ).
+         KHÔNG được lấy giá cũ trừ tham chiếu hôm nay ra % — đó là biến động chưa từng
+         xảy ra. Cũng không được tô nhãn trần/sàn cho một mã đứng im. */
+      c.nt=!!r.nt;
+      c.chg1d=(!c.nt&&c.ref>0&&c.price>0)?(c.price-c.ref)/c.ref*100:null;
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
   }
@@ -204,7 +208,9 @@ async function doPoll(only){
       c.high=(parseFloat(t.highPrice)||0)*1000||c.high;
       c.low=(parseFloat(t.lowPrice)||0)*1000||c.low;
       c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
-      c.chg1d=c.ref>0&&c.price>0?(c.price-c.ref)/c.ref*100:c.chg1d;
+      // vừa có lệnh khớp -> mã hết "đứng im", % lại tính được bình thường
+      if(last>0) c.nt=false;
+      c.chg1d=(!c.nt&&c.ref>0&&c.price>0)?(c.price-c.ref)/c.ref*100:(c.nt?null:c.chg1d);
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     CP.lastPollAt=Date.now(); CP.liveOk=true;
