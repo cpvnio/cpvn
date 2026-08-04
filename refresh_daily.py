@@ -250,14 +250,22 @@ for sym in syms:
     snap.append({"sym":sym,"close":p["close"],"o":p["o"],"h":p["h"],"l":p["l"],"vol":p["vol"],
         "ref":b.get("ref"),"ceil":b.get("ceil"),"floor":b.get("floor"),"fBuy":b.get("fBuy"),
         "fSell":b.get("fSell"),"gtgd":b.get("gtgd")})
-if len(snap)>=100:                    # chống ghi đè kho bằng dữ liệu rỗng khi VPS sập
+# BẢNG GIÁ CÓ SỐNG KHÔNG? snap dựng từ KHO NẾN nên luôn đủ 100 mã kể cả khi bảng giá
+# rỗng — mà trần/sàn/tham chiếu/khối ngoại/GTGD thì lấy từ BẢNG GIÁ. Ngày lễ hoặc VPS
+# trả rỗng mà vẫn ghi thì latest.json của phiên trước bị thay bằng bản NN = null,
+# cột "NN mua/bán" trên web trắng trơn tới phiên sau. Cùng ngưỡng 10% với assets/core.js.
+board_live=sum(1 for s in snap if (s.get("fBuy") or s.get("fSell") or s.get("ref")))
+if len(snap)>=100 and board_live>=len(snap)*0.1:
     doc={"date":sess_date,"generated":vn_now().strftime("%Y-%m-%d %H:%M"),
          "count":len(snap),"indices":indices,"data":snap}
     jdump(doc,os.path.join(EOD_DIR,f"{sess_date}.json"))
     jdump(doc,os.path.join(EOD_DIR,"latest.json"))
     print(f"ĐÃ LƯU snapshot EOD phiên {sess_date} ({len(snap)} mã) + latest.json",flush=True)
-else:
+elif len(snap)<100:
     print(f"BỎ QUA snapshot: chỉ có {len(snap)} mã (VPS lỗi?) — giữ nguyên latest.json cũ",flush=True)
+else:
+    print(f"BỎ QUA snapshot: bảng giá đứng yên ({board_live}/{len(snap)} mã có số) "
+          f"— nghỉ lễ hoặc VPS rỗng, giữ nguyên latest.json cũ",flush=True)
 HL["snapshot"]=len(snap)
 # spark.json: 30 giá đóng cửa gần nhất mỗi mã — trang bảng giá vẽ sparkline bằng 1 file duy nhất
 if len(sparks)>=100:

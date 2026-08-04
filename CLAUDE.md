@@ -61,6 +61,17 @@ Trình tự mở trang: nạp kho → `applyLive()` (đệm đè nếu `sess > e
 | 15:00–15:05 đang chốt | 60s/lần — **cố ý chưa coi là xong** (ATC/thoả thuận) | chưa đóng dấu cứng |
 | sau 15:05 · tối · T7/CN | **0 lượt** khi đã chốt cứng | `final=true`, lấy thẳng ra dùng |
 
+### Kiểm thử — chạy TRƯỚC MỖI LẦN đẩy nếu có đụng vào giá
+
+```
+node tools/test_gia.js
+```
+
+38 phép kiểm nạp thẳng `assets/core.js` vào đồng hồ giả + localStorage giả: lịch phiên ở mọi
+mốc chuyển, luật chốt cứng, luật đệm thắng/thua kho, F5 giữa phiên không được chờ mạng, hợp
+đồng 10 phần tử của `cpvn_live`, chế độ `?offline`. Hỏng một phép là có người dùng sẽ thấy
+giá sai hoặc giá nhảy — đừng đẩy.
+
 ### Luật bất di bất dịch
 
 - **`CP.liveSess` chỉ được đóng dấu sau lượt quét ĐỦ** (`only` rỗng). Lượt nhỏ đóng dấu →
