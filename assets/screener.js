@@ -1,5 +1,5 @@
 /* ============================================================================
-   CPScreen — BỘ LỌC bảng giá CPVN: van an toàn + 15 chip lọc nhanh 1 chạm.
+   CPScreen — BỘ LỌC bảng giá CPVN: van an toàn + 19 chip lọc nhanh 1 chạm.
    Dữ liệu: data/screen.json (kỹ thuật) + data/fund.json (dẫn xuất từ kho BCTC,
    build_screen.py tự sinh mỗi phiên). Nạp LƯỜI khi người dùng mở panel lần đầu —
    không tốn tải trang cho người không dùng lọc.
@@ -47,6 +47,10 @@ CPScreen.chips=[
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
   {id:'nnd10', g:'Dòng tiền', nm:'NN mua hôm nay ≥ 10 tỷ'},
+  {id:'nn60',  g:'Dòng tiền', nm:'NN gom ròng 60 phiên'},
+  {id:'q2up',  g:'Sức khoẻ', nm:'2 quý liền lãi tăng ≥ 25%'},
+  {id:'lossY3',g:'Đáy & Phục hồi', nm:'Lỗ 3 năm nhưng thu hẹp'},
+  {id:'lossQ8',g:'Đáy & Phục hồi', nm:'Lỗ 8 quý nhưng thu hẹp'},
 ];
 CPScreen.chip=function(id,c){
   const t=CPScreen.T[c.sym]||{},f=CPScreen.F[c.sym]||{},p=c.price||0;
@@ -66,6 +70,16 @@ CPScreen.chip=function(id,c){
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;
     case 'nnd10': return (c.fbuy||0)*p>=1e10;
+    // gom BỀN: mua ròng suốt 60 phiên VÀ chiếm >=3% giá trị giao dịch — bỏ những mã
+    // chỉ dương nhờ đúng một phiên mua lớn rồi thôi
+    case 'nn60':  return (t.nn60||0)>0&&(t.nnr60||0)>=3;
+    // HAI quý LIÊN TIẾP lãi tăng >=25% so với CÙNG KỲ năm trước (mốc 25% của CAN SLIM).
+    // So cùng kỳ chứ không so quý liền trước — tránh nhiễu mùa vụ.
+    case 'q2up':  return (f.npQ??-9)>=25&&(f.npQ2??-9)>=25;
+    // CÒN LỖ nhưng đáy đã qua: 3 năm liền lỗ mà lỗ nhỏ dần từng năm
+    case 'lossY3':return f.lossY3===1;
+    // 8 quý liền lỗ, nhưng tổng lỗ 4 quý gần đây NHỎ HƠN 4 quý trước đó
+    case 'lossQ8':return f.lossQ8===1;
     default: return true;
   }
 };

@@ -56,6 +56,21 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .tabs a.on{color:#fff;background:var(--accent)}
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .spacer{flex:1}
+  /* Ô TÌM MÃ ngay trên header — trước đây muốn xem mã khác phải quay ra trang chủ */
+  .qbox{position:relative;flex:0 0 230px}
+  input.qin{width:100%;background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:8px 12px;font-size:14px;outline:none}
+  input.qin:focus{border-color:var(--accent)}
+  #qlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;display:none;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    box-shadow:0 10px 28px rgba(0,0,0,.28);max-height:320px;overflow-y:auto}
+  #qlist.on{display:block}
+  #qlist .it{display:flex;align-items:center;gap:9px;padding:7px 11px;cursor:pointer}
+  #qlist .it.sel,#qlist .it:hover{background:var(--panel2)}
+  #qlist .it img{width:22px;height:22px;border-radius:5px;background:#fff;object-fit:contain;flex-shrink:0}
+  #qlist .it b{font-size:13.5px;min-width:46px}
+  #qlist .it span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media(max-width:760px){ .qbox{order:3;flex:1 1 100%} }
   #page{max-width:1320px;margin:0 auto;padding:16px}
 
   /* ---- khối đầu: 2 bảng thông số bên TRÁI, biểu đồ bên PHẢI ----
@@ -318,7 +333,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260808d"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260808i"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -333,6 +348,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <a href="congcu.html?m=race">Đường đua</a>
   </nav>
   <div class="spacer"></div>
+  <div class="qbox"><input class="qin" id="q" placeholder="Tìm mã khác…" autocomplete="off"
+    spellcheck="false" /><div id="qlist"></div></div>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
@@ -462,8 +479,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260808d"></script>
-<script src="assets/chart.js?v=20260808d"></script>
+<script src="assets/core.js?v=20260808i"></script>
+<script src="assets/chart.js?v=20260808i"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -712,6 +729,48 @@ const DKEY=()=>'cpvn_draw_'+SYM;
 function loadDraws(){ try{ return JSON.parse(localStorage.getItem(DKEY())||'[]'); }catch(e){ return []; } }
 function saveDraws(a){ try{ localStorage.setItem(DKEY(),JSON.stringify(a||[])); }catch(e){} }
 /* Cột nút vẽ được dựng trong ensureChart()/ptOpen() bằng CPChart.paletteHTML. */
+
+/* ── TÌM MÃ ngay trên trang: gõ -> gợi ý -> Enter/bấm là sang mã đó ───────────
+   Trước đây muốn xem mã khác phải bấm ra trang chủ rồi tìm lại. Danh mục đã nằm
+   sẵn trong CP.coins nên tìm hoàn toàn tại chỗ, không gọi mạng. */
+(function(){
+  const inp=$('q'), box=$('qlist'); let kq=[], sel=-1;
+  // BỎ DẤU khi so khớp: người Việt gõ tìm gần như luôn không dấu ("ngan hang", "vin group")
+  const bd=t=>(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/đ/g,'d').replace(/Đ/g,'D').toUpperCase();
+  const tenBd=new Map();   // nhớ tên đã bỏ dấu, khỏi tính lại mỗi lần gõ
+  const dong=(s,i)=>`<div class="it${i===sel?' sel':''}" data-sym="${s.sym}">`+
+    CP.logoHTML(s.sym,s.img)+`<b>${s.sym}</b><span>${CP.esc(s.name||'')}</span></div>`;
+  function tim(t){
+    t=bd(t.trim()); if(!t) return [];
+    const dau=[], sau=[];
+    for(const c of CP.coins.values()){
+      if(c.sym===SYM) continue;                       // đang xem rồi thì khỏi gợi ý lại
+      if(c.sym.startsWith(t)){ dau.push(c); continue; }   // khớp ĐẦU mã lên trước
+      if(!tenBd.has(c.sym)) tenBd.set(c.sym,bd(c.name));
+      if(c.sym.includes(t)||tenBd.get(c.sym).includes(t)) sau.push(c);
+    }
+    dau.sort((a,b)=>(b.mcapLive||b.mcap||0)-(a.mcapLive||a.mcap||0));
+    sau.sort((a,b)=>(b.mcapLive||b.mcap||0)-(a.mcapLive||a.mcap||0));
+    return dau.concat(sau).slice(0,8);                // mã lớn lên trước trong TỪNG nhóm
+  }
+  function ve(){
+    box.innerHTML=kq.map(dong).join('');
+    box.classList.toggle('on',kq.length>0);
+    box.querySelectorAll('.it').forEach(e=>e.onmousedown=ev=>{ ev.preventDefault(); di(e.dataset.sym); });
+  }
+  const di=s=>{ if(s) location.href='/cophieu/'+s; };
+  inp.oninput=()=>{ kq=tim(inp.value); sel=kq.length?0:-1; ve(); };
+  inp.onkeydown=e=>{
+    if(e.key==='Escape'){ inp.value=''; kq=[]; ve(); inp.blur(); return; }
+    if(!kq.length) return;
+    if(e.key==='ArrowDown'){ e.preventDefault(); sel=(sel+1)%kq.length; ve(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); sel=(sel-1+kq.length)%kq.length; ve(); }
+    else if(e.key==='Enter'){ e.preventDefault(); di((kq[sel]||kq[0]).sym); }
+  };
+  inp.onblur=()=>setTimeout(()=>{ box.classList.remove('on'); },120);
+  inp.onfocus=()=>{ if(kq.length) box.classList.add('on'); };
+})();
 
 $('ptktBtn').onclick=ptOpen;
 $('ptClose').onclick=ptClose;

@@ -262,6 +262,8 @@ FUND_FIELDS = [
     'ptx','evDebt','evCash','roc',                # LNTT TTM (tỷ) · nợ vay (tỷ) · tiền (tỷ) · ROC %
     'accr','recRev','invRev','shDil','aGrow',     # cờ đỏ: dồn tích·phải thu·tồn kho·pha loãng·TS phình
     'fsc','fmx',                                  # điểm Piotroski đạt / tối đa khả dụng
+    # CHỈ ĐƯỢC NỐI THÊM VÀO CUỐI — client đọc theo THỨ TỰ của pk.f, chèn giữa là lệch hết
+    'lossY3','lossQ8','npQ2',                     # 3 năm lỗ nhưng thu hẹp · 8 quý lỗ nhưng thu hẹp · %LNST quý liền trước so cùng kỳ
 ]
 _CYC_RE = ('kim loại','khai khoáng','hóa chất','dầu','khí đốt','vận chuyển','vận tải',
            'chứng khoán','vật liệu xây dựng','cao su','nông','thủy sản','phân bón')
@@ -371,6 +373,26 @@ def build_fund(meta):
             else: break
         F['yrsProfit'] = yp
         F['qLoss8'] = sum(1 for r in Q[-8:] if r.get('np') is not None and r['np'] < 0) if Q else None
+
+        # LỖ NHƯNG ĐANG THU HẸP — doanh nghiệp còn lỗ mà đáy đã qua. Người dò đáy tìm
+        # đúng nhóm này, nhưng không lọc được bằng bất kỳ trường nào đang có.
+        y3 = [r.get('np') for r in Y[-3:]] if len(Y) >= 3 else []
+        if len(y3) == 3 and all(v is not None and v < 0 for v in y3):
+            F['lossY3'] = 1 if y3[2] > y3[1] > y3[0] else 0   # lỗ nhỏ dần từng năm
+        q8 = [r.get('np') for r in Q[-8:]] if len(Q) >= 8 else []
+        if len(q8) == 8 and all(v is not None and v < 0 for v in q8):
+            # 8 quý noise nhiều -> so TỔNG 4 quý gần đây với 4 quý trước đó, không đòi
+            # từng quý phải nhỏ dần (đòi thế thì gần như không mã nào đạt)
+            F['lossQ8'] = 1 if sum(q8[4:]) > sum(q8[:4]) else 0
+
+        # %LNST của quý LIỀN TRƯỚC so với CÙNG KỲ năm trước — ghép với npQ (quý mới nhất)
+        # thành điều kiện "2 quý liên tiếp tăng mạnh so với cùng kỳ"
+        if len(Q) >= 2:
+            q2, y2 = _lab_qy(Q[-2].get('label'))
+            if q2:
+                pv = next((r for r in Q if _lab_qy(r.get('label')) == (q2, y2 - 1)), None)
+                if pv and pv.get('np') and pv['np'] > 0 and Q[-2].get('np') is not None:
+                    F['npQ2'] = round((Q[-2]['np'] / pv['np'] - 1) * 100, 1)
 
         # --- ROE năm thấp nhất 5 năm (xuyên chu kỳ — chuẩn Buffett)
         if ry.get('bsa78') and bsY.get('labels') and Y:
