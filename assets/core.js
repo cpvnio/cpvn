@@ -124,11 +124,16 @@ CP.sessionOpen=function(){
 };
 /* NGÀY PHIÊN GẦN NHẤT ĐÃ ĐÓNG SỔ. Sau 15h05 ngày giao dịch thì chính là hôm nay,
    còn lại lùi về ngày giao dịch trước (bỏ thứ 7, chủ nhật).
-   Dùng để biết khi nào giá đã CHỐT CỨNG — không thể đổi nữa nên khỏi gọi mạng. */
+   Dùng để biết khi nào giá đã CHỐT CỨNG — không thể đổi nữa nên khỏi gọi mạng.
+
+   LỊCH KHÔNG BIẾT NGÀY LỄ. Tết, 30/4, 2/9... rơi vào T2-T6 thì lịch vẫn tưởng là
+   phiên. Nên khi ĐÃ CÓ BẰNG CHỨNG THẬT rằng hôm nay không có mã nào khớp lệnh
+   (CP.nghiHomNay, đặt lúc quét thấy bảng trống trong giờ giao dịch) thì lùi tiếp. */
 CP.lastSessionDate=function(){
   const vn=vnNow(), m=vn.getHours()*60+vn.getMinutes();
   const d=new Date(vn);
-  if(!(d.getDay()>=1&&d.getDay()<=5&&m>=905)) d.setDate(d.getDate()-1);
+  const nghi=CP.nghiHomNay===ymd(vn);
+  if(nghi||!(d.getDay()>=1&&d.getDay()<=5&&m>=905)) d.setDate(d.getDate()-1);
   while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()-1);
   return ymd(d);
 };
@@ -165,6 +170,13 @@ async function doPoll(only){
        Lượt nhỏ (1 mã) không xét được tỷ lệ nên thêm điều kiện: KHÔNG mã nào có giao dịch. */
     const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
     const boardEmpty=active===0||(rows.length>50&&active<rows.length*0.1);
+    /* BẰNG CHỨNG NGÀY NGHỈ: quét ĐỦ cả thị trường ngay giữa giờ giao dịch mà không
+       mã nào khớp lệnh -> hôm nay thị trường không mở (lễ, tết). Ghi lại để đừng
+       coi hôm nay là một phiên rồi chờ mãi số chốt không bao giờ có. */
+    if(boardEmpty&&!(only&&only.length)&&rows.length>50&&CP.sessionOpen()){
+      const vn=vnNow();
+      if(vn.getHours()*60+vn.getMinutes()>=600) CP.nghiHomNay=ymd(vn);   // sau 10:00 mới dám kết luận
+    }
     for(const t of rows){
       const c=CP.coins.get(t.sym); if(!c) continue;
       c.ref=(+t.r||0)*1000; c.ceil=(+t.c||0)*1000; c.flr=(+t.f||0)*1000;
@@ -189,17 +201,31 @@ async function doPoll(only){
          kê thiếu mã và bộ đệm không bao giờ được ghi. */
       if(!boardEmpty) CP.liveSess=CP.sessionOpen()?CP.dayVN():CP.lastSessionDate();
     }
-    /* CHỈ ghi đệm sau lượt quét TOÀN BỘ. Lượt nhỏ chỉ làm mới vài mã, nếu ghi đệm
-       thì phần còn lại là số kho cũ lại bị đóng dấu "giá sống hôm nay" -> sai. */
-    if(!boardEmpty&&!(only&&only.length)) CP.saveLive();
+    /* Ghi đệm sau MỌI lượt (kể cả lượt nhỏ 1 phút): F5 giữa phiên là có ngay đúng
+       những con số vừa nhìn thấy, không phải số cũ 5 phút trước.
+       An toàn vì cái quyết định "đã chốt cứng" là CP.liveSess, mà liveSess chỉ được
+       đóng dấu sau lượt quét ĐỦ (xem ngay trên) — lượt nhỏ không tự phong mình. */
+    if(!boardEmpty) CP.saveLive();
     return true;
   }catch(e){ CP.liveOk=false; return false; }
 }
+/* Đệm còn TƯƠI trong vòng `giay` giây gần đây hay không. */
+CP.buffFresh=function(giay){
+  return !!CP.liveAt && (Date.now()-CP.liveAt)/1000 <= (giay||120);
+};
 /* Hâm nóng giá cho MẤY MÃ SẮP VẼ, chờ tối đa ms rồi vẽ dù xong hay chưa.
-   Nếu quá hạn, lượt gọi vẫn chạy tiếp và startPolling nhận chung kết quả đó. */
+   Nếu quá hạn, lượt gọi vẫn chạy tiếp và startPolling nhận chung kết quả đó.
+
+   BỎ QUA khi không cần, để trang hiện ra TỨC THÌ:
+   · đã chốt cứng phiên gần nhất -> số không thể đổi
+   · đang trong phiên mà đệm mới ghi dưới 2 phút -> vẽ đúng những con số người dùng
+     vừa nhìn thấy trước khi F5. Chờ mạng rồi vẽ số mới toanh mới là cái gây cảm giác
+     "nhảy giá": màn hình vừa tải lại đã khác màn hình lúc nãy. Cứ vẽ số cũ trước,
+     nhịp poll ngay sau đó sẽ đổi tại chỗ đúng như khi ngồi xem mà không F5. */
 CP.warmPrices=function(syms,ms){
   if(CP.OFFLINE||!syms||!syms.length) return Promise.resolve(false);
-  if(CP.pricesFinal()) return Promise.resolve(false);   // đã chốt cứng -> khỏi chờ mạng
+  if(CP.pricesFinal()) return Promise.resolve(false);
+  if(CP.sessionOpen()&&CP.buffFresh(120)) return Promise.resolve(false);
   return Promise.race([CP.pollBoard(syms), new Promise(r=>setTimeout(()=>r(false),ms||800))]);
 };
 /* BỘ NHỚ GIÁ SỐNG DÙNG CHUNG (sessionStorage 'cpvn_live'): trang nào poll xong cũng ghi,
@@ -214,10 +240,13 @@ CP.saveLive=function(){
       if(!(c.price>0)) continue;
       d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr];
     }
-    /* sess = phiên của số này; final = đã ngoài giờ nên số này KHÔNG ĐỔI NỮA.
-       Ghi final=true tức là lưu CỨNG: lần sau mở trang cứ lấy ra dùng, khỏi gọi mạng. */
+    /* sess = phiên của số này · at = lúc ghi (để biết đệm còn tươi không)
+       final = ĐÃ CHỐT CỨNG: ngoài giờ VÀ đã có lượt quét đủ sau khi đóng cửa.
+       Không lấy !sessionOpen() làm final: lượt lúc 15:02 cũng ngoài giờ nhưng bảng
+       chưa chốt xong, đóng dấu cứng lúc đó là đóng nhầm số dở dang. */
     localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
-      sess:CP.liveSess||CP.dayVN(), final:!CP.sessionOpen(),
+      sess:CP.liveSess||CP.dayVN(),
+      final:!CP.sessionOpen()&&CP.liveSess===CP.lastSessionDate(),
       idx:(CP.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
   }catch(e){}
 };
@@ -250,6 +279,7 @@ CP.applyLive=function(){
     }
     if(j.idx&&j.idx.length) CP.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
     CP.lastPollAt=j.at;                                // nhịp hiển thị nối tiếp từ bản đệm
+    CP.liveAt=j.at;                                    // đệm ghi lúc nào -> biết còn tươi không
     if(j.final) CP.liveSess=j.sess;                    // bản CHỐT CỨNG -> khỏi gọi mạng nữa
     return true;
   }catch(e){ return false; }
