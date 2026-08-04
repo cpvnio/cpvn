@@ -11,6 +11,50 @@
    ========================================================================== */
 'use strict';
 (function(g){
+/* ---- BỘ NÚT VẼ dùng chung cho cả biểu đồ nhỏ lẫn chế độ toàn màn hình ------
+   Xếp CỘT DỌC BÊN TRÁI biểu đồ đúng thói quen các trang phân tích kỹ thuật. */
+const SVG={
+  cur:'<path d="M3.4 2.6 L7 12 L8.6 8.6 L12 7 Z" fill="currentColor" stroke="none"/>',
+  tl :'<path d="M3 13 L13 3"/><circle cx="3" cy="13" r="1.7" fill="currentColor"/><circle cx="13" cy="3" r="1.7" fill="currentColor"/>',
+  ray:'<path d="M2.5 13.5 L14 2"/><circle cx="2.5" cy="13.5" r="1.7" fill="currentColor"/><path d="M10.5 2 H14 V5.5"/>',
+  hl :'<path d="M1.5 8 H14.5"/><circle cx="8" cy="8" r="1.7" fill="currentColor"/>',
+  vl :'<path d="M8 1.5 V14.5"/><circle cx="8" cy="8" r="1.7" fill="currentColor"/>',
+  pc :'<path d="M1.5 11 L11 1.5 M5 14.5 L14.5 5"/>',
+  rc :'<rect x="2.2" y="4" width="11.6" height="8"/>',
+  fib:'<path d="M2 3 H14 M2 6.4 H14 M2 9.6 H14 M2 13 H14"/>',
+  msr:'<path d="M1.6 9.5 L6.5 14.4 L14.4 6.5 L9.5 1.6 Z M5.2 5.9 L6.9 7.6 M7.6 3.5 L9.3 5.2 M2.8 8.3 L4.5 10"/>',
+  txt:'<path d="M3 3.5 H13 M8 3.5 V13 M5.8 13 H10.2"/>',
+  mag:'<path d="M4 2.5 V8 a4 4 0 0 0 8 0 V2.5 M4 6 H12"/><path d="M3 2.5 H5.2 M10.8 2.5 H13"/>',
+  del:'<path d="M3.4 3.4 L12.6 12.6 M12.6 3.4 L3.4 12.6"/>',
+  undo:'<path d="M3 8.2 A5 5 0 1 1 5.2 12.4"/><path d="M2.2 4.6 V8.6 H6.2"/>',
+  clr:'<path d="M2.6 4.3 H13.4 M6.4 4.3 V2.6 H9.6 V4.3 M4.2 4.3 L4.9 13.6 H11.1 L11.8 4.3"/>'
+};
+const TIP={
+  cur:'Con trỏ — kéo để dời biểu đồ, cuộn để phóng to thu nhỏ',
+  tl :'Đường xu hướng — bấm rồi kéo, hoặc bấm 2 điểm',
+  ray:'Tia — như đường xu hướng nhưng kéo dài mãi về phía trước',
+  hl :'Đường ngang — mốc giá hỗ trợ / kháng cự',
+  vl :'Đường dọc — mốc thời gian',
+  pc :'Kênh song song — vẽ 1 đường rồi bấm điểm thứ 3 định độ rộng',
+  rc :'Vùng chữ nhật — bấm rồi kéo',
+  fib:'Fibonacci thoái lui — kéo từ đỉnh xuống đáy',
+  msr:'Thước đo — hiện chênh lệch giá, phần trăm và số phiên',
+  txt:'Ghi chú — bấm 1 điểm rồi nhập chữ',
+  mag:'Hít nến — điểm vẽ tự bám giá mở/cao/thấp/đóng gần nhất',
+  del:'Xoá hình đang chọn (hoặc bấm phím Delete)',
+  undo:'Hoàn tác hình vừa vẽ',
+  clr:'Xoá hết hình vẽ'
+};
+const FULL=['cur','|','tl','ray','hl','vl','pc','rc','fib','msr','txt','|','mag','|','del','undo','clr'];
+const GON =['cur','|','tl','ray','hl','fib','rc','txt','|','mag','|','del','clr'];
+const DTOOL={cur:'',tl:'tl',ray:'ray',hl:'hl',vl:'vl',pc:'pc',rc:'rc',fib:'fib',msr:'msr',txt:'txt'};
+function paletteHTML(kind){
+  return (kind==='gon'?GON:FULL).map(k=>{
+    if(k==='|') return '<hr>';
+    const attr=(k in DTOOL)?` data-t="${DTOOL[k]}"${k==='cur'?' class="on"':''}`:` data-a="${k}"`;
+    return `<button${attr} title="${TIP[k]}"><svg viewBox="0 0 16 16">${SVG[k]}</svg></button>`;
+  }).join('');
+}
 const VNOFF=25200;                                  // VN = UTC+7, không có giờ mùa hè
 const vn=t=>new Date((t+VNOFF)*1000);               // dùng kèm getUTC* để ra đúng giờ VN
 const dayNum=t=>Math.floor((t+VNOFF)/86400);
@@ -84,6 +128,7 @@ let yPan=0, yZoom=1;
 /* HÌNH VẼ PTKT — neo theo DỮ LIỆU (thời gian + giá) nên kéo/phóng vẫn đứng yên */
 let draws=[], tool=null, pending=null, preview=null;
 let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đang kéo · hít nến · màu vẽ
+let dpen=null;                                     // mốc bấm xuống, để phân biệt bấm-nhả với bấm-kéo
   let drag=null,pinch=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
@@ -461,11 +506,14 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
     x.restore();
   }
   function paintDraws(x,y){
+    // cắt gọn trong vùng giá: hình vẽ không được tràn xuống dải khối lượng / RSI / MACD
+    x.save(); x.beginPath(); x.rect(0,geo.padTv,geo.plotW,geo.plotHv); x.clip();
     draws.forEach((d,i)=>paintOne(x,y,d,false,i===sel));
     if(pending){
       const pts=pending.p.concat(preview?[preview]:[]);
       if(pts.length) paintOne(x,y,{k:pending.k,p:pts,col:pending.col,txt:pending.txt},true);
     }
+    x.restore();
   }
   const NEED={hl:1,vl:1,txt:1,tl:2,ray:2,rc:2,fib:2,msr:2,pc:3};
 
@@ -534,20 +582,34 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
   self.getMagnet=()=>magnet;
   self.setColor=function(c){ dcol=c||null;
     if(sel>=0){ draws[sel].col=dcol; self.draw(); if(opt.onDraws) opt.onDraws(draws); } };
+  /* QUY TẮC VẼ theo đúng thói quen các trang phân tích kỹ thuật:
+       · bấm–kéo–thả ra một hình, hoặc bấm điểm đầu rồi bấm điểm cuối
+       · vẽ XONG MỘT hình là tự trả về con trỏ (không vẽ liên tiếp)
+       · Esc huỷ hình đang vẽ dở                                            */
+  function finishDraw(){
+    if(!pending) return;
+    if(pending.k==='txt'){
+      const s=prompt('Nội dung ghi chú:','');
+      if(s===null||!s.trim()){ cancelDraw(); return; }
+      pending.txt=s.trim();
+    }
+    draws.push(pending); pending=null; preview=null;
+    if(opt.onDraws) opt.onDraws(draws);
+    tool=null; cvs.style.cursor='';                 // trả về con trỏ
+    if(opt.onTool) opt.onTool(null);
+    self.draw();
+  }
+  function cancelDraw(){
+    pending=null; preview=null; tool=null; cvs.style.cursor='';
+    if(opt.onTool) opt.onTool(null);
+    self.draw();
+  }
   function addPoint(px,py){
+    py=Math.max(geo.padTv,Math.min(geo.padTv+geo.plotHv,py));   // giữ điểm vẽ trong vùng giá
     const p={t:tOfX(px), v:snapV(px,py)};
     if(!pending) pending={k:tool,p:[p],col:dcol||undefined};
     else pending.p.push(p);
-    if(pending.p.length>=(NEED[tool]||2)){
-      if(pending.k==='txt'){
-        const s=prompt('Nội dung ghi chú:','');
-        if(s===null||!s.trim()){ pending=null; preview=null; self.draw(); return; }
-        pending.txt=s.trim();
-      }
-      draws.push(pending); pending=null; preview=null;
-      if(opt.onDraws) opt.onDraws(draws);
-    }
-    self.draw();
+    if(pending.p.length>=(NEED[pending.k]||2)) finishDraw(); else self.draw();
   }
 
   /* ---- tương tác ---- */
@@ -572,7 +634,11 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
   },{passive:false});
   cvs.addEventListener('mousedown',e=>{
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
-    if(tool){ addPoint(px,py); return; }          // đang chọn công cụ vẽ -> đặt điểm
+    if(tool){                                     // đang chọn công cụ vẽ
+      addPoint(px,py);
+      if(pending) dpen={x:px,y:py,n:pending.p.length};   // ghi mốc để biết có KÉO hay không
+      return;
+    }
     if(px<=geo.plotW){                            // không có công cụ -> thử CHỌN hình vẽ
       const h=hitTest(px,py);
       if(h){ sel=h.i;
@@ -585,7 +651,13 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
     drag={x:e.clientX,y:e.clientY,i0,yPan,yZoom,axis:px>geo.plotW};
     cvs.style.cursor=drag.axis?'ns-resize':'grabbing';
   });
-  window.addEventListener('mouseup',()=>{
+  window.addEventListener('mouseup',e=>{
+    // nhả chuột sau khi KÉO -> chốt luôn điểm cuối (kiểu bấm–kéo–thả)
+    if(dpen&&pending&&pending.p.length===dpen.n){
+      const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+      if(Math.hypot(px-dpen.x,py-dpen.y)>5&&px<=geo.plotW) addPoint(px,py);
+    }
+    dpen=null;
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
     drag=null; cvs.style.cursor=tool?'crosshair':'';
   });
@@ -616,12 +688,16 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
     if(i!==hover||Math.abs(py-hoverY)>0.5){ hover=i; hoverY=py; self.draw(); }
   });
   cvs.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; hoverY=-1; self.draw(); } });
-  // phím Delete xoá hình đang chọn (bỏ qua khi đang gõ trong ô nhập)
+  /* Trang gọi khi bấm Esc: đang vẽ dở thì huỷ nét vẽ và trả TRUE, để Esc đó
+     không đóng luôn cửa sổ toàn màn hình. */
+  self.cancelTool=function(){ if(!pending&&!tool) return false; cancelDraw(); return true; };
+  // phím Delete xoá hình đang chọn
   window.addEventListener('keydown',e=>{
-    if(sel<0||!cvs.isConnected) return;
-    if(e.key!=='Delete'&&e.key!=='Backspace') return;
+    if(!cvs.isConnected) return;
     const a=document.activeElement;
     if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable)) return;
+    if(sel<0) return;
+    if(e.key!=='Delete'&&e.key!=='Backspace') return;
     e.preventDefault(); self.delSel();
   });
   cvs.addEventListener('dblclick',()=>{ self.resetView(); });
@@ -632,7 +708,7 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
     }else if(e.touches.length===1){
       const r=cvs.getBoundingClientRect();
       const p0=e.touches[0], px=p0.clientX-r.left, py=p0.clientY-r.top;
-      if(tool){ addPoint(px,py); return; }
+      if(tool){ addPoint(px,py); if(pending) dpen={x:px,y:py,n:pending.p.length}; return; }
       if(px<=geo.plotW){                       // chạm trúng hình vẽ -> chọn và kéo được bằng ngón
         const hit=hitTest(px,py);
         if(hit){ sel=hit.i;
@@ -647,6 +723,11 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
   },{passive:true});
   cvs.addEventListener('touchmove',e=>{
     const r=cvs.getBoundingClientRect();
+    if(tool&&pending&&e.touches.length===1){   // đang kéo ra hình -> xem trước
+      e.preventDefault();
+      const px=e.touches[0].clientX-r.left, py=e.touches[0].clientY-r.top;
+      preview={t:tOfX(px),v:snapV(px,py)}; self.draw(); return;
+    }
     if(dmove&&e.touches.length===1){          // kéo hình vẽ bằng ngón tay
       e.preventDefault();
       const px=e.touches[0].clientX-r.left, py=e.touches[0].clientY-r.top;
@@ -673,7 +754,14 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
       self.draw();
     }
   },{passive:false});
-  cvs.addEventListener('touchend',()=>{
+  cvs.addEventListener('touchend',e=>{
+    // nhấc ngón sau khi kéo -> chốt điểm cuối, giống bấm–kéo–thả bằng chuột
+    if(dpen&&pending&&pending.p.length===dpen.n){
+      const t=e.changedTouches&&e.changedTouches[0];
+      if(t){ const r=cvs.getBoundingClientRect(), px=t.clientX-r.left, py=t.clientY-r.top;
+        if(Math.hypot(px-dpen.x,py-dpen.y)>8&&px<=geo.plotW) addPoint(px,py); }
+    }
+    dpen=null;
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
     drag=null; pinch=null;
   });
@@ -683,7 +771,25 @@ let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đan
   return self;
 }
 
+/* Nối cột nút với một biểu đồ. Trả về hàm đánh dấu nút đang chọn, để biểu đồ
+   gọi lại mỗi khi vẽ xong và tự trả về con trỏ. */
+function bindPalette(host,chart){
+  const tbs=[...host.querySelectorAll('button[data-t]')];
+  const mark=t=>tbs.forEach(b=>b.classList.toggle('on',(b.dataset.t||'')===(t||'')));
+  tbs.forEach(b=>b.onclick=()=>{ chart.setTool(b.dataset.t||null); mark(b.dataset.t||''); });
+  host.querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;
+    if(a==='mag'){ const on=!chart.getMagnet(); chart.setMagnet(on); b.classList.toggle('on',on); }
+    else if(a==='del'){ if(!chart.delSel()) alert('Bấm vào một hình vẽ để chọn trước đã.'); }
+    else if(a==='undo') chart.undoDraw();
+    else if(a==='clr'){ if(chart.getDraws().length&&confirm('Xoá hết hình vẽ của mã này?')) chart.clearDraws(); }
+  });
+  return mark;
+}
+
 g.CPChart=Chart;
 g.CPChart.aggregate=aggregate;
 g.CPChart.fullLabel=fullLabel;
+g.CPChart.paletteHTML=paletteHTML;
+g.CPChart.bindPalette=bindPalette;
 })(window);

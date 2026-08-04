@@ -105,7 +105,21 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .chead .note{color:var(--muted);font-size:11.5px;margin-left:auto}
   /* canvas trải tuyệt đối trong khung -> cao đúng bằng phần còn lại của thẻ, không cần chiều cao cứng */
+  .cvrow{display:flex;gap:7px;flex:1;min-height:0}
   #cvWrap{position:relative;flex:1;min-height:392px}
+  /* CỘT CÔNG CỤ VẼ dọc bên trái biểu đồ */
+  .vtool{display:flex;flex-direction:column;gap:2px;padding:3px;flex:0 0 auto;
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    align-self:stretch;overflow-y:auto;overflow-x:hidden}
+  .vtool button{width:30px;height:29px;flex:0 0 auto;display:grid;place-items:center;
+    background:transparent;color:var(--muted);border:1px solid transparent;
+    border-radius:7px;cursor:pointer;padding:0}
+  .vtool button:hover{background:var(--panel);color:var(--txt)}
+  .vtool button.on{background:#1e6fe8;border-color:#1e6fe8;color:#fff}
+  .vtool button[data-a="clr"]:hover{color:#e5484d}
+  .vtool svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;
+    stroke-linecap:round;stroke-linejoin:round}
+  .vtool hr{border:0;border-top:1px solid var(--line);margin:3px 4px;width:calc(100% - 8px);flex:0 0 auto}
   /* PHẢI khai báo width/height 100%: canvas là phần tử thay thế, chỉ inset:0 thì nó
      lấy kích thước nội tại (thuộc tính width/height) -> vẽ tràn ra ngoài thẻ */
   canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
@@ -140,16 +154,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .ptseg button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);
     border-radius:7px;padding:5px 10px;font-size:12.5px;font-weight:700;cursor:pointer}
   .ptseg button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
-  /* dàn nút vẽ: biểu tượng SVG vuông vắn cho dễ nhận ra */
-  #ptTool button{padding:0;width:30px;height:29px;display:grid;place-items:center}
-  #ptTool svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;
-    stroke-linecap:round;stroke-linejoin:round}
-  #ptTool button[data-t].on{background:#1e6fe8;border-color:#1e6fe8}
-  #ptUndo,#ptClear{color:var(--muted)}
-  #ptClear:hover{color:#e5484d;border-color:#e5484d}
   .ptsep{width:1px;height:20px;background:var(--line)}
   #ptLegend{padding:4px 12px 0;font-size:12px}
-  #ptWrap{position:relative;flex:1;min-height:0;margin:6px 12px 12px}
+  /* thân: cột công cụ vẽ bên trái + biểu đồ chiếm phần còn lại */
+  #ptBody{display:flex;gap:8px;flex:1;min-height:0;margin:6px 12px 12px}
+  #ptWrap{position:relative;flex:1;min-height:0}
   #ptCv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
     border-radius:10px;background:var(--canvasfaint,rgba(128,128,128,.05));
     touch-action:pan-y;cursor:crosshair}
@@ -160,7 +169,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #ptClose{order:0;padding:5px 10px;font-size:13px}
     .ptseg{flex:1 0 100%;order:1}
     .ptseg button{padding:5px 8px;font-size:12px}
-    #ptTool button{width:34px;height:30px;padding:0}
+    #ptBody{margin:5px 8px 8px;gap:6px}
+    .vtool{padding:2px;gap:1px}
+    .vtool button{width:27px;height:26px}
+    .vtool svg{width:15px;height:15px}
     #ptLegend{font-size:11px;padding:3px 10px 0}
     #ptWrap{margin:5px 8px 8px}
   }
@@ -306,7 +318,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260806w"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260806y"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -360,7 +372,9 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
       <button class="ptbtn" id="ptktBtn" title="Phân tích kỹ thuật toàn màn hình">⛶ Phân tích kỹ thuật</button>
     </div>
     <div class="clg" id="cvLegend"></div>
-    <div id="cvWrap"><canvas id="cv"></canvas></div>
+    <!-- cột công cụ vẽ nằm BÊN TRÁI biểu đồ, theo đúng bố cục các trang PTKT -->
+    <div class="cvrow"><div class="vtool" id="cvTool"></div>
+      <div id="cvWrap"><canvas id="cv"></canvas></div></div>
     <div class="note" id="chelp">Cuộn chuột để phóng to · kéo ngang trượt thời gian, kéo dọc dời vùng giá · kéo tiếp sang trái để chừa khoảng trống tương lai · bấm đúp xem lại toàn bộ</div>
     </div>
   </div>
@@ -433,23 +447,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
       <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
     </span>
     <span class="ptsep"></span>
-    <span class="ptseg" id="ptTool">
-      <button data-t="" class="on" title="Con trỏ — kéo để dời chart, cuộn để phóng to thu nhỏ"><svg viewBox="0 0 16 16"><path d="M3.4 2.6 L7 12 L8.6 8.6 L12 7 Z" fill="currentColor" stroke="none"/></svg></button>
-      <button data-t="tl" title="Đường xu hướng — bấm 2 điểm"><svg viewBox="0 0 16 16"><path d="M3 13 L13 3"/><circle cx="3" cy="13" r="1.7" fill="currentColor"/><circle cx="13" cy="3" r="1.7" fill="currentColor"/></svg></button>
-      <button data-t="hl" title="Đường ngang — mốc giá hỗ trợ / kháng cự"><svg viewBox="0 0 16 16"><path d="M1.5 8 H14.5"/><circle cx="8" cy="8" r="1.7" fill="currentColor"/></svg></button>
-      <button data-t="vl" title="Đường dọc — mốc thời gian"><svg viewBox="0 0 16 16"><path d="M8 1.5 V14.5"/><circle cx="8" cy="8" r="1.7" fill="currentColor"/></svg></button>
-      <button data-t="ray" title="Tia — bấm 2 điểm, đường kéo dài mãi về phía trước"><svg viewBox="0 0 16 16"><path d="M2.5 13.5 L14 2"/><circle cx="2.5" cy="13.5" r="1.7" fill="currentColor"/><path d="M10.5 2 H14 V5.5"/></svg></button>
-      <button data-t="pc" title="Kênh song song — bấm 2 điểm tạo đường, điểm thứ 3 định độ rộng"><svg viewBox="0 0 16 16"><path d="M1.5 11 L11 1.5 M5 14.5 L14.5 5"/></svg></button>
-      <button data-t="rc" title="Vùng chữ nhật — bấm 2 góc"><svg viewBox="0 0 16 16"><rect x="2.2" y="4" width="11.6" height="8"/></svg></button>
-      <button data-t="fib" title="Fibonacci thoái lui — bấm đỉnh rồi đáy"><svg viewBox="0 0 16 16"><path d="M2 3 H14 M2 6.4 H14 M2 9.6 H14 M2 13 H14"/></svg></button>
-      <button data-t="msr" title="Thước đo — bấm 2 điểm, hiện chênh lệch giá, % và số phiên"><svg viewBox="0 0 16 16"><path d="M1.6 9.5 L6.5 14.4 L14.4 6.5 L9.5 1.6 Z M5.2 5.9 L6.9 7.6 M7.6 3.5 L9.3 5.2 M2.8 8.3 L4.5 10"/></svg></button>
-      <button data-t="txt" title="Ghi chú — bấm 1 điểm rồi nhập chữ"><svg viewBox="0 0 16 16"><path d="M3 3.5 H13 M8 3.5 V13 M5.8 13 H10.2"/></svg></button>
-      <button id="ptMag" title="Hít nến — điểm vẽ tự bám vào giá mở/cao/thấp/đóng"><svg viewBox="0 0 16 16"><path d="M4 2.5 V8 a4 4 0 0 0 8 0 V2.5 M4 6 H12"/><path d="M3 2.5 H5.2 M10.8 2.5 H13"/></svg></button>
-      <button id="ptDel" title="Xoá hình đang chọn (hoặc bấm phím Delete)"><svg viewBox="0 0 16 16"><path d="M3.4 3.4 L12.6 12.6 M12.6 3.4 L3.4 12.6"/></svg></button>
-      <button id="ptUndo" title="Hoàn tác hình vừa vẽ"><svg viewBox="0 0 16 16"><path d="M3 8.2 A5 5 0 1 1 5.2 12.4"/><path d="M2.2 4.6 V8.6 H6.2"/></svg></button>
-      <button id="ptClear" title="Xoá hết hình vẽ"><svg viewBox="0 0 16 16"><path d="M2.6 4.3 H13.4 M6.4 4.3 V2.6 H9.6 V4.3 M4.2 4.3 L4.9 13.6 H11.1 L11.8 4.3"/></svg></button>
-    </span>
-    <span class="ptsep"></span>
     <span class="ptseg" id="ptInd">
       <button data-k="ma20" class="on">MA20</button><button data-k="ma50">MA50</button>
       <button data-k="ma200">MA200</button><button data-k="bb">Bollinger</button>
@@ -458,13 +455,15 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     </span>
   </div>
   <div class="clg on" id="ptLegend"></div>
-  <div id="ptWrap"><canvas id="ptCv"></canvas></div>
+  <!-- cột công cụ vẽ dọc bên trái, cùng bố cục với biểu đồ nhỏ -->
+  <div id="ptBody"><div class="vtool" id="ptTool"></div>
+    <div id="ptWrap"><canvas id="ptCv"></canvas></div></div>
 </div>
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260806w"></script>
-<script src="assets/chart.js?v=20260806w"></script>
+<script src="assets/core.js?v=20260806y"></script>
+<script src="assets/chart.js?v=20260806y"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -609,9 +608,15 @@ async function renderFromHist(){
 function ensureChart(){
   if(chart) return chart;
   chart=CPChart($('cv'),{ legend:$('cvLegend'), light:isLight,
+    onDraws:saveDraws,
+    onTool:t=>markCv&&markCv(t),          // vẽ xong 1 hình -> nút tự sáng lại ở con trỏ
     label:(iv,n)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
+  $('cvTool').innerHTML=CPChart.paletteHTML('gon');
+  markCv=CPChart.bindPalette($('cvTool'),chart);
+  chart.setDraws(loadDraws());
   return chart;
 }
+let markCv=null, markPt=null;
 async function loadChart(){
   ensureChart();
   if(tf==='i'){                       // nến 5 phút phiên gần nhất — chỉ có ở nguồn trực tiếp
@@ -666,13 +671,19 @@ function ptOpen(){
   if(!ptChart){
     ptChart=CPChart($('ptCv'),{ legend:$('ptLegend'), light:isLight,
       onDraws:saveDraws,
+      onTool:t=>markPt&&markPt(t),
       label:(iv,n)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
-    ptChart.setDraws(loadDraws());
+    $('ptTool').innerHTML=CPChart.paletteHTML('full');
+    markPt=CPChart.bindPalette($('ptTool'),ptChart);
   }
+  ptChart.setDraws(loadDraws());          // lấy luôn hình đã vẽ ở biểu đồ nhỏ
   ptTf=tf; setSeg('ptTf',ptTf);
   ptLoad();
 }
-function ptClose(){ $('ptkt').classList.remove('on'); document.body.style.overflow=''; }
+function ptClose(){
+  $('ptkt').classList.remove('on'); document.body.style.overflow='';
+  if(chart) chart.setDraws(loadDraws());  // mang hình vẽ trong PTKT về biểu đồ nhỏ
+}
 function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); }
 async function ptLoad(){
   if(!ptChart) return;
@@ -692,22 +703,17 @@ async function ptLoad(){
 const DKEY=()=>'cpvn_draw_'+SYM;
 function loadDraws(){ try{ return JSON.parse(localStorage.getItem(DKEY())||'[]'); }catch(e){ return []; } }
 function saveDraws(a){ try{ localStorage.setItem(DKEY(),JSON.stringify(a||[])); }catch(e){} }
-/* Chọn công cụ vẽ. Về "con trỏ" là kéo/phóng lại bình thường. */
-document.querySelectorAll('#ptTool button[data-t]').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#ptTool button[data-t]').forEach(x=>x.classList.toggle('on',x===b));
-  ptChart.setTool(b.dataset.t||null);
-});
-$('ptUndo').onclick=()=>ptChart.undoDraw();
-$('ptClear').onclick=()=>{ if(confirm('Xoá hết hình vẽ của mã này?')) ptChart.clearDraws(); };
-/* Hít nến: bật/tắt, điểm vẽ tự bám vào giá mở/cao/thấp/đóng cho khỏi lệch tay */
-$('ptMag').onclick=()=>{ const on=!$('ptMag').classList.contains('on');
-  $('ptMag').classList.toggle('on',on); ptChart.setMagnet(on); };
-/* Xoá hình ĐANG CHỌN — bấm vào hình để chọn trước (hoặc dùng phím Delete) */
-$('ptDel').onclick=()=>{ if(!ptChart.delSel()) alert('Bấm vào một hình vẽ để chọn trước đã.'); };
+/* Cột nút vẽ được dựng trong ensureChart()/ptOpen() bằng CPChart.paletteHTML. */
 
 $('ptktBtn').onclick=ptOpen;
 $('ptClose').onclick=ptClose;
-addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('ptkt').classList.contains('on')) ptClose(); });
+/* Esc: đang vẽ dở thì chỉ huỷ nét vẽ, chưa đóng cửa sổ toàn màn hình */
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  const c=$('ptkt').classList.contains('on')?ptChart:chart;
+  if(c&&c.cancelTool()) return;
+  if($('ptkt').classList.contains('on')) ptClose();
+});
 document.querySelectorAll('#ptTf button').forEach(b=>b.onclick=()=>{ ptTf=b.dataset.v; setSeg('ptTf',ptTf); ptLoad(); });
 document.querySelectorAll('#ptInd button').forEach(b=>b.onclick=()=>{
   const on=!b.classList.contains('on'); b.classList.toggle('on',on);
