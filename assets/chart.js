@@ -77,6 +77,11 @@ function Chart(cvs,opt){
   opt=opt||{};
   const self={};
   let rows=[],iv="D",i0=0,i1=0,hover=-1,hoverY=-1;   // hoverY = Y THẬT của con trỏ
+/* TRỤC GIÁ chỉnh tay: yPan = dời (theo phần của biên độ), yZoom = giãn/co.
+   0 và 1 = tự khít theo nến đang xem như cũ. */
+let yPan=0, yZoom=1;
+/* HÌNH VẼ PTKT — neo theo DỮ LIỆU (thời gian + giá) nên kéo/phóng vẫn đứng yên */
+let draws=[], tool=null, pending=null, preview=null;
   let drag=null,pinch=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
@@ -97,6 +102,7 @@ function Chart(cvs,opt){
     i1=i0+span;
   }
   function resetView(){
+    yPan=0; yZoom=1;
     const n=rows.length, d=DEFN[iv]||0;
     const span=(!d||d>=n)?n:d;
     i0=n-span; i1=n; clampView();
@@ -137,7 +143,12 @@ function Chart(cvs,opt){
     for(const r of vis){ if(r.l<mn)mn=r.l; if(r.h>mx)mx=r.h; if((r.v||0)>vmax)vmax=r.v||0; }
     if(mx-mn<1e-9) mx=mn+1;
     const pad=(mx-mn)*0.06; mn-=pad; mx+=pad;
+    if(yZoom!==1||yPan!==0){                    // người dùng đã kéo/giãn trục giá bằng tay
+      const c=(mn+mx)/2, hf=(mx-mn)/2*yZoom, sh=yPan*(mx-mn);
+      mn=c-hf+sh; mx=c+hf+sh;
+    }
     const y=v=>padT+(mx-v)/(mx-mn)*plotH;
+    geo.mn=mn; geo.mx=mx; geo.padTv=padT; geo.plotHv=plotH;   // cho lớp vẽ dùng lại
     const cw=plotW/n, bw=Math.max(1,Math.min(16,cw*0.66));
     geo.cw=cw;
     const cx=i=>i*cw+cw/2;
@@ -176,6 +187,7 @@ function Chart(cvs,opt){
       const a=y(Math.max(r.o,r.c)), b=y(Math.min(r.o,r.c));
       x.fillRect(X-bw/2,a,bw,Math.max(1,b-a));
     }
+    paintDraws(x,y);
     // vạch giá mới nhất
     const lastC=vis[n-1].c, yl=y(lastC), lcol=lastC>=vis[0].o?UP:DOWN;
     x.setLineDash([3,3]); x.strokeStyle=lcol+'99';
@@ -277,6 +289,93 @@ function Chart(cvs,opt){
     host.classList.add('on');
   }
 
+  /* ---- LỚP VẼ PHÂN TÍCH KỸ THUẬT ------------------------------------------
+     Mỗi hình lưu theo (thời gian, giá) chứ không theo pixel, nên kéo ngang/dọc
+     hay phóng to thu nhỏ thì hình vẫn dính đúng chỗ trên nến. */
+  const FIB=[0,0.236,0.382,0.5,0.618,0.786,1];
+  function idxOfT(t){                       // vị trí (số thực) của mốc thời gian trong dãy nến
+    const n=rows.length; if(!n) return 0;
+    if(t<=rows[0].t) return 0;
+    if(t>=rows[n-1].t) return n-1;
+    let lo=0,hi=n-1;
+    while(hi-lo>1){ const m=(lo+hi)>>1; if(rows[m].t<=t) lo=m; else hi=m; }
+    const a=rows[lo].t,b=rows[hi].t;
+    return lo+(b>a?(t-a)/(b-a):0);
+  }
+  const xOfT=t=>(idxOfT(t)-i0)*geo.cw+geo.cw/2;
+  function tOfX(px){
+    const n=rows.length; if(!n) return 0;
+    const f=i0+px/geo.cw-0.5, k=Math.max(0,Math.min(n-1,f));
+    const lo=Math.floor(k), hi=Math.min(n-1,lo+1);
+    return Math.round(rows[lo].t+(rows[hi].t-rows[lo].t)*(k-lo));
+  }
+  const vOfY=py=>geo.mx-(py-geo.padTv)/geo.plotHv*(geo.mx-geo.mn);
+  self.vOfY=vOfY; self.tOfX=tOfX;
+  const DCOL='#2962ff';
+  function paintOne(x,y,d,live){
+    const P=d.p.map(q=>({x:xOfT(q.t),y:y(q.v)}));
+    x.save();
+    x.strokeStyle=d.col||DCOL; x.fillStyle=d.col||DCOL;
+    x.lineWidth=live?1.2:1.6; if(live) x.setLineDash([5,4]);
+    const W=geo.plotW;
+    if(d.k==='hl'&&P[0]){
+      x.beginPath(); x.moveTo(0,P[0].y); x.lineTo(W,P[0].y); x.stroke();
+      x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='bottom';
+      x.fillText(fmtP(d.p[0].v),4,P[0].y-3);
+    }else if(d.k==='vl'&&P[0]){
+      x.beginPath(); x.moveTo(P[0].x,geo.padTv); x.lineTo(P[0].x,geo.padTv+geo.plotHv); x.stroke();
+    }else if(P.length>=2){
+      const a=P[0], b=P[1];
+      if(d.k==='tl'){ x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); }
+      else if(d.k==='rc'){
+        x.beginPath(); x.rect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
+        x.stroke(); x.globalAlpha=0.10; x.fill(); x.globalAlpha=1;
+      }else if(d.k==='fib'){
+        const v0=d.p[0].v, v1=d.p[1].v, x0=Math.min(a.x,b.x), x1=Math.max(a.x,b.x);
+        x.font='700 9.5px system-ui'; x.textBaseline='bottom';   // chữ nằm TRÊN đường, khỏi bị gạch ngang
+        x.setLineDash([4,3]);
+        // nhãn nằm bên phải, nhưng nếu sát mép thì lật vào trong cho khỏi bị cắt
+        const flip=x1>W-72; x.textAlign=flip?'right':'left';
+        for(const f of FIB){
+          const v=v0+(v1-v0)*f, yy=y(v);
+          x.beginPath(); x.moveTo(x0,yy); x.lineTo(x1,yy); x.stroke();
+          x.fillText((f*100).toFixed(1)+'%  '+fmtP(v),flip?x1-4:x1+4,yy-2.5);
+        }
+        x.setLineDash([]);
+      }
+    }
+    // chấm neo để biết hình đang ở đâu
+    if(!live){ for(const q of P){ x.beginPath(); x.arc(q.x,q.y,2.6,0,7); x.fill(); } }
+    x.restore();
+  }
+  function paintDraws(x,y){
+    for(const d of draws) paintOne(x,y,d,false);
+    if(pending){
+      const pts=pending.p.concat(preview?[preview]:[]);
+      if(pts.length) paintOne(x,y,{k:pending.k,p:pts,col:pending.col},true);
+    }
+  }
+  const NEED={hl:1,vl:1,tl:2,rc:2,fib:2};
+  self.setTool=function(n){ tool=n||null; pending=null; preview=null;
+    cvs.style.cursor=tool?'crosshair':''; self.draw(); };
+  self.getTool=()=>tool;
+  self.getDraws=()=>draws;
+  self.setDraws=function(a){ draws=Array.isArray(a)?a:[]; self.draw(); };
+  self.undoDraw=function(){ if(pending){pending=null;preview=null;} else draws.pop();
+    self.draw(); if(opt.onDraws) opt.onDraws(draws); };
+  self.clearDraws=function(){ draws=[]; pending=null; preview=null;
+    self.draw(); if(opt.onDraws) opt.onDraws(draws); };
+  function addPoint(px,py){
+    const p={t:tOfX(px), v:vOfY(py)};
+    if(!pending) pending={k:tool,p:[p]};
+    else pending.p.push(p);
+    if(pending.p.length>=(NEED[tool]||2)){
+      draws.push(pending); pending=null; preview=null;
+      if(opt.onDraws) opt.onDraws(draws);
+    }
+    self.draw();
+  }
+
   /* ---- tương tác ---- */
   const idxAt=px=>{
     if(!geo.cw) return -1;
@@ -297,16 +396,29 @@ function Chart(cvs,opt){
     const r=cvs.getBoundingClientRect();
     zoomAt(e.clientX-r.left, e.deltaY>0?1.18:0.85);
   },{passive:false});
-  cvs.addEventListener('mousedown',e=>{ drag={x:e.clientX,i0}; cvs.style.cursor='grabbing'; });
-  window.addEventListener('mouseup',()=>{ drag=null; cvs.style.cursor=''; });
+  cvs.addEventListener('mousedown',e=>{
+    const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+    if(tool){ addPoint(px,py); return; }          // đang chọn công cụ vẽ -> đặt điểm
+    // kéo trên TRỤC GIÁ = giãn/co trục giá; kéo trong khung = dời cả 2 chiều
+    drag={x:e.clientX,y:e.clientY,i0,yPan,yZoom,axis:px>geo.plotW};
+    cvs.style.cursor=drag.axis?'ns-resize':'grabbing';
+  });
+  window.addEventListener('mouseup',()=>{ drag=null; cvs.style.cursor=tool?'crosshair':''; });
   cvs.addEventListener('mousemove',e=>{
-    const r=cvs.getBoundingClientRect(), px=e.clientX-r.left;
+    const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
     if(drag){
-      const dCandles=Math.round((drag.x-e.clientX)/geo.cw);
-      const span=i1-i0; i0=drag.i0+dCandles; i1=i0+span; clampView(); hover=-1; self.draw(); return;
+      if(drag.axis){                              // giãn/co trục giá
+        yZoom=Math.max(0.15,Math.min(6,drag.yZoom*(1+(e.clientY-drag.y)/260)));
+      }else{                                      // DỜI: ngang = thời gian, DỌC = giá
+        const span=i1-i0;
+        i0=drag.i0+Math.round((drag.x-e.clientX)/geo.cw); i1=i0+span; clampView();
+        yPan=drag.yPan+(e.clientY-drag.y)/(geo.plotHv||geo.plotH||1);
+      }
+      hover=-1; self.draw(); return;
     }
+    if(tool&&pending){ preview={t:tOfX(px),v:vOfY(py)}; self.draw(); return; }
     if(px>geo.plotW){ if(hover!==-1){hover=-1; hoverY=-1; self.draw();} return; }
-    const i=idxAt(px), py=e.clientY-r.top;
+    const i=idxAt(px);
     /* Đường ngang phải BÁM ĐÚNG CHUỘT, không hít vào giá đóng cửa của nến. Nên vẽ lại
        cả khi chỉ đổi Y (rê dọc trong cùng một nến) — trước chỉ vẽ khi đổi nến. */
     if(i!==hover||Math.abs(py-hoverY)>0.5){ hover=i; hoverY=py; self.draw(); }
@@ -319,7 +431,9 @@ function Chart(cvs,opt){
       pinch={d:Math.abs(e.touches[0].clientX-e.touches[1].clientX),span:i1-i0,i0}; drag=null;
     }else if(e.touches.length===1){
       const r=cvs.getBoundingClientRect();
-      drag={x:e.touches[0].clientX,i0,moved:false};
+      const p0=e.touches[0];
+      if(tool){ addPoint(p0.clientX-r.left,p0.clientY-r.top); return; }
+      drag={x:p0.clientX,y:p0.clientY,i0,yPan,moved:false};
       hover=idxAt(e.touches[0].clientX-r.left); self.draw();
     }
   },{passive:true});
@@ -334,9 +448,11 @@ function Chart(cvs,opt){
     }
     if(drag&&e.touches.length===1){
       const px=e.touches[0].clientX-r.left, dx=drag.x-e.touches[0].clientX;
-      if(Math.abs(dx)>18){                       // vuốt ngang rõ ràng -> trượt thời gian
+      const dy=(drag.y||0)-e.touches[0].clientY;
+      if(Math.abs(dx)>18||Math.abs(dy)>18){      // vuốt rõ ràng -> dời cả ngang lẫn dọc
         e.preventDefault(); drag.moved=true;
-        const span=i1-i0; i0=drag.i0+Math.round(dx/geo.cw); i1=i0+span; clampView(); hover=-1;
+        const span=i1-i0; i0=drag.i0+Math.round(dx/geo.cw); i1=i0+span; clampView();
+        yPan=(drag.yPan||0)-dy/(geo.plotHv||geo.plotH||1); hover=-1;
       }else{ hover=idxAt(px); }
       self.draw();
     }

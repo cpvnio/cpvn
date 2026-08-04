@@ -111,12 +111,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
     border-radius:10px;background:rgba(255,255,255,.02);touch-action:pan-y;cursor:crosshair}
   #chelp{margin-top:7px}
-  /* nút PTKT: nổi ở GÓC 1H của đồ thị, màu xanh lá — ngay tầm mắt khi đang xem chart */
-  .ptbtn{position:absolute;top:8px;right:8px;z-index:5;
-    background:var(--green);color:#fff;border:1px solid var(--green);border-radius:8px;
-    padding:5px 11px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;
-    box-shadow:0 2px 8px rgba(11,155,97,.35);opacity:.92}
-  .ptbtn:hover{opacity:1;box-shadow:0 3px 12px rgba(11,155,97,.55)}
+  /* nút PTKT: xanh lá, nằm cuối hàng chọn khung nến (chỗ dòng ghi chú cũ) */
+  .ptbtn{margin-left:auto;background:var(--green);color:#fff;border:1px solid var(--green);
+    border-radius:9px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;
+    white-space:nowrap;box-shadow:0 2px 8px rgba(11,155,97,.32)}
+  .ptbtn:hover{filter:brightness(1.08);box-shadow:0 3px 12px rgba(11,155,97,.5)}
   /* DÒNG CHÚ GIẢI cố định: rê chuột tới đâu đổi số tới đó, không có hộp che nến */
   .clg{min-height:17px;margin:2px 0 4px;font-size:11.5px;color:var(--muted);
     white-space:nowrap;overflow-x:auto;scrollbar-width:none;opacity:.55}
@@ -141,6 +140,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .ptseg button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);
     border-radius:7px;padding:5px 10px;font-size:12.5px;font-weight:700;cursor:pointer}
   .ptseg button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
+  /* dàn nút vẽ: biểu tượng SVG vuông vắn cho dễ nhận ra */
+  #ptTool button{padding:0;width:30px;height:29px;display:grid;place-items:center}
+  #ptTool svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;
+    stroke-linecap:round;stroke-linejoin:round}
+  #ptTool button[data-t].on{background:#1e6fe8;border-color:#1e6fe8}
+  #ptUndo,#ptClear{color:var(--muted)}
+  #ptClear:hover{color:#e5484d;border-color:#e5484d}
   .ptsep{width:1px;height:20px;background:var(--line)}
   #ptLegend{padding:4px 12px 0;font-size:12px}
   #ptWrap{position:relative;flex:1;min-height:0;margin:6px 12px 12px}
@@ -154,6 +160,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #ptClose{order:0;padding:5px 10px;font-size:13px}
     .ptseg{flex:1 0 100%;order:1}
     .ptseg button{padding:5px 8px;font-size:12px}
+    #ptTool button{width:34px;height:30px;padding:0}
     #ptLegend{font-size:11px;padding:3px 10px 0}
     #ptWrap{margin:5px 8px 8px}
   }
@@ -299,7 +306,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260806m"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260806q"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -350,12 +357,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <button data-v="i">Trong ngày</button><button data-v="D" class="on">Nến ngày</button>
         <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
       </div>
-      <span class="note" id="cnote"></span>
+      <button class="ptbtn" id="ptktBtn" title="Phân tích kỹ thuật toàn màn hình">⛶ Phân tích kỹ thuật</button>
     </div>
     <div class="clg" id="cvLegend"></div>
-    <div id="cvWrap"><canvas id="cv"></canvas>
-      <button class="ptbtn" id="ptktBtn" title="Phân tích kỹ thuật toàn màn hình">⛶ PTKT</button>
-    </div>
+    <div id="cvWrap"><canvas id="cv"></canvas></div>
     <div class="note" id="chelp">Cuộn chuột để phóng to · kéo ngang để trượt thời gian · rê chuột để xem giá từng phiên · bấm đúp để xem lại toàn bộ</div>
     </div>
   </div>
@@ -428,6 +433,17 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
       <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
     </span>
     <span class="ptsep"></span>
+    <span class="ptseg" id="ptTool">
+      <button data-t="" class="on" title="Con trỏ — kéo để dời chart, cuộn để phóng to thu nhỏ"><svg viewBox="0 0 16 16"><path d="M3.4 2.6 L7 12 L8.6 8.6 L12 7 Z" fill="currentColor" stroke="none"/></svg></button>
+      <button data-t="tl" title="Đường xu hướng — bấm 2 điểm"><svg viewBox="0 0 16 16"><path d="M3 13 L13 3"/><circle cx="3" cy="13" r="1.7" fill="currentColor"/><circle cx="13" cy="3" r="1.7" fill="currentColor"/></svg></button>
+      <button data-t="hl" title="Đường ngang — mốc giá hỗ trợ / kháng cự"><svg viewBox="0 0 16 16"><path d="M1.5 8 H14.5"/><circle cx="8" cy="8" r="1.7" fill="currentColor"/></svg></button>
+      <button data-t="vl" title="Đường dọc — mốc thời gian"><svg viewBox="0 0 16 16"><path d="M8 1.5 V14.5"/><circle cx="8" cy="8" r="1.7" fill="currentColor"/></svg></button>
+      <button data-t="rc" title="Vùng chữ nhật — bấm 2 góc"><svg viewBox="0 0 16 16"><rect x="2.2" y="4" width="11.6" height="8"/></svg></button>
+      <button data-t="fib" title="Fibonacci thoái lui — bấm đỉnh rồi đáy"><svg viewBox="0 0 16 16"><path d="M2 3 H14 M2 6.4 H14 M2 9.6 H14 M2 13 H14"/></svg></button>
+      <button id="ptUndo" title="Hoàn tác hình vừa vẽ"><svg viewBox="0 0 16 16"><path d="M3 8.2 A5 5 0 1 1 5.2 12.4"/><path d="M2.2 4.6 V8.6 H6.2"/></svg></button>
+      <button id="ptClear" title="Xoá hết hình vẽ"><svg viewBox="0 0 16 16"><path d="M2.6 4.3 H13.4 M6.4 4.3 V2.6 H9.6 V4.3 M4.2 4.3 L4.9 13.6 H11.1 L11.8 4.3"/></svg></button>
+    </span>
+    <span class="ptsep"></span>
     <span class="ptseg" id="ptInd">
       <button data-k="ma20" class="on">MA20</button><button data-k="ma50">MA50</button>
       <button data-k="ma200">MA200</button><button data-k="vol" class="on">Khối lượng</button>
@@ -440,8 +456,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260806m"></script>
-<script src="assets/chart.js?v=20260806m"></script>
+<script src="assets/core.js?v=20260806q"></script>
+<script src="assets/chart.js?v=20260806q"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -593,7 +609,7 @@ async function loadChart(){
   ensureChart();
   if(tf==='i'){                       // nến 5 phút phiên gần nhất — chỉ có ở nguồn trực tiếp
     const r=await CP.loadCandles(C.sym,'5',4*86400);
-    if(!r||!r.rows.length){ $('cnote').textContent='Không có dữ liệu trong ngày'; return; }
+    if(!r||!r.rows.length){ setCnote('Không có dữ liệu trong ngày'); return; }
     let rows=r.rows;
     if(!r.saved){
       const day=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
@@ -601,7 +617,7 @@ async function loadChart(){
       rows=rows.filter(x=>day(x.t)===last);
     }
     candles=rows; candleSaved=r.saved;
-    $('cnote').textContent=(r.saved?'kho lưu trữ CPVN':'nguồn trực tiếp')+` · ${rows.length} nến 5 phút`;
+    setCnote((r.saved?'kho lưu trữ CPVN':'nguồn trực tiếp')+` · ${rows.length} nến 5 phút`);
     chart.setRows(rows,'i');
     return;
   }
@@ -614,15 +630,15 @@ async function loadChart(){
       candleSaved=true;
     }else{                            // kho lỗi -> lấy sống 5 năm
       const r=await CP.loadCandles(C.sym,'1D',2000*86400);
-      if(!r){ $('cnote').textContent='Không có dữ liệu nến'; return; }
+      if(!r){ setCnote('Không có dữ liệu nến'); return; }
       dailyRows=r.rows; candleSaved=r.saved;
     }
   }
   const rows=CPChart.aggregate(dailyRows,tf);
-  if(rows.length<2){ $('cnote').textContent='Chưa đủ dữ liệu'; return; }
+  if(rows.length<2){ setCnote('Chưa đủ dữ liệu'); return; }
   candles=rows;
   const from=CPChart.fullLabel('D',dailyRows[0].t);
-  $('cnote').textContent=`${rows.length} nến · ${candleSaved?'kho lưu trữ CPVN':'nguồn trực tiếp'} · từ ${from}`;
+  setCnote(`${rows.length} nến · ${candleSaved?'kho lưu trữ CPVN':'nguồn trực tiếp'} · từ ${from}`);
   chart.setRows(rows,tf);
 }
 function drawChart(){ if(chart) chart.draw(); }
@@ -630,6 +646,9 @@ function drawChart(){ if(chart) chart.draw(); }
 /* ---------- PTKT TOÀN MÀN HÌNH ----------------------------------------------
    Dùng lại đúng engine biểu đồ, chỉ đổi khung: chiếm trọn màn hình, thêm bật/tắt
    MA20/50/200 · khối lượng · RSI. Nến lấy từ dailyRows đã nạp nên mở ra là có ngay. */
+/* Dòng ghi chú "n nến · kho lưu trữ…" đã bỏ theo yêu cầu. Giữ hàm rỗng để các
+   chỗ báo trạng thái cũ không nổ (từng có vụ gọi phần tử đã xoá làm trắng cả trang). */
+function setCnote(){}
 let ptChart=null, ptTf='D';
 function ptOpen(){
   $('ptkt').classList.add('on');
@@ -639,7 +658,9 @@ function ptOpen(){
   $('ptPx').style.color=CP.col1d(C);
   if(!ptChart){
     ptChart=CPChart($('ptCv'),{ legend:$('ptLegend'), light:isLight,
+      onDraws:saveDraws,
       label:(iv,n)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
+    ptChart.setDraws(loadDraws());
   }
   ptTf=tf; setSeg('ptTf',ptTf);
   ptLoad();
@@ -660,6 +681,18 @@ async function ptLoad(){
   if(!dailyRows) return;
   ptChart.setRows(CPChart.aggregate(dailyRows,ptTf),ptTf);
 }
+/* HÌNH VẼ lưu theo TỪNG MÃ trong máy người dùng -> mở lại vẫn còn nguyên */
+const DKEY=()=>'cpvn_draw_'+SYM;
+function loadDraws(){ try{ return JSON.parse(localStorage.getItem(DKEY())||'[]'); }catch(e){ return []; } }
+function saveDraws(a){ try{ localStorage.setItem(DKEY(),JSON.stringify(a||[])); }catch(e){} }
+/* Chọn công cụ vẽ. Về "con trỏ" là kéo/phóng lại bình thường. */
+document.querySelectorAll('#ptTool button[data-t]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#ptTool button[data-t]').forEach(x=>x.classList.toggle('on',x===b));
+  ptChart.setTool(b.dataset.t||null);
+});
+$('ptUndo').onclick=()=>ptChart.undoDraw();
+$('ptClear').onclick=()=>{ if(confirm('Xoá hết hình vẽ của mã này?')) ptChart.clearDraws(); };
+
 $('ptktBtn').onclick=ptOpen;
 $('ptClose').onclick=ptClose;
 addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('ptkt').classList.contains('on')) ptClose(); });
