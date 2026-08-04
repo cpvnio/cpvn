@@ -133,13 +133,22 @@ CP.lastSessionDate=function(){
   const vn=vnNow(), m=vn.getHours()*60+vn.getMinutes();
   const d=new Date(vn);
   const nghi=CP.nghiHomNay===ymd(vn);
-  if(nghi||!(d.getDay()>=1&&d.getDay()<=5&&m>=905)) d.setDate(d.getDate()-1);
+  // mốc 900 = 15:00, KHỚP với lúc sessionOpen() tắt. Trước đây để 905 nên có khe
+  // 15:00-15:05 hàm này còn trả về phiên HÔM QUA trong khi phiên hôm nay đã đóng
+  // -> pricesFinal() tưởng xong, tắt sạch mạng, người mở trang lúc 15:02 thấy số hôm qua.
+  if(nghi||!(d.getDay()>=1&&d.getDay()<=5&&m>=900)) d.setDate(d.getDate()-1);
   while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()-1);
   return ymd(d);
 };
 /* Giá đang giữ đã là giá CHỐT của phiên gần nhất -> khỏi hỏi mạng thêm lần nào. */
 CP.pricesFinal=function(){
   if(CP.sessionOpen()) return false;
+  const vn=vnNow(), m=vn.getHours()*60+vn.getMinutes(), t=vn.getDay()>=1&&vn.getDay()<=5;
+  // 15:00-15:05 bảng còn đang chốt (ATC/thoả thuận) -> chưa được coi là xong, cứ hỏi tiếp
+  if(t&&m>=900&&m<905) return false;
+  // bảng giá KHÔNG có mã nào giao dịch (nghỉ lễ, hoặc đêm bảng đã reset): nguồn không
+  // còn gì mới để cho nữa -> số đang giữ chính là số cuối cùng, đừng hỏi lại mỗi phút
+  if(CP.boardIdle) return true;
   const s=CP.lastSessionDate();
   return CP.eodDate===s||CP.liveSess===s;
 };
@@ -170,12 +179,17 @@ async function doPoll(only){
        Lượt nhỏ (1 mã) không xét được tỷ lệ nên thêm điều kiện: KHÔNG mã nào có giao dịch. */
     const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
     const boardEmpty=active===0||(rows.length>50&&active<rows.length*0.1);
-    /* BẰNG CHỨNG NGÀY NGHỈ: quét ĐỦ cả thị trường ngay giữa giờ giao dịch mà không
-       mã nào khớp lệnh -> hôm nay thị trường không mở (lễ, tết). Ghi lại để đừng
-       coi hôm nay là một phiên rồi chờ mãi số chốt không bao giờ có. */
-    if(boardEmpty&&!(only&&only.length)&&rows.length>50&&CP.sessionOpen()){
-      const vn=vnNow();
-      if(vn.getHours()*60+vn.getMinutes()>=600) CP.nghiHomNay=ymd(vn);   // sau 10:00 mới dám kết luận
+    /* BẢNG ĐỨNG YÊN: quét ĐỦ cả thị trường mà không mã nào khớp lệnh. Xảy ra khi
+       nghỉ lễ, hoặc đêm/rạng sáng khi VPS đã reset bảng. Nguồn không còn gì mới để
+       cho -> đánh dấu, để pricesFinal() biết đường dừng thay vì hỏi lại mỗi phút
+       suốt cả kỳ nghỉ Tết (kỳ nghỉ dài hơn 1 ngày thì lịch không bắc cầu qua được). */
+    if(!(only&&only.length)&&rows.length>50){
+      CP.boardIdle=boardEmpty;
+      // giữa giờ giao dịch mà bảng trống -> hôm nay thị trường không mở
+      if(boardEmpty&&CP.sessionOpen()){
+        const vn=vnNow();
+        if(vn.getHours()*60+vn.getMinutes()>=600) CP.nghiHomNay=ymd(vn);  // sau 10:00 mới dám kết luận
+      }
     }
     for(const t of rows){
       const c=CP.coins.get(t.sym); if(!c) continue;
@@ -313,6 +327,8 @@ CP.startPolling=function(onUpdate,visibleSyms){
       if(!CP.pricesFinal()&&now-CP.lastPollAt>=60000) tick(false);
       return;
     }
+    // trong giờ mà bảng trống trơn (ngày nghỉ lễ) -> giãn ra 5 phút/lần, đừng nện 1 phút
+    if(CP.boardIdle){ if(now-CP.lastPollAt>=300000) tick(false); return; }
     if(now-CP.lastFullAt>=300000) tick(false);
     else if(now-CP.lastPollAt>=60000) tick(true);
   },5000);
