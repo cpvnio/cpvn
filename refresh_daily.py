@@ -192,6 +192,14 @@ def work_hist(sym):
     b=board.get(sym) or {}
     if out["t"] and (b.get("fBuy") or b.get("fSell")):   # NN phiên hôm nay từ bảng giá
         fbfs[vn_day(out["t"][-1])]=(int(b.get("fBuy") or 0),int(b.get("fSell") or 0))
+    # TỰ VÁ LỖ NN: phiên nào trong 6 phiên gần nhất còn trống thì gọi bù một lượt.
+    # Trước đây chỉ vá vào ngày --full (thứ 2) nên pipeline lỡ một ngày là phiên đó
+    # mang NN = 0 suốt cả tuần, kéo sai luôn dòng tiền 7D/30D mà không báo gì.
+    # Ngày chạy bình thường không có lỗ -> không tốn thêm lượt gọi nào.
+    if not (fresh or FULL) and out["t"]:
+        if any(vn_day(tt) not in fbfs for tt in out["t"][-6:]):
+            f6=fetch_foreign30(sym)
+            if f6: fbfs.update(f6)
     out["fb"]=[]; out["fs"]=[]
     for tt in out["t"]:
         fb,fs=fbfs.get(vn_day(tt),(0,0))
