@@ -605,7 +605,9 @@ let dpen=null;                                     // mốc bấm xuống, để
     self.draw();
   }
   function addPoint(px,py){
-    py=Math.max(geo.padTv,Math.min(geo.padTv+geo.plotHv,py));   // giữ điểm vẽ trong vùng giá
+    // giữ điểm vẽ trong vùng giá, kể cả khi bấm/nhả trúng trục giá bên phải
+    px=Math.max(0,Math.min(geo.plotW-1,px));
+    py=Math.max(geo.padTv,Math.min(geo.padTv+geo.plotHv,py));
     const p={t:tOfX(px), v:snapV(px,py)};
     if(!pending) pending={k:tool,p:[p],col:dcol||undefined};
     else pending.p.push(p);
@@ -655,7 +657,8 @@ let dpen=null;                                     // mốc bấm xuống, để
     // nhả chuột sau khi KÉO -> chốt luôn điểm cuối (kiểu bấm–kéo–thả)
     if(dpen&&pending&&pending.p.length===dpen.n){
       const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
-      if(Math.hypot(px-dpen.x,py-dpen.y)>5&&px<=geo.plotW) addPoint(px,py);
+      // nhả tay ra ngoài vùng vẽ thì KẸP vào mép, đừng bỏ dở hình đang vẽ
+      if(Math.hypot(px-dpen.x,py-dpen.y)>5) addPoint(Math.min(px,geo.plotW-1),py);
     }
     dpen=null;
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
@@ -759,7 +762,7 @@ let dpen=null;                                     // mốc bấm xuống, để
     if(dpen&&pending&&pending.p.length===dpen.n){
       const t=e.changedTouches&&e.changedTouches[0];
       if(t){ const r=cvs.getBoundingClientRect(), px=t.clientX-r.left, py=t.clientY-r.top;
-        if(Math.hypot(px-dpen.x,py-dpen.y)>8&&px<=geo.plotW) addPoint(px,py); }
+        if(Math.hypot(px-dpen.x,py-dpen.y)>8) addPoint(Math.min(px,geo.plotW-1),py); }
     }
     dpen=null;
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
