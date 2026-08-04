@@ -110,15 +110,51 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      lấy kích thước nội tại (thuộc tính width/height) -> vẽ tràn ra ngoài thẻ */
   canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
     border-radius:10px;background:rgba(255,255,255,.02);touch-action:pan-y;cursor:crosshair}
-  /* bảng giá hiện khi rê chuột lên biểu đồ */
-  #cvTip{position:absolute;display:none;pointer-events:none;z-index:6;
-    background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px;
-    font-size:11.5px;line-height:1.7;color:var(--txt);box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:158px}
-  #cvTip .hd{display:block;font-weight:800;font-size:12px;margin-bottom:3px}
-  #cvTip .r{display:flex;justify-content:space-between;gap:12px;white-space:nowrap}
-  #cvTip .r i{color:var(--muted);font-style:normal}
-  #cvTip .r span{font-weight:700}
   #chelp{margin-top:7px}
+  /* nút mở PTKT toàn màn hình */
+  .ptbtn{background:var(--panel2);color:var(--accent);border:1px solid rgba(225,29,72,.45);
+    border-radius:7px;padding:5px 11px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .ptbtn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* DÒNG CHÚ GIẢI cố định: rê chuột tới đâu đổi số tới đó, không có hộp che nến */
+  .clg{min-height:17px;margin:2px 0 4px;font-size:11.5px;color:var(--muted);
+    white-space:nowrap;overflow-x:auto;scrollbar-width:none;opacity:.55}
+  .clg::-webkit-scrollbar{display:none}
+  .clg.on{opacity:1}
+  .clg u{text-decoration:none;font-weight:800;color:var(--txt);margin-right:10px}
+  .clg i{font-style:normal;margin:0 3px 0 8px}
+  .clg b{font-weight:800;color:var(--txt)}
+
+  /* ── PTKT TOÀN MÀN HÌNH ─────────────────────────────────────────────────── */
+  #ptkt{position:fixed;inset:0;z-index:90;display:none;background:var(--bg);
+    flex-direction:column}
+  #ptkt.on{display:flex}
+  #ptHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;
+    border-bottom:1px solid var(--line);background:var(--hdr2)}
+  #ptHead .sym{font-size:17px;font-weight:800}
+  #ptHead .px{font-size:15px;font-weight:800}
+  #ptClose{order:9;margin-left:auto;background:var(--panel);color:var(--txt);
+    border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:14px;
+    font-weight:800;cursor:pointer}
+  .ptseg{display:flex;gap:3px;flex-wrap:wrap}
+  .ptseg button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);
+    border-radius:7px;padding:5px 10px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .ptseg button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
+  .ptsep{width:1px;height:20px;background:var(--line)}
+  #ptLegend{padding:4px 12px 0;font-size:12px}
+  #ptWrap{position:relative;flex:1;min-height:0;margin:6px 12px 12px}
+  #ptCv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
+    border-radius:10px;background:var(--canvasfaint,rgba(128,128,128,.05));
+    touch-action:pan-y;cursor:crosshair}
+  @media(max-width:760px){
+    /* hàng 1: mã + giá + Đóng · hàng 2: khung thời gian · hàng 3: chỉ báo */
+    #ptHead{padding:7px 10px;gap:5px}
+    #ptHead .ptsep{display:none}
+    #ptClose{order:0;padding:5px 10px;font-size:13px}
+    .ptseg{flex:1 0 100%;order:1}
+    .ptseg button{padding:5px 8px;font-size:12px}
+    #ptLegend{font-size:11px;padding:3px 10px 0}
+    #ptWrap{margin:5px 8px 8px}
+  }
 
   /* ---- tabs nội dung ---- */
   #secTabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap}
@@ -261,7 +297,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260806i"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260806k"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -312,9 +348,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <button data-v="i">Trong ngày</button><button data-v="D" class="on">Nến ngày</button>
         <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
       </div>
+      <button class="ptbtn" id="ptktBtn" title="Mở phân tích kỹ thuật toàn màn hình">⛶ PTKT</button>
       <span class="note" id="cnote"></span>
     </div>
-    <div id="cvWrap"><canvas id="cv"></canvas><div id="cvTip"></div></div>
+    <div class="clg" id="cvLegend"></div>
+    <div id="cvWrap"><canvas id="cv"></canvas></div>
     <div class="note" id="chelp">Cuộn chuột để phóng to · kéo ngang để trượt thời gian · rê chuột để xem giá từng phiên · bấm đúp để xem lại toàn bộ</div>
     </div>
   </div>
@@ -376,10 +414,31 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   </div>
 </div>
 
+<div id="ptkt">
+  <div id="ptHead">
+    <span class="sym" id="ptSym"></span>
+    <span class="px" id="ptPx"></span>
+    <span class="ptsep"></span>
+    <button id="ptClose">✕ Đóng</button>
+    <span class="ptseg" id="ptTf">
+      <button data-v="i">Trong ngày</button><button data-v="D" class="on">Ngày</button>
+      <button data-v="W">Tuần</button><button data-v="M">Tháng</button><button data-v="Y">Năm</button>
+    </span>
+    <span class="ptsep"></span>
+    <span class="ptseg" id="ptInd">
+      <button data-k="ma20" class="on">MA20</button><button data-k="ma50">MA50</button>
+      <button data-k="ma200">MA200</button><button data-k="vol" class="on">Khối lượng</button>
+      <button data-k="rsi">RSI</button>
+    </span>
+  </div>
+  <div class="clg on" id="ptLegend"></div>
+  <div id="ptWrap"><canvas id="ptCv"></canvas></div>
+</div>
+
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260806i"></script>
-<script src="assets/chart.js?v=20260806i"></script>
+<script src="assets/core.js?v=20260806k"></script>
+<script src="assets/chart.js?v=20260806k"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -523,7 +582,7 @@ async function renderFromHist(){
    nên đổi khung là hiện ngay, không phải gọi mạng lại. "Trong ngày" mới cần nguồn trực tiếp. */
 function ensureChart(){
   if(chart) return chart;
-  chart=CPChart($('cv'),{ tip:$('cvTip'), light:isLight,
+  chart=CPChart($('cv'),{ legend:$('cvLegend'), light:isLight,
     label:(iv,n)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
   return chart;
 }
@@ -564,6 +623,54 @@ async function loadChart(){
   chart.setRows(rows,tf);
 }
 function drawChart(){ if(chart) chart.draw(); }
+
+/* ---------- PTKT TOÀN MÀN HÌNH ----------------------------------------------
+   Dùng lại đúng engine biểu đồ, chỉ đổi khung: chiếm trọn màn hình, thêm bật/tắt
+   MA20/50/200 · khối lượng · RSI. Nến lấy từ dailyRows đã nạp nên mở ra là có ngay. */
+let ptChart=null, ptTf='D';
+function ptOpen(){
+  $('ptkt').classList.add('on');
+  document.body.style.overflow='hidden';
+  $('ptSym').textContent=C.sym+' · '+C.ex;
+  $('ptPx').textContent=CP.fmtD(C.price)+' đ  '+CP.pcTxt(C.chg1d);
+  $('ptPx').style.color=CP.col1d(C);
+  if(!ptChart){
+    ptChart=CPChart($('ptCv'),{ legend:$('ptLegend'), light:isLight,
+      label:(iv,n)=>({i:'Trong ngày  ',D:'Nến ngày  ',W:'Nến tuần  ',M:'Nến tháng  ',Y:'Nến năm  '}[iv]||'') });
+  }
+  ptTf=tf; setSeg('ptTf',ptTf);
+  ptLoad();
+}
+function ptClose(){ $('ptkt').classList.remove('on'); document.body.style.overflow=''; }
+function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); }
+async function ptLoad(){
+  if(!ptChart) return;
+  if(ptTf==='i'){
+    const r=await CP.loadCandles(C.sym,'5',4*86400);
+    if(r&&r.rows.length){ let rows=r.rows;
+      if(!r.saved){ const day=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+        const last=day(rows[rows.length-1].t); rows=rows.filter(z=>day(z.t)===last); }
+      ptChart.setRows(rows,'i'); }
+    return;
+  }
+  if(!dailyRows) await loadChart();          // dùng chung kho nến đã nạp cho biểu đồ nhỏ
+  if(!dailyRows) return;
+  ptChart.setRows(CPChart.aggregate(dailyRows,ptTf),ptTf);
+}
+$('ptktBtn').onclick=ptOpen;
+$('ptClose').onclick=ptClose;
+addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('ptkt').classList.contains('on')) ptClose(); });
+document.querySelectorAll('#ptTf button').forEach(b=>b.onclick=()=>{ ptTf=b.dataset.v; setSeg('ptTf',ptTf); ptLoad(); });
+document.querySelectorAll('#ptInd button').forEach(b=>b.onclick=()=>{
+  const on=!b.classList.contains('on'); b.classList.toggle('on',on);
+  const k=b.dataset.k, cur=ptChart.ind();
+  if(k==='vol'||k==='rsi') ptChart.setInd({[k]:on});
+  else{ const per=+k.slice(2);
+    ptChart.setInd({ma:on?[...new Set([...cur.ma,per])].sort((x,y)=>x-y):cur.ma.filter(z=>z!==per)}); }
+});
+if(window.ResizeObserver){ let t2=0;
+  new ResizeObserver(()=>{ clearTimeout(t2); t2=setTimeout(()=>{ if(ptChart&&$('ptkt').classList.contains('on')) ptChart.draw(); },60); }).observe($('ptWrap'));
+}
 
 /* ---------- doanh nghiệp cùng ngành: logo + giá + VỐN HOÁ ---------- */
 function renderPeers(){

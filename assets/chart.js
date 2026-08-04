@@ -4,7 +4,7 @@
      · Nến: Trong ngày · Ngày · Tuần · Tháng · Năm (gộp tại chỗ từ nến ngày của kho)
      · Cuộn chuột = phóng to/thu nhỏ quanh con trỏ; kéo = trượt thời gian
      · Điện thoại: 1 ngón kéo, 2 ngón chụm để phóng
-     · Rê chuột/chạm = thanh ngắm + bảng giá mở/cao/thấp/đóng đúng ngày đó
+     · Rê chuột/chạm = thanh ngắm + dòng chú giải O·H·L·C cố định trên đầu (không che nến)
      · Trục dưới tự đổi nhãn theo mức phóng: ngày → tháng → quý → năm
    Không phụ thuộc core.js để trang bong bóng (độc lập) cũng dùng được.
    ========================================================================== */
@@ -76,7 +76,7 @@ const fmtV=v=>v>=1e9?(v/1e9).toFixed(2)+' tỷ':v>=1e6?(v/1e6).toFixed(2)+' tr':
 function Chart(cvs,opt){
   opt=opt||{};
   const self={};
-  let rows=[],iv='D',i0=0,i1=0,hover=-1,vwHost=null;
+  let rows=[],iv="D",i0=0,i1=0,hover=-1;
   let drag=null,pinch=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
@@ -112,6 +112,11 @@ function Chart(cvs,opt){
 
   /* ---- vẽ ---- */
   const geo={padR:64,padT:14,plotW:0,plotH:0,cw:0,h:0,w:0,volTop:0};
+  /* CHỈ BÁO bật/tắt được — mặc định chỉ MA20 như cũ; chế độ PTKT toàn màn hình bật thêm */
+  const MACOL={20:'rgba(234,179,8,.85)',50:'rgba(56,189,248,.85)',200:'rgba(192,38,211,.8)'};
+  const ind={ma:[20], vol:true, rsi:false};
+  self.ind=()=>ind;
+  self.setInd=function(o){ Object.assign(ind,o||{}); self.draw(); };
   self.draw=function(){
     const DPR=Math.min(2,window.devicePixelRatio||1);
     const w=cvs.clientWidth||600, h=cvs.clientHeight||300;
@@ -122,7 +127,10 @@ function Chart(cvs,opt){
       x.fillText(opt.emptyText||'Đang tải biểu đồ…',w/2,h/2); return; }
     clampView();
     const vis=rows.slice(i0,i1), n=vis.length;
-    const volH=Math.round(h*0.17), padB=volH+22, padR=geo.padR, padT=geo.padT;
+    const volH=ind.vol?Math.round(h*0.17):0;
+    const rsiH=ind.rsi?Math.round(h*0.18):0;
+    const padB=volH+rsiH+22, padR=geo.padR, padT=geo.padT;
+    const volBase=h-22-rsiH;                 // đáy cột khối lượng (chừa chỗ cho RSI bên dưới)
     const plotW=w-padR, plotH=h-padT-padB;
     geo.plotW=plotW; geo.plotH=plotH; geo.volTop=h-padB+6;
     let mn=Infinity,mx=-Infinity,vmax=0;
@@ -142,18 +150,20 @@ function Chart(cvs,opt){
       x.fillStyle=MUT(); x.textAlign='left'; x.fillText(fmtP(v),plotW+6,yy);
     }
     // khối lượng
-    for(let i=0;i<n;i++){
+    if(ind.vol) for(let i=0;i<n;i++){
       const r=vis[i], up=r.c>=r.o, vh=vmax?(r.v||0)/vmax*(volH-6):0;
       x.fillStyle=up?'rgba(22,199,132,.34)':'rgba(234,57,67,.34)';
-      x.fillRect(cx(i)-bw/2,h-16-vh,bw,vh);
+      x.fillRect(cx(i)-bw/2,volBase-vh,bw,vh);
     }
-    // MA20 (tính trên toàn chuỗi để mép trái không bị cụt)
-    if(rows.length>=21){
-      x.strokeStyle='rgba(234,179,8,.75)'; x.lineWidth=1.4; x.beginPath(); let st=false;
+    // ĐƯỜNG TRUNG BÌNH (tính trên toàn chuỗi để mép trái không bị cụt)
+    for(const per of ind.ma){
+      if(rows.length<per+1) continue;
+      x.strokeStyle=MACOL[per]||'rgba(148,163,184,.8)'; x.lineWidth=1.4;
+      x.beginPath(); let st=false;
       for(let i=0;i<n;i++){
-        const gi=i0+i; if(gi<19) continue;
-        let s=0; for(let k=gi-19;k<=gi;k++) s+=rows[k].c;
-        const yy=y(s/20); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true;
+        const gi=i0+i; if(gi<per-1) continue;
+        let sum=0; for(let k=gi-per+1;k<=gi;k++) sum+=rows[k].c;
+        const yy=y(sum/per); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true;
       }
       if(st) x.stroke();
     }
@@ -182,7 +192,7 @@ function Chart(cvs,opt){
       if(prevKey!==null&&k!==prevKey){
         const X=cx(i);
         if(X-lastX>=46&&X<plotW-14){
-          x.strokeStyle=GRID(); x.beginPath(); x.moveTo(X,padT); x.lineTo(X,h-volH-20); x.stroke();
+          x.strokeStyle=GRID(); x.beginPath(); x.moveTo(X,padT); x.lineTo(X,volBase); x.stroke();
           x.fillStyle=MUT(); x.fillText(tickLabel(unit,vis[i].t,prevT),X,h-4);
           lastX=X; prevT=vis[i].t;
         }
@@ -194,7 +204,34 @@ function Chart(cvs,opt){
     const pct=(lastC/vis[0].o-1)*100;
     x.textAlign='left'; x.font='800 14px system-ui'; x.fillStyle=pct>=0?UP:DOWN;
     x.fillText(`${opt.label?opt.label(iv,n):''}${pct>=0?'+':''}${pct.toFixed(2)}%`,8,padT+8);
-    x.font='10.5px system-ui'; x.fillStyle='rgba(234,179,8,.8)'; x.fillText('— MA20',8,padT+24);
+    x.font='10.5px system-ui'; let lx=8;
+    for(const per of ind.ma){ x.fillStyle=MACOL[per]||'rgba(148,163,184,.9)';
+      const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
+    // RSI 14 phiên (dải riêng dưới cùng)
+    if(ind.rsi&&rows.length>15){
+      const top=h-22-rsiH+4, bh=rsiH-10;
+      const ry=v=>top+(100-v)/100*bh;
+      x.strokeStyle=GRID(); x.beginPath(); x.moveTo(0,ry(70)); x.lineTo(plotW,ry(70)); x.stroke();
+      x.beginPath(); x.moveTo(0,ry(30)); x.lineTo(plotW,ry(30)); x.stroke();
+      x.fillStyle=MUT(); x.font='9.5px system-ui'; x.textAlign='left';
+      x.fillText('70',plotW+6,ry(70)); x.fillText('30',plotW+6,ry(30));
+      // Wilder: trung bình tăng/giảm làm mượt dần
+      let ag=0,al=0;
+      for(let k=1;k<=14&&k<rows.length;k++){ const d=rows[k].c-rows[k-1].c; d>=0?ag+=d:al-=d; }
+      ag/=14; al/=14;
+      const rsi=new Array(rows.length).fill(null);
+      for(let k=15;k<rows.length;k++){
+        const d=rows[k].c-rows[k-1].c;
+        ag=(ag*13+(d>0?d:0))/14; al=(al*13+(d<0?-d:0))/14;
+        rsi[k]=al===0?100:100-100/(1+ag/al);
+      }
+      x.strokeStyle='rgba(139,92,246,.95)'; x.lineWidth=1.4; x.beginPath(); let st=false;
+      for(let i=0;i<n;i++){ const v=rsi[i0+i]; if(v==null) continue;
+        const yy=ry(v); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true; }
+      if(st) x.stroke();
+      x.fillStyle='rgba(139,92,246,.95)'; x.font='700 10px system-ui';
+      x.fillText('RSI 14',8,top+11);
+    }
     // thanh ngắm
     if(hover>=0&&hover<n){
       const X=cx(hover), r=vis[hover];
@@ -208,26 +245,25 @@ function Chart(cvs,opt){
       x.fillStyle=light()?'#fff':'#0a0a0c'; x.font='700 10.5px system-ui';
       x.textAlign='left'; x.textBaseline='middle'; x.fillText(fmtP(r.c),plotW+6,y(r.c));
       paintTip(r,X,vis[hover-1]);
-    } else if(vwHost) vwHost.style.display='none';
+    } else if(opt.legend){          // chưa rê chuột: vẫn hiện nến MỚI NHẤT, chỉ để mờ
+      paintTip(vis[n-1],0,vis[n-2]); opt.legend.classList.remove('on');
+    }
   };
 
-  /* ---- bảng giá khi rê chuột (dùng thẻ HTML để chữ nét) ---- */
+  /* ---- DÒNG CHÚ GIẢI CỐ ĐỊNH (thay hộp bám theo chuột) ----------------------
+     Hộp cũ chạy theo con trỏ, che mất chính chỗ đang muốn xem. Nay O/C/H/L nằm
+     yên một dòng trên đầu biểu đồ như các nền tảng PTKT chuyên dụng: rê tới đâu
+     dòng này đổi số tới đó, không có gì che nến. */
   function paintTip(r,X,prev){
-    if(!opt.tip) return;
-    if(!vwHost){ vwHost=opt.tip; }
+    const host=opt.legend; if(!host) return;
     const chg=prev?((r.c-prev.c)/prev.c*100):((r.c-r.o)/r.o*100);
     const col=chg>=0?UP:DOWN;
-    const row=(k,v,c)=>`<div class="r"><i>${k}</i><span${c?` style="color:${c}"`:''}>${v}</span></div>`;
-    vwHost.innerHTML=
-      `<span class="hd">${fullLabel(iv,r.t)}</span>`+
-      row('Mở',fmtP(r.o))+row('Cao',fmtP(r.h))+row('Thấp',fmtP(r.l))+
-      row('Đóng',fmtP(r.c),col)+
-      row('Thay đổi',(chg>=0?'+':'')+chg.toFixed(2)+'%',col)+
-      (r.v?row('Khối lượng',fmtV(r.v)):'');
-    vwHost.style.display='block';
-    const wrapW=cvs.clientWidth, tw=vwHost.offsetWidth||190;
-    vwHost.style.left=Math.max(4,Math.min(wrapW-tw-4,X+12))+'px';
-    vwHost.style.top='6px';
+    const it=(k,v,c)=>`<i>${k}</i><b${c?` style="color:${c}"`:''}>${v}</b>`;
+    host.innerHTML=`<u>${fullLabel(iv,r.t)}</u>`+
+      it('O',fmtP(r.o))+it('H',fmtP(r.h))+it('L',fmtP(r.l))+it('C',fmtP(r.c),col)+
+      it('',(chg>=0?'+':'')+chg.toFixed(2)+'%',col)+
+      (r.v?it('KL',fmtV(r.v)):'');
+    host.classList.add('on');
   }
 
   /* ---- tương tác ---- */
