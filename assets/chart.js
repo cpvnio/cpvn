@@ -83,6 +83,7 @@ function Chart(cvs,opt){
 let yPan=0, yZoom=1;
 /* HÌNH VẼ PTKT — neo theo DỮ LIỆU (thời gian + giá) nên kéo/phóng vẫn đứng yên */
 let draws=[], tool=null, pending=null, preview=null;
+let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đang kéo · hít nến · màu vẽ
   let drag=null,pinch=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
@@ -126,7 +127,7 @@ let draws=[], tool=null, pending=null, preview=null;
   const geo={padR:64,padT:14,plotW:0,plotH:0,cw:0,h:0,w:0,volTop:0};
   /* CHỈ BÁO bật/tắt được — mặc định chỉ MA20 như cũ; chế độ PTKT toàn màn hình bật thêm */
   const MACOL={20:'rgba(234,179,8,.85)',50:'rgba(56,189,248,.85)',200:'rgba(192,38,211,.8)'};
-  const ind={ma:[20], vol:true, rsi:false};
+  const ind={ma:[20], vol:true, rsi:false, bb:false, macd:false};
   self.ind=()=>ind;
   self.setInd=function(o){ Object.assign(ind,o||{}); self.draw(); };
   self.draw=function(){
@@ -145,8 +146,10 @@ let draws=[], tool=null, pending=null, preview=null;
     const vis=rows.slice(i0,i1), n=vis.length;
     const volH=ind.vol?Math.round(h*0.17):0;
     const rsiH=ind.rsi?Math.round(h*0.18):0;
-    const padB=volH+rsiH+22, padR=geo.padR, padT=geo.padT;
-    const volBase=h-22-rsiH;                 // đáy cột khối lượng (chừa chỗ cho RSI bên dưới)
+    const macH=ind.macd?Math.round(h*0.18):0;
+    const subH=rsiH+macH;                    // tổng chiều cao các dải phụ dưới đáy
+    const padB=volH+subH+22, padR=geo.padR, padT=geo.padT;
+    const volBase=h-22-subH;                 // đáy cột khối lượng (chừa chỗ cho dải phụ)
     const plotW=w-padR, plotH=h-padT-padB;
     geo.plotW=plotW; geo.plotH=plotH; geo.volTop=h-padB+6;
     let mn=Infinity,mx=-Infinity,vmax=0;
@@ -175,6 +178,30 @@ let draws=[], tool=null, pending=null, preview=null;
       const r=vis[i], up=r.c>=r.o, vh=vmax?(r.v||0)/vmax*(volH-6):0;
       x.fillStyle=up?'rgba(22,199,132,.34)':'rgba(234,57,67,.34)';
       x.fillRect(cx(i)-bw/2,volBase-vh,bw,vh);
+    }
+    // DẢI BOLLINGER 20 phiên · 2 độ lệch chuẩn (tô mờ khoảng giữa 2 dải)
+    if(ind.bb&&rows.length>21){
+      const P=20, K=2, up=[], lo=[], mid=[];
+      for(let i=0;i<n;i++){
+        const gi=i0+i; if(gi<P-1){ up.push(null); lo.push(null); mid.push(null); continue; }
+        let s=0; for(let k=gi-P+1;k<=gi;k++) s+=rows[k].c;
+        const m=s/P; let q=0; for(let k=gi-P+1;k<=gi;k++) q+=(rows[k].c-m)**2;
+        const sd=Math.sqrt(q/P);
+        mid.push(m); up.push(m+K*sd); lo.push(m-K*sd);
+      }
+      x.fillStyle=light()?'rgba(56,189,248,.10)':'rgba(56,189,248,.09)';
+      x.beginPath(); let st=false;
+      for(let i=0;i<n;i++){ if(up[i]==null) continue; const X=cx(i); st?x.lineTo(X,y(up[i])):x.moveTo(X,y(up[i])); st=true; }
+      for(let i=n-1;i>=0;i--){ if(lo[i]==null) continue; x.lineTo(cx(i),y(lo[i])); }
+      if(st){ x.closePath(); x.fill(); }
+      x.lineWidth=1.2;
+      for(const [arr,col,dash] of [[up,'rgba(56,189,248,.85)',null],[lo,'rgba(56,189,248,.85)',null],
+                                   [mid,'rgba(56,189,248,.55)',[4,3]]]){
+        x.strokeStyle=col; x.setLineDash(dash||[]); x.beginPath(); let s2=false;
+        for(let i=0;i<n;i++){ if(arr[i]==null) continue; const X=cx(i); s2?x.lineTo(X,y(arr[i])):x.moveTo(X,y(arr[i])); s2=true; }
+        if(s2) x.stroke();
+      }
+      x.setLineDash([]);
     }
     // ĐƯỜNG TRUNG BÌNH (tính trên toàn chuỗi để mép trái không bị cụt)
     for(const per of ind.ma){
@@ -235,7 +262,7 @@ let draws=[], tool=null, pending=null, preview=null;
       const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     // RSI 14 phiên (dải riêng dưới cùng)
     if(ind.rsi&&rows.length>15){
-      const top=h-22-rsiH+4, bh=rsiH-10;
+      const top=h-22-subH+4, bh=rsiH-10;
       const ry=v=>top+(100-v)/100*bh;
       x.strokeStyle=GRID(); x.beginPath(); x.moveTo(0,ry(70)); x.lineTo(plotW,ry(70)); x.stroke();
       x.beginPath(); x.moveTo(0,ry(30)); x.lineTo(plotW,ry(30)); x.stroke();
@@ -257,6 +284,32 @@ let draws=[], tool=null, pending=null, preview=null;
       if(st) x.stroke();
       x.fillStyle='rgba(139,92,246,.95)'; x.font='700 10px system-ui';
       x.fillText('RSI 14',8,top+11);
+    }
+    // MACD 12/26/9 (dải riêng dưới cùng): cột chênh lệch + 2 đường
+    if(ind.macd&&rows.length>35){
+      const top=h-22-macH+4, bh=macH-10;
+      const ema=(arr,per)=>{ const k=2/(per+1), o=[]; let e=arr[0];
+        for(let i=0;i<arr.length;i++){ e=i?arr[i]*k+e*(1-k):arr[i]; o.push(e); } return o; };
+      const cl=rows.map(r=>r.c), e12=ema(cl,12), e26=ema(cl,26);
+      const mac=cl.map((_,i)=>e12[i]-e26[i]), sig=ema(mac,9);
+      let amp=1e-9;
+      for(let i=0;i<n;i++){ const gi=i0+i; if(gi<26) continue;
+        amp=Math.max(amp,Math.abs(mac[gi]),Math.abs(sig[gi]),Math.abs(mac[gi]-sig[gi])); }
+      const my=v=>top+bh/2-(v/amp)*(bh/2-2);
+      x.strokeStyle=GRID(); x.beginPath(); x.moveTo(0,my(0)); x.lineTo(plotW,my(0)); x.stroke();
+      for(let i=0;i<n;i++){ const gi=i0+i; if(gi<26) continue;
+        const hv=mac[gi]-sig[gi], y0=my(0), y1=my(hv);
+        x.fillStyle=hv>=0?'rgba(22,199,132,.55)':'rgba(234,57,67,.55)';
+        x.fillRect(cx(i)-bw/2,Math.min(y0,y1),bw,Math.max(1,Math.abs(y1-y0)));
+      }
+      for(const [arr,col] of [[mac,'rgba(56,189,248,.95)'],[sig,'rgba(249,115,22,.95)']]){
+        x.strokeStyle=col; x.lineWidth=1.3; x.beginPath(); let st=false;
+        for(let i=0;i<n;i++){ const gi=i0+i; if(gi<26) continue;
+          const yy=my(arr[gi]); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true; }
+        if(st) x.stroke();
+      }
+      x.fillStyle=MUT(); x.font='700 10px system-ui'; x.textAlign='left';
+      x.fillText('MACD 12/26/9',8,top+11);
     }
     // thanh ngắm
     if(hover>=0&&hover<span){
@@ -337,11 +390,12 @@ let draws=[], tool=null, pending=null, preview=null;
   const vOfY=py=>geo.mx-(py-geo.padTv)/geo.plotHv*(geo.mx-geo.mn);
   self.vOfY=vOfY; self.tOfX=tOfX;
   const DCOL='#2962ff';
-  function paintOne(x,y,d,live){
+  const yOfV=v=>geo.padTv+(geo.mx-v)/(geo.mx-geo.mn)*geo.plotHv;   // bản dùng ngoài draw()
+  function paintOne(x,y,d,live,isSel){
     const P=d.p.map(q=>({x:xOfT(q.t),y:y(q.v)}));
     x.save();
     x.strokeStyle=d.col||DCOL; x.fillStyle=d.col||DCOL;
-    x.lineWidth=live?1.2:1.6; if(live) x.setLineDash([5,4]);
+    x.lineWidth=(live?1.2:1.6)*(isSel?1.6:1); if(live) x.setLineDash([5,4]);
     const W=geo.plotW;
     if(d.k==='hl'&&P[0]){
       x.beginPath(); x.moveTo(0,P[0].y); x.lineTo(W,P[0].y); x.stroke();
@@ -349,9 +403,39 @@ let draws=[], tool=null, pending=null, preview=null;
       x.fillText(fmtP(d.p[0].v),4,P[0].y-3);
     }else if(d.k==='vl'&&P[0]){
       x.beginPath(); x.moveTo(P[0].x,geo.padTv); x.lineTo(P[0].x,geo.padTv+geo.plotHv); x.stroke();
+    }else if(d.k==='txt'&&P[0]){
+      x.font='700 12px system-ui'; x.textAlign='left'; x.textBaseline='middle';
+      x.fillText(d.txt||'Ghi chú',P[0].x+7,P[0].y);
+      x.beginPath(); x.arc(P[0].x,P[0].y,3,0,7); x.fill();
     }else if(P.length>=2){
       const a=P[0], b=P[1];
       if(d.k==='tl'){ x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); }
+      else if(d.k==='ray'){                       // tia: kéo dài mãi về phía điểm thứ 2
+        const dx=b.x-a.x, dy=b.y-a.y, k=dx?(dx>0?(W-a.x)/dx:(0-a.x)/dx):1e4;
+        x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(a.x+dx*Math.max(1,k),a.y+dy*Math.max(1,k)); x.stroke();
+      }
+      else if(d.k==='pc'&&P.length>=3){           // kênh song song: 2 đường song song + tô mờ
+        const c=P[2], off=c.y-(a.y+(b.y-a.y)*((c.x-a.x)/((b.x-a.x)||1)));
+        x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke();
+        x.beginPath(); x.moveTo(a.x,a.y+off); x.lineTo(b.x,b.y+off); x.stroke();
+        x.globalAlpha=0.10; x.beginPath();
+        x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.lineTo(b.x,b.y+off); x.lineTo(a.x,a.y+off);
+        x.closePath(); x.fill(); x.globalAlpha=1;
+      }
+      else if(d.k==='msr'){                       // thước đo: chênh lệch giá · % · số phiên
+        const v0=d.p[0].v, v1=d.p[1].v, pc=v0?((v1-v0)/v0*100):0, up=v1>=v0;
+        const nb=Math.round(Math.abs(idxOfT(d.p[1].t)-idxOfT(d.p[0].t)));
+        x.strokeStyle=x.fillStyle=up?UP:DOWN;
+        const X0=Math.min(a.x,b.x), X1=Math.max(a.x,b.x), Y0=Math.min(a.y,b.y), Y1=Math.max(a.y,b.y);
+        x.globalAlpha=0.13; x.fillRect(X0,Y0,X1-X0,Y1-Y0); x.globalAlpha=1;
+        x.beginPath(); x.rect(X0,Y0,X1-X0,Y1-Y0); x.stroke();
+        x.beginPath(); x.moveTo((X0+X1)/2,a.y); x.lineTo((X0+X1)/2,b.y); x.stroke();
+        const lb=`${up?'+':''}${fmtP(v1-v0)}  (${pc>=0?'+':''}${pc.toFixed(2)}%)  ${nb} phiên`;
+        x.font='700 11px system-ui'; x.textAlign='center'; x.textBaseline='bottom';
+        const tw=x.measureText(lb).width+14, cx0=Math.max(tw/2,Math.min(W-tw/2,(X0+X1)/2));
+        x.fillRect(cx0-tw/2,Y0-19,tw,17);
+        x.fillStyle='#fff'; x.fillText(lb,cx0,Y0-5);
+      }
       else if(d.k==='rc'){
         x.beginPath(); x.rect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
         x.stroke(); x.globalAlpha=0.10; x.fill(); x.globalAlpha=1;
@@ -369,32 +453,97 @@ let draws=[], tool=null, pending=null, preview=null;
         x.setLineDash([]);
       }
     }
-    // chấm neo để biết hình đang ở đâu
-    if(!live){ for(const q of P){ x.beginPath(); x.arc(q.x,q.y,2.6,0,7); x.fill(); } }
+    // chấm neo để biết hình đang ở đâu; hình ĐANG CHỌN thì neo to hơn, viền trắng
+    if(!live) for(const q of P){
+      x.beginPath(); x.arc(q.x,q.y,isSel?5:2.6,0,7); x.fill();
+      if(isSel){ x.strokeStyle='#fff'; x.lineWidth=1.6; x.stroke(); }
+    }
     x.restore();
   }
   function paintDraws(x,y){
-    for(const d of draws) paintOne(x,y,d,false);
+    draws.forEach((d,i)=>paintOne(x,y,d,false,i===sel));
     if(pending){
       const pts=pending.p.concat(preview?[preview]:[]);
-      if(pts.length) paintOne(x,y,{k:pending.k,p:pts,col:pending.col},true);
+      if(pts.length) paintOne(x,y,{k:pending.k,p:pts,col:pending.col,txt:pending.txt},true);
     }
   }
-  const NEED={hl:1,vl:1,tl:2,rc:2,fib:2};
-  self.setTool=function(n){ tool=n||null; pending=null; preview=null;
+  const NEED={hl:1,vl:1,txt:1,tl:2,ray:2,rc:2,fib:2,msr:2,pc:3};
+
+  /* ---- CHỌN / KÉO / XOÁ TỪNG HÌNH ---------------------------------------- */
+  const HIT=8;                                          // bán kính bắt trúng (px)
+  function segDist(px,py,a,b){                          // khoảng cách từ điểm tới đoạn thẳng
+    const dx=b.x-a.x, dy=b.y-a.y, L=dx*dx+dy*dy;
+    const t=L?Math.max(0,Math.min(1,((px-a.x)*dx+(py-a.y)*dy)/L)):0;
+    return Math.hypot(px-(a.x+dx*t),py-(a.y+dy*t));
+  }
+  function hitOne(d,px,py){
+    const P=d.p.map(q=>({x:xOfT(q.t),y:yOfV(q.v)})), W=geo.plotW;
+    for(let i=0;i<P.length;i++) if(Math.hypot(px-P[i].x,py-P[i].y)<=HIT) return {pt:i};
+    if(d.k==='hl') return Math.abs(py-P[0].y)<=HIT?{}:null;
+    if(d.k==='vl') return Math.abs(px-P[0].x)<=HIT?{}:null;
+    if(d.k==='txt') return (px>P[0].x-HIT&&px<P[0].x+90&&Math.abs(py-P[0].y)<=10)?{}:null;
+    if(P.length<2) return null;
+    const a=P[0], b=P[1];
+    if(d.k==='tl') return segDist(px,py,a,b)<=HIT?{}:null;
+    if(d.k==='ray'){
+      const dx=b.x-a.x, dy=b.y-a.y, k=dx?(dx>0?(W-a.x)/dx:(0-a.x)/dx):1e4;
+      return segDist(px,py,a,{x:a.x+dx*Math.max(1,k),y:a.y+dy*Math.max(1,k)})<=HIT?{}:null;
+    }
+    if(d.k==='rc'||d.k==='msr'){
+      const X0=Math.min(a.x,b.x), X1=Math.max(a.x,b.x), Y0=Math.min(a.y,b.y), Y1=Math.max(a.y,b.y);
+      return (px>=X0-HIT&&px<=X1+HIT&&py>=Y0-HIT&&py<=Y1+HIT)?{}:null;
+    }
+    if(d.k==='pc'&&P.length>=3){
+      const c=P[2], off=c.y-(a.y+(b.y-a.y)*((c.x-a.x)/((b.x-a.x)||1)));
+      return (segDist(px,py,a,b)<=HIT||segDist(px,py,{x:a.x,y:a.y+off},{x:b.x,y:b.y+off})<=HIT)?{}:null;
+    }
+    if(d.k==='fib'){
+      const v0=d.p[0].v, v1=d.p[1].v, X0=Math.min(a.x,b.x), X1=Math.max(a.x,b.x);
+      if(px<X0-HIT||px>X1+HIT) return null;
+      for(const f of FIB) if(Math.abs(py-yOfV(v0+(v1-v0)*f))<=HIT) return {};
+      return null;
+    }
+    return null;
+  }
+  function hitTest(px,py){                              // hình vẽ sau đè hình trước
+    for(let i=draws.length-1;i>=0;i--){ const h=hitOne(draws[i],px,py); if(h) return {i,pt:h.pt}; }
+    return null;
+  }
+  function snapV(px,py){                                // hít vào giá O/H/L/C gần nhất
+    if(!magnet) return vOfY(py);
+    const gi=Math.round(i0+px/geo.cw-0.5);
+    const r=rows[Math.max(0,Math.min(rows.length-1,gi))]; if(!r) return vOfY(py);
+    const v=vOfY(py);
+    let best=v, bd=Infinity;
+    for(const c of [r.o,r.h,r.l,r.c]){ const dd=Math.abs(yOfV(c)-py); if(dd<bd){bd=dd;best=c;} }
+    return bd<=22?best:v;                               // xa quá thì thôi, khỏi giật
+  }
+  self.setTool=function(n){ tool=n||null; pending=null; preview=null; sel=-1;
     cvs.style.cursor=tool?'crosshair':''; self.draw(); };
   self.getTool=()=>tool;
   self.getDraws=()=>draws;
-  self.setDraws=function(a){ draws=Array.isArray(a)?a:[]; self.draw(); };
-  self.undoDraw=function(){ if(pending){pending=null;preview=null;} else draws.pop();
+  self.setDraws=function(a){ draws=Array.isArray(a)?a:[]; sel=-1; self.draw(); };
+  self.undoDraw=function(){ if(pending){pending=null;preview=null;} else {draws.pop(); sel=-1;}
     self.draw(); if(opt.onDraws) opt.onDraws(draws); };
-  self.clearDraws=function(){ draws=[]; pending=null; preview=null;
+  self.clearDraws=function(){ draws=[]; pending=null; preview=null; sel=-1;
     self.draw(); if(opt.onDraws) opt.onDraws(draws); };
+  self.getSel=()=>sel;
+  self.delSel=function(){ if(sel<0) return false;
+    draws.splice(sel,1); sel=-1; self.draw(); if(opt.onDraws) opt.onDraws(draws); return true; };
+  self.setMagnet=function(b){ magnet=!!b; };
+  self.getMagnet=()=>magnet;
+  self.setColor=function(c){ dcol=c||null;
+    if(sel>=0){ draws[sel].col=dcol; self.draw(); if(opt.onDraws) opt.onDraws(draws); } };
   function addPoint(px,py){
-    const p={t:tOfX(px), v:vOfY(py)};
-    if(!pending) pending={k:tool,p:[p]};
+    const p={t:tOfX(px), v:snapV(px,py)};
+    if(!pending) pending={k:tool,p:[p],col:dcol||undefined};
     else pending.p.push(p);
     if(pending.p.length>=(NEED[tool]||2)){
+      if(pending.k==='txt'){
+        const s=prompt('Nội dung ghi chú:','');
+        if(s===null||!s.trim()){ pending=null; preview=null; self.draw(); return; }
+        pending.txt=s.trim();
+      }
       draws.push(pending); pending=null; preview=null;
       if(opt.onDraws) opt.onDraws(draws);
     }
@@ -424,13 +573,30 @@ let draws=[], tool=null, pending=null, preview=null;
   cvs.addEventListener('mousedown',e=>{
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
     if(tool){ addPoint(px,py); return; }          // đang chọn công cụ vẽ -> đặt điểm
+    if(px<=geo.plotW){                            // không có công cụ -> thử CHỌN hình vẽ
+      const h=hitTest(px,py);
+      if(h){ sel=h.i;
+        dmove={i:h.i, pt:h.pt, t0:tOfX(px), v0:vOfY(py), p0:draws[h.i].p.map(q=>({...q}))};
+        cvs.style.cursor='move'; self.draw(); return;
+      }
+      if(sel>=0){ sel=-1; self.draw(); }          // bấm ra chỗ trống -> bỏ chọn
+    }
     // kéo trên TRỤC GIÁ = giãn/co trục giá; kéo trong khung = dời cả 2 chiều
     drag={x:e.clientX,y:e.clientY,i0,yPan,yZoom,axis:px>geo.plotW};
     cvs.style.cursor=drag.axis?'ns-resize':'grabbing';
   });
-  window.addEventListener('mouseup',()=>{ drag=null; cvs.style.cursor=tool?'crosshair':''; });
+  window.addEventListener('mouseup',()=>{
+    if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
+    drag=null; cvs.style.cursor=tool?'crosshair':'';
+  });
   cvs.addEventListener('mousemove',e=>{
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+    if(dmove){                                    // đang kéo hình vẽ (cả hình hoặc 1 điểm neo)
+      const dt=tOfX(px)-dmove.t0, dv=snapV(px,py)-dmove.v0, d=draws[dmove.i];
+      if(dmove.pt!=null){ d.p[dmove.pt]={t:dmove.p0[dmove.pt].t+dt, v:dmove.p0[dmove.pt].v+dv}; }
+      else d.p=dmove.p0.map(q=>({t:q.t+dt, v:q.v+dv}));
+      hover=-1; self.draw(); return;
+    }
     if(drag){
       if(drag.axis){                              // giãn/co trục giá
         yZoom=Math.max(0.15,Math.min(6,drag.yZoom*(1+(e.clientY-drag.y)/260)));
@@ -441,14 +607,23 @@ let draws=[], tool=null, pending=null, preview=null;
       }
       hover=-1; self.draw(); return;
     }
-    if(tool&&pending){ preview={t:tOfX(px),v:vOfY(py)}; self.draw(); return; }
+    if(tool&&pending){ preview={t:tOfX(px),v:snapV(px,py)}; self.draw(); return; }
     if(px>geo.plotW){ if(hover!==-1){hover=-1; hoverY=-1; self.draw();} return; }
+    if(!tool&&draws.length) cvs.style.cursor=hitTest(px,py)?'move':'';   // rê trúng hình -> báo kéo được
     const i=idxAt(px);
     /* Đường ngang phải BÁM ĐÚNG CHUỘT, không hít vào giá đóng cửa của nến. Nên vẽ lại
        cả khi chỉ đổi Y (rê dọc trong cùng một nến) — trước chỉ vẽ khi đổi nến. */
     if(i!==hover||Math.abs(py-hoverY)>0.5){ hover=i; hoverY=py; self.draw(); }
   });
   cvs.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; hoverY=-1; self.draw(); } });
+  // phím Delete xoá hình đang chọn (bỏ qua khi đang gõ trong ô nhập)
+  window.addEventListener('keydown',e=>{
+    if(sel<0||!cvs.isConnected) return;
+    if(e.key!=='Delete'&&e.key!=='Backspace') return;
+    const a=document.activeElement;
+    if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable)) return;
+    e.preventDefault(); self.delSel();
+  });
   cvs.addEventListener('dblclick',()=>{ self.resetView(); });
   // cảm ứng: 1 ngón trượt/xem, 2 ngón chụm để phóng
   cvs.addEventListener('touchstart',e=>{
@@ -456,14 +631,30 @@ let draws=[], tool=null, pending=null, preview=null;
       pinch={d:Math.abs(e.touches[0].clientX-e.touches[1].clientX),span:i1-i0,i0}; drag=null;
     }else if(e.touches.length===1){
       const r=cvs.getBoundingClientRect();
-      const p0=e.touches[0];
-      if(tool){ addPoint(p0.clientX-r.left,p0.clientY-r.top); return; }
+      const p0=e.touches[0], px=p0.clientX-r.left, py=p0.clientY-r.top;
+      if(tool){ addPoint(px,py); return; }
+      if(px<=geo.plotW){                       // chạm trúng hình vẽ -> chọn và kéo được bằng ngón
+        const hit=hitTest(px,py);
+        if(hit){ sel=hit.i;
+          dmove={i:hit.i, pt:hit.pt, t0:tOfX(px), v0:vOfY(py), p0:draws[hit.i].p.map(q=>({...q}))};
+          self.draw(); return;
+        }
+        if(sel>=0){ sel=-1; self.draw(); }
+      }
       drag={x:p0.clientX,y:p0.clientY,i0,yPan,moved:false};
       hover=idxAt(e.touches[0].clientX-r.left); self.draw();
     }
   },{passive:true});
   cvs.addEventListener('touchmove',e=>{
     const r=cvs.getBoundingClientRect();
+    if(dmove&&e.touches.length===1){          // kéo hình vẽ bằng ngón tay
+      e.preventDefault();
+      const px=e.touches[0].clientX-r.left, py=e.touches[0].clientY-r.top;
+      const dt=tOfX(px)-dmove.t0, dv=snapV(px,py)-dmove.v0, d=draws[dmove.i];
+      if(dmove.pt!=null) d.p[dmove.pt]={t:dmove.p0[dmove.pt].t+dt, v:dmove.p0[dmove.pt].v+dv};
+      else d.p=dmove.p0.map(q=>({t:q.t+dt, v:q.v+dv}));
+      hover=-1; self.draw(); return;
+    }
     if(pinch&&e.touches.length===2){
       e.preventDefault();
       const d=Math.abs(e.touches[0].clientX-e.touches[1].clientX)||1;
@@ -482,7 +673,10 @@ let draws=[], tool=null, pending=null, preview=null;
       self.draw();
     }
   },{passive:false});
-  cvs.addEventListener('touchend',()=>{ drag=null; pinch=null; });
+  cvs.addEventListener('touchend',()=>{
+    if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
+    drag=null; pinch=null;
+  });
 
   let rt=null;
   window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(()=>self.draw(),120); });
