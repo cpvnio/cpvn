@@ -319,7 +319,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260806z"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260807d"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -466,7 +466,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260806z"></script>
+<script src="assets/chart.js?v=20260807d"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -624,14 +624,16 @@ let lastFullAt=0;
 /* BỘ NHỚ GIÁ SỐNG dùng chung 3 trang (sessionStorage cpvn_live) — trang khác mở là có ngay */
 const dayVN=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
 function saveLiveShared(){
-  if(!sessionOpen()) return;                 // chỉ ghi SỐ TRONG PHIÊN 9-15h
+  // ghi cả NGOÀI GIỜ: buổi tối mở trang vẫn có số gần nhất, khỏi loé giá phiên trước
   try{
     const d={};
     for(const c of state.coins.values()){
       if(!(c.price>0)) continue;
       d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd||0),c.fbuy||0,c.fsell||0,c.high||0,c.low||0,c.ceil||0,c.flr||0];
     }
-    localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(), sess:dayVN(),
+    // final = ngoài giờ nên số này không đổi nữa -> lưu CỨNG, lần sau khỏi gọi mạng
+    localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
+      sess:window._liveSess||dayVN(), final:!sessionOpen(),
       idx:(window._lastIdx||[]).map(i=>[i.name,i.value,i.chg]), d}));
   }catch(e){}
 }
@@ -639,9 +641,12 @@ function saveLiveShared(){
 function applyLiveShared(){
   try{
     const j=JSON.parse(localStorage.getItem('cpvn_live')||'null');
-    if(!j||!j.d||j.sess!==dayVN()) return false;
-    if(state.eodDate===j.sess) return false;   // kho ĐÃ chốt ngày này -> kho thắng
+    if(!j||!j.d||!j.sess||j.sess>dayVN()) return false;
+    if(!(j.sess>(state.eodDate||''))) return false;   // kho bằng/mới hơn đệm -> kho thắng
+    // ĐẾM TRƯỚC rồi mới ghi đè, kẻo đệm thiếu mã thì dữ liệu bị trộn nửa sống nửa kho
     let n=0;
+    for(const sym in j.d) if(state.coins.get(sym)&&j.d[sym]&&j.d[sym][0]>0) n++;
+    if(n<100) return false;
     for(const sym in j.d){
       const c=state.coins.get(sym); if(!c) continue;
       const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
@@ -652,10 +657,10 @@ function applyLiveShared(){
       c.traded=last>0&&(vol||0)>0;
       c.chg1d=c.ref>0?(last-c.ref)/c.ref*100:c.chg1d;
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
-      n++;
     }
-    if(n>=100){ lastPollAt=j.at; return true; }
-    return false;
+    lastPollAt=j.at;
+    if(j.final) window._liveSess=j.sess;      // bản CHỐT CỨNG -> khỏi gọi mạng nữa
+    return true;
   }catch(e){ return false; }
 }
 /* only = mảng mã đang hiển thị (làm mới nhanh); bỏ trống = quét cả thị trường */
@@ -665,11 +670,11 @@ async function pollBoard(only){
     let list=chunks;
     if(only&&only.length){ const u=[...new Set(only.filter(x=>state.coins.has(x)))];
       list=[]; for(let i=0;i<u.length;i+=150) list.push(u.slice(i,i+150).join(',')); }
-    const rows=[];
-    for(const ch of list){
-      const arr=await fetch(BG+'/getliststockdata/'+ch).then(r=>r.json());
-      for(const t of arr) rows.push(t);
-    }
+    // các lượt chạy SONG SONG (nối đuôi nhau thì quét cả thị trường mất ~2,8 giây)
+    const rows=(await Promise.all(list.map(ch=>
+      fetch(BG+'/getliststockdata/'+ch).then(r=>r.json()).catch(()=>[])
+    ))).flat().filter(Boolean);
+    if(!rows.length) throw new Error('bảng giá rỗng');
     /* ĐÊM RESET BẢNG (rạng sáng trước phiên mới / cuối tuần): VPS trả lastPrice=0, lot=0
        cho CẢ thị trường. Không được ghi đè số liệu kho -> chỉ nhận TC/trần/sàn phiên tới,
        giữ nguyên giá/KL/%/bong bóng của phiên gần nhất. */
@@ -691,8 +696,13 @@ async function pollBoard(only){
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     lastPollAt=Date.now();
-    if(!(only&&only.length)) lastFullAt=lastPollAt;
-    if(!boardEmpty) saveLiveShared();        // đệm liên tục 9-15h
+    if(!(only&&only.length)){
+      lastFullAt=lastPollAt;
+      // chỉ lượt quét ĐỦ mới đóng dấu phiên (lượt nhỏ đóng dấu thì bỏ luôn lượt quét đủ)
+      if(!boardEmpty) window._liveSess=sessionOpen()?dayVN():lastSessionDate();
+    }
+    // CHỈ ghi đệm sau lượt quét TOÀN BỘ — lượt nhỏ ghi vào sẽ đóng dấu số kho cũ thành giá sống
+    if(!boardEmpty&&!(only&&only.length)) saveLiveShared();
     updateLivePill();
   }catch(e){
     setStatus(state.eodLoaded&&!lastPollAt
@@ -706,6 +716,20 @@ function sessionOpen(){
   const vn=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
   const d=vn.getDay(), m=vn.getHours()*60+vn.getMinutes();
   return d>=1&&d<=5&&m>=540&&m<900;   // 540=9:00, 900=15:00
+}
+/* Ngày phiên gần nhất ĐÃ đóng sổ (sau 15h05 ngày giao dịch là chính hôm nay). */
+function lastSessionDate(){
+  const vn=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+  const m=vn.getHours()*60+vn.getMinutes(), d=new Date(vn);
+  if(!(d.getDay()>=1&&d.getDay()<=5&&m>=905)) d.setDate(d.getDate()-1);
+  while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()-1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+/* Giá đang giữ đã là giá CHỐT phiên gần nhất -> ngoài giờ khỏi gọi mạng nữa. */
+function pricesFinal(){
+  if(sessionOpen()) return false;
+  const s=lastSessionDate();
+  return state.eodDate===s||window._liveSess===s;
 }
 function updateLivePill(){
   const el=document.getElementById('live');
@@ -725,7 +749,8 @@ function updateLivePill(){
 setInterval(()=>{
   if(document.hidden) return;
   const now=Date.now();
-  if(!sessionOpen()){ if(now-lastPollAt>=1800000) pollBoard(); return; }
+  // ngoài giờ: chốt cứng rồi thì NGỪNG HẲN, chưa chốt thì hỏi lại mỗi phút cho tới khi chốt
+  if(!sessionOpen()){ if(!pricesFinal()&&now-lastPollAt>=60000) pollBoard(); return; }
   if(now-lastFullAt>=300000) pollBoard();
   else if(now-lastPollAt>=60000) pollBoard(bubbles.map(b=>b.sym).concat(detailSym||[]));
 },5000);
@@ -2128,7 +2153,8 @@ async function openNews(slug){
     if(new URLSearchParams(location.search).get('view')==='heat') state.view='heat';
     rebuild(); applyView();
     refreshIdxBar();
-    pollBoard().then(()=>{ rebuild(); refreshIdxBar(); });   // giá trực tiếp đè lên khi có
+    // giá trực tiếp đè lên khi có — nhưng đã chốt cứng phiên gần nhất thì khỏi gọi mạng
+    if(!pricesFinal()) pollBoard().then(()=>{ rebuild(); refreshIdxBar(); });
     setInterval(rebuild, 30000);
   }catch(e){ setStatus('Lỗi khởi động: '+e.message); }
 })();

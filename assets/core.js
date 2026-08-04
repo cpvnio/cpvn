@@ -115,26 +115,56 @@ CP.consolidateSectors=function(){
 };
 
 /* ---------- bảng giá trực tiếp VPS (poll 5 phút trong phiên) --------------- */
+const vnNow=()=>new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 CP.sessionOpen=function(){
-  const vn=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+  const vn=vnNow();
   const d=vn.getDay(), m=vn.getHours()*60+vn.getMinutes();
   return d>=1&&d<=5&&m>=540&&m<900;
 };
-let polling=false;
+/* NGÀY PHIÊN GẦN NHẤT ĐÃ ĐÓNG SỔ. Sau 15h05 ngày giao dịch thì chính là hôm nay,
+   còn lại lùi về ngày giao dịch trước (bỏ thứ 7, chủ nhật).
+   Dùng để biết khi nào giá đã CHỐT CỨNG — không thể đổi nữa nên khỏi gọi mạng. */
+CP.lastSessionDate=function(){
+  const vn=vnNow(), m=vn.getHours()*60+vn.getMinutes();
+  const d=new Date(vn);
+  if(!(d.getDay()>=1&&d.getDay()<=5&&m>=905)) d.setDate(d.getDate()-1);
+  while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()-1);
+  return ymd(d);
+};
+/* Giá đang giữ đã là giá CHỐT của phiên gần nhất -> khỏi hỏi mạng thêm lần nào. */
+CP.pricesFinal=function(){
+  if(CP.sessionOpen()) return false;
+  const s=CP.lastSessionDate();
+  return CP.eodDate===s||CP.liveSess===s;
+};
+let polling=false, inflight=null;
 CP.lastFullAt=0;
-/* only = mảng mã cần làm mới NHANH (những mã người dùng đang nhìn); bỏ trống = quét cả thị trường */
-CP.pollBoard=async function(only){
-  if(polling||CP.OFFLINE) return false; polling=true;
+/* only = mảng mã cần làm mới NHANH (những mã người dùng đang nhìn); bỏ trống = quét cả thị trường.
+   Đang có lượt chạy thì TRẢ VỀ CHÍNH LƯỢT ĐÓ (trước đây trả false rồi thôi — ai gọi trúng
+   lúc bận sẽ không bao giờ được báo kết quả, màn hình đứng số cũ). */
+CP.pollBoard=function(only){
+  if(CP.OFFLINE) return Promise.resolve(false);
+  if(polling&&inflight) return inflight;
+  polling=true;
+  inflight=doPoll(only).finally(()=>{ polling=false; });
+  return inflight;
+};
+async function doPoll(only){
   try{
     const syms=(only&&only.length)?only.filter(s=>CP.coins.has(s)):[...CP.coins.keys()];
-    const rows=[];
-    for(let i=0;i<syms.length;i+=150){
-      const arr=await fetch(BG+'/getliststockdata/'+syms.slice(i,i+150).join(',')).then(r=>r.json());
-      for(const t of arr) rows.push(t);
-    }
-    /* đêm reset bảng: VPS trả 0 cả thị trường -> chỉ nhận TC/trần/sàn, giữ số phiên gần nhất */
+    /* CÁC LƯỢT CHẠY SONG SONG. Trước đây chờ nhau nối đuôi: quét cả thị trường
+       mất ~2,8 giây, đúng bằng khoảng thời gian giá "loé số cũ" khi mới mở trang. */
+    const parts=[];
+    for(let i=0;i<syms.length;i+=150) parts.push(syms.slice(i,i+150));
+    const rows=(await Promise.all(parts.map(p=>
+      fetch(BG+'/getliststockdata/'+p.join(',')).then(r=>r.json()).catch(()=>[])
+    ))).flat().filter(Boolean);
+    if(!rows.length) throw new Error('bảng giá rỗng');
+    /* đêm reset bảng: VPS trả 0 cả thị trường -> chỉ nhận TC/trần/sàn, giữ số phiên gần nhất.
+       Lượt nhỏ (1 mã) không xét được tỷ lệ nên thêm điều kiện: KHÔNG mã nào có giao dịch. */
     const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
-    const boardEmpty=rows.length>50&&active<rows.length*0.1;
+    const boardEmpty=active===0||(rows.length>50&&active<rows.length*0.1);
     for(const t of rows){
       const c=CP.coins.get(t.sym); if(!c) continue;
       c.ref=(+t.r||0)*1000; c.ceil=(+t.c||0)*1000; c.flr=(+t.f||0)*1000;
@@ -152,35 +182,61 @@ CP.pollBoard=async function(only){
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
     CP.lastPollAt=Date.now(); CP.liveOk=true;
-    if(!(only&&only.length)) CP.lastFullAt=CP.lastPollAt;
-    if(!boardEmpty) CP.saveLive();           // ghi đệm LIÊN TỤC trong phiên (cả tầng 1 phút)
+    if(!(only&&only.length)){
+      CP.lastFullAt=CP.lastPollAt;
+      /* CHỈ lượt quét ĐỦ CẢ THỊ TRƯỜNG mới được đóng dấu phiên. Lượt hâm nóng vài
+         chục mã mà đóng dấu thì hệ coi như đã xong, bỏ luôn lượt quét đủ -> thống
+         kê thiếu mã và bộ đệm không bao giờ được ghi. */
+      if(!boardEmpty) CP.liveSess=CP.sessionOpen()?CP.dayVN():CP.lastSessionDate();
+    }
+    /* CHỈ ghi đệm sau lượt quét TOÀN BỘ. Lượt nhỏ chỉ làm mới vài mã, nếu ghi đệm
+       thì phần còn lại là số kho cũ lại bị đóng dấu "giá sống hôm nay" -> sai. */
+    if(!boardEmpty&&!(only&&only.length)) CP.saveLive();
     return true;
   }catch(e){ CP.liveOk=false; return false; }
-  finally{ polling=false; }
+}
+/* Hâm nóng giá cho MẤY MÃ SẮP VẼ, chờ tối đa ms rồi vẽ dù xong hay chưa.
+   Nếu quá hạn, lượt gọi vẫn chạy tiếp và startPolling nhận chung kết quả đó. */
+CP.warmPrices=function(syms,ms){
+  if(CP.OFFLINE||!syms||!syms.length) return Promise.resolve(false);
+  if(CP.pricesFinal()) return Promise.resolve(false);   // đã chốt cứng -> khỏi chờ mạng
+  return Promise.race([CP.pollBoard(syms), new Promise(r=>setTimeout(()=>r(false),ms||800))]);
 };
 /* BỘ NHỚ GIÁ SỐNG DÙNG CHUNG (sessionStorage 'cpvn_live'): trang nào poll xong cũng ghi,
    trang khác mở ra là CÓ NGAY số sống gần nhất — không phải chờ mạng, không lóe số cũ. */
 CP.dayVN=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
 CP.saveLive=function(){
-  if(!CP.sessionOpen()) return;              // chỉ ghi SỐ TRONG PHIÊN (9-15h)
+  /* Ghi cả NGOÀI GIỜ. Trước đây chỉ ghi trong 9-15h, nên buổi tối mở trang là
+     không có đệm -> luôn loé giá đóng cửa HÔM TRƯỚC rồi mới nhảy. */
   try{
     const d={};
     for(const c of CP.coins.values()){
       if(!(c.price>0)) continue;
       d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr];
     }
-    localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(), sess:CP.dayVN(),
+    /* sess = phiên của số này; final = đã ngoài giờ nên số này KHÔNG ĐỔI NỮA.
+       Ghi final=true tức là lưu CỨNG: lần sau mở trang cứ lấy ra dùng, khỏi gọi mạng. */
+    localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
+      sess:CP.liveSess||CP.dayVN(), final:!CP.sessionOpen(),
       idx:(CP.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
   }catch(e){}
 };
-/* áp BẢN ĐỆM TRONG PHIÊN lên coins: dùng khi kho EOD chưa chốt ngày hôm nay.
-   Sau 15h15 server đẩy kho ngày mới -> kho chính thức THẮNG, bản đệm bị bỏ qua. */
+/* áp BẢN ĐỆM lên coins khi nó MỚI HƠN kho EOD. Sau 15h15 server đẩy kho ngày
+   mới -> kho chính thức THẮNG, bản đệm bị bỏ qua.
+   So theo NGÀY PHIÊN chứ không bắt phải đúng hôm nay: sáng sớm hôm sau mà kho
+   còn trễ một phiên thì đệm chiều qua vẫn sát hơn giá đóng cửa hôm kia. */
 CP.applyLive=function(){
   try{
     const j=JSON.parse(localStorage.getItem('cpvn_live')||'null');
-    if(!j||!j.d||j.sess!==CP.dayVN()) return false;   // khác ngày phiên -> bỏ
-    if(CP.eodDate===j.sess) return false;             // kho ĐÃ chốt hôm nay -> kho thắng
+    if(!j||!j.d||!j.sess) return false;
+    if(j.sess>CP.dayVN()) return false;                // đệm ở tương lai -> hỏng, bỏ
+    if(!(j.sess>(CP.eodDate||''))) return false;       // kho đã bằng hoặc mới hơn -> kho thắng
+    /* ĐẾM TRƯỚC rồi mới ghi đè. Trước đây kiểm tra n<100 SAU vòng lặp: đệm thiếu mã
+       thì hàm báo thất bại nhưng coins đã bị trộn nửa số sống nửa số kho. */
     let n=0;
+    for(const sym in j.d){ const c=CP.coins.get(sym);
+      if(c&&j.d[sym]&&j.d[sym][0]>0) n++; }
+    if(n<100) return false;
     for(const sym in j.d){
       const c=CP.coins.get(sym); if(!c) continue;
       const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
@@ -191,11 +247,10 @@ CP.applyLive=function(){
       c.traded=last>0&&(vol||0)>0;
       c.chg1d=c.ref>0?(last-c.ref)/c.ref*100:c.chg1d;
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
-      n++;
     }
-    if(n<100) return false;
     if(j.idx&&j.idx.length) CP.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
     CP.lastPollAt=j.at;                                // nhịp hiển thị nối tiếp từ bản đệm
+    if(j.final) CP.liveSess=j.sess;                    // bản CHỐT CỨNG -> khỏi gọi mạng nữa
     return true;
   }catch(e){ return false; }
 };
@@ -210,11 +265,24 @@ CP.startPolling=function(onUpdate,visibleSyms){
     const only=fast&&typeof visibleSyms==='function'?visibleSyms():null;
     if(await CP.pollBoard(only)&&onUpdate) onUpdate();
   };
-  tick(false);
+  /* LƯỢT ĐẦU chỉ lấy mã ĐANG HIỆN trên màn hình: 1 lượt mạng (~30ms) thay vì
+     quét cả 1.500 mã (~1,4 giây) -> giá đúng gần như ngay, hết cảnh loé số cũ.
+     Quét toàn bộ đẩy lùi lại chút, chạy ngầm cho thống kê và xếp hạng.
+     Nhưng nếu giá ĐÃ CHỐT CỨNG phiên gần nhất thì khỏi gọi mạng lượt nào. */
+  if(!CP.pricesFinal()){
+    // vừa hâm nóng xong thì khỏi lấy lại mấy mã đó, đi thẳng tới lượt quét đủ
+    const vuaLay=Date.now()-CP.lastPollAt<3000;
+    (vuaLay?Promise.resolve():tick(true)).then(()=>setTimeout(()=>tick(false),300));
+  }
   setInterval(()=>{
     if(document.hidden) return;
     const now=Date.now();
-    if(!CP.sessionOpen()){ if(now-CP.lastPollAt>=1800000) tick(false); return; }
+    if(!CP.sessionOpen()){
+      /* NGOÀI GIỜ: giá không thể đổi nữa. Chốt được rồi thì NGỪNG HẲN; chưa chốt
+         (vừa đóng cửa, hoặc mở trang lúc chưa có số) thì hỏi lại mỗi phút cho tới khi chốt. */
+      if(!CP.pricesFinal()&&now-CP.lastPollAt>=60000) tick(false);
+      return;
+    }
     if(now-CP.lastFullAt>=300000) tick(false);
     else if(now-CP.lastPollAt>=60000) tick(true);
   },5000);
