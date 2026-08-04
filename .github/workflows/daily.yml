@@ -1,12 +1,17 @@
 name: CPVN daily EOD refresh
 
-# DỰ PHÒNG TỰ ĐỘNG cho server chính (VPS Windows riêng, Scheduled Task 15:15 T2–T6):
-# 16:05 giờ VN (09:05 UTC) Actions kiểm tra — hôm nay server ĐÃ push "EOD <ngày>" thì thôi,
-# CHƯA có (server hỏng/tắt) thì Actions tự cào và push thay. Hai máy không bao giờ đụng nhau.
-# Bấm "Run workflow" ở tab Actions để chạy tay bất cứ lúc nào (chạy tay bỏ qua kiểm tra).
+# DỰ PHÒNG TỰ ĐỘNG cho server chính (VPS Windows riêng, Scheduled Task 15:15 T2–T6).
+# Actions kiểm tra: KHO đã có PHIÊN GẦN NHẤT chưa? Có rồi thì thôi, chưa có thì tự cào
+# và push thay. Hai máy không bao giờ đụng nhau. Bấm "Run workflow" để chạy tay bất cứ lúc nào.
+#
+# CHẠY NHIỀU KHUNG GIỜ vì lịch của GitHub Actions KHÔNG được bảo đảm đúng giờ: có lần
+# lượt 16:05 bị đẩy trễ hơn 8 tiếng, có ngày không chạy. Nhờ bước kiểm tra ở dưới nên
+# lượt nào tới sau mà kho đã đủ thì tự thoát, không tốn gì.
 on:
   schedule:
-    - cron: "5 9 * * 1-5"   # 16:05 giờ VN, Thứ 2–6 — sau giờ server chính 50 phút
+    - cron: "5 9 * * 1-5"    # 16:05 giờ VN — sau giờ server chính 50 phút
+    - cron: "5 12 * * 1-5"   # 19:05 giờ VN — vá khi lượt trên trễ/không chạy
+    - cron: "5 16 * * 1-5"   # 23:05 giờ VN — chốt chặn cuối trong ngày
   workflow_dispatch: {}
 
 permissions:
@@ -20,13 +25,30 @@ jobs:
         with:
           fetch-depth: 20
 
-      - name: Kiểm tra server chính đã cập nhật chưa
+      # So theo PHIÊN GẦN NHẤT ĐÃ ĐÓNG SỔ, không so theo "hôm nay".
+      # Bản cũ so với ngày chạy nên một lượt bị trễ qua nửa đêm sẽ push commit mang tên
+      # ngày HÔM SAU trong khi ruột là phiên hôm trước -> lượt đúng giờ hôm sau nhìn thấy
+      # tên đó rồi tưởng xong, bỏ qua luôn. Dự phòng tự vô hiệu hoá chính nó.
+      - name: Xác định phiên gần nhất và kiểm tra kho
         id: guard
         run: |
-          TODAY=$(TZ=Asia/Ho_Chi_Minh date +%F)
-          if [ "${{ github.event_name }}" = "schedule" ] && git log -10 --format=%s | grep -q "EOD $TODAY"; then
+          SESS=$(python3 - <<'PY'
+          from datetime import datetime, timedelta, timezone
+          vn = datetime.now(timezone(timedelta(hours=7)))
+          # chưa qua 15:05 hoặc không phải ngày giao dịch -> lùi về ngày giao dịch trước
+          if vn.weekday() > 4 or (vn.hour * 60 + vn.minute) < 905:
+              vn -= timedelta(days=1)
+          while vn.weekday() > 4:
+              vn -= timedelta(days=1)
+          print(vn.strftime('%Y-%m-%d'))
+          PY
+          )
+          echo "sess=$SESS" >> "$GITHUB_OUTPUT"
+          HAVE=$(python3 -c "import json;print(json.load(open('data/health.json'))['date'])" 2>/dev/null || echo "")
+          echo "Phiên gần nhất cần có: $SESS · kho đang có: ${HAVE:-<trống>}"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$HAVE" = "$SESS" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Server đã push EOD $TODAY — Actions không cần chạy."
+            echo "Kho đã có phiên $SESS — Actions không cần chạy."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -50,12 +72,14 @@ jobs:
             python refresh_daily.py
           fi
 
+      # Tên commit lấy theo PHIÊN TRONG KHO vừa dựng, không lấy theo ngày chạy máy.
       - name: Commit dữ liệu mới
         if: steps.guard.outputs.skip != 'true'
         run: |
+          SESS=$(python3 -c "import json;print(json.load(open('data/health.json'))['date'])" 2>/dev/null || echo "unknown")
           git config user.name  "cpvn-bot"
           git config user.email "bot@users.noreply.github.com"
           git add universe.json data/ assets/logo/
-          git commit -m "EOD $(TZ=Asia/Ho_Chi_Minh date +%F)" || echo "không có thay đổi"
+          git commit -m "EOD $SESS (actions)" || echo "không có thay đổi"
           git pull --rebase origin main || true
           git push
