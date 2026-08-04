@@ -134,7 +134,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   thead th i.u{font-size:12px}
   td .dash{color:var(--muted);font-weight:400;opacity:.5}
 
-  /* ---- BỘ LỌC: van an toàn + chips + preset triết lý ---- */
+  /* ---- BỘ LỌC: van an toàn + lọc nhanh + bảng xếp hạng ---- */
   .thmbtn .ic{width:15px;height:15px;fill:currentColor;vertical-align:-2px;margin-right:5px}
   /* nút BỘ LỌC: tô màu nổi hẳn khỏi các nút xám + nhãn "pro" sáng ở góc 1 giờ */
   #scrBtn{position:relative;display:inline-flex;align-items:center;font-size:13.5px;font-weight:800;
@@ -167,6 +167,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     cursor:pointer;display:flex;gap:8px;align-items:center}
   .pre:hover{border-color:var(--accent)}
   .pre.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
+  /* tiêu đề NHÓM CÂU HỎI trong bảng xếp hạng — chiếm trọn một hàng của lưới */
+  .rkg{grid-column:1/-1;font-size:10.5px;font-weight:800;color:var(--muted);
+    letter-spacing:.05em;text-transform:uppercase;margin:7px 0 -2px}
+  .prewrap .rkg:first-child{margin-top:0}
   .pre .ic{font-size:18px;flex-shrink:0}
   .pre .nm{font-size:12.8px;font-weight:800;line-height:1.25}
   .pre .ct{margin-left:auto;flex-shrink:0;font-size:11.5px;font-weight:800;color:var(--muted);
@@ -187,6 +191,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .chipbar button{white-space:nowrap}
     .prewrap{display:grid;grid-template-columns:none;grid-template-rows:repeat(2,auto);
       grid-auto-flow:column;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+    .rkg{display:none}   /* mobile cuộn ngang 2 hàng: tiêu đề nhóm chen vào là vỡ lưới */
     .prewrap::-webkit-scrollbar{display:none}
     .pre{min-width:196px;padding:7px 9px}
     .pre .nm{font-size:11.8px}
@@ -301,7 +306,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260807i"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260808c"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -325,7 +330,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
   <button class="thmbtn" id="secToggle" title="Chọn nhóm ngành">☰ Ngành</button>
   <button class="thmbtn" id="shotBtn" title="Chụp ảnh bảng giá tại đúng vị trí đang xem">📷</button>
-  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: van an toàn + lọc nhanh + 9 bộ lọc triết lý đầu tư"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Bộ Lọc</span></button>
+  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: van an toàn + 15 lọc nhanh + 15 bảng xếp hạng theo con số"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Bộ Lọc</span></button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
@@ -346,7 +351,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <button id="scrClear">✕ Xoá hết lọc</button>
   </div>
   <div class="scrRow"><span class="scrLb">Lọc nhanh</span><div class="chipbar" id="scrChips"></div></div>
-  <div class="scrRow" style="align-items:flex-start"><span class="scrLb">Triết lý</span>
+  <div class="scrRow" style="align-items:flex-start"><span class="scrLb">Xếp hạng</span>
     <div style="flex:1;min-width:0"><div class="prewrap" id="scrPre"></div><div id="scrDesc"></div></div>
   </div>
 </div>
@@ -386,14 +391,15 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260807i"></script>
-<script src="assets/screener.js?v=20260807i"></script>
+<script src="assets/core.js?v=20260808c"></script>
+<script src="assets/screener.js?v=20260808c"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[], bd:null };
 /* trạng thái BỘ LỌC (assets/screener.js): van an toàn + chips + preset */
-const SCR={ on:false, gtgd:5e9, mcap:2e12, p10:true, chips:new Set(), preset:null };
+const SCR={ on:false, gtgd:5e9, mcap:2e12, p10:true, chips:new Set(), rank:null };
+let rankRows=null;   // danh sách ĐÃ xếp hạng của bảng đang chọn
 function scrVan(c){                       // van an toàn — lớp chạy TRƯỚC mọi tiêu chí
   const t=CPScreen.T[c.sym]||{};
   if(SCR.gtgd&&(t.avgval20||0)<SCR.gtgd) return false;
@@ -404,7 +410,6 @@ function scrVan(c){                       // van an toàn — lớp chạy TRƯ�
 function scrPass(c){
   if(!scrVan(c)) return false;
   for(const id of SCR.chips) if(!CPScreen.chip(id,c)) return false;
-  if(SCR.preset&&!CPScreen.pass(SCR.preset,c)) return false;
   return true;
 }
 // bd = lọc theo độ rộng thị trường: 'up'|'flat'|'down'|'ceil'|'floor' (bấm chip màu ở hàng thống kê)
@@ -542,13 +547,15 @@ function filterRows(){
       }
     });
   }
-  if(SCR.on&&CPScreen.loaded) list=list.filter(scrPass);   // BỘ LỌC (van + chips + preset)
+  if(SCR.on&&CPScreen.loaded) list=list.filter(scrPass);   // BỘ LỌC (van + chips)
   const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
-  /* preset Greenblatt: khi chưa đổi cột sắp xếp thì hiện ĐÚNG THỨ HẠNG của công thức */
-  if(SCR.on&&SCR.preset==='mf'&&k==='mcap'&&CPScreen.mfRank){
-    list.sort((a,b)=>(CPScreen.mfRank[a.sym]||99)-(CPScreen.mfRank[b.sym]||99));
-    ST.rows=list; return;
-  }
+  /* BẢNG XẾP HẠNG: vừa lọc vừa sắp xếp. Chừng nào người dùng chưa tự bấm đổi cột
+     thì giữ ĐÚNG thứ hạng của bảng; bấm cột khác là bảng nhường quyền sắp xếp. */
+  if(SCR.on&&SCR.rank&&CPScreen.loaded){
+    const R=CPScreen.rankList(SCR.rank,list);
+    if(R){ rankRows=R; list=R.map(x=>x.c);
+      if(k==='mcap'){ ST.rows=list; return; } }
+  } else rankRows=null;
   /* Mã THIẾU DỮ LIỆU luôn nằm CUỐI dù sắp xếp tăng hay giảm — bấm P/E mà một loạt
      dấu "—" nhảy lên đầu bảng thì coi như cột đó vô dụng. */
   list.sort((a,b)=>{ const va=val(a,k), vb=val(b,k);
@@ -825,16 +832,37 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
 
 /* ---------- PANEL BỘ LỌC ---------- */
 function scrCount(fn){ let n=0; for(const c of CP.coins.values()) if(scrVan(c)&&fn(c)) n++; return n; }
+/* Đếm HAI con số: qua van, và toàn thị trường. Bảng "Lỗ nặng nhất" là ví dụ rõ nhất —
+   181 mã lỗ nhưng 0 mã qua van mặc định, hiện trơ số 0 thì người dùng tưởng hệ hỏng. */
+let rankTong={};
 function scrPaintCounts(){
+  const pool=[...CP.coins.values()].filter(scrVan), all=[...CP.coins.values()];
   document.querySelectorAll('#scrPre .pre').forEach(el=>{
-    el.querySelector('.ct').textContent=scrCount(c=>CPScreen.pass(el.dataset.id,c));
+    const id=el.dataset.id;
+    const R=CPScreen.rankList(id,pool), A=CPScreen.rankList(id,all);
+    rankTong[id]=A?A.length:0;
+    const n=R?R.length:0;
+    el.querySelector('.ct').textContent=n;
+    el.title=`${n} mã qua van an toàn · ${rankTong[id]} mã trên toàn thị trường`;
   });
+}
+/* Van chặn gần hết thì nói thẳng và cho nới bằng một cú bấm. */
+function scrGoiY(id,n){
+  const t=rankTong[id]||0;
+  if(!id||n>=5||t<=n) return '';
+  return ` <b style="color:var(--warn,#eab308)">Van an toàn đang chặn ${t-n} mã khác.</b>`
+       + ` <button id="scrNoi" style="background:var(--accent);color:#fff;border:0;border-radius:7px;`
+       + `padding:3px 10px;font-size:11.5px;font-weight:800;cursor:pointer;margin-left:4px">Nới van</button>`;
 }
 function scrBuild(){
   $('scrChips').innerHTML=CPScreen.chips.map(x=>
     `<button data-id="${x.id}" title="${x.g}">${x.nm}</button>`).join('');
-  $('scrPre').innerHTML=CPScreen.presets.map(p=>
-    `<div class="pre" data-id="${p.id}"><span class="ic">${p.ic}</span><span class="nm">${p.nm}</span><span class="ct">…</span></div>`).join('');
+  // gom theo NHÓM CÂU HỎI, giữ đúng thứ tự khai báo trong screener.js
+  let g0=null;
+  $('scrPre').innerHTML=CPScreen.ranks.map(p=>{
+    const h=p.g!==g0?`<div class="rkg">${p.g}</div>`:''; g0=p.g;
+    return h+`<div class="pre" data-id="${p.id}"><span class="nm">${p.nm}</span><span class="ct">…</span></div>`;
+  }).join('');
   document.querySelectorAll('#scrChips button').forEach(b=>b.onclick=()=>{
     const id=b.dataset.id;
     SCR.chips.has(id)?SCR.chips.delete(id):SCR.chips.add(id);
@@ -843,14 +871,21 @@ function scrBuild(){
   });
   document.querySelectorAll('#scrPre .pre').forEach(el=>el.onclick=()=>{
     const id=el.dataset.id;
-    SCR.preset=SCR.preset===id?null:id;
-    document.querySelectorAll('#scrPre .pre').forEach(x=>x.classList.toggle('on',x.dataset.id===SCR.preset));
-    const p=CPScreen.presets.find(x=>x.id===SCR.preset);
-    $('scrDesc').textContent=p?p.ds:'';
+    SCR.rank=SCR.rank===id?null:id;
+    document.querySelectorAll('#scrPre .pre').forEach(x=>x.classList.toggle('on',x.dataset.id===SCR.rank));
+    const p=CPScreen.ranks.find(x=>x.id===SCR.rank);
+    if(SCR.rank){ ST.sort='rank'; ST.dir=-1; }   // chọn bảng là trả quyền sắp xếp cho bảng
     ST.page=1; render();
+    const soQuaVan=(rankRows||[]).length;
+    $('scrDesc').innerHTML=p?(p.ds+scrGoiY(SCR.rank,soQuaVan)):'';
+    const nb=$('scrNoi');
+    if(nb) nb.onclick=e=>{ e.stopPropagation();
+      SCR.gtgd=0; SCR.mcap=0; SCR.p10=false;                 // mở hết van
+      $('scrGtgd').value='0'; $('scrMcap').value='0'; $('scrP10').checked=false;
+      scrVanChanged(); $('scrDesc').innerHTML=p.ds; };
     // mobile: panel + rừng nút chiếm gần trọn màn hình -> chọn xong tự đưa xuống kết quả
     // (cuộn thẳng, không smooth — smooth bị nhiều môi trường nuốt mất animation)
-    if(SCR.preset&&window.innerWidth<=760)
+    if(SCR.rank&&window.innerWidth<=760)
       setTimeout(()=>{ const y=$('wrap').getBoundingClientRect().top+window.scrollY-52;
         window.scrollTo(0,Math.max(0,y)); },120);
   });
@@ -877,7 +912,7 @@ $('scrGtgd').onchange=e=>{ SCR.gtgd=+e.target.value; scrVanChanged(); };
 $('scrMcap').onchange=e=>{ SCR.mcap=+e.target.value; scrVanChanged(); };
 $('scrP10').onchange=e=>{ SCR.p10=e.target.checked; scrVanChanged(); };
 $('scrClear').onclick=()=>{
-  SCR.chips.clear(); SCR.preset=null;
+  SCR.chips.clear(); SCR.rank=null; rankRows=null;
   SCR.gtgd=5e9; SCR.mcap=2e12; SCR.p10=true;
   $('scrGtgd').value='5e9'; $('scrMcap').value='2e12'; $('scrP10').checked=true;
   document.querySelectorAll('#scrChips button,#scrPre .pre').forEach(x=>x.classList.remove('on'));

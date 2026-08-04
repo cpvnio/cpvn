@@ -1,5 +1,5 @@
 /* ============================================================================
-   CPScreen — BỘ LỌC bảng giá CPVN: van an toàn + chips 1 chạm + 9 preset triết lý
+   CPScreen — BỘ LỌC bảng giá CPVN: van an toàn + chips 1 chạm + 15 bảng xếp hạng
    Dữ liệu: data/fund.json (dẫn xuất từ kho BCTC,
    build_screen.py tự sinh mỗi phiên) + data/screen.json (kỹ thuật). Nạp LƯỜI khi
    người dùng mở panel lần đầu — không tốn tải trang cho người không dùng lọc.
@@ -122,68 +122,87 @@ CPScreen.chip=function(id,c){
   }
 };
 
-/* ---------- 9 PRESET triết lý ---------------------------------------------- */
-CPScreen.presets=[
- {id:'graham',ic:'🏛',nm:'Phòng thủ Graham',
-  ds:'P/E trên EPS bình quân 3 năm ≤ 15 · P/E×P/B ≤ 22,5 · 8 năm liền có lãi · cổ tức tiền mặt đều ≥ 5 năm · thanh toán hiện hành ≥ 2 và nợ dài hạn ≤ vốn lưu động ròng (nhóm tài chính miễn 2 điều kiện cấu trúc nợ)'},
- {id:'buffett',ic:'💎',nm:'Chất lượng Buffett',
-  ds:'ROE ≥ 15% TỪNG NĂM suốt 5 năm (xuyên chu kỳ) · 8 năm không lỗ · biên ròng trên trung vị ngành và không suy giảm · nợ vay/VCSH < 1 + CFO/LNST ≥ 0,9 (tài chính: thay bằng ROA ≥ 1% & VCSH/TS ≥ 5%)'},
- {id:'canslim',ic:'🚀',nm:'CAN SLIM (O’Neil)',
-  ds:'LNST quý ≥ +25% cùng kỳ · LNST tăng ≥ 25%/năm suốt 3 năm · ROE ≥ 17% · giá cách đỉnh 52W ≤ 15% · RS ≥ 80 · khối ngoại mua ròng 30 phiên (chữ I bản VN)'},
- {id:'miner',ic:'📈',nm:'Trend Template Minervini',
-  ds:'Giá > MA50 > MA150 > MA200 · MA200 dốc lên ≥ 1 tháng · giá cao hơn đáy 52W ≥ 30% · cách đỉnh ≤ 25% · RS ≥ 70 · đủ ~1 năm giao dịch'},
- {id:'pio',ic:'🎯',nm:'Điểm Piotroski F',
-  ds:'Nhóm P/B rẻ nhất 20% thị trường + đạt gần tối đa 8 tín hiệu sức khoẻ BCTC (ROA, CFO, dồn tích, đòn bẩy, thanh khoản, biên gộp, vòng quay — ngân hàng chấm trên 6)'},
- {id:'mf',ic:'🧮',nm:'Công thức kỳ diệu Greenblatt',
-  ds:'Xếp hạng kép: Tỷ suất lợi nhuận (LNTT/EV) + Sinh lời trên vốn — lấy TOP 30, loại tài chính & tiện ích như công thức gốc. Kết quả xếp đúng thứ hạng'},
- {id:'div',ic:'💰',nm:'Cổ tức bền vững',
-  ds:'Tỷ suất cổ tức tiền mặt ≥ 5% · trả đều ≥ 5 năm liên tục · payout ≤ 60% · CFO phủ được cổ tức · LNST năm gần nhất không giảm quá 20%'},
- {id:'lynch',ic:'⚖️',nm:'GARP Lynch',
-  ds:'PEG < 1 (P/E ÷ tăng trưởng LNST 3 năm) · nợ vay/VCSH < 0,5 · tồn kho không phình nhanh hơn doanh thu · LOẠI ngành chu kỳ (PEG đáy chu kỳ là bẫy) · tài chính: VCSH/TS > 5% & ROA > 1%'},
- {id:'nn',ic:'🌊',nm:'Sóng ngầm khối ngoại',
-  ds:'Khối ngoại mua ròng ≥ 5% tổng GTGD 30 phiên VÀ còn mua ròng luỹ kế 60 phiên · giá trên MA50 · RS ≥ 70 — dòng tiền lớn bền bỉ, không phải cú đánh 1 phiên'},
+/* ---------- BẢNG XẾP HẠNG (thay 9 preset triết lý cũ) -----------------------
+   Preset cũ trả lời "mã này có đạt trường phái X không" — hỏi kiểu đúng/sai, và
+   người dùng phải biết Graham/Piotroski là gì mới dùng được. Bảng xếp hạng trả lời
+   thẳng câu người ta thật sự hỏi: "ai lãi nhất", "ai lỗ nặng nhất", "ai nhiều tiền
+   mặt nhất" — vừa LỌC vừa SẮP XẾP trong một cú bấm.
+
+   ok(c,f,t)  : mã có đủ tư cách vào bảng này không (chặn số rác)
+   sc(c,f,t)  : điểm để xếp hạng, LUÔN xếp GIẢM DẦN (muốn tăng dần thì trả số âm)
+
+   CHẶN SỐ RÁC là phần quan trọng nhất: kho có mã biên ròng 115.200% và mã lãi tăng
+   +84.736% — đều là doanh thu/nền lợi nhuận tí hon chia ra, lọt vào là top vô nghĩa. */
+const cap=(v,lo,hi)=>v!=null&&isFinite(v)&&v>=lo&&v<=hi;
+CPScreen.ranks=[
+ // ── LÃI & LỖ: câu hỏi ai cũng hỏi trước tiên ───────────────────────────────
+ {id:'npBig', g:'Lãi & Lỗ', nm:'Lãi lớn nhất', dv:'tỷ',
+  ds:'Lợi nhuận sau thuế năm gần nhất, cao xuống thấp. Con số tuyệt đối — quy mô thật của doanh nghiệp.',
+  ok:c=>(c.np||0)>0, sc:c=>c.np},
+ {id:'npLoss', g:'Lãi & Lỗ', nm:'Lỗ nặng nhất', dv:'tỷ',
+  ds:'Chỉ các mã LỖ, lỗ to nhất lên đầu. Xem ai đang đốt tiền, và ai vừa thoát lỗ.',
+  ok:c=>(c.np||0)<0, sc:c=>-c.np},
+ {id:'npGrow', g:'Lãi & Lỗ', nm:'Lãi tăng mạnh nhất', dv:'%',
+  ds:'LNST năm nay so với năm trước. Đã chặn trên 500% vì nền lợi nhuận tí hon chia ra cho số vô nghĩa.',
+  ok:(c,f)=>(c.np||0)>0&&cap(f.npChg1,-100,500), sc:(c,f)=>f.npChg1},
+ {id:'npCagr', g:'Lãi & Lỗ', nm:'Tăng trưởng lãi 3 năm', dv:'%/năm',
+  ds:'Tốc độ tăng lợi nhuận kép 3 năm — bền hơn con số một năm, tránh mã lãi đột biến một lần.',
+  ok:(c,f)=>cap(f.npCagr3,-100,200), sc:(c,f)=>f.npCagr3},
+
+ // ── BIÊN LỢI NHUẬN: lãi trên mỗi đồng doanh thu ────────────────────────────
+ {id:'nmTop', g:'Biên lợi nhuận', nm:'Biên ròng cao nhất', dv:'%',
+  ds:'Lãi ròng trên doanh thu. Biên cao = có lợi thế cạnh tranh, ít bị ép giá. Chặn trong 0–100%.',
+  ok:(c,f)=>cap(f.nm,0.1,100), sc:(c,f)=>f.nm},
+ {id:'nmUp', g:'Biên lợi nhuận', nm:'Biên ròng cải thiện', dv:'điểm %',
+  ds:'Biên năm nay CAO HƠN bình quân 5 năm bao nhiêu điểm phần trăm. Doanh nghiệp đang tốt lên, không phải đang tốt sẵn.',
+  ok:(c,f)=>cap(f.nm,-50,100)&&cap(f.nmAvg5,-50,100), sc:(c,f)=>f.nm-f.nmAvg5},
+
+ // ── TIỀN MẶT & NỢ: sống được bao lâu nếu thị trường xấu ────────────────────
+ {id:'cashTop', g:'Tiền mặt & Nợ', nm:'Tiền mặt / vốn hoá', dv:'%',
+  ds:'Tiền và tương đương chiếm bao nhiêu phần vốn hoá. Trên 50% nghĩa là mua công ty gần như được tặng kèm tiền mặt.',
+  ok:c=>(c.cash||0)>0&&(c.mcapLive||c.mcap||0)>0, sc:c=>(c.cash*1e9)/(c.mcapLive||c.mcap)*100},
+ {id:'deLow', g:'Tiền mặt & Nợ', nm:'Nợ vay thấp nhất', dv:'lần',
+  ds:'Nợ vay trên vốn chủ sở hữu, thấp lên đầu. Nợ ít thì lãi suất tăng hay doanh thu hụt cũng không gãy.',
+  ok:(c,f)=>cap(f.de,0,20)&&!f.fin, sc:(c,f)=>-f.de},
+ {id:'roeTop', g:'Tiền mặt & Nợ', nm:'ROE cao nhất', dv:'%',
+  ds:'Lợi nhuận trên vốn chủ. Chỉ số Buffett xem đầu tiên: mỗi đồng vốn cổ đông đẻ ra bao nhiêu. Chặn trong 0–100%.',
+  ok:(c,f)=>cap(f.roe,0.1,100), sc:(c,f)=>f.roe},
+
+ // ── ĐỊNH GIÁ: đắt hay rẻ ───────────────────────────────────────────────────
+ {id:'peLow', g:'Định giá', nm:'P/E thấp nhất', dv:'lần',
+  ds:'Giá trên lợi nhuận mỗi cổ phiếu, tính SỐNG theo giá hiện tại. Chỉ mã đang có lãi.',
+  ok:c=>CPScreen.pe(c)!=null, sc:c=>-CPScreen.pe(c)},
+ {id:'pbLow', g:'Định giá', nm:'P/B thấp nhất', dv:'lần',
+  ds:'Giá trên giá trị sổ sách. Dưới 1 nghĩa là thị trường định giá thấp hơn vốn chủ trên giấy tờ.',
+  ok:c=>cap(c.pb,0.01,50), sc:c=>-c.pb},
+ {id:'dyTop', g:'Định giá', nm:'Cổ tức tiền mặt cao nhất', dv:'%',
+  ds:'Cổ tức tiền mặt chia cho thị giá. Tiền thật về túi hằng năm, không phụ thuộc giá lên xuống.',
+  ok:(c,f)=>(c.price||0)>0&&(f.divCash||0)>0&&f.divCash/c.price<=0.3, sc:(c,f)=>f.divCash/c.price*100},
+
+ // ── DÒNG TIỀN & ĐÀ GIÁ ─────────────────────────────────────────────────────
+ {id:'nnTop', g:'Dòng tiền & Đà giá', nm:'Khối ngoại mua ròng 20 phiên', dv:'% GTGD',
+  ds:'Mua ròng của khối ngoại chiếm bao nhiêu phần giá trị giao dịch 20 phiên. Dòng tiền lớn bền bỉ, không phải cú đánh một phiên.',
+  ok:(c,f,t)=>cap(t.nnr20,-100,100)&&t.nnr20>0, sc:(c,f,t)=>t.nnr20},
+ {id:'rsTop', g:'Dòng tiền & Đà giá', nm:'Sức mạnh giá (RS)', dv:'/100',
+  ds:'Xếp hạng đà giá so với cả thị trường, thang 1–99. Đà giá là một trong ít yếu tố được kiểm chứng lâu nhất.',
+  ok:(c,f,t)=>cap(t.rs,1,99), sc:(c,f,t)=>t.rs},
+
+ // ── CẢNH BÁO: ít người nhìn, nhưng bắt được thứ báo cáo giấu ───────────────
+ {id:'cfoBad', g:'Cảnh báo', nm:'Lãi nhưng tiền không về', dv:'lần',
+  ds:'Dòng tiền kinh doanh chia lợi nhuận, 3 năm — THẤP lên đầu. Báo lãi to mà tiền không về là dấu hiệu số một của lợi nhuận trên giấy.',
+  ok:(c,f)=>(c.np||0)>0&&cap(f.cfoNp3,-10,10), sc:(c,f)=>-f.cfoNp3},
 ];
-CPScreen.pass=function(id,c){
-  const t=CPScreen.T[c.sym],f=CPScreen.F[c.sym],p=c.price||0;
-  if(!t||!f) return false;
-  switch(id){
-    case 'graham':{
-      const pe3=(f.eps3||0)>0&&p>0?p/f.eps3:null;
-      if(!(pe3&&pe3<=15&&(c.pb||99)*pe3<=22.5)) return false;
-      if((f.yrsProfit||0)<8||(f.divYears||0)<5) return false;
-      return f.fin?true:(nz(f.cr,0)>=2&&nz(f.ltdNwc,99)<=1);
-    }
-    case 'buffett':{
-      if(nz(f.roeMin5,-99)<15||(f.yrsProfit||0)<8) return false;
-      if(f.nm==null||f.nm<secNm(c)||f.nmAvg5==null||f.nm<f.nmAvg5-1) return false;
-      return f.fin?(nz(f.roa,0)>=1&&nz(f.eqA,0)>=5):(nz(f.de,99)<1&&nz(f.cfoNp3,0)>=0.9);
-    }
-    case 'canslim':
-      return nz(f.npQ,-99)>=25&&nz(f.npCagr3,-99)>=25&&nz(f.roe,0)>=17
-        &&nz(t.dhi,-99)>=-15&&(t.rs||0)>=80&&(t.nn20||0)>0;
-    case 'miner':
-      return p>0&&t.ma50&&t.ma150&&t.ma200&&p>t.ma50&&t.ma50>t.ma150&&t.ma150>t.ma200
-        &&nz(t.m200s,-1)>0&&nz(t.dlo,0)>=30&&nz(t.dhi,-99)>=-25&&(t.rs||0)>=70&&(t.nsess||0)>=210;
-    case 'pio':
-      return c.pb!=null&&c.pb>0&&c.pb<=CPScreen.pb20&&(f.fmx||0)>=6&&(f.fsc||0)>=(f.fmx||9)-1;
-    case 'mf':
-      return CPScreen.mfRank&&CPScreen.mfRank[c.sym]!=null&&CPScreen.mfRank[c.sym]<=30;
-    case 'div':{
-      if(!(p>0&&(f.divCash||0)/p>=0.05)) return false;
-      if((f.divYears||0)<5||nz(f.npChg1,-99)<-20) return false;
-      const pay=(c.eps||0)>0?(f.divCash||0)/c.eps:9;
-      if(pay>0.6) return false;
-      return f.fin?true:((f.cfoT||0)*1e9>=(f.divCash||0)*(c.shares||0));
-    }
-    case 'lynch':{
-      const pv=CPScreen.pe(c);
-      if(!(pv&&(f.npCagr3||0)>0&&pv/f.npCagr3<1)||f.cyc) return false;
-      return f.fin?(nz(f.eqA,0)>5&&nz(f.roa,0)>1):(nz(f.de,99)<0.5&&nz(f.invRev,0)<=10);
-    }
-    case 'nn':
-      return nz(t.nnr20,-99)>=5&&(t.nn60||0)>0&&p>0&&t.ma50!=null&&p>t.ma50&&(t.rs||0)>=70;
-    default: return true;
+/* Trả về danh sách ĐÃ xếp hạng của một bảng, kèm điểm để hiển thị. */
+CPScreen.rankList=function(id,pool){
+  const R=CPScreen.ranks.find(x=>x.id===id); if(!R) return null;
+  const out=[];
+  for(const c of pool){
+    const f=CPScreen.F[c.sym]||{}, t=CPScreen.T[c.sym]||{};
+    try{ if(!R.ok(c,f,t)) continue; const v=R.sc(c,f,t);
+      if(v==null||!isFinite(v)) continue; out.push({c,v}); }catch(e){}
   }
+  out.sort((a,b)=>b.v-a.v);
+  return out;
 };
 
 })();
