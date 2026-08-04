@@ -57,7 +57,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .spacer{flex:1}
   /* Ô TÌM MÃ ngay trên header — trước đây muốn xem mã khác phải quay ra trang chủ */
-  .qbox{position:relative;max-width:300px;margin-bottom:9px}
+  .qbox{position:relative;flex:0 1 250px;margin-left:6px}
   input.qin{width:100%;background:var(--panel);color:var(--txt);border:1px solid var(--line);
     border-radius:9px;padding:8px 12px;font-size:14px;outline:none}
   input.qin:focus{border-color:var(--accent)}
@@ -70,7 +70,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #qlist .it img{width:22px;height:22px;border-radius:5px;background:#fff;object-fit:contain;flex-shrink:0}
   #qlist .it b{font-size:13.5px;min-width:46px}
   #qlist .it span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  @media(max-width:760px){ .qbox{max-width:none} }
+  @media(max-width:760px){ .qbox{order:3;flex:1 1 100%;margin-left:0} }
   #page{max-width:1320px;margin:0 auto;padding:16px}
 
   /* ---- khối đầu: 2 bảng thông số bên TRÁI, biểu đồ bên PHẢI ----
@@ -333,7 +333,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260808j"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260808k"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -347,6 +347,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <a href="congcu.html?m=radar">Radar</a>
     <a href="congcu.html?m=race">Đường đua</a>
   </nav>
+  <!-- ô TÌM MÃ: CÙNG HÀNG với các tab, đặt ngay SAU tab nên rơi đúng mép trái cột
+       biểu đồ — tức nằm thẳng trên hàng "Nến ngày" ở dưới -->
+  <div class="qbox"><input class="qin" id="q" placeholder="🔍  Tìm mã khác…" autocomplete="off"
+    spellcheck="false" /><div id="qlist"></div></div>
   <div class="spacer"></div>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
@@ -379,10 +383,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     </div>
 
     <div class="card" id="chartCard">
-    <!-- ô TÌM MÃ KHÁC đặt ngay TRÊN hàng chọn khung nến: đó là chỗ mắt người dùng
-         đang nhìn khi xem biểu đồ, thấy ngay thay vì phải ngước lên header -->
-    <div class="qbox"><input class="qin" id="q" placeholder="🔍  Tìm mã khác…" autocomplete="off"
-      spellcheck="false" /><div id="qlist"></div></div>
     <div class="chead">
       <div class="chips" id="tf">
         <button data-v="i">Trong ngày</button><button data-v="D" class="on">Nến ngày</button>
@@ -481,8 +481,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260808j"></script>
-<script src="assets/chart.js?v=20260808j"></script>
+<script src="assets/core.js?v=20260808k"></script>
+<script src="assets/chart.js?v=20260808k"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
