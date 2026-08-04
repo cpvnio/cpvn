@@ -76,7 +76,7 @@ const fmtV=v=>v>=1e9?(v/1e9).toFixed(2)+' tỷ':v>=1e6?(v/1e6).toFixed(2)+' tr':
 function Chart(cvs,opt){
   opt=opt||{};
   const self={};
-  let rows=[],iv="D",i0=0,i1=0,hover=-1;
+  let rows=[],iv="D",i0=0,i1=0,hover=-1,hoverY=-1;   // hoverY = Y THẬT của con trỏ
   let drag=null,pinch=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
@@ -235,15 +235,26 @@ function Chart(cvs,opt){
     // thanh ngắm
     if(hover>=0&&hover<n){
       const X=cx(hover), r=vis[hover];
+      const DK=light()?'#16181d':'#e9e9ef', LT=light()?'#fff':'#0a0a0c';
       x.strokeStyle=light()?'rgba(0,0,0,.35)':'rgba(255,255,255,.35)'; x.lineWidth=1;
       x.setLineDash([4,4]);
       x.beginPath(); x.moveTo(X,padT); x.lineTo(X,h-16); x.stroke();
-      x.beginPath(); x.moveTo(0,y(r.c)); x.lineTo(plotW,y(r.c)); x.stroke();
+      // ĐƯỜNG NGANG theo ĐÚNG Y CỦA CHUỘT (không hít vào giá đóng cửa)
+      const yy=hoverY>=0?Math.max(padT,Math.min(padT+plotH,hoverY)):y(r.c);
+      x.beginPath(); x.moveTo(0,yy); x.lineTo(plotW,yy); x.stroke();
       x.setLineDash([]);
-      x.fillStyle=light()?'#16181d':'#e9e9ef';
-      x.fillRect(plotW,y(r.c)-8,padR,16);
-      x.fillStyle=light()?'#fff':'#0a0a0c'; x.font='700 10.5px system-ui';
-      x.textAlign='left'; x.textBaseline='middle'; x.fillText(fmtP(r.c),plotW+6,y(r.c));
+      // nhãn giá = giá TẠI VỊ TRÍ CHUỘT (nghịch đảo của hàm y)
+      const pAt=mx-(yy-padT)/plotH*(mx-mn);
+      x.fillStyle=DK; x.fillRect(plotW,yy-8,padR,16);
+      x.fillStyle=LT; x.font='700 10.5px system-ui';
+      x.textAlign='left'; x.textBaseline='middle'; x.fillText(fmtP(pAt),plotW+6,yy);
+      // nhãn NGÀY dưới trục thời gian, ngay dưới thanh ngắm
+      const lb=fullLabel(iv,r.t);
+      x.font='700 10px system-ui'; x.textAlign='center'; x.textBaseline='middle';
+      const tw=x.measureText(lb).width+12;
+      const bx=Math.max(0,Math.min(plotW-tw,X-tw/2));
+      x.fillStyle=DK; x.fillRect(bx,h-16,tw,15);
+      x.fillStyle=LT; x.fillText(lb,bx+tw/2,h-8);
       paintTip(r,X,vis[hover-1]);
     } else if(opt.legend){          // chưa rê chuột: vẫn hiện nến MỚI NHẤT, chỉ để mờ
       paintTip(vis[n-1],0,vis[n-2]); opt.legend.classList.remove('on');
@@ -294,11 +305,13 @@ function Chart(cvs,opt){
       const dCandles=Math.round((drag.x-e.clientX)/geo.cw);
       const span=i1-i0; i0=drag.i0+dCandles; i1=i0+span; clampView(); hover=-1; self.draw(); return;
     }
-    if(px>geo.plotW){ if(hover!==-1){hover=-1; self.draw();} return; }
-    const i=idxAt(px);
-    if(i!==hover){ hover=i; self.draw(); }
+    if(px>geo.plotW){ if(hover!==-1){hover=-1; hoverY=-1; self.draw();} return; }
+    const i=idxAt(px), py=e.clientY-r.top;
+    /* Đường ngang phải BÁM ĐÚNG CHUỘT, không hít vào giá đóng cửa của nến. Nên vẽ lại
+       cả khi chỉ đổi Y (rê dọc trong cùng một nến) — trước chỉ vẽ khi đổi nến. */
+    if(i!==hover||Math.abs(py-hoverY)>0.5){ hover=i; hoverY=py; self.draw(); }
   });
-  cvs.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; self.draw(); } });
+  cvs.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; hoverY=-1; self.draw(); } });
   cvs.addEventListener('dblclick',()=>{ self.resetView(); });
   // cảm ứng: 1 ngón trượt/xem, 2 ngón chụm để phóng
   cvs.addEventListener('touchstart',e=>{
