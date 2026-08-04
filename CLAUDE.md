@@ -144,9 +144,18 @@ Chỉ cập nhật universe bằng giá trị **khác None** — đó là cách 
 Song song đã cân theo giới hạn nguồn (Simplize 4 luồng + sleep 0.15, hist 12, fin 5,
 news 6, profile 5) — tăng lên dễ bị chặn IP.
 
-**Lịch chạy**: VPS Windows Scheduled Task 15:15 (commit `EOD <phiên> (server)`), GitHub
-Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN. Actions so `data/health.json['date']` với
-**phiên gần nhất đã đóng sổ**, bằng nhau thì tự thoát.
+**Lịch chạy**: VPS Windows Scheduled Task 15:15 chạy `server/run_refresh.ps1` (commit
+`EOD <phiên> (server)`) — **đường chính**. GitHub Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN,
+so `data/health.json['date']` với **phiên gần nhất đã đóng sổ**, bằng nhau thì tự thoát.
+Toàn bộ cấu hình máy chủ nằm trong **`server/`** (script chạy + script dựng tác vụ + cách
+dựng lại từ số 0). Tác vụ trỏ thẳng vào file TRONG kho nên sửa ở repo là lượt sau tự lấy.
+
+> **`Last Result: 0` của Scheduled Task KHÔNG có nghĩa là đã đẩy được lên GitHub** — nó chỉ
+> nói PowerShell thoát sạch. Ngày 04/08/2026 tác vụ chạy đúng giờ, cào đủ 1522 mã, commit tại
+> chỗ, rồi `git push` bị từ chối "fetch first" vì có commit khác đẩy lên trong 8 phút pipeline
+> chạy — cả phiên nằm lại trong máy suốt buổi tối mà không ai biết. Nay script kéo lại ngay
+> trước khi đẩy, thử 5 lần, hỏng thì ghi `C:\cpvn\PUSH_FAILED.txt`. Khi nghi ngờ: xem cờ đó
+> và `data/health.json['date']`, đừng tin Last Result.
 
 > **Lịch của GitHub Actions không đáng tin** — đã đo: 1 lượt duy nhất chạy đúng lịch trong
 > nhiều ngày, và trễ 8 tiếng 12 phút. Vì thế mới có 3 khung giờ + bước kiểm tra idempotent.
