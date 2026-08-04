@@ -192,6 +192,11 @@ dựng lại từ số 0). Tác vụ trỏ thẳng vào file TRONG kho nên sử
   → phải có class `shotmode` tắt animation; logo cần `crossOrigin='anonymous'`.
 - **Font hệ thống dùng chữ số tỷ lệ** (9 bề rộng khác nhau) → cột số lệch.
   Phải `font-variant-numeric: tabular-nums`.
+- **Kho lẫn HAI DẠNG UNICODE cho cùng một chuỗi tiếng Việt** — `data/fin/*.json` có
+  2.764 dòng dựng sẵn (NFC) và 82 dòng tách dấu (NFD), chủ yếu công ty chứng khoán
+  (VIX, SBS, AGR). Nhìn giống hệt nhau nhưng `===` trả false. Mọi so khớp theo TÊN
+  tiếng Việt phải qua `.normalize('NFC')` trước, nếu không nhóm 82 mã đó lặng lẽ
+  trượt khỏi luật tô màu / lọc dòng mà không có lỗi nào.
 - **Logo cache 1 năm immutable** — thay file cùng tên sẽ không bao giờ tới người đã ghé.
 - Nến ngày `'D'` thì `CPChart.aggregate` trả về **chính mảng gốc**, sửa nến cuối tại chỗ là
   sửa luôn bộ nhớ đệm của mã đó.
