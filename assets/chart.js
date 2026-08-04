@@ -2,7 +2,8 @@
    CPVN chart.js — biểu đồ nến LINH ĐỘNG, dùng chung cho trang cổ phiếu và
    bảng chi tiết ở trang bong bóng.
      · Nến: Trong ngày · Ngày · Tuần · Tháng · Năm (gộp tại chỗ từ nến ngày của kho)
-     · Cuộn chuột = phóng to/thu nhỏ quanh con trỏ; kéo = trượt thời gian
+     · Cuộn chuột = phóng to/thu nhỏ quanh con trỏ; kéo = trượt cả thời gian lẫn vùng giá
+     · Kéo tiếp sang trái = chừa VÙNG TRỐNG TƯƠNG LAI (tối đa nửa màn hình) để vẽ dự phóng
      · Điện thoại: 1 ngón kéo, 2 ngón chụm để phóng
      · Rê chuột/chạm = thanh ngắm + dòng chú giải O·H·L·C cố định trên đầu (không che nến)
      · Trục dưới tự đổi nhãn theo mức phóng: ngày → tháng → quý → năm
@@ -86,19 +87,24 @@ let draws=[], tool=null, pending=null, preview=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
   const MUT =()=>light()?'#66707f':'#8a8a99';
+  const FUT =()=>light()?'#aab2bf':'#5c6070';   // mốc thời gian ở vùng trống tương lai: nhạt hơn
   const PANEL=()=>light()?'#ffffff':'#15151a';
   const TXT =()=>light()?'#16181d':'#e9e9ef';
   const UP='#16c784', DOWN='#ea3943';
   const DEFN={i:0,D:120,W:120,M:60,Y:0};            // 0 = xem hết
 
-  /* ---- khung nhìn ---- */
+  /* ---- khung nhìn ----
+     i1 ĐƯỢC PHÉP vượt quá số nến: phần dôi ra là VÙNG TRỐNG TƯƠNG LAI, để kéo
+     nến hôm nay vào giữa màn hình mà vẽ đường dự phóng ra phía trước. */
+  const OFFMAX=0.5;                        // trống tối đa nửa bề ngang
   function clampView(){
     const n=rows.length;
     if(n<2){ i0=0; i1=n; return; }
     let span=Math.round(i1-i0);
     span=Math.max(5,Math.min(n,span));
+    const maxOff=Math.floor(span*OFFMAX);  // số nến trống tối đa được chừa bên phải
+    if(i0>n-span+maxOff) i0=n-span+maxOff;
     if(i0<0) i0=0;
-    if(i0+span>n) i0=n-span;
     i1=i0+span;
   }
   function resetView(){
@@ -132,6 +138,10 @@ let draws=[], tool=null, pending=null, preview=null;
     if(!rows.length){ x.fillStyle=MUT(); x.font='13px system-ui'; x.textAlign='center';
       x.fillText(opt.emptyText||'Đang tải biểu đồ…',w/2,h/2); return; }
     clampView();
+    /* span = bề rộng khung nhìn tính theo NẾN (kể cả phần trống tương lai),
+       n = số nến THẬT vẽ được. Bề rộng mỗi nến chia theo span nên khi kéo ra
+       vùng trống, nến giữ nguyên kích thước thay vì bị kéo giãn. */
+    const span=i1-i0;
     const vis=rows.slice(i0,i1), n=vis.length;
     const volH=ind.vol?Math.round(h*0.17):0;
     const rsiH=ind.rsi?Math.round(h*0.18):0;
@@ -149,7 +159,7 @@ let draws=[], tool=null, pending=null, preview=null;
     }
     const y=v=>padT+(mx-v)/(mx-mn)*plotH;
     geo.mn=mn; geo.mx=mx; geo.padTv=padT; geo.plotHv=plotH;   // cho lớp vẽ dùng lại
-    const cw=plotW/n, bw=Math.max(1,Math.min(16,cw*0.66));
+    const cw=plotW/span, bw=Math.max(1,Math.min(16,cw*0.66));
     geo.cw=cw;
     const cx=i=>i*cw+cw/2;
 
@@ -196,20 +206,24 @@ let draws=[], tool=null, pending=null, preview=null;
     x.fillStyle='#fff'; x.font='700 10.5px system-ui'; x.textAlign='left'; x.textBaseline='middle';
     x.fillText(fmtP(lastC),plotW+6,yl);
     // nhãn trục dưới: chỉ vẽ tại mốc đổi đơn vị, cách nhau tối thiểu 46px
-    const unit=tickUnit(iv,n);
+    const unit=tickUnit(iv,span);
     x.fillStyle=MUT(); x.font='10px system-ui'; x.textAlign='center'; x.textBaseline='alphabetic';
     let lastX=-1e9, prevKey=null, prevT=null;
-    for(let i=0;i<n;i++){
-      const k=tickKey(unit,vis[i].t);
+    const step=barStep();
+    // chạy hết span: qua khỏi nến cuối thì mốc thời gian được ngoại suy, để vùng
+    // trống tương lai vẫn biết đang chiếu tới tháng/năm nào
+    for(let i=0;i<span;i++){
+      const t=i<n?vis[i].t:Math.round(vis[n-1].t+(i-(n-1))*step);
+      const k=tickKey(unit,t);
       if(prevKey!==null&&k!==prevKey){
         const X=cx(i);
         if(X-lastX>=46&&X<plotW-14){
           x.strokeStyle=GRID(); x.beginPath(); x.moveTo(X,padT); x.lineTo(X,volBase); x.stroke();
-          x.fillStyle=MUT(); x.fillText(tickLabel(unit,vis[i].t,prevT),X,h-4);
-          lastX=X; prevT=vis[i].t;
+          x.fillStyle=i<n?MUT():FUT(); x.fillText(tickLabel(unit,t,prevT),X,h-4);
+          lastX=X; prevT=t;
         }
       }
-      if(prevKey===null) prevT=vis[i].t;
+      if(prevKey===null) prevT=t;
       prevKey=k;
     }
     // % của khoảng đang xem + chú thích MA20
@@ -245,8 +259,9 @@ let draws=[], tool=null, pending=null, preview=null;
       x.fillText('RSI 14',8,top+11);
     }
     // thanh ngắm
-    if(hover>=0&&hover<n){
-      const X=cx(hover), r=vis[hover];
+    if(hover>=0&&hover<span){
+      const future=hover>=n;                       // đang rê vào vùng trống phía trước
+      const X=cx(hover), r=vis[Math.min(hover,n-1)];
       const DK=light()?'#16181d':'#e9e9ef', LT=light()?'#fff':'#0a0a0c';
       x.strokeStyle=light()?'rgba(0,0,0,.35)':'rgba(255,255,255,.35)'; x.lineWidth=1;
       x.setLineDash([4,4]);
@@ -261,13 +276,15 @@ let draws=[], tool=null, pending=null, preview=null;
       x.fillStyle=LT; x.font='700 10.5px system-ui';
       x.textAlign='left'; x.textBaseline='middle'; x.fillText(fmtP(pAt),plotW+6,yy);
       // nhãn NGÀY dưới trục thời gian, ngay dưới thanh ngắm
-      const lb=fullLabel(iv,r.t);
+      const lb=fullLabel(iv,future?tOfX(X):r.t);
       x.font='700 10px system-ui'; x.textAlign='center'; x.textBaseline='middle';
       const tw=x.measureText(lb).width+12;
       const bx=Math.max(0,Math.min(plotW-tw,X-tw/2));
       x.fillStyle=DK; x.fillRect(bx,h-16,tw,15);
       x.fillStyle=LT; x.fillText(lb,bx+tw/2,h-8);
-      paintTip(r,X,vis[hover-1]);
+      // vùng trống chưa có nến -> dòng chú giải giữ nến mới nhất và để mờ
+      if(future){ paintTip(vis[n-1],0,vis[n-2]); if(opt.legend) opt.legend.classList.remove('on'); }
+      else paintTip(r,X,vis[hover-1]);
     } else if(opt.legend){          // chưa rê chuột: vẫn hiện nến MỚI NHẤT, chỉ để mờ
       paintTip(vis[n-1],0,vis[n-2]); opt.legend.classList.remove('on');
     }
@@ -293,10 +310,16 @@ let draws=[], tool=null, pending=null, preview=null;
      Mỗi hình lưu theo (thời gian, giá) chứ không theo pixel, nên kéo ngang/dọc
      hay phóng to thu nhỏ thì hình vẫn dính đúng chỗ trên nến. */
   const FIB=[0,0.236,0.382,0.5,0.618,0.786,1];
+  function barStep(){                        // khoảng thời gian trung bình giữa 2 nến gần đây
+    const n=rows.length; if(n<2) return 86400;
+    const k=Math.min(n-1,20);
+    return (rows[n-1].t-rows[n-1-k].t)/k || 86400;
+  }
   function idxOfT(t){                       // vị trí (số thực) của mốc thời gian trong dãy nến
     const n=rows.length; if(!n) return 0;
     if(t<=rows[0].t) return 0;
-    if(t>=rows[n-1].t) return n-1;
+    // quá nến cuối -> ngoại suy vào vùng trống, để vẽ được đường dự phóng tương lai
+    if(t>=rows[n-1].t) return n-1+(t-rows[n-1].t)/barStep();
     let lo=0,hi=n-1;
     while(hi-lo>1){ const m=(lo+hi)>>1; if(rows[m].t<=t) lo=m; else hi=m; }
     const a=rows[lo].t,b=rows[hi].t;
@@ -305,7 +328,9 @@ let draws=[], tool=null, pending=null, preview=null;
   const xOfT=t=>(idxOfT(t)-i0)*geo.cw+geo.cw/2;
   function tOfX(px){
     const n=rows.length; if(!n) return 0;
-    const f=i0+px/geo.cw-0.5, k=Math.max(0,Math.min(n-1,f));
+    const f=i0+px/geo.cw-0.5;
+    if(f>=n-1) return Math.round(rows[n-1].t+(f-(n-1))*barStep());   // vùng trống tương lai
+    const k=Math.max(0,f);
     const lo=Math.floor(k), hi=Math.min(n-1,lo+1);
     return Math.round(rows[lo].t+(rows[hi].t-rows[lo].t)*(k-lo));
   }
