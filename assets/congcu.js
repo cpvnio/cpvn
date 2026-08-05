@@ -777,21 +777,33 @@ function drawDCA(lerp){
   x.strokeStyle=MUTC; x.setLineDash([5,4]); x.lineWidth=1.2; x.beginPath();
   for(let i=0;i<=iA;i++){ const p=[X(i),Y(C2.amt*(i+1))]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
   x.lineTo(X(f),Y(C2.amt*(f+1))); x.stroke(); x.setLineDash([]);
-  // đường NGÂN HÀNG 7%/năm — vàng đậm, mốc "gửi tiết kiệm thì được bao nhiêu"
+  /* CÁC ĐƯỜNG: mỗi đường có VIỀN NỀN lót dưới rồi mới tô màu — chỗ cắt nhau vẫn
+     tách bạch chứ không hoà thành mớ; nét 2.6 thay 2. Bảng màu RIÊNG gán theo
+     THỨ HẠNG nên 8 đường luôn tương phản mạnh, không trùng tông; màu vàng dành
+     riêng cho ngân hàng. */
   const GOLD='#f5b40a';
-  x.strokeStyle=GOLD; x.lineWidth=2.4; x.beginPath();
-  for(let i=0;i<=iA;i++){ const p=[X(i),Y(bank(i))]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
-  x.lineTo(X(f),Y(bank(f))); x.stroke();
-  // các đường mã
+  const HALO=isLight()?'rgba(255,255,255,.95)':'rgba(9,9,15,.92)';
+  const vien=(pts,col,w)=>{
+    x.lineJoin='round'; x.lineCap='round';
+    for(const cw of [[HALO,w+2.8],[col,w]]){
+      x.strokeStyle=cw[0]; x.lineWidth=cw[1]; x.beginPath();
+      pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));
+      x.stroke();
+    }
+  };
+  const ptsOf=g=>{ const a2=[]; for(let i=0;i<=iA;i++) a2.push([X(i),Y(g(i))]); return a2; };
+  // ngân hàng vẽ TRƯỚC (nó là mốc so sánh, nằm dưới các mã)
+  const bPts=ptsOf(bank); bPts.push([X(f),Y(bank(f))]);
+  vien(bPts,GOLD,2.6);
+  const PAL=['#f43f5e','#38bdf8','#16c784','#a78bfa','#fb923c','#2dd4bf','#e879f9','#60a5fa'];
   const tips=[];
-  for(const r of rows){
-    const col=D.cols[r.s]||'#38bdf8';
-    x.strokeStyle=col; x.lineWidth=2; x.lineJoin='round'; x.beginPath();
-    for(let i=0;i<=iA;i++){ const p=[X(i),Y(r.vals[i])]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
+  rows.forEach((r,ri)=>{
+    const col=PAL[ri%PAL.length];
     const vNow=cur(r.vals);
-    x.lineTo(X(f),Y(vNow)); x.stroke();
+    const pts=ptsOf(i=>r.vals[i]); pts.push([X(f),Y(vNow)]);
+    vien(pts,col,2.6);
     tips.push({s:r.s,col,v:vNow,y:Y(vNow)});
-  }
+  });
   tips.push({s:mob?'NH 7%':'Ngân hàng 7%',col:GOLD,v:bank(f),y:Y(bank(f)),bank:true});
   // nhãn: dồn cho khỏi đè nhau rồi vẽ logo/chấm màu + mã + giá trị + % lãi
   tips.sort((a,b)=>a.y-b.y);
