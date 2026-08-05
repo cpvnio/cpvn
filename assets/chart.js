@@ -227,29 +227,10 @@ let dpen=null;                                     // mốc bấm xuống, để
     geo.cw=cw;
     const cx=i=>i*cw+cw/2;
 
-    // TÊN MÃ chìm giữa vùng vẽ (kiểu các trang PTKT): ảnh chụp mang đi đâu cũng
-    // biết đang xem mã nào. Vẽ TRƯỚC lưới nên luôn nằm dưới nến, không che gì.
+    /* Tên mã KHÔNG đặt giữa vùng vẽ nữa — chữ to nằm chính giữa che nến, nhìn lâu
+       khó chịu dù đã hạ rất mờ. Nay in ở GÓC TRÁI TRÊN, chỗ trước đây để "Nến ngày
+       +xx%" (xem đoạn vẽ chú giải phía dưới). */
     const wm=opt.wm&&opt.wm();
-    if(wm&&wm.sym){
-      x.save();
-      x.textAlign='center'; x.textBaseline='middle';
-      const mid=plotW/2, midY=padT+plotH/2;
-      // chặn TRẦN kích thước: màn rộng mà không chặn thì chữ nuốt luôn cái chart
-      const s=Math.max(20,Math.min(plotW*0.17,plotH*0.30,120));
-      // ĐỦ MỜ để mắt bỏ qua khi đang đọc nến. Đậm lên là khó chịu ngay — người
-      // dùng nhìn chart chứ không nhìn chữ; danh tính mã đã có ở đầu trang và ở
-      // dấu CPVN.IO góc dưới, chữ này chỉ để ảnh cắt rời vẫn còn ngữ cảnh.
-      const al=light()?0.055:0.07;
-      x.fillStyle=TXT(); x.globalAlpha=al;
-      x.font=`800 ${s}px system-ui`;
-      x.fillText(wm.sym,mid,midY-(wm.phu?s*0.18:0));
-      if(wm.phu){                       // tên công ty dài -> nhỏ và nhạt hơn hẳn mã
-        x.globalAlpha=al*0.7;
-        x.font=`600 ${Math.max(10,Math.min(s*0.20,15))}px system-ui`;
-        x.fillText(wm.phu,mid,midY+s*0.40);
-      }
-      x.restore();
-    }
 
     // DẤU CPVN.IO góc trái dưới vùng vẽ — chỗ các trang chart hay đặt logo, không
     // đụng chú giải (góc trái TRÊN) lẫn trục giá (bên phải). Ảnh cắt riêng vùng
@@ -355,10 +336,21 @@ let dpen=null;                                     // mốc bấm xuống, để
       if(prevKey===null) prevT=t;
       prevKey=k;
     }
-    // % của khoảng đang xem + chú thích MA20
-    const pct=(lastC/vis[0].o-1)*100;
-    x.textAlign='left'; x.font='800 14px system-ui'; x.fillStyle=pct>=0?UP:DOWN;
-    x.fillText(`${opt.label?opt.label(iv,n):''}${pct>=0?'+':''}${pct.toFixed(2)}%`,8,padT+8);
+    // TÊN MÃ ở góc trái trên + chú thích MA. Trước đây ô này in "Nến ngày +65,66%"
+    // — % của riêng khoảng đang xem, đổi theo mức phóng nên gây hiểu nhầm; user bỏ.
+    // Khung thời gian đã có ở dải nút Ngày/Tuần/Tháng nên cũng không nhắc lại.
+    // giữ textBaseline='middle' như dòng MA ngay dưới, nếu đổi sang 'top' là chữ
+    // tụt xuống chồng lên "— MA20"
+    x.textAlign='left'; x.textBaseline='middle';
+    if(wm&&wm.sym){
+      x.fillStyle=TXT(); x.font='800 14px system-ui';
+      x.fillText(wm.sym,8,padT+8);
+      if(wm.phu){
+        const w1=x.measureText(wm.sym).width;
+        x.fillStyle=MUT(); x.font='600 11.5px system-ui';
+        x.fillText(wm.phu,8+w1+7,padT+9);
+      }
+    }
     x.font='10.5px system-ui'; let lx=8;
     for(const per of ind.ma){ x.fillStyle=MACOL[per]||'rgba(148,163,184,.9)';
       const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
