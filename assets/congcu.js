@@ -878,7 +878,8 @@ function renderRace(){
     +'<div class="note">8 mã giá trị cao nhất trong nhóm — bấm ▶ để xem tiền lớn lên qua từng tháng. Đường đứt là vốn đã bỏ; đường vàng là gửi ngân hàng lãi 7%/năm (ghép lãi theo tháng) để so ngay đầu tư thắng hay thua tiết kiệm.</div>'
     +'<div class="panel"><div class="ph">Giá trị hôm nay<span id="dcaSum" style="margin-left:auto;font-weight:600;color:var(--mut)"></span></div>'
     +'<div class="pb" id="dcaOut"></div></div>'
-    +'<div class="note">Mua tại giá đóng cửa THÁNG theo kho CPVN — đã gồm biến động giá, chưa tính cổ tức tiền nhận về. '
+    +'<div class="note">Mua tại giá đóng cửa THÁNG, giá ĐÃ HỒI TỐ cổ tức/chia tách theo nguồn — tức phần lớn cổ tức '
+    +'(cả tiền lẫn cổ phiếu) đã nằm trong kết quả như thể được tái đầu tư; số ít đợt nguồn bỏ sót thì kết quả hơi thấp hơn thực nhận. '
     +'Mã phải có giao dịch đủ từ tháng bắt đầu mới được xếp hạng. Thống kê quá khứ, không phải khuyến nghị đầu tư.</div>'
     +'</div>';
   const syncMode=()=>{                            // đổi chế độ: dừng chạy, về vạch xuất phát
