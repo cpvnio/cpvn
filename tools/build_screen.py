@@ -263,7 +263,8 @@ FUND_FIELDS = [
     'accr','recRev','invRev','shDil','aGrow',     # cờ đỏ: dồn tích·phải thu·tồn kho·pha loãng·TS phình
     'fsc','fmx',                                  # điểm Piotroski đạt / tối đa khả dụng
     # CHỈ ĐƯỢC NỐI THÊM VÀO CUỐI — client đọc theo THỨ TỰ của pk.f, chèn giữa là lệch hết
-    'lossY3','lossQ8','npQ2',                     # 3 năm lỗ nhưng thu hẹp · 8 quý lỗ nhưng thu hẹp · %LNST quý liền trước so cùng kỳ
+    'npQ2',                                       # %LNST quý liền trước so cùng kỳ
+    'lossYs','lossQm',                            # chuỗi năm lỗ thu hẹp dần · mặt nạ bit 8 quý (xem build_fund)
 ]
 _CYC_RE = ('kim loại','khai khoáng','hóa chất','dầu','khí đốt','vận chuyển','vận tải',
            'chứng khoán','vật liệu xây dựng','cao su','nông','thủy sản','phân bón')
@@ -376,14 +377,36 @@ def build_fund(meta):
 
         # LỖ NHƯNG ĐANG THU HẸP — doanh nghiệp còn lỗ mà đáy đã qua. Người dò đáy tìm
         # đúng nhóm này, nhưng không lọc được bằng bất kỳ trường nào đang có.
-        y3 = [r.get('np') for r in Y[-3:]] if len(Y) >= 3 else []
-        if len(y3) == 3 and all(v is not None and v < 0 for v in y3):
-            F['lossY3'] = 1 if y3[2] > y3[1] > y3[0] else 0   # lỗ nhỏ dần từng năm
-        q8 = [r.get('np') for r in Q[-8:]] if len(Q) >= 8 else []
-        if len(q8) == 8 and all(v is not None and v < 0 for v in q8):
-            # 8 quý noise nhiều -> so TỔNG 4 quý gần đây với 4 quý trước đó, không đòi
-            # từng quý phải nhỏ dần (đòi thế thì gần như không mã nào đạt)
-            F['lossQ8'] = 1 if sum(q8[4:]) > sum(q8[:4]) else 0
+        # NĂM: đòi lỗ nhỏ dần TỪNG năm. Điều kiện này đơn điệu (đạt 4 năm thì hiển nhiên
+        # đạt 3 và 2) nên chỉ cần lưu ĐỘ DÀI chuỗi; client hỏi "lỗ N năm" = lossYs >= N.
+        ys = [r.get('np') for r in Y]
+        k = 0
+        if ys and ys[-1] is not None and ys[-1] < 0:
+            k = 1
+            for i in range(2, len(ys) + 1):
+                cu, moi = ys[-i], ys[-i + 1]           # cũ hơn / mới hơn, cả hai đều âm
+                if cu is None or cu >= 0 or cu >= moi: break   # đứt lỗ, hoặc lỗ phình ra
+                k = i
+        F['lossYs'] = k
+        # QUÝ: 8 quý nhiễu mùa vụ, đòi từng quý nhỏ dần thì gần như không mã nào đạt ->
+        # so TRUNG BÌNH nửa mới với nửa cũ của đúng cửa sổ N quý. Phép so này KHÔNG đơn
+        # điệu theo N (đạt ở N=6 vẫn có thể trượt ở N=2) nên phải lưu riêng từng N:
+        # bit thứ N-1 của lossQm = "lỗ N quý liên tiếp VÀ đang thu hẹp".
+        qs = [r.get('np') for r in Q]
+        mask = 0
+        for n in range(1, 9):
+            if len(qs) < max(n, 2): break           # n=1 vẫn cần quý liền trước để so
+            w = qs[-n:]
+            if any(v is None or v >= 0 for v in w): break   # đứt chuỗi lỗ -> N lớn hơn cũng đứt
+            if n == 1:
+                truoc = qs[-2]                      # cửa sổ 1 quý: so với quý liền trước nó
+                ok = truoc is not None and w[0] > truoc
+            else:
+                h = (n + 1) // 2                    # nửa MỚI làm tròn lên (N lẻ: 3 = 2 mới / 1 cũ)
+                moi, cu = w[-h:], w[:n - h]
+                ok = sum(moi) / len(moi) > sum(cu) / len(cu)
+            if ok: mask |= 1 << (n - 1)
+        F['lossQm'] = mask
 
         # %LNST của quý LIỀN TRƯỚC so với CÙNG KỲ năm trước — ghép với npQ (quý mới nhất)
         # thành điều kiện "2 quý liên tiếp tăng mạnh so với cùng kỳ"

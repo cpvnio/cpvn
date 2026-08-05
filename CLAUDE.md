@@ -29,7 +29,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `congcu.html` + `assets/congcu.js` | 384+676 | 2 module: Radar phiên (18 thẻ) · Đường đua vốn hoá (78 tháng) |
 | `assets/core.js` | 522 | **Lõi dữ liệu `CP`** — chỉ index + cophieu dùng. Phần lớn là cơ chế giá |
 | `assets/chart.js` | 798 | **`CPChart`** — bộ vẽ nến canvas tự viết + lớp vẽ PTKT. Không phụ thuộc core.js |
-| `assets/screener.js` | 189 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
+| `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
 

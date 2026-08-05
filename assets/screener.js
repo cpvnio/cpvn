@@ -49,11 +49,15 @@ CPScreen.chips=[
   {id:'nnd10', g:'Dòng tiền', nm:'NN mua hôm nay ≥ 10 tỷ'},
   {id:'nn60',  g:'Dòng tiền', nm:'NN gom ròng 60 phiên'},
   {id:'q2up',  g:'Sức khoẻ', nm:'2 quý liền lãi tăng ≥ 25%'},
-  {id:'lossY3',g:'Đáy & Phục hồi', nm:'Lỗ 3 năm nhưng thu hẹp'},
-  {id:'lossQ8',g:'Đáy & Phục hồi', nm:'Lỗ 8 quý nhưng thu hẹp'},
+  // HAI chip CÓ THAM SỐ: {n} là chỗ client cắm ô chọn số kỳ. def = số kỳ mặc định.
+  {id:'lossY', g:'Đáy & Phục hồi', nm:'Lỗ {n} năm nhưng thu hẹp', opts:[2,3,4,5],          def:3},
+  {id:'lossQ', g:'Đáy & Phục hồi', nm:'Lỗ {n} quý nhưng thu hẹp', opts:[1,2,3,4,5,6,7,8], def:8},
 ];
-CPScreen.chip=function(id,c){
+CPScreen.def=id=>{const x=CPScreen.chips.find(c=>c.id===id);return x&&x.def||0;};
+/* n = số kỳ người dùng chọn, chỉ có nghĩa với chip mang opts */
+CPScreen.chip=function(id,c,n){
   const t=CPScreen.T[c.sym]||{},f=CPScreen.F[c.sym]||{},p=c.price||0;
+  n=n||CPScreen.def(id);
   switch(id){
     case 'pe10':  { const v=CPScreen.pe(c); return v!=null&&v<10; }
     case 'pb1':   return c.pb!=null&&c.pb>0&&c.pb<1;
@@ -76,10 +80,12 @@ CPScreen.chip=function(id,c){
     // HAI quý LIÊN TIẾP lãi tăng >=25% so với CÙNG KỲ năm trước (mốc 25% của CAN SLIM).
     // So cùng kỳ chứ không so quý liền trước — tránh nhiễu mùa vụ.
     case 'q2up':  return (f.npQ??-9)>=25&&(f.npQ2??-9)>=25;
-    // CÒN LỖ nhưng đáy đã qua: 3 năm liền lỗ mà lỗ nhỏ dần từng năm
-    case 'lossY3':return f.lossY3===1;
-    // 8 quý liền lỗ, nhưng tổng lỗ 4 quý gần đây NHỎ HƠN 4 quý trước đó
-    case 'lossQ8':return f.lossQ8===1;
+    // CÒN LỖ nhưng đáy đã qua: N năm liền lỗ mà lỗ nhỏ dần TỪNG năm. Điều kiện đơn điệu
+    // theo N nên kho chỉ lưu độ dài chuỗi.
+    case 'lossY': return (f.lossYs||0)>=n;
+    // N quý liền lỗ mà lỗ đang thu hẹp (nửa mới nhẹ hơn nửa cũ). Không đơn điệu theo N
+    // -> kho lưu mặt nạ bit, mỗi N một bit.
+    case 'lossQ': return !!(((f.lossQm||0)>>(n-1))&1);
     default: return true;
   }
 };
