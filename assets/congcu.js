@@ -526,7 +526,8 @@ function renderRadar(){
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
-const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null};
+const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
+  settling:false,maxDelta:0};
 function raceData(){
   if(RA.data) return RA.data;
   const R=ST.market&&ST.market.race; if(!R) return null;
@@ -545,7 +546,7 @@ function raceData(){
 }
 function raceFmt(v){ if(v==null) return '—';   // v tính bằng NGHÌN TỶ -> quy về tỷ
   return Math.round(v*1000).toLocaleString('en-US')+' tỷ'; }
-function drawRace(){
+function drawRace(lerp){
   const cv=$('#cvRace'); if(!cv) return;
   const D=raceData(); if(!D) return;
   const W=cv.clientWidth||900, H=cv.clientHeight||520, x=dpr(cv,W,H);
@@ -563,12 +564,21 @@ function drawRace(){
   for(const r of rows2) if(RA.imgs[r.s]===undefined){ const im=new Image();
     im.onerror=()=>{ RA.imgs[r.s]=null; }; im.src='assets/logo/'+r.s+'.webp'; RA.imgs[r.s]=im; }
   const mx=rows2[0].v*1.06;
-  const top=16, rowH=(H-top-46)/10, labX=118, barX=labX+10, barW=W-barX-130;
+  /* MÀN HẸP (điện thoại dọc): logo+mã thu nhỏ để nhường đường đua cho thanh vốn hoá,
+     con số vốn hoá in ĐẬM bám cuối thanh (hết chỗ thì nằm trong thanh) — nổi hơn hẳn. */
+  const mob=W<560;
+  const logoR=mob?8:12, labX=mob?60:118, barX=labX+(mob?6:10);
+  const barW=W-barX-(mob?12:130);
+  const top=16, rowH=(H-top-(mob?38:46))/10;
+  let md=0;                                     // độ lệch lớn nhất còn lại (cho pha xếp hàng)
+  const K=lerp==null?.18:lerp;
   rows2.forEach((r,rank)=>{
     const ty2=top+rank*rowH;
     if(RA.curY[r.s]==null) RA.curY[r.s]=ty2;
-    RA.curY[r.s]+=(ty2-RA.curY[r.s])*.18;
+    RA.curY[r.s]+=(ty2-RA.curY[r.s])*K;
+    md=Math.max(md,Math.abs(ty2-RA.curY[r.s]));
   });
+  RA.maxDelta=md;
   for(const r of rows2){
     const y=RA.curY[r.s], col=D.cols[r.s];
     const bw=Math.max(2,r.v/mx*barW), bh=rowH*.66;
@@ -578,21 +588,45 @@ function drawRace(){
     x.beginPath(); x.roundRect(barX,y+rowH*.14,bw,bh,8); x.globalAlpha=.32; x.fill(); x.globalAlpha=1;
     const im=RA.imgs[r.s];
     if(im&&im.complete&&im.naturalWidth){
-      x.save(); x.beginPath(); x.arc(labX-72,y+rowH*.5,12,0,7); x.closePath();
+      const lcx=mob?14:labX-72;
+      x.save(); x.beginPath(); x.arc(lcx,y+rowH*.5,logoR,0,7); x.closePath();
       x.fillStyle='#fff'; x.fill(); x.clip();
-      x.drawImage(im,labX-84,y+rowH*.5-12,24,24); x.restore();
+      x.drawImage(im,lcx-logoR,y+rowH*.5-logoR,logoR*2,logoR*2); x.restore();
     }
-    x.fillStyle=isLight()?'#101321':'#ecedf4'; x.font='800 14px system-ui';
+    x.fillStyle=isLight()?'#101321':'#ecedf4';
+    x.font=mob?'800 11.5px system-ui':'800 14px system-ui';
     x.textAlign='left'; x.textBaseline='middle';
-    x.fillText(r.s,labX-52,y+rowH*.5);
-    x.fillStyle=isLight()?'#5d6272':'#9092a3'; x.font='700 12.5px system-ui';
-    x.fillText(raceFmt(r.v),barX+bw+10,y+rowH*.5);
+    x.fillText(r.s,mob?26:labX-52,y+rowH*.5);
+    const vt=raceFmt(r.v);
+    x.font=mob?'800 11.5px system-ui':'700 12.5px system-ui';
+    if(mob&&bw+8+x.measureText(vt).width>barW){   // thanh dài kịch khung -> số vào TRONG thanh
+      x.textAlign='right'; x.fillStyle=isLight()?'#101321':'#fff';
+      x.fillText(vt,barX+bw-7,y+rowH*.5); x.textAlign='left';
+    }else{
+      x.fillStyle=mob?(isLight()?'#101321':'#ecedf4'):(isLight()?'#5d6272':'#9092a3');
+      x.fillText(vt,barX+bw+(mob?7:10),y+rowH*.5);
+    }
   }
   x.fillStyle=isLight()?'rgba(16,19,33,.14)':'rgba(255,255,255,.1)';
-  x.font='900 54px system-ui'; x.textAlign='right'; x.textBaseline='alphabetic';
-  x.fillText(D.labels[Math.round(f)],W-18,H-18);
-  x.fillStyle=isLight()?'#9aa0af':'#5d5f70'; x.font='10.5px system-ui'; x.textAlign='left';
-  x.fillText('Vốn hoá quy ước: số cổ phiếu HIỆN TẠI × giá tháng đó',14,H-10);
+  x.font=mob?'900 34px system-ui':'900 54px system-ui';
+  x.textAlign='right'; x.textBaseline='alphabetic';
+  x.fillText(D.labels[Math.round(f)],W-(mob?12:18),H-(mob?12:18));
+  if(!mob){                                     // màn hẹp bỏ ghi chú, nhường chỗ cho đường đua
+    x.fillStyle=isLight()?'#9aa0af':'#5d5f70'; x.font='10.5px system-ui'; x.textAlign='left';
+    x.fillText('Vốn hoá quy ước: số cổ phiếu HIỆN TẠI × giá tháng đó',14,H-10);
+  }
+}
+/* CÁN ĐÍCH XONG XẾP HÀNG: các hàng đang bay dở tiếp tục trườn về đúng vị trí rồi
+   khoá thẳng hàng — trước đây dừng vẽ ngay tại đích nên logo đè lên nhau. */
+function settleRace(){
+  if(RA.settling) return; RA.settling=true;
+  const step=()=>{
+    if(RA.playing){ RA.settling=false; return; }   // người dùng bấm chạy tiếp -> nhường
+    drawRace();
+    if(RA.maxDelta>0.4) requestAnimationFrame(step);
+    else{ RA.settling=false; drawRace(1); }        // khung cuối: khoá đúng hàng
+  };
+  requestAnimationFrame(step);
 }
 function raceTick(ts){
   if(!RA.playing) return;
@@ -605,6 +639,46 @@ function raceTick(ts){
   const sl=$('#raSlide'); if(sl) sl.value=RA.f;
   drawRace();
   if(RA.playing) RA.raf=requestAnimationFrame(raceTick);
+  else settleRace();                              // hết đua -> xếp hàng thẳng lối rồi mới đứng im
+}
+/* ---- ĐẦU TƯ ĐỀU ĐẶN (DCA): bỏ X triệu mỗi tháng từ tháng đã chọn tới nay ----
+   Dùng CHÍNH chuỗi race (mcap = giá tháng đó × SLCP hiện tại): tỉ lệ giữa các tháng
+   đúng bằng tỉ lệ giá nên giá trị DCA = X × Σ(v_cuối / v_tháng-mua). */
+const DCA={amt:5,from:0,sec:null};
+function dcaFmt(v){ // v tính bằng TRIỆU đồng
+  if(v>=1000) return (v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+' tỷ';
+  return Math.round(v).toLocaleString('en-US')+' triệu';
+}
+function renderDCA(){
+  const D=raceData(), box=$('#dcaOut'); if(!D||!box) return;
+  const L=D.labels.length, i0=clamp(DCA.from,0,L-1), amt=+DCA.amt||0;
+  let pool=D.syms;
+  if(DCA.sec) pool=pool.filter(s=>{ const c=ST.map.get(s); return c&&c.sector===DCA.sec; });
+  const n=L-i0, cost=amt*n, rows=[];
+  for(const s of pool){
+    const a=D.series[s], vEnd=a[L-1];
+    // đòi CÓ GIÁ ngay tháng bắt đầu: mã niêm yết muộn hơn thì không được xếp hạng cùng
+    if(a[i0]==null||!(vEnd>0)) continue;
+    let u=0, ok=true;
+    for(let i=i0;i<L;i++){ const v=a[i]; if(!(v>0)){ ok=false; break; } u+=1/v; }
+    if(ok) rows.push({s,val:amt*u*vEnd});
+  }
+  rows.sort((a,b)=>b.val-a.val);
+  const sum=$('#dcaSum');
+  if(sum) sum.innerHTML=amt>0?'bỏ <b>'+dcaFmt(amt)+'</b>/tháng × '+n+' tháng = vốn <b>'+dcaFmt(cost)+'</b>':'';
+  if(!(amt>0)){ box.innerHTML='<div class="empty">Nhập số tiền bỏ vào mỗi tháng</div>'; return; }
+  const top=rows.slice(0,12), mxv=top.length?top[0].val:1;
+  box.innerHTML=top.length?top.map(r=>{
+    const c=ST.map.get(r.s)||{sym:r.s,name:'',img:null};
+    const p=cost>0?(r.val/cost-1)*100:null, up=p!=null&&p>=0;
+    const pc=p==null?'':(p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%';
+    return '<div class="dcarow" data-sym="'+r.s+'" title="Bấm mở trang '+r.s+'">'+logoHTML(c)
+      +'<span class="idn"><b>'+r.s+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
+      +'<span class="dbar"><i style="width:'+(r.val/mxv*100).toFixed(1)+'%;background:'
+      +(up?'linear-gradient(90deg,rgba(22,199,132,.45),var(--green))':'linear-gradient(90deg,rgba(234,57,67,.45),var(--red))')
+      +'"></i></span>'
+      +'<span class="dval">'+dcaFmt(r.val)+'<b class="'+(up?'up':'dn')+'">'+pc+'</b></span></div>';
+  }).join(''):'<div class="empty">Nhóm này không có mã nào đủ dữ liệu từ tháng đã chọn</div>';
 }
 function renderRace(){
   const m=MODULES.find(x=>x.id==='race');
@@ -612,18 +686,31 @@ function renderRace(){
   if(!D){ $('#m-race').innerHTML=head(m)+'<div class="empty">Chưa có dữ liệu đua — chạy lại demo-build-screen.py</div>'; return; }
   const secCnt={};
   for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
-  const secOpts=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a])
-    .map(k=>'<option value="'+esc(k)+'"'+(RA.sector===k?' selected':'')+'>'+esc(k)+'</option>').join('');
+  const secKeys=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a]);
+  const secOpts=sel=>secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
+  const thang=lb=>{ const p=String(lb).split('/'); return 'Tháng '+p[0]+'/20'+p[1]; };
+  const fromOpts=D.labels.map((lb,i)=>'<option value="'+i+'"'+(i===DCA.from?' selected':'')+'>'+thang(lb)+'</option>').join('');
   $('#m-race').innerHTML=head(m)
     +'<div class="ctl"><button class="btn" id="raPlay">▶ Bắt đầu đua</button>'
     +'<span class="lb">Nhóm ngành</span>'
-    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts+'</select>'
+    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts(RA.sector)+'</select>'
     +'<div class="seg" id="raSpeed"><button data-v="0.5">chậm</button><button data-v="1" class="on">vừa</button>'
     +'<button data-v="2">nhanh</button><button data-v="4">rất nhanh</button></div>'
     +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0" style="flex:1;min-width:170px"/>'
-    +'<span class="note" style="margin:0">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
-    +'<div class="panel" style="padding:12px"><canvas id="cvRace" class="block" style="height:520px"></canvas></div>'
-    +'<div class="note">Top 10 vốn hoá lớn nhất tại từng thời điểm (chọn nhóm ngành để đua riêng ngành đó). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>';
+    +'<span class="note raRange" style="margin:0">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
+    +'<div class="panel racePanel"><canvas id="cvRace" class="block" style="height:520px"></canvas></div>'
+    +'<div class="note">Top 10 vốn hoá lớn nhất tại từng thời điểm (chọn nhóm ngành để đua riêng ngành đó). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
+    +sectionHead('r-dca','💰 Nếu đầu tư đều đặn mỗi tháng')
+    +'<div class="ctl"><span class="lb">Mỗi tháng</span>'
+    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+DCA.amt+'" style="width:80px"/>'
+    +'<span class="lb" style="text-transform:none;letter-spacing:0">triệu đồng</span>'
+    +'<span class="lb">Từ</span><select id="dcaFrom">'+fromOpts+'</select>'
+    +'<span class="lb">Nhóm ngành</span>'
+    +'<select id="dcaSec"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select></div>'
+    +'<div class="panel"><div class="ph">Giá trị hôm nay<span id="dcaSum" style="margin-left:auto;font-weight:600;color:var(--mut)"></span></div>'
+    +'<div class="pb" id="dcaOut"></div></div>'
+    +'<div class="note">Mua tại giá đóng cửa THÁNG theo kho CPVN — đã gồm biến động giá, chưa tính cổ tức tiền nhận về. '
+    +'Mã phải có giao dịch đủ từ tháng bắt đầu mới được xếp hạng. Thống kê quá khứ, không phải khuyến nghị đầu tư.</div>';
   $('#raPlay').onclick=()=>{
     if(RA.playing){ RA.playing=false; $('#raPlay').textContent='▶ Tiếp tục'; return; }
     if(RA.f>=D.labels.length-1.01) RA.f=0;
@@ -635,9 +722,14 @@ function renderRace(){
     b.classList.add('on'); RA.speed=+b.dataset.v; });
   $('#raSlide').oninput=e=>{ RA.playing=false; $('#raPlay').textContent='▶ Tiếp tục';
     RA.f=+e.target.value; drawRace(); };
-  $('#raSec').onchange=e=>{ RA.sector=e.target.value||null; RA.curY={}; drawRace(); };
+  $('#raSlide').onchange=()=>settleRace();        // thả tay -> hàng nào bay dở cũng về đúng chỗ
+  $('#raSec').onchange=e=>{ RA.sector=e.target.value||null; RA.curY={}; drawRace(); settleRace(); };
+  $('#dcaAmt').oninput=e=>{ DCA.amt=+e.target.value||0; renderDCA(); };
+  $('#dcaFrom').onchange=e=>{ DCA.from=+e.target.value||0; renderDCA(); };
+  $('#dcaSec').onchange=e=>{ DCA.sec=e.target.value||null; renderDCA(); };
   RA.f=0; RA.curY={};
   requestAnimationFrame(drawRace);
+  renderDCA();
 }
 MODULES.find(x=>x.id==='race').after=()=>requestAnimationFrame(drawRace);
 
@@ -660,7 +752,7 @@ async function init(){
     showMod(cur);
   };
   $('#mn').addEventListener('click',e=>{           // bấm dòng mã ở bất kỳ thẻ nào -> trang cổ phiếu
-    const rw=e.target.closest('.rw');
+    const rw=e.target.closest('.rw,.dcarow');
     if(rw&&rw.dataset.sym) location.href='cophieu.html?sym='+rw.dataset.sym;
   });
   addEventListener('resize',(()=>{ let rt; return ()=>{ clearTimeout(rt);

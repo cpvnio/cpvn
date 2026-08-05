@@ -300,6 +300,42 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .secrow .sbr{display:none}
 }
 
+/* ---------- đường đua + đầu tư đều đặn (DCA) ---------- */
+.racePanel{padding:12px}
+.dcarow{display:grid;grid-template-columns:26px 150px 1fr minmax(112px,auto);gap:10px;align-items:center;
+  padding:7px 12px;border-top:1px solid var(--line);cursor:pointer;transition:.12s}
+.dcarow:first-child{border-top:0}
+.dcarow:hover{background:var(--card2)}
+.dcarow .lgw{width:24px;height:24px;border-radius:7px;background:#fff;overflow:hidden;display:flex;
+  align-items:center;justify-content:center}
+.dcarow img{width:100%;height:100%;object-fit:contain}
+.dcarow .noimg{width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;
+  align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--mut)}
+.dcarow .idn{min-width:0;line-height:1.2}
+.dcarow .idn b{display:block;font-size:13px;font-weight:800}
+.dcarow .idn i{display:block;font-style:normal;font-size:10px;color:var(--faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcarow .dbar{height:13px;background:var(--card2);border-radius:7px;overflow:hidden}
+.dcarow .dbar i{display:block;height:100%;border-radius:7px}
+.dcarow .dval{text-align:right;font-weight:800;font-size:13.5px;white-space:nowrap;line-height:1.25}
+.dcarow .dval b{display:block;font-size:11px}
+@media(max-width:640px){
+  /* màn dọc: mỗi cụm điều khiển MỘT hàng (nút đua / chọn ngành / tốc độ / tua),
+     thẻ đua sát mép cho rộng đường đua */
+  .racePanel{padding:8px 6px}
+  #raPlay{width:100%}
+  .ctl select{flex:1 1 120px;min-width:0}
+  .ctl input[type=number]{flex:0 1 80px}
+  .ctl .seg{display:flex;flex:1 1 100%}
+  .ctl .seg button{flex:1;padding:7px 4px}
+  .ctl input[type=range]{flex:1 1 100%}
+  .raRange{display:none}
+  .dcarow{grid-template-columns:22px 52px 1fr minmax(96px,auto);gap:7px;padding:7px 8px}
+  .dcarow .lgw,.dcarow .noimg{width:20px;height:20px}
+  .dcarow .idn b{font-size:12px}
+  .dcarow .idn i{display:none}
+}
+
 /* ---------- toast + loader ---------- */
 #toast{position:fixed;right:18px;bottom:18px;z-index:90;display:flex;flex-direction:column;gap:8px}
 .tst{background:var(--solid);border:1px solid var(--line2);border-left:3px solid var(--teal);
@@ -379,6 +415,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260808z"></script>
+<script src="assets/congcu.js?v=20260809a"></script>
 </body>
 </html>
