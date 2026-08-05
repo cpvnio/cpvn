@@ -211,6 +211,27 @@ let dpen=null;                                     // mốc bấm xuống, để
     geo.cw=cw;
     const cx=i=>i*cw+cw/2;
 
+    // TÊN MÃ chìm giữa vùng vẽ (kiểu các trang PTKT): ảnh chụp mang đi đâu cũng
+    // biết đang xem mã nào. Vẽ TRƯỚC lưới nên luôn nằm dưới nến, không che gì.
+    const wm=opt.wm&&opt.wm();
+    if(wm&&wm.sym){
+      x.save();
+      x.textAlign='center'; x.textBaseline='middle';
+      const mid=plotW/2, midY=padT+plotH/2;
+      // chặn TRẦN kích thước: màn rộng mà không chặn thì chữ nuốt luôn cái chart
+      const s=Math.max(20,Math.min(plotW*0.17,plotH*0.30,120));
+      const al=light()?0.08:0.10;
+      x.fillStyle=TXT(); x.globalAlpha=al;
+      x.font=`800 ${s}px system-ui`;
+      x.fillText(wm.sym,mid,midY-(wm.phu?s*0.18:0));
+      if(wm.phu){                       // tên công ty dài -> nhỏ và nhạt hơn hẳn mã
+        x.globalAlpha=al*0.75;
+        x.font=`600 ${Math.max(10,Math.min(s*0.20,15))}px system-ui`;
+        x.fillText(wm.phu,mid,midY+s*0.40);
+      }
+      x.restore();
+    }
+
     // lưới ngang + trục giá bên phải
     x.font='10.5px system-ui'; x.textBaseline='middle';
     for(let k=0;k<=4;k++){
