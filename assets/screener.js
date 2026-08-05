@@ -49,9 +49,8 @@ CPScreen.chips=[
   {id:'nnd10', g:'Dòng tiền', nm:'NN mua hôm nay ≥ 10 tỷ'},
   {id:'nn60',  g:'Dòng tiền', nm:'NN gom ròng 60 phiên'},
   {id:'q2up',  g:'Sức khoẻ', nm:'2 quý liền lãi tăng ≥ 25%'},
-  // HAI chip CÓ THAM SỐ: {n} là chỗ client cắm ô chọn số kỳ. def = số kỳ mặc định.
-  {id:'lossY', g:'Đáy & Phục hồi', nm:'Lỗ {n} năm nhưng thu hẹp', opts:[2,3,4,5],          def:3},
-  {id:'lossQ', g:'Đáy & Phục hồi', nm:'Lỗ {n} quý nhưng thu hẹp', opts:[1,2,3,4,5,6,7,8], def:8},
+  // chip CÓ THAM SỐ: {n} là chỗ client cắm ô chọn số kỳ. def = số kỳ mặc định.
+  {id:'lossQ', g:'Sức khoẻ', nm:'Lỗ {n} quý liên tiếp', opts:[1,2,3,4,5,6,7,8], def:8},
 ];
 CPScreen.def=id=>{const x=CPScreen.chips.find(c=>c.id===id);return x&&x.def||0;};
 /* n = số kỳ người dùng chọn, chỉ có nghĩa với chip mang opts */
@@ -80,12 +79,8 @@ CPScreen.chip=function(id,c,n){
     // HAI quý LIÊN TIẾP lãi tăng >=25% so với CÙNG KỲ năm trước (mốc 25% của CAN SLIM).
     // So cùng kỳ chứ không so quý liền trước — tránh nhiễu mùa vụ.
     case 'q2up':  return (f.npQ??-9)>=25&&(f.npQ2??-9)>=25;
-    // CÒN LỖ nhưng đáy đã qua: N năm liền lỗ mà lỗ nhỏ dần TỪNG năm. Điều kiện đơn điệu
-    // theo N nên kho chỉ lưu độ dài chuỗi.
-    case 'lossY': return (f.lossYs||0)>=n;
-    // N quý liền lỗ mà lỗ đang thu hẹp (nửa mới nhẹ hơn nửa cũ). Không đơn điệu theo N
-    // -> kho lưu mặt nạ bit, mỗi N một bit.
-    case 'lossQ': return !!(((f.lossQm||0)>>(n-1))&1);
+    // N quý gần nhất LIÊN TIẾP lỗ — kho lưu độ dài chuỗi lỗ, đứt một quý là về 0
+    case 'lossQ': return (f.lossQs||0)>=n;
     default: return true;
   }
 };
