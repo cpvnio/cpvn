@@ -187,8 +187,18 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #detail .row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-top:1px solid var(--line);gap:8px}
   #detail .row span:first-child{color:var(--muted);white-space:nowrap}
   #detail .row span:last-child{text-align:right}
-  #detail .big{font-size:22px;font-weight:800;margin:2px 0 6px;transition:color .25s;display:flex;gap:10px;align-items:baseline}
+  #detail .big{font-size:22px;font-weight:800;margin:2px 0 6px;transition:color .25s;display:flex;gap:10px;
+    align-items:baseline;flex-wrap:wrap}
   #detail .big .pc{font-size:14px}
+  /* GIÁ không bao giờ xuống dòng: panel hẹp (điện thoại) thì nút "Xem chi tiết"
+     tự rơi xuống dòng dưới, vẫn dồn phải — chứ đừng bẻ đôi con số giá. */
+  #detail .big #detPrice{white-space:nowrap}
+  /* nút mở trang chi tiết: dồn sang phải -> thẳng cột với chips khung nến ngay dưới,
+     và cùng hàng với giá. Không dùng class .btn (nó là nút khối cuối panel). */
+  #detail .big .more{margin-left:auto;align-self:center;white-space:nowrap;cursor:pointer;
+    font-size:12px;font-weight:700;text-decoration:none;color:var(--accent);
+    background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 10px}
+  #detail .big .more:hover{background:var(--accent);border-color:var(--accent);color:#fff}
   #detail img.logo{width:26px;height:26px;border-radius:6px;background:#fff;object-fit:contain}
   #detail a.btn{display:block;margin-top:10px;text-align:center;background:var(--accent);color:#fff;
     text-decoration:none;font-weight:700;padding:8px;border-radius:9px;font-size:13px}
@@ -401,7 +411,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
       <span class="close" id="detClose">×</span>
       <h3><img class="logo" id="detImg" alt=""/><span id="detSym"></span></h3>
       <div class="sub" id="detName"></div>
-      <div class="big"><span id="detPrice"></span><span class="pc" id="detChg"></span></div>
+      <div class="big"><span id="detPrice"></span><span class="pc" id="detChg"></span>
+        <a class="more" id="detMore" title="Mở trang cổ phiếu đầy đủ trên CPVN.IO">Xem chi tiết →</a></div>
 
       <div class="sect"><span>Biểu đồ nến</span>
         <span class="chips" id="candleTf">
@@ -1597,6 +1608,7 @@ function showDetail(c){
   $('detSym').textContent=c.sym;
   $('detName').textContent=`${c.name} · ${c.ex} · ${c.sector}`;
   $('detLink').href=`https://simplize.vn/co-phieu/${c.sym}`;
+  $('detMore').href=`/cophieu/${c.sym}`;      // trang cổ phiếu đầy đủ của chính CPVN
   const im=$('detImg');                       // kho repo trước -> CDN nguồn -> ẩn
   im.style.display='block'; delete im.dataset.cdn;
   im.onerror=()=>{ if(!im.dataset.cdn&&c.img){ im.dataset.cdn='1'; im.src=c.img; } else im.style.display='none'; };
