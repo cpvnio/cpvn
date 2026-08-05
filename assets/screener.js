@@ -1,5 +1,5 @@
 /* ============================================================================
-   CPScreen — BỘ LỌC bảng giá CPVN: van an toàn + 19 chip lọc nhanh 1 chạm.
+   CPScreen — BỘ LỌC bảng giá CPVN: 18 chip lọc nhanh 1 chạm.
    Dữ liệu: data/screen.json (kỹ thuật) + data/fund.json (dẫn xuất từ kho BCTC,
    build_screen.py tự sinh mỗi phiên). Nạp LƯỜI khi người dùng mở panel lần đầu —
    không tốn tải trang cho người không dùng lọc.
