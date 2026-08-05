@@ -11,6 +11,22 @@
    ========================================================================== */
 'use strict';
 (function(g){
+/* ---- LOGO CPVN đóng dấu trong vùng vẽ ---------------------------------------
+   Nạp MỘT lần rồi mọi biểu đồ dùng chung. Ảnh về sau khi chart đã vẽ xong thì
+   phải vẽ lại, nếu không lần đầu vào trang sẽ mất dấu. Đường dẫn TUYỆT ĐỐI vì
+   cophieu.html chạy URL hai tầng /cophieu/MÃ. */
+let logoImg=null, logoXong=false;
+const doiLogo=[];                       // các hàm vẽ lại, gọi đúng một lượt khi ảnh về
+function logoSan(){
+  if(!logoImg){
+    logoImg=new Image();
+    logoImg.onload=()=>{ logoXong=true; doiLogo.splice(0).forEach(f=>{try{f()}catch(e){}}); };
+    logoImg.onerror=()=>{ logoImg=null; };   // hỏng thì thôi, chỉ in chữ
+    logoImg.src='/assets/logo-64.png?v=3';
+  }
+  return logoXong?logoImg:null;
+}
+function khiCoLogo(f){ if(!logoXong&&logoImg) doiLogo.push(f); }
 /* ---- BỘ NÚT VẼ dùng chung cho cả biểu đồ nhỏ lẫn chế độ toàn màn hình ------
    Xếp CỘT DỌC BÊN TRÁI biểu đồ đúng thói quen các trang phân tích kỹ thuật. */
 const SVG={
@@ -220,15 +236,32 @@ let dpen=null;                                     // mốc bấm xuống, để
       const mid=plotW/2, midY=padT+plotH/2;
       // chặn TRẦN kích thước: màn rộng mà không chặn thì chữ nuốt luôn cái chart
       const s=Math.max(20,Math.min(plotW*0.17,plotH*0.30,120));
-      const al=light()?0.08:0.10;
+      const al=light()?0.13:0.15;       // đủ đọc được mà vẫn nằm sau nến
       x.fillStyle=TXT(); x.globalAlpha=al;
       x.font=`800 ${s}px system-ui`;
       x.fillText(wm.sym,mid,midY-(wm.phu?s*0.18:0));
       if(wm.phu){                       // tên công ty dài -> nhỏ và nhạt hơn hẳn mã
-        x.globalAlpha=al*0.75;
+        x.globalAlpha=al*0.7;
         x.font=`600 ${Math.max(10,Math.min(s*0.20,15))}px system-ui`;
         x.fillText(wm.phu,mid,midY+s*0.40);
       }
+      x.restore();
+    }
+
+    // DẤU CPVN.IO góc trái dưới vùng vẽ — chỗ các trang chart hay đặt logo, không
+    // đụng chú giải (góc trái TRÊN) lẫn trục giá (bên phải). Ảnh cắt riêng vùng
+    // chart vẫn còn nguồn.
+    if(wm&&wm.sym&&plotH>=150){        // chart lùn (panel bong bóng ~110px) thì bỏ, kẻo chật
+      const lg=logoSan(), L=20, by=padT+plotH-8;
+      khiCoLogo(()=>self.draw());       // ảnh về sau -> vẽ lại đúng một lượt
+      x.save();
+      let bx=8;
+      if(lg){                           // logo để RÕ, dưới 18px là thành cục mờ
+        x.globalAlpha=0.85; x.drawImage(lg,bx,by-L+3,L,L); bx+=L+5;
+      }
+      x.globalAlpha=light()?0.55:0.5;
+      x.fillStyle=TXT(); x.textAlign='left'; x.textBaseline='alphabetic';
+      x.font='800 12px system-ui'; x.fillText('CPVN.IO',bx,by-4);
       x.restore();
     }
 
