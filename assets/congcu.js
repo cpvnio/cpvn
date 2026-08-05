@@ -728,15 +728,21 @@ function drawDCA(lerp){
     x.fillText(C2.amt>0?'Nhóm này không có mã nào đủ dữ liệu từ tháng đã chọn':'Nhập số tiền bỏ vào mỗi tháng',W/2,H/2);
     return;
   }
+  for(const r of rows) if(RA.imgs[r.s]===undefined){ const im=new Image();
+    im.onerror=()=>{ RA.imgs[r.s]=null; }; im.src='assets/logo/'+r.s+'.webp'; RA.imgs[r.s]=im; }
   const n=C2.n, f=clamp(RA.f,0,n-1);
   const iA=Math.floor(f), iB=Math.min(n-1,iA+1), tt=f-iA;
   const cur=a=>a[iA]+((a[iB]!=null?a[iB]:a[iA])-a[iA])*tt;
-  const padL=mob?10:14, padR=mob?92:128, padT=20, padB=30;
+  /* ĐỐI THỦ NGÂN HÀNG: gửi X mỗi tháng, lãi 7%/năm ghép theo tháng (r=7%/12).
+     Khoản gửi tháng j hưởng (k-j) tháng lãi -> tổng tại tháng k = X·((1+r)^(k+1)-1)/r.
+     Cùng quy ước với cổ phiếu: khoản tháng này chưa kịp sinh lời. */
+  const rB=0.07/12, bank=k=>C2.amt*((Math.pow(1+rB,k+1)-1)/rB);
+  const padL=mob?10:14, padR=mob?110:172, padT=20, padB=30;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const xmax=Math.max(f,6);                      // trục ngang nở dần theo cuộc chạy
   const X=i=>padL+i/xmax*plotW;
-  // đỉnh trục tiền: giá trị lớn nhất ĐÃ HIỆN (kể cả vốn), co giãn mượt
-  let mx=C2.amt*(iB+1);
+  // đỉnh trục tiền: giá trị lớn nhất ĐÃ HIỆN (mã, ngân hàng, vốn), co giãn mượt
+  let mx=Math.max(C2.amt*(iB+1),bank(iB));
   for(const r of rows) for(let i=0;i<=iB;i++) if(r.vals[i]>mx) mx=r.vals[i];
   mx*=1.08;
   const K=lerp==null?.18:lerp;
@@ -758,15 +764,25 @@ function drawDCA(lerp){
   for(let i=0;i<=Math.min(Math.ceil(f),n-1);i+=stepT)
     x.fillText(D.labels[C2.i0+i],X(i),H-12);
   brandMark(x,W,H);                              // dấu thương hiệu dưới các đường
-  // tháng hiện tại to mờ góc trái trên
+  // tháng hiện tại to mờ + HUD "đã bỏ bao nhiêu" — nhìn phát biết ngay vốn theo từng tháng
   x.fillStyle=isLight()?'rgba(16,19,33,.12)':'rgba(255,255,255,.09)';
   x.font=mob?'900 30px system-ui':'900 44px system-ui'; x.textAlign='left';
   x.fillText(D.labels[C2.i0+Math.round(f)],padL+6,padT+(mob?22:30));
+  const soThang=Math.floor(f)+1, von=C2.amt*soThang;
+  x.fillStyle=TXTC; x.font=mob?'800 15px system-ui':'800 20px system-ui';
+  x.fillText('đã bỏ '+dcaFmt(von),padL+8,padT+(mob?48:66));
+  x.fillStyle=MUTC; x.font=mob?'700 10.5px system-ui':'700 12px system-ui';
+  x.fillText(soThang+' tháng × '+dcaFmt(C2.amt),padL+8,padT+(mob?64:86));
   // đường VỐN ĐÃ BỎ (đứt nét) — mốc so lãi/lỗ
   x.strokeStyle=MUTC; x.setLineDash([5,4]); x.lineWidth=1.2; x.beginPath();
   for(let i=0;i<=iA;i++){ const p=[X(i),Y(C2.amt*(i+1))]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
   x.lineTo(X(f),Y(C2.amt*(f+1))); x.stroke(); x.setLineDash([]);
-  // các đường mã + nhãn bám đầu đường
+  // đường NGÂN HÀNG 7%/năm — vàng đậm, mốc "gửi tiết kiệm thì được bao nhiêu"
+  const GOLD='#f5b40a';
+  x.strokeStyle=GOLD; x.lineWidth=2.4; x.beginPath();
+  for(let i=0;i<=iA;i++){ const p=[X(i),Y(bank(i))]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
+  x.lineTo(X(f),Y(bank(f))); x.stroke();
+  // các đường mã
   const tips=[];
   for(const r of rows){
     const col=D.cols[r.s]||'#38bdf8';
@@ -776,20 +792,38 @@ function drawDCA(lerp){
     x.lineTo(X(f),Y(vNow)); x.stroke();
     tips.push({s:r.s,col,v:vNow,y:Y(vNow)});
   }
-  // nhãn: dồn cho khỏi đè nhau rồi vẽ chấm màu + mã + giá trị
+  tips.push({s:mob?'NH 7%':'Ngân hàng 7%',col:GOLD,v:bank(f),y:Y(bank(f)),bank:true});
+  // nhãn: dồn cho khỏi đè nhau rồi vẽ logo/chấm màu + mã + giá trị + % lãi
   tips.sort((a,b)=>a.y-b.y);
-  const GAP=mob?15:18, x0=X(f);
+  const GAP=mob?16:19, x0=X(f);
   for(let i=1;i<tips.length;i++) if(tips[i].y-tips[i-1].y<GAP) tips[i].y=tips[i-1].y+GAP;
   for(let i=tips.length-1;i>0;i--) if(tips[i].y>padT+plotH){ tips[i].y=padT+plotH;
     if(tips[i].y-tips[i-1].y<GAP) tips[i-1].y=tips[i].y-GAP; }
   x.textBaseline='middle';
   for(const t of tips){
-    x.fillStyle=t.col; x.beginPath(); x.arc(x0,t.y,3.5,0,7); x.fill();
-    x.fillStyle=TXTC; x.font=mob?'800 11px system-ui':'800 12.5px system-ui'; x.textAlign='left';
-    const sx=x0+7;
-    x.fillText(t.s,sx,t.y);
-    x.fillStyle=MUTC; x.font=mob?'700 10px system-ui':'700 11px system-ui';
-    x.fillText(dcaFmt(t.v),sx+x.measureText('  ').width+(mob?26:34),t.y);
+    let sx=x0+6;
+    const im=t.bank?null:RA.imgs[t.s];
+    if(im&&im.complete&&im.naturalWidth){        // logo công ty tròn ở đầu đường
+      const R2=mob?7:8;
+      x.save(); x.beginPath(); x.arc(sx+R2,t.y,R2,0,7); x.closePath();
+      x.fillStyle='#fff'; x.fill(); x.strokeStyle=t.col; x.lineWidth=1.4; x.stroke(); x.clip();
+      x.drawImage(im,sx,t.y-R2,R2*2,R2*2); x.restore();
+      sx+=R2*2+4;
+    }else{
+      x.fillStyle=t.col; x.beginPath(); x.arc(sx+3.5,t.y,3.5,0,7); x.fill(); sx+=11;
+    }
+    x.fillStyle=t.bank?GOLD:TXTC; x.font=mob?'800 10.5px system-ui':'800 12.5px system-ui';
+    x.textAlign='left'; x.fillText(t.s,sx,t.y);
+    sx+=x.measureText(t.s).width+5;
+    x.fillStyle=TXTC; x.font=mob?'700 10px system-ui':'700 11.5px system-ui';
+    x.fillText(dcaFmt(t.v),sx,t.y);
+    if(!mob&&!t.bank&&von>0){                    // % lãi/lỗ so vốn — chỉ màn rộng cho khỏi chật
+      sx+=x.measureText(dcaFmt(t.v)).width+5;
+      const p=(t.v/von-1)*100;
+      x.fillStyle=p>=0?(isLight()?'#0a9e63':'#16c784'):(isLight()?'#dc3644':'#ea3943');
+      x.font='700 10.5px system-ui';
+      x.fillText((p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%',sx,t.y);
+    }
   }
   // nhãn đường vốn
   x.fillStyle=MUTC; x.font=mob?'700 10px system-ui':'700 11px system-ui'; x.textAlign='left';
@@ -829,7 +863,7 @@ function renderRace(){
     +'<span class="lb">Nhóm ngành</span>'
     +'<select id="dcaSec"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select></div>'
     +'<div class="panel racePanel"><canvas id="cvDca" class="block" style="height:520px"></canvas></div>'
-    +'<div class="note">8 mã giá trị cao nhất trong nhóm — bấm ▶ để xem tiền lớn lên qua từng tháng; đường đứt là vốn đã bỏ.</div>'
+    +'<div class="note">8 mã giá trị cao nhất trong nhóm — bấm ▶ để xem tiền lớn lên qua từng tháng. Đường đứt là vốn đã bỏ; đường vàng là gửi ngân hàng lãi 7%/năm (ghép lãi theo tháng) để so ngay đầu tư thắng hay thua tiết kiệm.</div>'
     +'<div class="panel"><div class="ph">Giá trị hôm nay<span id="dcaSum" style="margin-left:auto;font-weight:600;color:var(--mut)"></span></div>'
     +'<div class="pb" id="dcaOut"></div></div>'
     +'<div class="note">Mua tại giá đóng cửa THÁNG theo kho CPVN — đã gồm biến động giá, chưa tính cổ tức tiền nhận về. '
