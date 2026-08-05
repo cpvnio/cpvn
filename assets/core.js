@@ -370,6 +370,47 @@ CP.loadHistFile=async function(sym){
     if(j&&j.t&&j.t.length) d=j; }catch(e){}
   histCache.set(sym,d); return d;
 };
+/* ---------- NẾN NGÀY DÀI HẠN: MƯỢN THẲNG TỪ NGUỒN, KHÔNG LẤY TRONG KHO ------
+   Luật (user chốt 05/08/2026): trang KHÔNG tự lưu nến để vẽ và KHÔNG tự tính
+   điều chỉnh cổ tức/chia tách nữa — cả hai để nguồn lo.
+     nguồn 1  VNDirect  13,5 năm (từ 02/01/2013), ĐÃ hồi tố quyền
+     nguồn 2  VPS       ~6 năm, hồi tố từ giữa 2021 trở lại — chỉ dùng khi nguồn 1 chết
+     chốt cuối kho repo — cho ?offline hoặc khi cả hai nguồn tắt
+   Vì sao phải có nguồn 2: nguồn 1 tắt là mất sạch chart, không có gì bù.
+   Vì sao kho vẫn ở lại: data/hist còn nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng
+   /đường đua — nó là CƠ SỞ DỮ LIỆU, chỉ thôi đóng vai nguồn vẽ chart. */
+const VNDCHART='https://dchart-api.vndirect.com.vn/dchart/history';
+/* ĐƠN VỊ: hai nguồn đều trả NGHÌN đồng, nhưng có mã trả sẵn VND -> đối chiếu với
+   tham chiếu bảng giá rồi chọn hệ số, TUYỆT ĐỐI không đoán theo ngưỡng (VNZ/HLB
+   giá ~500 nghìn rơi đúng biên, từng sai 1000 lần). */
+function chuanDonVi(sym,j){
+  const c0=CP.coins.get(sym)||{}, moc=c0.ref||c0.price||0;
+  const cuoi=j.c[j.c.length-1];
+  const k=moc>0&&cuoi>0?(Math.abs(cuoi*1000-moc)<Math.abs(cuoi-moc)?1000:1):(cuoi<500?1000:1);
+  const g=(a,i)=>(a&&a[i]!=null?a[i]:j.c[i]);
+  return j.t.map((t,i)=>({t,
+    o:Math.round(g(j.o,i)*k), h:Math.round(g(j.h,i)*k),
+    l:Math.round(g(j.l,i)*k), c:Math.round(j.c[i]*k), v:(j.v||[])[i]||0}));
+}
+const dayCache=new Map();
+CP.loadDaily=function(sym){
+  if(dayCache.has(sym)) return dayCache.get(sym);
+  const p=(async()=>{
+    const to=Math.floor(Date.now()/1e3), from=to-15*365*86400;
+    if(!CP.OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
+      try{
+        const j=await fetch(`${url}?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`)
+                        .then(r=>r.ok?r.json():null);
+        if(j&&j.s==='ok'&&j.t&&j.t.length>=2) return {rows:chuanDonVi(sym,j),src:ten};
+      }catch(e){}
+    }
+    const f=await CP.loadHistFile(sym);
+    if(!f||!f.t||f.t.length<2) return null;
+    return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+  })();
+  dayCache.set(sym,p); return p;
+};
+
 /* rows nến {t,o,h,l,c,v}[] — res '5'|'30'|'1D'; fallback = nến ngày từ kho */
 CP.loadCandles=async function(sym,res,spanSec){
   const to=Math.floor(Date.now()/1e3);

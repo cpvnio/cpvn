@@ -335,7 +335,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260808t"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260808u"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -483,8 +483,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260808t"></script>
-<script src="assets/chart.js?v=20260808t"></script>
+<script src="assets/core.js?v=20260808u"></script>
+<script src="assets/chart.js?v=20260808u"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -502,7 +502,7 @@ if(SYM&&/^[A-Z0-9]{2,10}$/.test(SYM)){
   cn.rel='canonical'; cn.href='https://cpvn.io'+nice;
   document.head.appendChild(cn);
 }
-let C=null, candles=null, candleSaved=false, tf='D', finPeriod='Q', peerK='m', finData=null;
+let C=null, candles=null, candleSaved=false, candleSrc='', tf='D', finPeriod='Q', peerK='m', finData=null;
 /* số liệu rút từ BCTC đưa lên bảng thống kê đầu trang (tiền mặt + LN sau thuế năm gần nhất) */
 const FIN={cash:null,cashLb:'',np:null,npLb:''};
 let chart=null, dailyRows=null;      // dailyRows = TOÀN BỘ nến ngày (kho ~6,5 năm) -> gộp tại chỗ
@@ -670,23 +670,15 @@ async function loadChart(){
     return;
   }
   if(!dailyRows){                     // tải 1 lần rồi dùng lại cho cả ngày/tuần/tháng/năm
-    const f=await CP.loadHistFile(C.sym);
-    if(f&&f.t&&f.t.length>1){
-      const ref=(CP.coins.get(C.sym)||{}).ref||0, lastC=f.c[f.c.length-1];
-      const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):(lastC<500?1000:1);
-      dailyRows=f.t.map((t,i)=>({t,o:f.o[i]*k,h:f.h[i]*k,l:f.l[i]*k,c:f.c[i]*k,v:f.v[i]||0}));
-      candleSaved=true;
-    }else{                            // kho lỗi -> lấy sống 5 năm
-      const r=await CP.loadCandles(C.sym,'1D',2000*86400);
-      if(!r){ setCnote('Không có dữ liệu nến'); return; }
-      dailyRows=r.rows; candleSaved=r.saved;
-    }
+    const r=await CP.loadDaily(C.sym); // VNDirect 13,5 năm -> VPS -> kho
+    if(!r||r.rows.length<2){ setCnote('Không có dữ liệu nến'); return; }
+    dailyRows=r.rows; candleSrc=r.src;
   }
   const rows=CPChart.aggregate(dailyRows,tf);
   if(rows.length<2){ setCnote('Chưa đủ dữ liệu'); return; }
   candles=rows;
   const from=CPChart.fullLabel('D',dailyRows[0].t);
-  setCnote(`${rows.length} nến · ${candleSaved?'kho lưu trữ CPVN':'nguồn trực tiếp'} · từ ${from}`);
+  setCnote(`${rows.length} nến · ${candleSrc} · từ ${from}`);
   chart.setRows(rows,tf);
 }
 function drawChart(){ if(chart) chart.draw(); }

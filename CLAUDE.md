@@ -39,12 +39,33 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 |---|---|
 | `universe.json` | 1522 mã: tên, sàn, ngành, SLCP, mcap, PE/PB, eps, cash, np, mốc %, vn30/hnx30 |
 | `data/eod/latest.json` | **File client luôn tải** (~100KB): giá đóng cửa phiên gần nhất + 4 chỉ số |
-| `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới |
+| `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua |
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức |
 | `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
+
+## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
+
+Luật user chốt 05/08/2026: **trang không tự lưu nến để vẽ và không tự tính điều chỉnh
+cổ tức/chia tách.** `CP.loadDaily(sym)` (core.js) và bản sao `loadDaily` trong
+bubbles.html đi theo chuỗi:
+
+| | Nguồn | Sâu | Hồi tố quyền |
+|---|---|---|---|
+| 1 | `dchart-api.vndirect.com.vn` ACAO `*` | **13,5 năm** (02/01/2013) | **đủ** — đo 206/213 sự kiện |
+| 2 | `histdatafeed.vps.com.vn` ACAO `*` | 15 năm (2011) | chỉ từ giữa 2021 trở lại |
+| 3 | kho `data/hist` | 2020 | như nguồn 2 |
+
+7 sự kiện còn "chưa hồi tố" ở nguồn 1 đều là **cổ tức TIỀN 2–4%** — đúng thông lệ thế
+giới (chart giá không trừ cổ tức tiền, chỉ chart tổng lợi nhuận mới trừ). Toàn bộ sự kiện
+gây gãy chart thật (thưởng CP, chia CP, tách) đều đã hồi tố.
+
+> **Vì sao phải có nguồn 2**: nguồn 1 tắt là mất sạch chart. **Vì sao kho vẫn ở lại**:
+> nó là CƠ SỞ DỮ LIỆU cho bộ lọc/radar/đường đua, chỉ thôi đóng vai nguồn vẽ.
+> **Đơn vị**: cả hai nguồn trả nghìn đồng — phải đối chiếu `ref` bảng giá chọn hệ số,
+> tuyệt đối không đoán theo ngưỡng (VNZ 555k, HLB 505k rơi đúng biên).
 
 ## Cơ chế giá — phần tinh vi nhất, đọc kỹ trước khi sửa
 

@@ -329,7 +329,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260808t"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260808u"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -477,7 +477,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260808t"></script>
+<script src="assets/chart.js?v=20260808u"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -1662,7 +1662,36 @@ async function loadHistFile(sym){
   }catch(e){}
   histFileCache.set(sym,d); return d;
 }
-let candleSaved=false;          // true = nến lấy từ kho
+/* NẾN NGÀY: mượn thẳng của nguồn, không lấy trong kho. Bản sao của CP.loadDaily
+   trong core.js — bubbles.html tự chứa lõi dữ liệu, sửa một bên phải sửa cả hai.
+   VNDirect 13,5 năm (đã hồi tố quyền) -> VPS ~6 năm -> kho repo (?offline). */
+const VNDCHART='https://dchart-api.vndirect.com.vn/dchart/history';
+const dayCache=new Map();
+function chuanDonVi(sym,j){
+  const c0=state.coins.get(sym)||{}, moc=c0.ref||c0.price||0, cuoi=j.c[j.c.length-1];
+  const k=moc>0&&cuoi>0?(Math.abs(cuoi*1000-moc)<Math.abs(cuoi-moc)?1000:1):(cuoi<500?1000:1);
+  const g=(a,i)=>(a&&a[i]!=null?a[i]:j.c[i]);
+  return j.t.map((t,i)=>({t,o:Math.round(g(j.o,i)*k),h:Math.round(g(j.h,i)*k),
+    l:Math.round(g(j.l,i)*k),c:Math.round(j.c[i]*k),v:(j.v||[])[i]||0}));
+}
+function loadDaily(sym){
+  if(dayCache.has(sym)) return dayCache.get(sym);
+  const p=(async()=>{
+    const to=Math.floor(Date.now()/1e3), from=to-15*365*86400;
+    if(!OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
+      try{
+        const j=await fetch(`${url}?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`)
+                        .then(r=>r.ok?r.json():null);
+        if(j&&j.s==='ok'&&j.t&&j.t.length>=2) return {rows:chuanDonVi(sym,j),src:ten};
+      }catch(e){}
+    }
+    const f=await loadHistFile(sym);
+    if(!f||!f.t||f.t.length<2) return null;
+    return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+  })();
+  dayCache.set(sym,p); return p;
+}
+let candleSaved=false;          // true = nến rơi về kho vì cả hai nguồn tắt
 let detChart=null, detDaily=null, detDailySym=null;
 function ensureDetChart(){
   if(detChart) return detChart;
@@ -1695,26 +1724,9 @@ async function loadCandles(sym){
   }
   if(detDailySym!==sym||!detDaily){
     candles=null; detChart.setRows([],candleTf);
-    const f=await loadHistFile(sym);
+    const r=await loadDaily(sym);      // VNDirect 13,5 năm -> VPS -> kho (xem core.js)
     if(sym!==detailSym) return;
-    if(f&&f.t&&f.t.length>1){
-      const ref=(state.coins.get(sym)||{}).ref||0, lastC=f.c[f.c.length-1];
-      const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):(lastC<500?1000:1);
-      detDaily=f.t.map((t,i)=>({t,o:f.o[i]*k,h:f.h[i]*k,l:f.l[i]*k,c:f.c[i]*k,v:f.v?(f.v[i]||0):0}));
-      detDailySym=sym; candleSaved=true;
-    }else{
-      const to=Math.floor(Date.now()/1e3);
-      try{
-        const j=await fetch(`${HIST}?symbol=${sym}&resolution=1D&from=${to-2000*86400}&to=${to}`).then(r=>r.json());
-        if(j.s==='ok'&&j.t&&j.t.length>=2){
-          let rows=j.t.map((t,i)=>({t,o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i],v:(j.v||[])[i]||0}));
-          const refP=(state.coins.get(sym)||{}).ref||0, lastC=rows[rows.length-1].c;
-          const k=refP>0&&lastC>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1);
-          if(k!==1) rows=rows.map(r=>({...r,o:r.o*k,h:r.h*k,l:r.l*k,c:r.c*k}));
-          detDaily=rows; detDailySym=sym; candleSaved=false;
-        }
-      }catch(e){}
-    }
+    if(r&&r.rows.length>1){ detDaily=r.rows; detDailySym=sym; candleSaved=r.src==='kho CPVN'; }
   }
   if(sym!==detailSym||!detDaily||detDaily.length<2) return;
   const rows=CPChart.aggregate(detDaily,candleTf);
@@ -1728,20 +1740,10 @@ function drawCandles(){ if(detChart) detChart.draw(); }
 const finHistCache={};
 async function loadFinHist(sym){
   if(finHistCache[sym]) return finHistCache[sym];
-  const to=Math.floor(Date.now()/1e3), from=to-3400*86400;
-  let out=null;
-  if(!OFFLINE) try{
-    const j=await fetch(`${HIST}?symbol=${sym}&resolution=1D&from=${from}&to=${to}`).then(r=>r.json());
-    if(j.s==='ok'&&j.c&&j.c.length){
-      const refP=(state.coins.get(sym)||{}).ref||0, lastC=j.c[j.c.length-1];
-      const k=refP>0&&lastC>0?(Math.abs(lastC*1000-refP)<Math.abs(lastC-refP)?1000:1):(lastC<500?1000:1);
-      out={t:j.t, c:j.c.map(x=>x*k)};
-    }
-  }catch(e){}
-  if(!out){   // VPS lỗi -> dùng kho đã lưu
-    const f=await loadHistFile(sym);
-    out=f?{t:f.t,c:f.c}:{t:[],c:[]};
-  }
+  // dùng chung đúng chuỗi nguồn với chart: giá ĐÃ hồi tố quyền nhân SLCP hiện tại
+  // ra vốn hoá kỳ đó sát hơn hẳn giá thô (hệ số hồi tố bù đúng phần pha loãng)
+  const r=await loadDaily(sym);
+  const out=r?{t:r.rows.map(x=>x.t),c:r.rows.map(x=>x.c)}:{t:[],c:[]};
   finHistCache[sym]=out;
   return out;
 }
