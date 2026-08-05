@@ -236,7 +236,10 @@ let dpen=null;                                     // mốc bấm xuống, để
       const mid=plotW/2, midY=padT+plotH/2;
       // chặn TRẦN kích thước: màn rộng mà không chặn thì chữ nuốt luôn cái chart
       const s=Math.max(20,Math.min(plotW*0.17,plotH*0.30,120));
-      const al=light()?0.13:0.15;       // đủ đọc được mà vẫn nằm sau nến
+      // ĐỦ MỜ để mắt bỏ qua khi đang đọc nến. Đậm lên là khó chịu ngay — người
+      // dùng nhìn chart chứ không nhìn chữ; danh tính mã đã có ở đầu trang và ở
+      // dấu CPVN.IO góc dưới, chữ này chỉ để ảnh cắt rời vẫn còn ngữ cảnh.
+      const al=light()?0.055:0.07;
       x.fillStyle=TXT(); x.globalAlpha=al;
       x.font=`800 ${s}px system-ui`;
       x.fillText(wm.sym,mid,midY-(wm.phu?s*0.18:0));
