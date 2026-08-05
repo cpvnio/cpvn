@@ -972,11 +972,20 @@ function genericTable(el,G,emph){
 /* tiền mặt (kỳ gần nhất) + LN sau thuế năm gần nhất -> đưa lên bảng thống kê đầu trang */
 function pickFinHighlights(){
   FIN.cash=null; FIN.np=null;
-  const bs=(finData&&(finData.bsQ||finData.bsY))||null;
-  if(bs&&bs.rows&&bs.labels){
-    const r=bs.rows.find(x=>x.k==='bsa2')||bs.rows.find(x=>/^tiền và tương đương tiền/i.test(x.n||''));
-    if(r) for(let i=bs.labels.length-1;i>=0;i--) if(r.v[i]!=null){ FIN.cash=r.v[i]; FIN.cashLb=bs.labels[i]; break; }
-  }
+  // giá trị KỲ GẦN NHẤT có số của một dòng trong bảng (tìm theo mã dòng, không thấy thì theo tên)
+  const kyCuoi=(tb,k,re)=>{
+    if(!tb||!tb.rows||!tb.labels) return null;
+    const r=tb.rows.find(x=>x.k===k)||tb.rows.find(x=>re.test(nrm(x.n)));
+    if(!r||!r.v) return null;
+    for(let i=tb.labels.length-1;i>=0;i--) if(r.v[i]!=null) return {v:r.v[i],lb:tb.labels[i]};
+    return null;
+  };
+  // 29 mã NGÂN HÀNG không có dòng bsa2: CĐKT rút gọn của nguồn cho nhà băng chỉ có 8 dòng
+  // (cho vay · đầu tư CK · góp vốn · tiền gửi · tổng TS · nợ · VCSH). Rơi về LCTT lấy
+  // "TIỀN VÀ TƯƠNG ĐƯƠNG TIỀN CUỐI KỲ" — cùng một con số, mã nào cũng có.
+  const ti=kyCuoi(finData&&(finData.bsQ||finData.bsY),'bsa2',/^TIỀN VÀ TƯƠNG ĐƯƠNG TIỀN$/)
+         ||kyCuoi(finData&&(finData.cfQ||finData.cfY),'cfa38',/TIỀN VÀ TƯƠNG ĐƯƠNG TIỀN CUỐI KỲ$/);
+  if(ti){ FIN.cash=ti.v; FIN.cashLb=ti.lb; }
   const Y=(finData&&finData.Y)||[];
   for(let i=Y.length-1;i>=0;i--) if(Y[i].np!=null){ FIN.np=Y[i].np; FIN.npLb=Y[i].label; break; }
 }
