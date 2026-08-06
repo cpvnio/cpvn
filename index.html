@@ -224,10 +224,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   @media(max-width:760px){
     /* ☰ Ngành xuống HÀNG BỘ LỌC cùng ô chọn sàn (đúng nhóm chức năng, và hàng
        thương hiệu không bị tràn xuống 2 dòng) */
-    /* ☰ Ngành đứng TRƯỚC ô chọn sàn — thao tác ngành nhiều hơn nên để tay với trước */
-    #secToggle{order:4;flex:0 0 auto;max-width:58%;overflow:hidden;
-      text-overflow:ellipsis;white-space:nowrap}
-    header select{order:5}
+    /* thứ tự trong cụm: ☰ Ngành -> sàn -> tìm mã (đặt ở khối media phía dưới) */
+    #secToggle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #shotBtn{order:1} #scrBtn{order:1;margin-left:auto} #thm{order:1}
     #sectorbar{position:fixed;left:0;top:0;bottom:0;z-index:60;width:78%;max-width:300px;
       max-height:none;transform:translateX(-100%);transition:transform .22s ease;
@@ -260,12 +258,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .tabs::-webkit-scrollbar{display:none}
     .tabs a{padding:7px 13px;font-size:13.5px;white-space:nowrap}
     .spacer{display:none} #cnt{display:none}
-    /* H3: ô TÌM MÃ chiếm TRỌN hàng — thao tác hay dùng nhất nên để to và rõ */
-    input.search{order:3;flex:1 1 100%;width:auto;min-width:0;font-size:14px}
-    /* H4: 2 ô chọn CHIA ĐÔI hàng — tên đầy đủ, không bị cắt */
-    /* min-width đủ lớn để 2 ô chọn KHÔNG chen được lên hàng tìm mã -> luôn tự xuống
-       hàng riêng và chia đôi. Thiếu chặn này chúng bị bóp còn mỗi mũi tên, mất tên ngành. */
-    header select{flex:1 1 auto;max-width:none;min-width:120px;font-size:13.5px;padding:8px 9px}
+    /* H3: NGÀNH · SÀN · TÌM MÃ gom CHUNG MỘT HÀNG — ô tìm mã chiếm trọn một hàng
+       riêng là phí gần 40px chiều cao, đẩy bảng giá xuống dưới nếp gấp. Ba ô chia
+       nhau theo tỉ lệ: ngành và sàn vừa đủ đọc tên, phần dư dồn hết cho ô tìm. */
+    #secToggle{order:3;flex:0 0 auto;max-width:none;padding:8px 10px;font-size:13px}
+    header select{order:4;flex:0 1 auto;width:auto;min-width:0;max-width:112px;
+      font-size:13px;padding:8px 6px}
+    input.search{order:5;flex:1 1 92px;width:auto;min-width:0;font-size:13.5px;padding:8px 9px}
     input.search::placeholder{opacity:.75}
     /* ép cột Cổ phiếu chỉ ~1/3 màn hình: khoá cứng bề rộng, phần dư dồn về cột số */
     table{min-width:640px}
@@ -293,7 +292,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260809e"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260809f"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -314,7 +313,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <option>VN30</option><option>HNX30</option>
   </select>
   <span id="cnt"></span>
-  <input class="search" id="q" placeholder="Tìm mã / tên công ty…" />
+  <input class="search" id="q" placeholder="Tìm mã / tên công ty…" data-mob="Tìm mã…" />
   <button class="thmbtn" id="secToggle" title="Chọn nhóm ngành">☰ Ngành</button>
   <button class="thmbtn" id="shotBtn" title="Chụp ảnh bảng giá tại đúng vị trí đang xem">📷</button>
   <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Bộ Lọc</span></button>
@@ -346,10 +345,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
         <th class="m" data-k="gtgd" title="Giá trị giao dịch hôm nay"><span class="n">GTGD</span></th>
         <th class="m" data-k="cash" title="Tiền và tương đương tiền — kỳ báo cáo gần nhất"><span class="n">Tiền mặt</span></th>
         <th class="m" data-k="np" title="Lợi nhuận sau thuế năm đã hoàn thành gần nhất"><span class="n" id="thNp">LNST</span></th>
-        <th class="m" data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng"><span class="n">NN mua</span></th>
-        <th class="m" data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng"><span class="n">NN bán</span></th>
         <th class="m" data-k="pe" title="P/E tính sống theo giá hiện tại = giá / EPS"><span class="n">P/E</span></th>
         <th class="m" data-k="eps" title="EPS 4 quý gần nhất — đồng/cổ phiếu"><span class="n">EPS</span></th>
+        <th class="m" data-k="nnb" title="Khối ngoại MUA trong ngày — tỷ đồng"><span class="n">NN mua</span></th>
+        <th class="m" data-k="nns" title="Khối ngoại BÁN trong ngày — tỷ đồng"><span class="n">NN bán</span></th>
       </tr>
     </thead>
     <tbody id="tb"></tbody>
@@ -364,12 +363,17 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260809e"></script>
-<script src="assets/screener.js?v=20260809e"></script>
+<script src="assets/core.js?v=20260809f"></script>
+<script src="assets/screener.js?v=20260809f"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, page:1, PER:100, rows:[], bd:null };
+/* ô tìm mã dùng chung một hàng với Ngành/Sàn ở màn hẹp -> nhãn dài bị cắt cụt,
+   đổi sang nhãn ngắn. Theo dõi cả lúc xoay ngang/dọc. */
+(function(){ const q=document.getElementById('q'), dai=q.placeholder, ngan=q.dataset.mob;
+  const set=()=>q.placeholder=innerWidth<=760?ngan:dai;
+  set(); addEventListener('resize',set); })();
 /* trạng thái BỘ LỌC (assets/screener.js): chips 1 chạm.
    num[id] = số kỳ của chip có tham số (lỗ N quý) */
 const SCR={ on:false, chips:new Set(), num:{} };
@@ -410,8 +414,8 @@ const peLive=c=>{ const p=(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:n
    tiêu đề) rồi khoá đúng bấy nhiêu. Chữ số các dòng vẫn căn phải nên thẳng cột, mà khối
    không còn thừa chỗ trống -> tiêu đề nằm sát ngay trên dãy số.
    Chạy lại sau mỗi lần dựng bảng (đổi trang / lọc / sắp xếp). */
-const MCOLS=[4,6,7,8,9,10];          // 6 cột tiền (số + đơn vị)
-const PCOLS=[3,11,12];              // cột số KHÔNG có đơn vị (Giá, P/E, EPS)
+const MCOLS=[4,6,7,8,11,12];         // 6 cột tiền (số + đơn vị) — NN mua/bán nay đứng cuối
+const PCOLS=[3,9,10];               // cột số KHÔNG có đơn vị (Giá, P/E, EPS)
 const NCOLS=[3,4,5,6,7,8,9,10,11,12];  // toàn bộ cột số, dùng để chia đều khoảng cách
 function fitNumCols(){
   const rows=[...document.querySelectorAll('#tb tr')];
@@ -566,10 +570,10 @@ function render(){
       <td class="m">${money(c.gtgd,true)}</td>
       <td class="m fund" title="${c.cashQ?'kỳ '+CP.esc(c.cashQ):''}">${money(c.cash==null?null:c.cash*1e9)}</td>
       <td class="m fund ${c.np==null?'':(c.np<0?'neg':'pos')}" title="${c.npY?'năm '+CP.esc(c.npY):''}">${money(c.np==null?null:c.np*1e9)}</td>
-      <td class="m nn pos" data-nnb>${money(nnBuy(c),true)}</td>
-      <td class="m nn neg" data-nns>${money(nnSell(c),true)}</td>
       <td class="m"><span class="n" data-pe>${pe!=null?pe.toFixed(1):'—'}</span></td>
       <td class="m"><span class="n">${c.eps!=null?CP.fmtD(c.eps):'—'}</span></td>
+      <td class="m nn pos" data-nnb>${money(nnBuy(c),true)}</td>
+      <td class="m nn neg" data-nns>${money(nnSell(c),true)}</td>
     </tr>`;
   }).join('');
   document.querySelectorAll('#tb tr').forEach(tr=>tr.onclick=e=>{
