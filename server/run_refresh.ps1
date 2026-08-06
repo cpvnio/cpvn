@@ -1,4 +1,4 @@
-# CPVN — cào EOD rồi đẩy kho lên GitHub.
+﻿# CPVN — cào EOD rồi đẩy kho lên GitHub.
 # Scheduled Task gọi lúc 15:15 T2–T6, chạy dưới quyền SYSTEM.
 #
 # BÀI HỌC 04/08/2026 — vì sao bản cũ hỏng:
@@ -6,6 +6,21 @@
 #   Ai đó đẩy commit lên trong 8 phút đó là push bị từ chối "fetch first", cả phiên vừa cào
 #   nằm lại trong máy, KHÔNG có gì báo — tác vụ vẫn báo Last Result = 0 vì PowerShell thoát 0.
 #   Nay: kéo lại NGAY TRƯỚC khi đẩy, thử lại vài lần, và thất bại thì kêu to.
+#
+# BÀI HỌC 06/08/2026 — bản trên lại hỏng theo kiểu khác:
+#   `git pull --rebase` trong vòng đẩy VẤP XUNG ĐỘT (phiên vừa cào ghi đè đúng những file
+#   data/ mà commit trên remote cũng vừa sửa). Rebase dừng giữa chừng, 5 lần đẩy đều hỏng,
+#   và từ hôm đó máy KẸT VĨNH VIỄN: lượt sau `git pull --rebase` gặp repo đang dở rebase là
+#   hỏng ngay từ dòng đầu. Web đứng im mà không ai biết.
+#   Nay: máy chủ coi như BẢN SAO — mỗi lượt huỷ rebase dở dang rồi reset thẳng về
+#   origin/main trước khi cào (dữ liệu vốn dựng lại được), và khi rebase để đẩy thì lấy
+#   BẢN VỪA CÀO làm chuẩn nếu đụng nhau (`-X theirs`).
+#
+# LƯU Ý ENCODING: file này PHẢI lưu UTF-8 CÓ BOM và MỌI CHUỖI CHẠY ĐƯỢC chỉ dùng ASCII.
+#   Windows PowerShell 5.1 đọc .ps1 không BOM theo bảng mã ANSI. Hôm 06/08 nó văng
+#   "'elseif' is not recognized" ở dòng 50 và ghi ra PUSH_FAILED.txt RỖNG TUẾCH — câu báo
+#   lỗi chứa dấu gạch dài biến mất sạch, đúng lúc cần đọc nhất. Tiếng Việt để trong CHÚ
+#   THÍCH thì vô hại (chú thích chạy tới hết dòng), trong chuỗi thì đừng.
 
 $ErrorActionPreference = 'Continue'
 $log = 'C:\cpvn\refresh_log.txt'
@@ -18,7 +33,14 @@ $env:GIT_SSH_COMMAND  = 'ssh -i C:/Users/Administrator/.ssh/github_deploy -o Str
 $git = 'C:\Program Files\Git\cmd\git.exe'
 $py  = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
 
-& $git pull --rebase origin main 2>&1
+# TỰ GỠ KẸT: lượt trước có thể để lại một cuộc rebase dở dang. Máy chủ chỉ là bản sao —
+# mọi thứ trong data/ đều dựng lại được — nên cứ huỷ rồi bám thẳng theo remote.
+if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
+  Write-Output 'Phat hien rebase do dang tu luot truoc - huy va bam lai theo remote.'
+  & $git rebase --abort 2>&1
+}
+& $git fetch origin main 2>&1
+& $git reset --hard origin/main 2>&1
 
 if ((Get-Date).DayOfWeek -eq 'Monday') { & $py refresh_daily.py --full 2>&1 }
 else                                   { & $py refresh_daily.py 2>&1 }
@@ -32,19 +54,27 @@ if (-not $sess) { $sess = Get-Date -Format 'yyyy-MM-dd' }
 & $git commit -m ("EOD $sess (server)") 2>&1
 
 # ĐẨY CÓ THỬ LẠI: mỗi vòng kéo lại rồi mới đẩy, vì remote có thể vừa nhích lên.
+# `-X theirs` = khi đụng nhau thì lấy BẢN VỪA CÀO (commit đang được replay), vì nó là số
+# liệu mới nhất và dựng lại từ nguồn; không có nó là rebase dừng giữa chừng, kẹt máy.
 $pushed = $false
 for ($i = 1; $i -le 5; $i++) {
-  & $git pull --rebase origin main 2>&1
+  & $git pull --rebase -X theirs origin main 2>&1
+  if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
+    Write-Output "Rebase vong $i van ket - huy de lan sau con chay duoc."
+    & $git rebase --abort 2>&1
+    Start-Sleep -Seconds 20
+    continue
+  }
   & $git push origin main 2>&1
-  if ($LASTEXITCODE -eq 0) { $pushed = $true; Write-Output "ĐẨY XONG (vòng $i)"; break }
-  Write-Output "Đẩy hỏng ở vòng $i, chờ 20 giây rồi thử lại..."
+  if ($LASTEXITCODE -eq 0) { $pushed = $true; Write-Output "DAY XONG (vong $i)"; break }
+  Write-Output "Day hong o vong $i, cho 20 giay roi thu lai..."
   Start-Sleep -Seconds 20
 }
 
 if (-not $pushed) {
   # Kêu to: ghi cờ ra file riêng để lượt sau và người kiểm biết ngay là kho đang kẹt lại
-  $msg = "ĐẨY THẤT BẠI sau 5 lần — phiên $sess đã cào xong nhưng CÒN KẸT trong máy này. " +
-         "Chạy tay: cd C:\cpvn; git pull --rebase origin main; git push origin main"
+  $msg = "DAY THAT BAI sau 5 lan - phien $sess da cao xong nhung CON KET trong may nay. " +
+         "Chay tay: cd C:\cpvn; git fetch origin main; git reset --hard origin/main"
   Write-Output $msg
   Set-Content -Path 'C:\cpvn\PUSH_FAILED.txt' -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm')  $msg"
 } elseif (Test-Path 'C:\cpvn\PUSH_FAILED.txt') {

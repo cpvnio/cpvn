@@ -36,3 +36,33 @@ Cả phiên nằm lại trong máy suốt buổi tối mà không ai biết, vì
 
 Đã sửa: **kéo lại ngay trước khi đẩy**, thử lại 5 lần cách nhau 20 giây, và thất bại thì ghi
 `PUSH_FAILED.txt`. Tên commit cũng lấy theo **ngày phiên trong kho** thay vì ngày chạy máy.
+
+## Sự cố 06/08/2026 — bản vá trên lại hỏng theo kiểu khác
+
+`git pull --rebase` ngay trước khi đẩy **vấp xung đột**: phiên vừa cào ghi đè đúng những file
+`data/fin/*.json` mà commit trên remote cũng vừa sửa. Rebase **dừng giữa chừng**, cả 5 vòng đẩy
+đều hỏng. Từ đó máy **kẹt vĩnh viễn**: lượt hôm sau `git pull --rebase` gặp repo đang dở rebase
+là hỏng ngay dòng đầu, chưa kịp cào gì. Web đứng im ở phiên 05/08 mà không ai biết — Actions dự
+phòng hôm đó cũng huỷ ở phút thứ 15 nên không ai gánh.
+
+Đã sửa, hai lớp:
+
+1. **Máy chủ nay là BẢN SAO thuần**: mỗi lượt huỷ rebase dở dang (nếu có) rồi `git fetch` +
+   `git reset --hard origin/main` TRƯỚC khi cào. Dữ liệu trong `data/` vốn dựng lại được nên
+   reset không mất gì, đổi lại là không thể kẹt qua đêm.
+2. **Rebase để đẩy dùng `-X theirs`** — đụng nhau thì lấy bản vừa cào; vòng nào vẫn kẹt thì
+   `rebase --abort` ngay để lượt sau còn chạy được.
+
+> **Encoding**: `run_refresh.ps1` phải là **UTF-8 CÓ BOM**, và mọi chuỗi chạy được chỉ dùng
+> ASCII. Windows PowerShell 5.1 đọc `.ps1` không BOM theo bảng mã ANSI — hôm 06/08 nó văng
+> `'elseif' is not recognized` và ghi ra `PUSH_FAILED.txt` **rỗng tuếch**, mất luôn câu báo lỗi.
+> Tiếng Việt trong **chú thích** thì vô hại.
+
+### Gỡ kẹt bằng tay (khi `PUSH_FAILED.txt` đã có sẵn từ trước bản vá)
+
+```powershell
+cd C:\cpvn
+& "C:\Program Files\Git\cmd\git.exe" rebase --abort
+& "C:\Program Files\Git\cmd\git.exe" fetch origin main
+& "C:\Program Files\Git\cmd\git.exe" reset --hard origin/main
+```
