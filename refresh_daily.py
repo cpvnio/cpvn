@@ -322,12 +322,23 @@ def parse_fin(d):        # cùng logic với web: isa3 DT, isa4 giá vốn, isa5
                     "pretax":g(pretax),"np":g(np),"gm":g(gm),"nm":g(nm)})
     out.reverse()        # cũ -> mới, khớp thứ tự client dùng
     return out
+def _qlb(y,m):           # (2025,10) -> "Q4/25" — đúng nhãn cột quý của bảng KQKD
+    return "Q%d/%s"%((int(m)-1)//3+1, str(int(y))[2:])
 def fetch_div(sym):      # cổ tức TIỀN MẶT (histories) + CP/thưởng (events, parse tỉ lệ)
-    by={}
+    # by  = gộp theo NĂM chốt quyền · byq = gộp theo QUÝ chốt quyền.
+    # Bảng KQKD xem theo quý mà chỉ có số theo năm thì phải rải đều số năm ra cả 4 quý
+    # -> VCB hiện 450đ ở cả Q1..Q4/25 như thể trả 4 lần, trong khi chỉ trả tháng 10.
+    # Nguồn có sẵn divMonths (tháng chi trả) và sự kiện có ngày chốt quyền -> gộp đúng quý.
+    by={}; byq={}
+    def _q(k,lb,v):
+        byq.setdefault(lb,{"cash":0,"div":0,"bonus":0})[k]+=v
     try:
         for x in get(f"https://api.simplize.vn/api/company/dividend/histories/{sym}").get("data") or []:
             y=int(x.get("year") or 0)
-            if y: by.setdefault(y,{"year":y,"cash":0,"div":0,"bonus":0})["cash"]=x.get("total") or 0
+            if not y: continue
+            by.setdefault(y,{"year":y,"cash":0,"div":0,"bonus":0})["cash"]=x.get("total") or 0
+            for m,v in (x.get("divMonths") or {}).items():
+                if v: _q("cash",_qlb(y,m),v)
     except Exception: pass
     time.sleep(0.1)
     try:
@@ -347,12 +358,15 @@ def fetch_div(sym):      # cổ tức TIỀN MẶT (histories) + CP/thưởng (e
             # trên 5 mã lớn khi đối chiếu. Nay cả bảng đọc thống nhất "năm ĐÓ nhận gì".
             y=ex_y
             if not y: continue
-            r=by.setdefault(y,{"year":y,"cash":0,"div":0,"bonus":0})
-            r["bonus" if is_bonus else "div"]+=pct
+            k="bonus" if is_bonus else "div"
+            by.setdefault(y,{"year":y,"cash":0,"div":0,"bonus":0})[k]+=pct
+            if len(ex)==3 and ex[1].isdigit(): _q(k,_qlb(y,ex[1]),pct)
     except Exception: pass
     out=sorted(by.values(),key=lambda r:-r["year"])
     for r in out: r["div"]=rnd(r["div"],1); r["bonus"]=rnd(r["bonus"],1)
-    return out
+    for r in byq.values():
+        r["cash"]=rnd(r["cash"],1); r["div"]=rnd(r["div"],1); r["bonus"]=rnd(r["bonus"],1)
+    return out,byq
 def parse_generic(d):    # CĐKT/LCTT: giữ nguyên mọi dòng {k,n,v[]}, kỳ CŨ -> MỚI
     H=d.get("headers") or []; rows=d.get("rows") or []
     labels=[(f"Q{h.get('quarter')}/{str(h.get('year'))[2:]}" if h.get("quarter") else str(h.get("year"))) for h in H]
@@ -365,7 +379,7 @@ def parse_generic(d):    # CĐKT/LCTT: giữ nguyên mọi dòng {k,n,v[]}, kỳ
 flock=threading.Lock(); fdone=[0,0]
 def work_fin(sym):
     url=lambda v,p:f"https://api-finance-t19.24hmoney.vn/v1/web/company/financial-report?symbol={sym}&view={v}&period={p}&expanded=false"
-    o={"sym":sym,"updated":sess_date,"Y":[],"Q":[],"div":[]}
+    o={"sym":sym,"updated":sess_date,"Y":[],"Q":[],"div":[],"divQ":{}}
     for key,p in (("Y",1),("Q",2)):     # KQKD năm + quý (format cũ, panel bong bóng đang dùng)
         for att in range(2):
             try:
@@ -378,7 +392,7 @@ def work_fin(sym):
             if g: o[key]=g
         except Exception: pass
         time.sleep(0.08)
-    o["div"]=fetch_div(sym)
+    o["div"],o["divQ"]=fetch_div(sym)
     with flock:
         fdone[0]+=1
         if o["Y"] or o["Q"] or o["div"]: fdone[1]+=1

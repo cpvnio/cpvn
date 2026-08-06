@@ -129,12 +129,15 @@ giá sai hoặc giá nhảy — đừng đẩy.
   bị tô trần/sàn giả, hàng Độ rộng đếm 1.422 mã "có giao dịch" trong khi thật sự 883.
   Cờ này do `refresh_daily.py` bước 5 sinh ra và được `core.js`, `bubbles.html`, `congcu.js`,
   `index.html` cùng tôn trọng.
-- **Cổ tức xếp theo NĂM CHỐT QUYỀN, mọi loại.** Cổ tức TIỀN lấy từ Simplize
+- **Cổ tức xếp theo NGÀY CHỐT QUYỀN — `div` gộp theo NĂM, `divQ` gộp theo QUÝ.** Cổ tức TIỀN lấy từ Simplize
   `dividend/histories` mang năm CHI TRẢ; nếu để cổ tức CỔ PHIẾU theo năm TÀI CHÍNH
   ghi trong mô tả sự kiện là trộn hai quy ước trong cùng một bảng — VCB 27,6% chốt
   quyền 22/12/2021 nằm ở dòng 2019, sai **21/21** sự kiện trên 5 mã lớn. Vá kho một
-  lần bằng `tools/va_cotuc.py` (350/1521 mã phải xếp lại). Độ lệch KHÔNG cố định
-  (VCB lệch 2 năm, HPG lệch 1) nên không suy ngược được, phải cào lại lịch sự kiện.
+  lần bằng `tools/va_cotuc.py`. Độ lệch KHÔNG cố định (VCB lệch 2 năm, HPG lệch 1)
+  nên không suy ngược được, phải cào lại lịch sự kiện.
+  **Cột QUÝ phải đọc `divQ`, không được lấy số cả năm rải ra 4 quý** — VCB từng hiện
+  450đ ở cả Q1..Q4/25 như thể trả bốn lần, thực tế chỉ trả tháng 10 (Q4). Tháng chi
+  trả có sẵn trong `dividend/histories.divMonths`, cổ tức CP lấy tháng của ngày chốt quyền.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 
 ## Quy ước toàn site
