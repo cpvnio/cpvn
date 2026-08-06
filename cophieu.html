@@ -914,7 +914,7 @@ function kqkdTable(rows,div){
     const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';
   /* CỔ TỨC gộp thẳng vào bảng KQKD, ngay dưới Biên LN ròng — người xem thấy luôn
      "làm ra bao nhiêu / chia về túi mình bao nhiêu" mà không phải kéo xuống mục khác.
-     Cổ tức công bố THEO NĂM nên cột quý sẽ lấy đúng số của năm chứa quý đó. */
+     Cổ tức xếp theo NĂM CHỐT QUYỀN (năm thực nhận) nên cột quý lấy số của năm chứa quý đó. */
   const dv=(div||[]).reduce((m,r)=>{ if(r&&r.year) m[String(r.year)]=r; return m; },{});
   const yearOf=lb=>{ const m=String(lb).match(/(\d{4})$/)||String(lb).match(/\/(\d{2})$/);
     return m?(m[1].length===4?m[1]:'20'+m[1]):null; };
@@ -925,9 +925,12 @@ function kqkdTable(rows,div){
       show.map(r=>{ const y=dv[yearOf(r.label)]; return `<td>${y&&y[k]>0?fmt(y[k]):'—'}</td>`; }).join('')+'<td class="sp"></td></tr>';
     let first=true;
     const add=(lb,k,fmt)=>{ if(!has(k)) return ''; const h=drow(lb,k,fmt,first); first=false; return h; };
-    divH=add('Cổ tức tiền mặt <i style="font-style:normal;opacity:.65">(năm)</i>','cash',v=>CP.fmtD(v)+' đ')
-       + add('Cổ tức cổ phiếu <i style="font-style:normal;opacity:.65">(năm)</i>','div',v=>v.toFixed(0)+'%')
-       + add('Thưởng cổ phiếu <i style="font-style:normal;opacity:.65">(năm)</i>','bonus',v=>v.toFixed(0)+'%');
+    // ghi rõ NĂM NHẬN (năm chốt quyền) — cổ tức "của năm 2019" thường trả sang năm sau,
+    // xếp theo năm nhận thì cả bảng đọc thống nhất "năm đó về túi bao nhiêu"
+    const nn=' <i style="font-style:normal;opacity:.65">(năm nhận)</i>';
+    divH=add('Cổ tức tiền mặt'+nn,'cash',v=>CP.fmtD(v)+' đ')
+       + add('Cổ tức cổ phiếu'+nn,'div',v=>v.toFixed(0)+'%')
+       + add('Thưởng cổ phiếu'+nn,'bonus',v=>v.toFixed(0)+'%');
   }
   const mcapH=show.some(r=>r._mcap!=null)
     ? `<tr class="mcapRow"><td><div class="lb">Vốn hoá</div></td>`+

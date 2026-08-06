@@ -302,7 +302,6 @@ def fin_stale(s):
     except Exception: return True
 need=[s for s in syms if FULL or fin_stale(s)]
 RX_RATIO=re.compile(r"tỷ lệ\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)",re.I)
-RX_FY=re.compile(r"năm\s*(\d{4})")
 RX_DIVCP=re.compile(r"cổ tức.*cổ phiếu",re.I)
 def parse_fin(d):        # cùng logic với web: isa3 DT, isa4 giá vốn, isa5 LN gộp, isa20/22 LNST
     H=d.get("headers") or []; rows=d.get("rows") or []
@@ -341,10 +340,12 @@ def fetch_div(sym):      # cổ tức TIỀN MẶT (histories) + CP/thưởng (e
             pct=float(m.group(2))/float(m.group(1))*100
             ex=(e.get("exDividendDate") or "").split("/")
             ex_y=int(ex[2]) if len(ex)==3 and ex[2].isdigit() else 0
-            if is_bonus: y=ex_y                       # thưởng: năm chốt quyền
-            else:
-                fy=RX_FY.search(desc)                 # cổ tức CP: năm tài chính, thiếu -> ex−1
-                y=int(fy.group(1)) if fy else (ex_y-1 if ex_y else 0)
+            # XẾP THEO NĂM CHỐT QUYỀN cho MỌI loại — cổ tức TIỀN lấy từ histories cũng
+            # là năm CHI TRẢ, nên trước đây cổ phiếu xếp theo năm TÀI CHÍNH là trộn hai
+            # quy ước trong cùng một bảng: VCB 27,6% chốt quyền 22/12/2021 lại nằm ở
+            # dòng 2019, đứng chung với 800đ tiền trả tháng 12/2019 — sai 21/21 sự kiện
+            # trên 5 mã lớn khi đối chiếu. Nay cả bảng đọc thống nhất "năm ĐÓ nhận gì".
+            y=ex_y
             if not y: continue
             r=by.setdefault(y,{"year":y,"cash":0,"div":0,"bonus":0})
             r["bonus" if is_bonus else "div"]+=pct
