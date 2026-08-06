@@ -166,6 +166,9 @@ select:focus,input:focus{border-color:var(--line2)}
 .btn:hover{filter:brightness(1.12)}
 .btn.gh{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
 .btn.gh:hover{border-color:var(--line2)}
+/* nút BẬT/TẮT (gộp rổ chia đều): tắt thì như nút xám, bật thì sáng màu ngọc */
+.btn.tog{padding:8px 14px;font-weight:700;font-size:12.5px;white-space:nowrap}
+.btn.gh.tog.on{background:rgba(45,212,191,.16);border-color:#2dd4bf;color:#2dd4bf}
 input[type=range]{accent-color:var(--teal)}
 
 /* ---------- ô thống kê ---------- */
@@ -306,6 +309,9 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   padding:7px 12px;border-top:1px solid var(--line);cursor:pointer;transition:.12s}
 .dcarow:first-child{border-top:0}
 .dcarow:hover{background:var(--card2)}
+/* hàng CỐ ĐỊNH (ngân hàng, rổ chia đều): không phải một mã nên không bấm vào đâu được */
+.dcarow.fix{cursor:default;background:var(--card2)}
+#dcaCtl2 #dcaMa{width:170px;flex:0 1 auto}
 .dcarow .lgw{width:24px;height:24px;border-radius:7px;background:#fff;overflow:hidden;display:flex;
   align-items:center;justify-content:center}
 .dcarow img{width:100%;height:100%;object-fit:contain}
@@ -320,18 +326,24 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .dcarow .dval{text-align:right;font-weight:800;font-size:13.5px;white-space:nowrap;line-height:1.25}
 .dcarow .dval b{display:block;font-size:11px}
 @media(max-width:640px){
-  /* MÀN DỌC — GỌN ĐÚNG 2 HÀNG (trước đây 5 hàng, ăn 218px trước khi thấy đường đua):
-     H1  ▶ · chế độ · tốc độ      (nhãn nút rút ngắn qua data-sm trong congcu.js)
-     H2  nhóm ngành · thanh tua   (bền vững: tiền · từ · ngành · tua)
+  /* MÀN DỌC — mỗi hàng một nhiệm vụ, không hàng nào thừa (trước đây 5 hàng, ăn 218px
+     trước khi thấy đường đua):
+     H1  ▶ · chế độ · tốc độ                 (nhãn nút rút ngắn qua data-sm trong congcu.js)
+     H2  đua: nhóm ngành · thanh tua
+         bền vững: kiểu bỏ vốn · số tiền · tháng bắt đầu
+     H3  bền vững: gộp rổ · nhóm ngành · ô gõ mã · thanh tua
      Thanh tua do JS chuyển sang khối của chế độ đang hiện. */
   .racePanel{padding:8px 6px}
   #raBar{gap:5px;flex-wrap:nowrap}
   #raPlay{flex:0 0 auto;padding:8px 11px;font-size:14px}
   #raBar .seg{flex:1 1 auto;min-width:0}
   #raBar .seg button{flex:1;padding:7px 3px;font-size:11.5px;white-space:nowrap}
-  #raCtl,#dcaCtl{gap:6px;flex-wrap:nowrap}
-  #raCtl select,#dcaCtl select{flex:1 1 70px;min-width:0;padding:8px 6px;font-size:12.5px}
+  #raCtl,#dcaCtl,#dcaCtl2{gap:6px;flex-wrap:nowrap;margin-bottom:9px}
+  #raCtl select,#dcaCtl select,#dcaCtl2 select{flex:1 1 70px;min-width:0;padding:8px 6px;font-size:12.5px}
   #dcaCtl input[type=number]{flex:0 0 46px;min-width:0;padding:8px 4px;font-size:12.5px;text-align:center}
+  #dcaCtl .seg button{padding:7px 7px;font-size:11.5px;white-space:nowrap}
+  #dcaCtl2 #dcaGop{flex:0 0 auto;padding:8px 8px;font-size:11.5px}
+  #dcaCtl2 #dcaMa{flex:1 1 72px;width:auto;min-width:0;padding:8px 7px;font-size:12.5px}
   .ctl input[type=range]{flex:1 1 60px;min-width:0}
   /* nhãn chữ nhường chỗ: ô chọn đã tự nói nội dung ("Toàn thị trường", "Tháng 3/2020"),
      riêng "tr" giữ lại vì con số trần không nói được đơn vị */
@@ -340,7 +352,8 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .lbTr{font-size:0}
   .lbTr::after{content:'tr';font-size:11px;letter-spacing:0}
   #dcaFrom{flex:0 0 84px}
-  #dcaSec,#raSec{flex:1 1 104px}
+  #raSec{flex:1 1 104px}
+  #dcaSec{flex:1 1 64px}          /* hàng 3 còn phải chứa ô gõ mã + thanh tua */
   .dcarow{grid-template-columns:22px 52px 1fr minmax(96px,auto);gap:7px;padding:7px 8px}
   .dcarow .lgw,.dcarow .noimg{width:20px;height:20px}
   .dcarow .idn b{font-size:12px}

@@ -666,55 +666,103 @@ function raceTick(ts){
   if(RA.playing) RA.raf=requestAnimationFrame(raceTick);
   else settleRace();                              // hết đua -> xếp hàng thẳng lối rồi mới đứng im
 }
-/* ---- ĐẦU TƯ ĐỀU ĐẶN (DCA): bỏ X triệu mỗi tháng từ tháng đã chọn tới nay ----
-   Dùng CHÍNH chuỗi race (mcap = giá tháng đó × SLCP hiện tại): tỉ lệ giữa các tháng
-   đúng bằng tỉ lệ giá nên giá trị DCA = X × Σ(v_cuối / v_tháng-mua). */
-const DCA={amt:5,from:0,sec:null,calc:null};
+/* ---- ĐẦU TƯ: bỏ tiền ĐỀU HÀNG THÁNG hay MỘT LẦN DUY NHẤT, vào TỪNG MÃ hay GỘP RỔ
+   CHIA ĐỀU — luôn kèm đối thủ ngân hàng 7%/năm để biết mua cổ phiếu thắng hay thua gửi
+   tiết kiệm. Dùng CHÍNH chuỗi race (mcap = giá tháng đó × SLCP hiện tại): tỉ lệ giữa các
+   tháng đúng bằng tỉ lệ giá, nên với chuỗi a và tháng bắt đầu i0:
+     hàng tháng   v_k = X · a_k · Σ(1/a_j, j=0..k)   (tháng nào cũng mua thêm)
+     một lần      v_k = X · a_k / a_0                 (mua đúng tháng i0 rồi giữ)
+     gộp rổ N mã  = trung bình cộng các đường (mỗi mã X/N) — chia đều, không cân lại. */
+const DCA={amtD:5,amtM:100,from:0,sec:null,ma:'',kieu:'deu',gop:false,calc:null};
+const dcaTien=()=>+(DCA.kieu==='mot'?DCA.amtM:DCA.amtD)||0;
 function dcaFmt(v){ // v tính bằng TRIỆU đồng
   if(v>=1000) return (v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+' tỷ';
   return Math.round(v).toLocaleString('en-US')+' triệu';
 }
-/* chuỗi giá trị DCA THEO TỪNG THÁNG của mọi mã đạt điều kiện — tính MỘT lần mỗi khi
-   đổi tham số, biểu đồ và bảng xếp hạng cùng đọc. vals[k] = giá trị tại tháng i0+k
-   = X × v_k × Σ(1/v_j, j=i0..k). Đòi có giá NGAY tháng bắt đầu, đứt tháng nào loại. */
+function dcaPct(v,goc){ if(!(goc>0)) return '';
+  const p=(v/goc-1)*100;
+  return (p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%'; }
+/* chuỗi giá trị THEO TỪNG THÁNG của mọi mã đạt điều kiện — tính MỘT lần mỗi khi đổi tham
+   số, biểu đồ và bảng xếp hạng cùng đọc. Đòi có giá NGAY tháng bắt đầu, đứt tháng nào loại. */
 function dcaAll(){
   if(DCA.calc) return DCA.calc;
   const D=raceData(); if(!D) return null;
-  const L=D.labels.length, i0=clamp(DCA.from,0,L-1), amt=+DCA.amt||0;
-  let pool=D.syms;
-  if(DCA.sec) pool=pool.filter(s=>{ const c=ST.map.get(s); return c&&c.sector===DCA.sec; });
+  const L=D.labels.length, i0=clamp(DCA.from,0,L-1), amt=dcaTien(), n=L-i0;
+  const mot=DCA.kieu==='mot';
+  /* GÕ MÃ có quyền cao hơn chọn ngành: "HPG" -> một mã; "HPG FPT VCB" -> rổ chia đều
+     đúng mấy mã đó. Mã không nằm trong dữ liệu đua thì gom vào `thieu` để báo lại. */
+  const goTay=[...new Set((DCA.ma||'').toUpperCase().match(/[A-Z][A-Z0-9]{2,}/g)||[])];
+  const laMa=goTay.length>0, thieu=[];
+  let pool;
+  if(laMa) pool=goTay.filter(s=>{ if(D.series[s]) return true; thieu.push(s); return false; });
+  else{
+    pool=D.syms;
+    if(DCA.sec) pool=pool.filter(s=>{ const c=ST.map.get(s); return c&&c.sector===DCA.sec; });
+  }
   const rows=[];
   for(const s of pool){
     const a=D.series[s];
-    if(a[i0]==null) continue;
+    if(!(a[i0]>0)) continue;
     let acc=0, ok=true; const vals=[];
     for(let i=i0;i<L;i++){ const v=a[i]; if(!(v>0)){ ok=false; break; }
-      acc+=1/v; vals.push(amt*acc*v); }
+      if(mot) vals.push(amt*v/a[i0]);
+      else { acc+=1/v; vals.push(amt*acc*v); } }
     if(ok) rows.push({s,vals,fin:vals[vals.length-1]});
   }
   rows.sort((a,b)=>b.fin-a.fin);
-  DCA.calc={rows,n:L-i0,i0,amt};
+  let ro=null;                        // RỔ CHIA ĐỀU: mỗi mã X/N -> đường rổ = trung bình cộng
+  if(rows.length){
+    const N=rows.length, vals=new Array(n).fill(0);
+    for(const r of rows) for(let k=0;k<n;k++) vals[k]+=r.vals[k]/N;
+    ro={s:'rổ',vals,fin:vals[n-1],n:N};
+  }
+  const rB=0.07/12;                   // 7%/năm ghép lãi theo tháng
+  DCA.calc={rows,ro,n,i0,amt,mot,thieu,laMa,
+    /* vốn đã bỏ tới tháng thứ k; một lần thì vốn đứng yên bằng đúng X */
+    von:k=>mot?amt:amt*(k+1),
+    /* ngân hàng cùng quy ước với cổ phiếu: khoản vừa bỏ tháng này chưa kịp sinh lời,
+       nên k=0 cả hai bên đều đúng bằng X — so nhau mới công bằng */
+    bank:k=>mot?amt*Math.pow(1+rB,k):amt*((Math.pow(1+rB,k+1)-1)/rB)};
   return DCA.calc;
 }
+const GRAD={up:'linear-gradient(90deg,rgba(22,199,132,.45),var(--green))',
+            dn:'linear-gradient(90deg,rgba(234,57,67,.45),var(--red))',
+            nh:'linear-gradient(90deg,rgba(245,180,10,.3),#f5b40a)',
+            ro:'linear-gradient(90deg,rgba(45,212,191,.35),#2dd4bf)'};
 function renderDCA(){
   const D=raceData(), box=$('#dcaOut'); if(!D||!box) return;
   const C2=dcaAll(); if(!C2) return;
-  const n=C2.n, amt=C2.amt, cost=amt*n, rows=C2.rows.map(r=>({s:r.s,val:r.fin}));
-  const sum=$('#dcaSum');
-  if(sum) sum.innerHTML=amt>0?'bỏ <b>'+dcaFmt(amt)+'</b>/tháng × '+n+' tháng = vốn <b>'+dcaFmt(cost)+'</b>':'';
-  if(!(amt>0)){ box.innerHTML='<div class="empty">Nhập số tiền bỏ vào mỗi tháng</div>'; return; }
-  const top=rows.slice(0,12), mxv=top.length?top[0].val:1;
-  box.innerHTML=top.length?top.map(r=>{
+  const n=C2.n, amt=C2.amt, von=C2.von(n-1), moc=D.labels[C2.i0], sum=$('#dcaSum');
+  if(sum) sum.innerHTML=!(amt>0)?'':((C2.mot
+      ? 'bỏ <b>'+dcaFmt(amt)+'</b> một lần tháng '+moc+' rồi giữ tới nay ('+n+' tháng)'
+      : 'bỏ <b>'+dcaFmt(amt)+'</b>/tháng × '+n+' tháng = vốn <b>'+dcaFmt(von)+'</b>')
+    +(C2.thieu.length?' · <span style="color:var(--red)">không có dữ liệu: '+esc(C2.thieu.join(', '))+'</span>':''));
+  if(!(amt>0)){ box.innerHTML='<div class="empty">Nhập số tiền đầu tư</div>'; return; }
+  const top=C2.rows.slice(0,12);
+  const nh=C2.bank(n-1);
+  const mxv=Math.max(nh,C2.ro?C2.ro.fin:0,top.length?top[0].fin:0)||1;
+  /* một hàng của bảng: logo · tên · thanh tỉ lệ · giá trị + % so vốn đã bỏ */
+  const dong=(o)=>'<div class="dcarow'+(o.sym?'':' fix')+'"'+(o.sym?' data-sym="'+o.sym+'" title="Bấm mở trang '+o.sym+'"':'')+'>'
+    +(o.logo||'<span class="noimg" style="font-size:13px">'+o.ico+'</span>')
+    +'<span class="idn"><b'+(o.mau?' style="color:'+o.mau+'"':'')+'>'+o.ten+'</b><i>'+esc(o.phu||'')+'</i></span>'
+    +'<span class="dbar"><i style="width:'+(Math.max(0,o.val)/mxv*100).toFixed(1)+'%;background:'+o.bg+'"></i></span>'
+    +'<span class="dval">'+dcaFmt(o.val)+'<b class="'+(o.val>=von?'up':'dn')+'">'+dcaPct(o.val,von)+'</b></span></div>';
+  /* NGÂN HÀNG luôn đứng đầu bảng: mọi con số bên dưới đọc xong là biết hơn/kém gửi tiết kiệm */
+  let html=dong({ico:'🏦',ten:'Ngân hàng 7%/năm',mau:'#f5b40a',
+    phu:C2.mot?'gửi một lần, ghép lãi theo tháng':'gửi đều mỗi tháng, ghép lãi theo tháng',
+    val:nh,bg:GRAD.nh});
+  if(DCA.gop&&C2.ro) html+=dong({ico:'⚖',ten:'Rổ '+C2.ro.n+' mã chia đều',mau:'#2dd4bf',
+    phu:(C2.laMa?'các mã đã gõ':(DCA.sec||'toàn thị trường'))+' · mỗi mã '+dcaFmt(amt/C2.ro.n)
+        +(C2.mot?'':'/tháng'),
+    val:C2.ro.fin,bg:GRAD.ro});
+  html+=top.map(r=>{
     const c=ST.map.get(r.s)||{sym:r.s,name:'',img:null};
-    const p=cost>0?(r.val/cost-1)*100:null, up=p!=null&&p>=0;
-    const pc=p==null?'':(p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%';
-    return '<div class="dcarow" data-sym="'+r.s+'" title="Bấm mở trang '+r.s+'">'+logoHTML(c)
-      +'<span class="idn"><b>'+r.s+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
-      +'<span class="dbar"><i style="width:'+(r.val/mxv*100).toFixed(1)+'%;background:'
-      +(up?'linear-gradient(90deg,rgba(22,199,132,.45),var(--green))':'linear-gradient(90deg,rgba(234,57,67,.45),var(--red))')
-      +'"></i></span>'
-      +'<span class="dval">'+dcaFmt(r.val)+'<b class="'+(up?'up':'dn')+'">'+pc+'</b></span></div>';
-  }).join(''):'<div class="empty">Nhóm này không có mã nào đủ dữ liệu từ tháng đã chọn</div>';
+    return dong({sym:r.s,logo:logoHTML(c),ten:r.s,phu:shortName(c.name||''),
+      val:r.fin,bg:r.fin>=von?GRAD.up:GRAD.dn});
+  }).join('');
+  box.innerHTML=top.length?html
+    :'<div class="empty">'+(C2.laMa?'Mã đã gõ không có trong dữ liệu đua'
+       :'Nhóm này không có mã nào đủ dữ liệu từ tháng đã chọn')+'</div>';
 }
 /* BIỂU ĐỒ ĐẦU TƯ BỀN VỮNG: trục dọc = số tiền, trục ngang = thời gian, chạy từng
    tháng như đường đua. Mỗi mã một đường, nhãn mã bám đầu đường; thêm đường đứt
@@ -724,10 +772,13 @@ function drawDCA(lerp){
   const D=raceData(), C2=dcaAll(); if(!D||!C2) return;
   const W=cv.clientWidth||900, H=cv.clientHeight||520, x=dpr(cv,W,H);
   const mob=W<560, TXTC=isLight()?'#101321':'#ecedf4', MUTC=isLight()?'#5d6272':'#9092a3';
-  const rows=C2.rows.slice(0,8);                 // 8 đường là trần đọc được
+  /* GỘP RỔ -> đúng MỘT đường (danh mục chia đều); từng mã -> 8 đường là trần đọc được */
+  const rows=DCA.gop?(C2.ro?[C2.ro]:[]):C2.rows.slice(0,8);
   if(!rows.length||!(C2.amt>0)){
     x.fillStyle=MUTC; x.font='13px system-ui'; x.textAlign='center';
-    x.fillText(C2.amt>0?'Nhóm này không có mã nào đủ dữ liệu từ tháng đã chọn':'Nhập số tiền bỏ vào mỗi tháng',W/2,H/2);
+    x.fillText(!(C2.amt>0)?'Nhập số tiền đầu tư'
+      :(C2.laMa?'Mã đã gõ không có trong dữ liệu đua'
+               :'Nhóm này không có mã nào đủ dữ liệu từ tháng đã chọn'),W/2,H/2);
     return;
   }
   for(const r of rows) if(RA.imgs[r.s]===undefined){ const im=new Image();
@@ -735,16 +786,15 @@ function drawDCA(lerp){
   const n=C2.n, f=clamp(RA.f,0,n-1);
   const iA=Math.floor(f), iB=Math.min(n-1,iA+1), tt=f-iA;
   const cur=a=>a[iA]+((a[iB]!=null?a[iB]:a[iA])-a[iA])*tt;
-  /* ĐỐI THỦ NGÂN HÀNG: gửi X mỗi tháng, lãi 7%/năm ghép theo tháng (r=7%/12).
-     Khoản gửi tháng j hưởng (k-j) tháng lãi -> tổng tại tháng k = X·((1+r)^(k+1)-1)/r.
-     Cùng quy ước với cổ phiếu: khoản tháng này chưa kịp sinh lời. */
-  const rB=0.07/12, bank=k=>C2.amt*((Math.pow(1+rB,k+1)-1)/rB);
-  const padL=mob?10:14, padR=mob?110:172, padT=20, padB=30;
+  const bank=C2.bank;                            // đối thủ ngân hàng 7%/năm (xem dcaAll)
+  /* padR = chỗ dành cho nhãn đầu đường: logo + tên + số tiền + %. Nhãn dài nhất là
+     "Ngân hàng 7% 984 triệu +26%" ~200px — để 172 thì phần % bị cắt cụt ngoài khung. */
+  const padL=mob?10:14, padR=mob?110:210, padT=20, padB=30;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const xmax=Math.max(f,6);                      // trục ngang nở dần theo cuộc chạy
   const X=i=>padL+i/xmax*plotW;
   // đỉnh trục tiền: giá trị lớn nhất ĐÃ HIỆN (mã, ngân hàng, vốn), co giãn mượt
-  let mx=Math.max(C2.amt*(iB+1),bank(iB));
+  let mx=Math.max(C2.von(iB),bank(iB));
   for(const r of rows) for(let i=0;i<=iB;i++) if(r.vals[i]>mx) mx=r.vals[i];
   mx*=1.08;
   const K=lerp==null?.18:lerp;
@@ -770,15 +820,16 @@ function drawDCA(lerp){
   x.fillStyle=isLight()?'rgba(16,19,33,.12)':'rgba(255,255,255,.09)';
   x.font=mob?'900 30px system-ui':'900 44px system-ui'; x.textAlign='left';
   x.fillText(D.labels[C2.i0+Math.round(f)],padL+6,padT+(mob?22:30));
-  const soThang=Math.floor(f)+1, von=C2.amt*soThang;
+  const soThang=Math.floor(f)+1, von=C2.von(f);
   x.fillStyle=TXTC; x.font=mob?'800 15px system-ui':'800 20px system-ui';
   x.fillText('đã bỏ '+dcaFmt(von),padL+8,padT+(mob?48:66));
   x.fillStyle=MUTC; x.font=mob?'700 10.5px system-ui':'700 12px system-ui';
-  x.fillText(soThang+' tháng × '+dcaFmt(C2.amt),padL+8,padT+(mob?64:86));
-  // đường VỐN ĐÃ BỎ (đứt nét) — mốc so lãi/lỗ
+  x.fillText(C2.mot?('mua một lần tháng '+D.labels[C2.i0]+' · giữ '+soThang+' tháng')
+                   :(soThang+' tháng × '+dcaFmt(C2.amt)),padL+8,padT+(mob?64:86));
+  // đường VỐN ĐÃ BỎ (đứt nét) — mốc so lãi/lỗ; mua một lần thì nó nằm ngang
   x.strokeStyle=MUTC; x.setLineDash([5,4]); x.lineWidth=1.2; x.beginPath();
-  for(let i=0;i<=iA;i++){ const p=[X(i),Y(C2.amt*(i+1))]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
-  x.lineTo(X(f),Y(C2.amt*(f+1))); x.stroke(); x.setLineDash([]);
+  for(let i=0;i<=iA;i++){ const p=[X(i),Y(C2.von(i))]; i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }
+  x.lineTo(X(f),Y(von)); x.stroke(); x.setLineDash([]);
   /* CÁC ĐƯỜNG: mỗi đường có VIỀN NỀN lót dưới rồi mới tô màu — chỗ cắt nhau vẫn
      tách bạch chứ không hoà thành mớ; nét 2.6 thay 2. Bảng màu RIÊNG gán theo
      THỨ HẠNG nên 8 đường luôn tương phản mạnh, không trùng tông; màu vàng dành
@@ -798,25 +849,38 @@ function drawDCA(lerp){
   const bPts=ptsOf(bank); bPts.push([X(f),Y(bank(f))]);
   vien(bPts,GOLD,2.6);
   const PAL=['#f43f5e','#38bdf8','#16c784','#a78bfa','#fb923c','#2dd4bf','#e879f9','#60a5fa'];
+  const RO='#2dd4bf';                            // đường RỔ CHIA ĐỀU dùng màu riêng
   const tips=[];
   rows.forEach((r,ri)=>{
-    const col=PAL[ri%PAL.length];
+    const gop=r===C2.ro, col=gop?RO:PAL[ri%PAL.length];
     const vNow=cur(r.vals);
     const pts=ptsOf(i=>r.vals[i]); pts.push([X(f),Y(vNow)]);
-    vien(pts,col,2.6);
-    tips.push({s:r.s,col,v:vNow,y:Y(vNow)});
+    vien(pts,col,gop?3.2:2.6);
+    tips.push({s:gop?('Rổ '+r.n+(mob?'':' mã')):r.s,col,v:vNow,y:Y(vNow),gop});
   });
   tips.push({s:mob?'NH 7%':'Ngân hàng 7%',col:GOLD,v:bank(f),y:Y(bank(f)),bank:true});
+  /* nhãn "vốn đã bỏ" ĐI CHUNG hàng ngũ với các nhãn khác: mua một lần thì nó nằm rất
+     thấp, để nó vẽ riêng là chồng đúng lên mấy mã đội sổ */
+  tips.push({s:'vốn đã bỏ',col:MUTC,v:von,y:Y(von),von:true});
   // nhãn: dồn cho khỏi đè nhau rồi vẽ logo/chấm màu + mã + giá trị + % lãi
   tips.sort((a,b)=>a.y-b.y);
   const GAP=mob?16:19, x0=X(f);
   for(let i=1;i<tips.length;i++) if(tips[i].y-tips[i-1].y<GAP) tips[i].y=tips[i-1].y+GAP;
-  for(let i=tips.length-1;i>0;i--) if(tips[i].y>padT+plotH){ tips[i].y=padT+plotH;
-    if(tips[i].y-tips[i-1].y<GAP) tips[i-1].y=tips[i].y-GAP; }
+  /* tràn đáy thì đẩy NGƯỢC LÊN theo dây chuyền — bản cũ chỉ nhích được đúng một nhãn
+     nên khi 4-5 nhãn cùng dồn xuống đáy (kiểu mua một lần, mã đội sổ nằm sát nhau) là
+     chúng đè chồng lên nhau thành một mớ chữ */
+  for(let i=tips.length-1;i>=0;i--){
+    const lim=(i===tips.length-1?padT+plotH:tips[i+1].y-GAP);
+    if(tips[i].y>lim) tips[i].y=lim;
+  }
   x.textBaseline='middle';
   for(const t of tips){
     let sx=x0+6;
-    const im=t.bank?null:RA.imgs[t.s];
+    if(t.von){                                   // nhãn vốn: chỉ chữ mờ, không chấm/không %
+      x.fillStyle=MUTC; x.font=mob?'700 10px system-ui':'700 11px system-ui';
+      x.textAlign='left'; x.fillText('vốn đã bỏ '+dcaFmt(von),sx,t.y); continue;
+    }
+    const im=(t.bank||t.gop)?null:RA.imgs[t.s];
     if(im&&im.complete&&im.naturalWidth){        // logo công ty tròn ở đầu đường
       const R2=mob?7:8;
       x.save(); x.beginPath(); x.arc(sx+R2,t.y,R2,0,7); x.closePath();
@@ -826,12 +890,13 @@ function drawDCA(lerp){
     }else{
       x.fillStyle=t.col; x.beginPath(); x.arc(sx+3.5,t.y,3.5,0,7); x.fill(); sx+=11;
     }
-    x.fillStyle=t.bank?GOLD:TXTC; x.font=mob?'800 10.5px system-ui':'800 12.5px system-ui';
+    x.fillStyle=t.bank?GOLD:(t.gop?RO:TXTC); x.font=mob?'800 10.5px system-ui':'800 12.5px system-ui';
     x.textAlign='left'; x.fillText(t.s,sx,t.y);
     sx+=x.measureText(t.s).width+5;
     x.fillStyle=TXTC; x.font=mob?'700 10px system-ui':'700 11.5px system-ui';
     x.fillText(dcaFmt(t.v),sx,t.y);
-    if(!mob&&!t.bank&&von>0){                    // % lãi/lỗ so vốn — chỉ màn rộng cho khỏi chật
+    /* % lãi/lỗ so vốn — kể cả đường ngân hàng, để đọc thẳng "cổ phiếu +323% / gửi +18%" */
+    if(!mob&&von>0){
       sx+=x.measureText(dcaFmt(t.v)).width+5;
       const p=(t.v/von-1)*100;
       x.fillStyle=p>=0?(isLight()?'#0a9e63':'#16c784'):(isLight()?'#dc3644':'#ea3943');
@@ -839,9 +904,6 @@ function drawDCA(lerp){
       x.fillText((p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%',sx,t.y);
     }
   }
-  // nhãn đường vốn
-  x.fillStyle=MUTC; x.font=mob?'700 10px system-ui':'700 11px system-ui'; x.textAlign='left';
-  x.fillText('vốn đã bỏ',x0+7,clamp(Y(C2.amt*(f+1)),padT+8,padT+plotH-4)+(mob?12:14));
 }
 function renderRace(){
   const m=MODULES.find(x=>x.id==='race');
@@ -875,19 +937,34 @@ function renderRace(){
     +'</div>'
     /* ---- chế độ ĐẦU TƯ BỀN VỮNG ---- */
     +'<div id="dcaView" style="display:none">'
-    +'<div class="ctl" id="dcaCtl"><span class="lb lbMoi">Mỗi tháng</span>'
-    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+DCA.amt+'" title="Số tiền bỏ vào mỗi tháng (triệu đồng)"/>'
+    +'<div class="ctl" id="dcaCtl">'
+    +'<div class="seg" id="dcaKieu">'
+    +'<button data-v="deu"'+(DCA.kieu!=='mot'?' class="on"':'')+' data-lg="🔁 Hàng tháng" data-sm="🔁 Tháng"></button>'
+    +'<button data-v="mot"'+(DCA.kieu==='mot'?' class="on"':'')+' data-lg="1️⃣ Một lần" data-sm="1️⃣ 1 lần"></button></div>'
+    +'<span class="lb lbMoi" id="dcaLbAmt">'+(DCA.kieu==='mot'?'Bỏ vào':'Mỗi tháng')+'</span>'
+    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+dcaTien()+'" title="Số tiền đầu tư (triệu đồng)"/>'
     +'<span class="lb lbTr" style="text-transform:none;letter-spacing:0">triệu đồng</span>'
     +'<span class="lb lbTu">Từ</span><select id="dcaFrom" title="Tháng bắt đầu">'+fromOpts+'</select>'
+    +'</div>'
+    +'<div class="ctl" id="dcaCtl2">'
+    +'<button class="btn gh tog'+(DCA.gop?' on':'')+'" id="dcaGop" data-lg="⚖ Gộp rổ chia đều" data-sm="⚖ Gộp rổ"'
+    +' title="Gộp cả nhóm thành MỘT danh mục, tỉ trọng chia đều — thay vì xếp hạng từng mã"></button>'
     +'<span class="lb lbNg">Nhóm ngành</span>'
-    +'<select id="dcaSec" title="Nhóm ngành"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select></div>'
+    +'<select id="dcaSec" title="Nhóm ngành"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select>'
+    +'<input type="text" id="dcaMa" value="'+esc(DCA.ma)+'" placeholder="hoặc gõ mã: HPG FPT"'
+    +' title="Gõ 1 hay nhiều mã (cách nhau bởi dấu cách/phẩy) để đầu tư đúng mấy mã đó — bỏ trống thì dùng nhóm ngành"/>'
+    +'</div>'
     +'<div class="panel racePanel"><canvas id="cvDca" class="block" style="height:520px"></canvas></div>'
-    +'<div class="note">8 mã giá trị cao nhất trong nhóm — bấm ▶ để xem tiền lớn lên qua từng tháng. Đường đứt là vốn đã bỏ; đường vàng là gửi ngân hàng lãi 7%/năm (ghép lãi theo tháng) để so ngay đầu tư thắng hay thua tiết kiệm.</div>'
+    +'<div class="note">Bấm ▶ để xem tiền lớn lên qua từng tháng. <b>Hàng tháng</b> = tháng nào cũng bỏ thêm; '
+    +'<b>Một lần</b> = bỏ đúng một lần vào tháng đã chọn rồi giữ tới nay. <b>Gộp rổ chia đều</b> = cả nhóm ngành '
+    +'(hoặc mấy mã vừa gõ) thành một danh mục, tiền chia đều cho từng mã — tắt thì xếp hạng 8 mã cao nhất. '
+    +'Đường đứt là vốn đã bỏ; đường vàng là gửi ngân hàng lãi 7%/năm (ghép lãi theo tháng) để so ngay đầu tư thắng hay thua tiết kiệm.</div>'
     +'<div class="panel"><div class="ph">Giá trị hôm nay<span id="dcaSum" style="margin-left:auto;font-weight:600;color:var(--mut)"></span></div>'
     +'<div class="pb" id="dcaOut"></div></div>'
     +'<div class="note">Mua tại giá đóng cửa THÁNG, giá ĐÃ HỒI TỐ cổ tức/chia tách theo nguồn — tức phần lớn cổ tức '
     +'(cả tiền lẫn cổ phiếu) đã nằm trong kết quả như thể được tái đầu tư; số ít đợt nguồn bỏ sót thì kết quả hơi thấp hơn thực nhận. '
-    +'Mã phải có giao dịch đủ từ tháng bắt đầu mới được xếp hạng. Thống kê quá khứ, không phải khuyến nghị đầu tư.</div>'
+    +'Mã phải có giao dịch đủ từ tháng bắt đầu mới được xếp hạng — rổ chia đều cũng chỉ gồm những mã đó, '
+    +'nên kết quả rổ không kể mã đã huỷ niêm yết giữa đường. Thống kê quá khứ, không phải khuyến nghị đầu tư.</div>'
     +'</div>';
   /* nhãn nút dài/ngắn theo bề ngang — màn dọc phải nén để cả cụm nằm gọn MỘT hàng */
   const hep=()=>innerWidth<=640;
@@ -896,7 +973,9 @@ function renderRace(){
       (t==='pause'?'⏸ Tạm dừng':t==='again'?'▶ Chạy lại':t==='cont'?'▶ Tiếp tục':'▶ Bắt đầu');
     b2.dataset.t=t; };
   const capNhatNhan=()=>{
-    $$('#raMode button,#raSpeed button').forEach(b2=>b2.textContent=hep()?b2.dataset.sm:b2.dataset.lg);
+    $$('#raMode button,#raSpeed button,#dcaKieu button,#dcaGop')
+      .forEach(b2=>b2.textContent=hep()?b2.dataset.sm:b2.dataset.lg);
+    $('#dcaMa').placeholder=hep()?'gõ mã':'hoặc gõ mã: HPG FPT';
     nhanPlay($('#raPlay').dataset.t||'start');
   };
   const syncMode=()=>{                            // đổi chế độ: dừng chạy, về vạch xuất phát
@@ -907,7 +986,7 @@ function renderRace(){
     /* THANH TUA đi theo chế độ: nhét vào cuối hàng điều khiển của view đang hiện.
        Để nguyên ở hàng đầu thì màn dọc phải gánh 4 cụm -> tràn thành 4 hàng riêng. */
     const sl=$('#raSlide');
-    (RA.mode==='dca'?$('#dcaCtl'):$('#raCtl')).appendChild(sl);
+    (RA.mode==='dca'?$('#dcaCtl2'):$('#raCtl')).appendChild(sl);
     sl.max=raceEnd(); sl.value=0;
     requestAnimationFrame(()=>curDraw());         // canvas vừa hiện mới đo được kích thước
   };
@@ -931,9 +1010,28 @@ function renderRace(){
   $('#raSlide').onchange=()=>settleRace();        // thả tay -> hàng nào bay dở cũng về đúng chỗ
   $('#raSec').onchange=e=>{ RA.sector=e.target.value||null; RA.curY={}; drawRace(); settleRace(); };
   /* đổi tham số bền vững: tính lại chuỗi; đổi THÁNG là đổi cả dòng thời gian -> về vạch */
-  $('#dcaAmt').oninput=e=>{ DCA.amt=+e.target.value||0; DCA.calc=null; RA.dcaMx=0; renderDCA(); drawDCA(1); };
+  const veLai=()=>{ DCA.calc=null; RA.dcaMx=0; renderDCA(); drawDCA(1); };
+  /* gõ mã thì ô nhóm ngành hết tác dụng — làm mờ đi cho khỏi tưởng đang lọc theo ngành */
+  const khoaNganh=()=>{ const s=$('#dcaSec');
+    const co=!!(DCA.ma||'').trim(); s.disabled=co; s.style.opacity=co?.45:1; };
+  $('#dcaKieu').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    if(DCA.kieu===b.dataset.v) return;
+    $('#dcaKieu').querySelectorAll('button').forEach(x2=>x2.classList.remove('on'));
+    b.classList.add('on'); DCA.kieu=b.dataset.v;
+    /* hai kiểu giữ SỐ TIỀN RIÊNG: 5 triệu/tháng và 100 triệu một lần là hai thói quen khác
+       nhau, đổi qua đổi lại mà số tiền nhảy theo thì phải gõ lại mỗi lần */
+    $('#dcaAmt').value=dcaTien();
+    $('#dcaLbAmt').textContent=DCA.kieu==='mot'?'Bỏ vào':'Mỗi tháng';
+    DCA.calc=null; syncMode(); renderDCA();
+  });
+  $('#dcaGop').onclick=()=>{ DCA.gop=!DCA.gop;
+    $('#dcaGop').classList.toggle('on',DCA.gop); veLai(); };
+  $('#dcaAmt').oninput=e=>{ const v=+e.target.value||0;
+    if(DCA.kieu==='mot') DCA.amtM=v; else DCA.amtD=v; veLai(); };
   $('#dcaFrom').onchange=e=>{ DCA.from=+e.target.value||0; DCA.calc=null; syncMode(); renderDCA(); };
-  $('#dcaSec').onchange=e=>{ DCA.sec=e.target.value||null; DCA.calc=null; RA.dcaMx=0; renderDCA(); drawDCA(1); };
+  $('#dcaSec').onchange=e=>{ DCA.sec=e.target.value||null; veLai(); };
+  $('#dcaMa').oninput=e=>{ DCA.ma=e.target.value||''; khoaNganh(); veLai(); };
+  khoaNganh();
   syncMode(); capNhatNhan();
   renderDCA();
 }
