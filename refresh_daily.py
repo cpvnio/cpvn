@@ -378,10 +378,18 @@ if indices:
 #    view=2 KQKD · view=1 Cân đối kế toán · view=3 Lưu chuyển tiền tệ
 #    Mã thiếu file HOẶC file chưa có CĐKT (schema cũ) thì cào; --full: cào lại toàn bộ.
 os.makedirs(FIN_DIR,exist_ok=True)
+# SƠ ĐỒ HIỆN HÀNH của một file fin. Thêm trường mới vào file thì PHẢI thêm tên nó vào đây,
+# bằng không mã cũ giữ file thiếu trường đó im lặng cho tới lượt --full thứ Hai — mà nếu
+# chính --full là thứ sinh ra trường đó thì kẹt luôn, phải chạy tay một script vá riêng.
+# Đã dính đúng lỗi này với `divQ` (cổ tức theo quý): 234 mã đứng ngoài suốt vì bảng kiểm
+# chỉ dò mỗi `bsQ` của lần đổi sơ đồ trước đó.
+FIN_KEYS=("bsQ","divQ")
 def fin_stale(s):
     p=os.path.join(FIN_DIR,f"{s}.json")
     if not os.path.exists(p): return True
-    try: return "bsQ" not in json.load(open(p,encoding="utf-8"))
+    try:
+        d=json.load(open(p,encoding="utf-8"))
+        return any(k not in d for k in FIN_KEYS)
     except Exception: return True
 need=[s for s in syms if FULL or fin_stale(s)]
 RX_RATIO=re.compile(r"tỷ lệ\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)",re.I)
