@@ -102,6 +102,8 @@ for i in range(0,len(syms),150):
             board[x["sym"]]={"ref":(float(x.get("r") or 0))*1000,"ceil":(float(x.get("c") or 0))*1000,
                 "floor":(float(x.get("f") or 0))*1000,"fBuy":(float(x.get("fBVol") or 0))*10,
                 "fSell":(float(x.get("fSVolume") or 0))*10,
+                # fRoom = số CP nước ngoài CÒN được mua (đơn vị CỔ PHIẾU, không nhân 10)
+                "fRoom":float(x.get("fRoom") or 0),
                 "gtgd":(float(x.get("avePrice") or 0))*1000*(float(x.get("lot") or 0))*10}
     except Exception as e: print("  board lỗi:",e,flush=True)
 print(f"bảng giá: {len(board)} mã",flush=True)
@@ -258,7 +260,7 @@ for sym in syms:
     r={"sym":sym,"close":p["close"],"o":p["o"],"h":p["h"],"l":p["l"],
        "vol":0 if nt else p["vol"],
        "ref":b.get("ref"),"ceil":b.get("ceil"),"floor":b.get("floor"),"fBuy":b.get("fBuy"),
-       "fSell":b.get("fSell"),"gtgd":b.get("gtgd")}
+       "fSell":b.get("fSell"),"gtgd":b.get("gtgd"),"fRoom":b.get("fRoom")}
     if nt: r["nt"]=1
     snap.append(r)
 # BẢNG GIÁ CÓ SỐNG KHÔNG? snap dựng từ KHO NẾN nên luôn đủ 100 mã kể cả khi bảng giá
