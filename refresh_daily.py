@@ -2,10 +2,14 @@
 """
 CPVN — cập nhật EOD hằng ngày + KHO DỮ LIỆU VĨNH VIỄN trong repo (số liệu không bao giờ mất).
 Chạy sau 15h (giờ VN), Thứ 2–6:
+  0) Đồng bộ danh sách mã từ SSI MỖI NGÀY -> mã vừa lên sàn có mặt ngay hôm đó (kèm nạp đủ
+     hồ sơ ngành/SLCP/logo cho mã còn thiếu, không phải đợi lượt --full thứ Hai).
   1) Làm mới universe.json: mốc giá m3/m6 (VPS), % điều chỉnh w/m/y/y5 + vốn hoá + ngành (Simplize).
   2) Bảng giá VPS cuối phiên (NN, trần/sàn/TC) + chỉ số VNINDEX/VN30/HNX/UPCOM.
   3) KHO LỊCH SỬ data/hist/{SYM}.json: toàn bộ nến ngày OHLCV + NN mua/bán của TỪNG mã.
-     Mã chưa có file -> tự cào đủ ~6.5 năm (backfill); ngày thường chỉ NỐI phiên mới.
+     Nguồn VNDirect (hồi tố ĐỦ quyền cũ), dự phòng VPS. Mã chưa có file -> tự cào đủ
+     ~6.5 năm (backfill); ngày thường chỉ NỐI phiên mới, nhưng mã nào vừa chốt quyền
+     (nền giá bị hạ) thì tự phát hiện và tải lại cả chuỗi ngay hôm đó.
   4) Snapshot EOD -> data/eod/{NGÀY_PHIÊN}.json + data/eod/latest.json
      (client CHỈ tải latest.json ~100KB — "dữ liệu hôm nay"), nối chỉ số vào data/idx.json.
   5) KHO KQKD data/fin/{SYM}.json: doanh thu/LN quý & năm + cổ tức (mã thiếu file thì cào).
@@ -42,20 +46,26 @@ u=json.load(open(UNIV,encoding="utf-8"))
 stocks={s["sym"]:s for s in u["stocks"]}
 print(f"universe: {len(stocks)} mã",flush=True)
 
-# 0) --full: ĐỒNG BỘ danh sách mã từ SSI (thêm mã mới niêm yết, đủ HOSE+HNX+UPCOM)
-if FULL:
-    added=0
-    for ex,slug in [("HOSE","hose"),("HNX","hnx"),("UPCOM","upcom")]:
-        try:
-            for x in get(f"https://iboard-query.ssi.com.vn/stock/exchange/{slug}")["data"]:
-                if x.get("stockType")!="s": continue
-                sym=x["stockSymbol"]
-                if sym not in stocks:
-                    stocks[sym]={"sym":sym,"ex":ex,"name":x.get("companyNameVi") or sym}; added+=1
-                else: stocks[sym]["ex"]=ex   # cập nhật nếu mã chuyển sàn
-        except Exception as e: print("  SSI",ex,"lỗi:",e,flush=True)
-    print(f"--full: đồng bộ SSI, thêm {added} mã mới, tổng {len(stocks)}",flush=True)
+# 0) ĐỒNG BỘ danh sách mã từ SSI (thêm mã mới niêm yết, đủ HOSE+HNX+UPCOM) — CHẠY MỖI NGÀY.
+#    Trước đây bước này nằm trong `if FULL` nên mã lên sàn thứ Ba phải chờ tới thứ Hai tuần
+#    sau mới có mặt trên web (DMX niêm yết 07/08/2026 là ca điển hình). Ba lượt gọi, ~2 giây.
+moi=set()                                  # mã MỚI THÊM lượt này -> cần nạp đủ hồ sơ + có giá mới giữ
+for ex,slug in [("HOSE","hose"),("HNX","hnx"),("UPCOM","upcom")]:
+    try:
+        for x in get(f"https://iboard-query.ssi.com.vn/stock/exchange/{slug}")["data"]:
+            if x.get("stockType")!="s": continue
+            sym=x["stockSymbol"]
+            if sym not in stocks:
+                stocks[sym]={"sym":sym,"ex":ex,"name":x.get("companyNameVi") or sym}; moi.add(sym)
+            else: stocks[sym]["ex"]=ex   # cập nhật nếu mã chuyển sàn
+    except Exception as e: print("  SSI",ex,"lỗi:",e,flush=True)
+print(f"đồng bộ SSI: thêm {len(moi)} mã mới{' ('+', '.join(sorted(moi))+')' if 0<len(moi)<=12 else ''}"
+      f", tổng {len(stocks)}",flush=True)
+HL["moi"]=sorted(moi)
 syms=list(stocks)
+# mã chưa có hồ sơ (mã mới, hoặc lượt --full trước đó Simplize lỗi) -> nạp ĐỦ trường ngay
+# hôm nay, không đợi thứ Hai: thiếu `sector`/`shares` là mất ngành, mất logo, mất đường đua.
+hoso={s for s in syms if not stocks[s].get("sector") or not stocks[s].get("shares")}
 
 # 1) Simplize summary -> % điều chỉnh + vốn hoá (+ ngành/SLCP/logo/PE/PB/cổ tức nếu --full)
 lock=threading.Lock(); sok=sfail=0
@@ -68,7 +78,7 @@ def fetch_simplize(sym):
             o={"mcap":d.get("marketCap"),"epsS":d.get("epsRatio"),
                "pct":{"w":d.get("pricePctChg7d"),"m":d.get("pricePctChg30d"),
                       "y":d.get("pricePctChg1y"),"y5":d.get("pricePctChg5y")}}
-            if FULL:
+            if FULL or sym in hoso:
                 o.update({"shares":d.get("outstandingSharesValue"),
                     "sector":(d.get("industryActivity") or "").strip() or None,
                     "sectorKey":d.get("bcIndustryGroupSlug"),"parent":d.get("bcEconomicSectorName"),
@@ -129,27 +139,37 @@ def close_at(t,c,days):
         if t[i]<=tgt: v=c[i]
         else: break
     return v if v is not None else (c[0] if c else None)
+# NGUỒN NẾN, ưu tiên từ trên xuống. VNDirect HỒI TỐ ĐỦ quyền cũ, VPS chỉ hồi tố từ khoảng
+# giữa 2021 — đo trên 6 mã: HPG 3/2020->nay VNDirect nhân 4,21 lần còn VPS chỉ 3,10 lần
+# (thiếu đúng đợt thưởng 35% năm 2021); VIB 5,14 vs 3,66; ACB 5,00 vs 4,00; FPT 4,83 vs 4,16;
+# NVL 0,51 vs 0,38. Mã nào không có quyền cũ (VCB) thì hai nguồn khớp tuyệt đối.
+# Lấy sai nguồn là đường đua/đầu tư bền vững/bộ lọc đều hụt lãi mà không báo gì.
+CHART_SRC=[("VNDirect","https://dchart-api.vndirect.com.vn/dchart/history","D"),
+           ("VPS","https://histdatafeed.vps.com.vn/tradingview/history","1D")]
+hsrc={}   # sym -> tên nguồn đã dùng (thống kê vào health.json)
 def fetch_hist(sym,days):
-    for att in range(2):
-        try:
-            j=get(f"https://histdatafeed.vps.com.vn/tradingview/history?symbol={sym}&resolution=1D&from={NOW-days*86400}&to={NOW}")
-            if j.get("s")!="ok" or not j.get("c"): return None
-            # Xác định đơn vị giá bằng ĐỐI CHIẾU THAM CHIẾU BẢNG GIÁ (luôn đúng VND),
-            # không đoán theo ngưỡng nữa — mã giá ~500 nghìn (VNZ/HLB) từng bị đoán sai 1000 lần.
-            last=j["c"][-1]; ref=(board.get(sym) or {}).get("ref") or 0
-            if ref>0 and last>0:
-                k=1000 if abs(last*1000-ref)<abs(last-ref) else 1
-            else:
-                k=1000 if last<500 else 1
-            n=len(j["t"])
-            gi=lambda a,i: (a[i] if a and i<len(a) and a[i] is not None else j["c"][i])
-            return {"t":j["t"],
-                    "o":[round(gi(j.get("o"),i)*k) for i in range(n)],
-                    "h":[round(gi(j.get("h"),i)*k) for i in range(n)],
-                    "l":[round(gi(j.get("l"),i)*k) for i in range(n)],
-                    "c":[round(x*k) for x in j["c"]],
-                    "v":[int(j["v"][i] or 0) if j.get("v") and i<len(j["v"]) else 0 for i in range(n)]}
-        except Exception: time.sleep(0.8*(att+1))
+    for ten,url,res in CHART_SRC:
+        for att in range(2):
+            try:
+                j=get(f"{url}?symbol={sym}&resolution={res}&from={NOW-days*86400}&to={NOW}")
+                if j.get("s")!="ok" or not j.get("c"): break      # nguồn không có mã -> nguồn sau
+                # Xác định đơn vị giá bằng ĐỐI CHIẾU THAM CHIẾU BẢNG GIÁ (luôn đúng VND),
+                # không đoán theo ngưỡng nữa — mã giá ~500 nghìn (VNZ/HLB) từng bị đoán sai 1000 lần.
+                last=j["c"][-1]; ref=(board.get(sym) or {}).get("ref") or 0
+                if ref>0 and last>0:
+                    k=1000 if abs(last*1000-ref)<abs(last-ref) else 1
+                else:
+                    k=1000 if last<500 else 1
+                n=len(j["t"])
+                gi=lambda a,i: (a[i] if a and i<len(a) and a[i] is not None else j["c"][i])
+                hsrc[sym]=ten
+                return {"t":j["t"],
+                        "o":[round(gi(j.get("o"),i)*k) for i in range(n)],
+                        "h":[round(gi(j.get("h"),i)*k) for i in range(n)],
+                        "l":[round(gi(j.get("l"),i)*k) for i in range(n)],
+                        "c":[round(x*k) for x in j["c"]],
+                        "v":[int(j["v"][i] or 0) if j.get("v") and i<len(j["v"]) else 0 for i in range(n)]}
+            except Exception: time.sleep(0.8*(att+1))
     return None
 def fetch_foreign30(sym):   # seed NN 30 phiên gần nhất (24hMoney) khi backfill lần đầu
     try:
@@ -172,6 +192,18 @@ def work_hist(sym):
     if not d or not d["t"]:
         with hlock: hstats["fail"]+=1
         return
+    # NỀN GIÁ ĐÃ BỊ HẠ CHƯA? Ngày chốt quyền, nguồn hồi tố hạ TOÀN BỘ chuỗi cũ xuống theo
+    # tỉ lệ cổ tức. File đang lưu vẫn là nền CŨ, nối phiên mới vào là ghép hai nền khác
+    # nhau -> đẻ ra một cú sập chưa từng xảy ra, đúng bằng tỉ lệ cổ tức, mà không báo gì.
+    # Đối chiếu ngay tại NGÀY TRÙNG NHAU: lệch quá 0,5% nghĩa là nền đã đổi -> tải lại cả chuỗi.
+    if not fullfetch and old and (old.get("t") or []) and old.get("c"):
+        moc=old["t"][-1]; cu=old["c"][-1]
+        j2=d["t"].index(moc) if moc in d["t"] else -1
+        if j2>=0 and cu>0 and abs(d["c"][j2]-cu)/cu>0.005:
+            d2=fetch_hist(sym,BACKFILL_D)
+            if d2 and d2["t"]:
+                print(f"  {sym}: nền giá hạ {cu} -> {d['c'][j2]} (chốt quyền) — tải lại cả chuỗi",flush=True)
+                d=d2; fullfetch=True
     fbfs={}                                       # ngày -> (NN mua, NN bán); VPS không có NN lịch sử
     if old:                                       # -> luôn GIỮ NN đã lưu, không bao giờ mất
         for i,tt in enumerate(old.get("t") or []):
@@ -183,11 +215,20 @@ def work_hist(sym):
         if f30: fbfs.update(f30)
     if fullfetch:
         out=d
-        # nếu VPS trả thiếu quá khứ so với file đã lưu -> ghép phần cũ lại (không mất dữ liệu)
+        # Nguồn trả thiếu quá khứ so với file đã lưu -> ghép phần cũ lại (không mất dữ liệu),
+        # nhưng phải QUY VỀ CÙNG NỀN: đo tỉ lệ ở phiên chung xa nhất rồi nhân phần cũ theo.
+        # Ghép thẳng nền cũ vào nền mới là tự tạo một cú sập giả ngay tại chỗ nối.
         if old and (old.get("t") or []) and old["t"][0]<d["t"][0]:
-            cut=0
-            while cut<len(old["t"]) and old["t"][cut]<d["t"][0]: cut+=1
-            for k2 in ("t","o","h","l","c","v"): out[k2]=old[k2][:cut]+out[k2]
+            cu={vn_day(t):c for t,c in zip(old["t"],old.get("c") or [])}
+            tile=None
+            for t,c in zip(d["t"],d["c"]):
+                dd=vn_day(t)
+                if dd in cu and cu[dd]>0: tile=c/cu[dd]; break
+            if tile is not None:
+                cut=0
+                while cut<len(old["t"]) and old["t"][cut]<d["t"][0]: cut+=1
+                for k2 in ("o","h","l","c"): out[k2]=[round(x*tile) for x in old[k2][:cut]]+out[k2]
+                for k2 in ("t","v"):         out[k2]=old[k2][:cut]+out[k2]
     else:                                         # ngày thường: nối phiên mới vào file cũ
         out=old; lastt=out["t"][-1] if out["t"] else 0
         for i,tt in enumerate(d["t"]):
@@ -218,8 +259,11 @@ def work_hist(sym):
     with hlock: hstats["new" if fresh else ("full" if fullfetch else "append")]+=1
 with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
     list(pool.map(work_hist,syms))
-print(f"kho lịch sử: backfill {hstats['new']}, nối {hstats['append']}, tải lại {hstats['full']}, lỗi {hstats['fail']}",flush=True)
-HL["hist"]=dict(hstats); HL["board"]=len(board); HL["indices"]=len(indices)
+nguon={}
+for v in hsrc.values(): nguon[v]=nguon.get(v,0)+1
+print(f"kho lịch sử: backfill {hstats['new']}, nối {hstats['append']}, tải lại {hstats['full']}, "
+      f"lỗi {hstats['fail']} · nguồn {nguon}",flush=True)
+HL["hist"]=dict(hstats); HL["histSrc"]=nguon; HL["board"]=len(board); HL["indices"]=len(indices)
 
 # 4) ghép mốc giá + vốn hoá (=SLCP×giá đóng cửa nếu Simplize thiếu) vào universe
 for sym,s in stocks.items():
@@ -228,10 +272,15 @@ for sym,s in stocks.items():
         s["anc"]=p["anc"]
         if not s.get("mcap") and s.get("shares"): s["mcap"]=s["shares"]*p["close"]
 
+# mã VỪA THÊM mà không cào nổi một cây nến nào (mã tạm ngừng, mã SSI liệt kê sớm hơn ngày
+# chào sàn) thì chưa ghi vào universe, chờ lượt sau — không để mã trống giá lọt ra web.
+chua=[s for s in moi if s not in prices]
+if chua: print(f"  mã mới chưa có giá, để lại lượt sau: {', '.join(sorted(chua))}",flush=True)
+
 # --full: bỏ UPCOM không có dữ liệu (rác thanh khoản); luôn giữ HOSE/HNX. Làm mới rổ chỉ số.
-keep=stocks.values()
+keep=[s for s in stocks.values() if s["sym"] not in chua]
 if FULL:
-    keep=[s for s in stocks.values() if s.get("mcap") or s["ex"] in ("HOSE","HNX")]
+    keep=[s for s in keep if s.get("mcap") or s["ex"] in ("HOSE","HNX")]
     def idx(n):
         try: return get(f"https://bgapidatafeed.vps.com.vn/getlistckindex/{n}")
         except Exception: return u.get({"VN30":"vn30","HNX30":"hnx30"}[n],[])

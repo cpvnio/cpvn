@@ -56,7 +56,7 @@ bubbles.html đi theo chuỗi:
 |---|---|---|---|
 | 1 | `dchart-api.vndirect.com.vn` ACAO `*` | **13,5 năm** (02/01/2013) | **đủ** — đo 206/213 sự kiện |
 | 2 | `histdatafeed.vps.com.vn` ACAO `*` | 15 năm (2011) | chỉ từ giữa 2021 trở lại |
-| 3 | kho `data/hist` | 2020 | như nguồn 2 |
+| 3 | kho `data/hist` | 2020 | **đủ** — từ 07/08/2026 kho cũng cào VNDirect |
 
 7 sự kiện còn "chưa hồi tố" ở nguồn 1 đều là **cổ tức TIỀN 2–4%** — đúng thông lệ thế
 giới (chart giá không trừ cổ tức tiền, chỉ chart tổng lợi nhuận mới trừ). Toàn bộ sự kiện
@@ -73,6 +73,24 @@ gây gãy chart thật (thưởng CP, chia CP, tách) đều đã hồi tố.
 > nó là CƠ SỞ DỮ LIỆU cho bộ lọc/radar/đường đua, chỉ thôi đóng vai nguồn vẽ.
 > **Đơn vị**: cả hai nguồn trả nghìn đồng — phải đối chiếu `ref` bảng giá chọn hệ số,
 > tuyệt đối không đoán theo ngưỡng (VNZ 555k, HLB 505k rơi đúng biên).
+
+### Kho `data/hist` cũng đã chuyển sang VNDirect (07/08/2026)
+
+Kho cào bằng VPS nên thiếu hồi tố mọi quyền TRƯỚC giữa 2021 → **371/1525 mã sai nền giá**,
+mọi thứ đọc kho (đường đua, đầu tư bền vững, bộ lọc MA/RSI, độ rộng) đều tính HỤT lãi:
+HPG 3/2020→nay ×3,10 thay vì ×4,21; VHM và VCI ×0,5; VIB ×0,71; SCI thậm chí có cây nến
+**−100%** trong chuỗi VPS. Đã vá bằng `tools/va_nen_gia.py` (chạy một lần, giữ nguyên
+`fb`/`fs` theo ngày) và `refresh_daily.fetch_hist` nay đi VNDirect trước, VPS dự phòng.
+
+Ba luật kèm theo, phá là dữ liệu sai âm thầm:
+
+1. **Tự phát hiện hạ nền**: ngày thường chỉ nối phiên mới, nhưng phải so giá tại NGÀY
+   TRÙNG NHAU giữa nguồn và file cũ — lệch >0,5% nghĩa là mã vừa chốt quyền và nguồn đã
+   hạ cả chuỗi → tải lại toàn bộ mã đó ngay, đừng nối nền mới vào nền cũ.
+2. **Ghép quá khứ phải quy về cùng nền**: khi nguồn trả thiếu phần cũ, nhân đoạn cũ với
+   tỉ lệ đo ở phiên chung xa nhất rồi mới ghép. Ghép thẳng là tự tay tạo cú sập giả.
+3. **Đo tỉ lệ TRƯỚC khi ghép**: đo sau thì phiên đầu chuỗi chính là số cũ, tỉ lệ ra 1,0
+   và tưởng không có gì đổi — lượt chạy thử đầu tiên báo 14 mã lệch, sự thật là 371.
 
 ## Cơ chế giá — phần tinh vi nhất, đọc kỹ trước khi sửa
 
@@ -195,6 +213,24 @@ Màu bảng điện (trần tím · tăng lục · TC vàng · giảm đỏ · s
 
 **`congcu.js`** — Thêm module phải sửa **6 chỗ**: `MODULES`, `PATHOF`, `TITLEOF`, `byPath`,
 tab trong HTML, rule trong `_redirects`. Poll sống chỉ vẽ lại module radar.
+
+**Đường đua có hai chế độ** (`RA.mode`): `race` = xếp hạng vốn hoá; `dca` = **đầu tư**, và
+chế độ đầu tư có thêm hai công tắc độc lập nhau, bốn tổ hợp đều dùng chung một mạch tính:
+
+| | từng mã (mỗi mã một đường) | gộp rổ chia đều (một đường danh mục) |
+|---|---|---|
+| **hàng tháng** `kieu='deu'` | `v_k = X·a_k·Σ(1/a_j)` | trung bình cộng các đường |
+| **một lần** `kieu='mot'` | `v_k = X·a_k/a_0` | trung bình cộng các đường |
+
+Rổ chia đều **đúng bằng trung bình cộng** các đường đơn lẻ (mỗi mã `X/N`) — đã kiểm chéo
+bằng cách cộng tay từng khoản mua. Ô **gõ mã** có quyền cao hơn ô nhóm ngành (gõ mã thì
+select ngành bị khoá mờ). Ngân hàng 7%/năm ghép lãi THEO THÁNG là đối thủ mặc định:
+`mot → X·(1+r)^k`, `deu → X·((1+r)^(k+1)−1)/r`, hai công thức đều cho `k=0` ra đúng `X`
+để tháng đầu hai bên hoà nhau — so nhau mới công bằng. Hai kiểu giữ **số tiền riêng**
+(`amtD` 5 triệu/tháng, `amtM` 100 triệu một lần), đổi qua lại không nhảy số.
+Nhãn đầu đường (kể cả "vốn đã bỏ") phải nằm chung mảng `tips` rồi mới dồn chống đè —
+tách ra vẽ riêng là chồng chữ; vòng đẩy ngược lên khi tràn đáy phải **cascade**, bản cũ
+chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thành một mớ.
 
 ## Pipeline
 
