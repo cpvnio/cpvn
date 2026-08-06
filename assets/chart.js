@@ -38,6 +38,9 @@ const SVG={
   pc :'<path d="M1.5 11 L11 1.5 M5 14.5 L14.5 5"/>',
   rc :'<rect x="2.2" y="4" width="11.6" height="8"/>',
   fib:'<path d="M2 3 H14 M2 6.4 H14 M2 9.6 H14 M2 13 H14"/>',
+  fibe:'<path d="M2 2.5 H14 M2 6 H14 M2 12.5 H10"/><path d="M11.5 10 L14 12.5 L11.5 15"/>',
+  pen:'<path d="M2.4 13.6 L4 9.6 L11.2 2.4 L13.6 4.8 L6.4 12 Z"/><path d="M10 3.6 L12.4 6"/>',
+  poly:'<path d="M2 12 L6 5.5 L10 9.5 L14 3"/><circle cx="2" cy="12" r="1.5" fill="currentColor"/><circle cx="6" cy="5.5" r="1.5" fill="currentColor"/><circle cx="10" cy="9.5" r="1.5" fill="currentColor"/><circle cx="14" cy="3" r="1.5" fill="currentColor"/>',
   msr:'<path d="M1.6 9.5 L6.5 14.4 L14.4 6.5 L9.5 1.6 Z M5.2 5.9 L6.9 7.6 M7.6 3.5 L9.3 5.2 M2.8 8.3 L4.5 10"/>',
   txt:'<path d="M3 3.5 H13 M8 3.5 V13 M5.8 13 H10.2"/>',
   mag:'<path d="M4 2.5 V8 a4 4 0 0 0 8 0 V2.5 M4 6 H12"/><path d="M3 2.5 H5.2 M10.8 2.5 H13"/>',
@@ -54,6 +57,9 @@ const TIP={
   pc :'Kênh song song — vẽ 1 đường rồi bấm điểm thứ 3 định độ rộng',
   rc :'Vùng chữ nhật — bấm rồi kéo',
   fib:'Fibonacci thoái lui — kéo từ đỉnh xuống đáy',
+  fibe:'Fibonacci mở rộng — bấm 3 điểm A·B·C, chiếu biên độ A→B tiếp từ C',
+  pen:'Bút vẽ — giữ chuột rê tự do',
+  poly:'Đường gấp khúc — bấm từng điểm, bấm đúp (hoặc Enter) để kết thúc',
   msr:'Thước đo — hiện chênh lệch giá, phần trăm và số phiên',
   txt:'Ghi chú — bấm 1 điểm rồi nhập chữ',
   mag:'Hít nến — điểm vẽ tự bám giá mở/cao/thấp/đóng gần nhất',
@@ -61,9 +67,10 @@ const TIP={
   undo:'Hoàn tác hình vừa vẽ',
   clr:'Xoá hết hình vẽ'
 };
-const FULL=['cur','|','tl','ray','hl','vl','pc','rc','fib','msr','txt','|','mag','|','del','undo','clr'];
-const GON =['cur','|','tl','ray','hl','fib','rc','txt','|','mag','|','del','clr'];
-const DTOOL={cur:'',tl:'tl',ray:'ray',hl:'hl',vl:'vl',pc:'pc',rc:'rc',fib:'fib',msr:'msr',txt:'txt'};
+const FULL=['cur','|','tl','ray','poly','pen','hl','vl','pc','rc','fib','fibe','msr','txt','|','mag','|','del','undo','clr'];
+const GON =['cur','|','tl','ray','poly','pen','hl','fib','fibe','rc','txt','|','mag','|','del','clr'];
+const DTOOL={cur:'',tl:'tl',ray:'ray',poly:'poly',pen:'pen',hl:'hl',vl:'vl',pc:'pc',rc:'rc',
+  fib:'fib',fibe:'fibe',msr:'msr',txt:'txt'};
 function paletteHTML(kind){
   return (kind==='gon'?GON:FULL).map(k=>{
     if(k==='|') return '<hr>';
@@ -145,6 +152,7 @@ let yPan=0, yZoom=1;
 let draws=[], tool=null, pending=null, preview=null;
 let sel=-1, dmove=null, magnet=false, dcol=null;   // hình đang chọn · đang kéo · hít nến · màu vẽ
 let dpen=null;                                     // mốc bấm xuống, để phân biệt bấm-nhả với bấm-kéo
+let veBut=false;                                   // bút đang được giữ và rê
   let drag=null,pinch=null;
   const light=()=>opt.light?opt.light():false;
   const GRID=()=>light()?'rgba(0,0,0,.09)':'rgba(255,255,255,.06)';
@@ -211,6 +219,9 @@ let dpen=null;                                     // mốc bấm xuống, để
     const subH=rsiH+macH;                    // tổng chiều cao các dải phụ dưới đáy
     const padB=volH+subH+22, padR=geo.padR, padT=geo.padT;
     const volBase=h-22-subH;                 // đáy cột khối lượng (chừa chỗ cho dải phụ)
+    /* Hình học dải RSI phải biết TỪ ĐÂY, không đợi tới đoạn vẽ đường RSI ở cuối draw():
+       lớp vẽ chạy trước đoạn đó, thiếu mốc là hình của dải RSI bị coi như không vẽ được. */
+    geo.rsiTop=rsiH?h-22-subH+4:null; geo.rsiH=rsiH?rsiH-10:0;
     const plotW=w-padR, plotH=h-padT-padB;
     geo.plotW=plotW; geo.plotH=plotH; geo.volTop=h-padB+6;
     let mn=Infinity,mx=-Infinity,vmax=0;
@@ -307,7 +318,7 @@ let dpen=null;                                     // mốc bấm xuống, để
       const a=y(Math.max(r.o,r.c)), b=y(Math.min(r.o,r.c));
       x.fillRect(X-bw/2,a,bw,Math.max(1,b-a));
     }
-    paintDraws(x,y);
+    paintDraws(x,y,'main');       // khung giá: sơn ngay sau nến
     // vạch giá mới nhất
     const lastC=vis[n-1].c, yl=y(lastC), lcol=lastC>=vis[0].o?UP:DOWN;
     x.setLineDash([3,3]); x.strokeStyle=lcol+'99';
@@ -356,7 +367,7 @@ let dpen=null;                                     // mốc bấm xuống, để
       const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     // RSI 14 phiên (dải riêng dưới cùng)
     if(ind.rsi&&rows.length>15){
-      const top=h-22-subH+4, bh=rsiH-10;
+      const top=geo.rsiTop, bh=geo.rsiH;
       const ry=v=>top+(100-v)/100*bh;
       x.strokeStyle=GRID(); x.beginPath(); x.moveTo(0,ry(70)); x.lineTo(plotW,ry(70)); x.stroke();
       x.beginPath(); x.moveTo(0,ry(30)); x.lineTo(plotW,ry(30)); x.stroke();
@@ -378,6 +389,7 @@ let dpen=null;                                     // mốc bấm xuống, để
       if(st) x.stroke();
       x.fillStyle='rgba(139,92,246,.95)'; x.font='700 10px system-ui';
       x.fillText('RSI 14',8,top+11);
+      paintDraws(x,y,'rsi');       // hình của dải RSI sơn SAU đường RSI để nằm trên
     }
     // MACD 12/26/9 (dải riêng dưới cùng): cột chênh lệch + 2 đường
     if(ind.macd&&rows.length>35){
@@ -457,6 +469,8 @@ let dpen=null;                                     // mốc bấm xuống, để
      Mỗi hình lưu theo (thời gian, giá) chứ không theo pixel, nên kéo ngang/dọc
      hay phóng to thu nhỏ thì hình vẫn dính đúng chỗ trên nến. */
   const FIB=[0,0.236,0.382,0.5,0.618,0.786,1];
+  // mức mở rộng chuẩn: chiếu tiếp biên độ A→B từ điểm C
+  const FIBE=[0,0.618,1,1.272,1.618,2,2.618];
   function barStep(){                        // khoảng thời gian trung bình giữa 2 nến gần đây
     const n=rows.length; if(n<2) return 86400;
     const k=Math.min(n-1,20);
@@ -485,8 +499,20 @@ let dpen=null;                                     // mốc bấm xuống, để
   self.vOfY=vOfY; self.tOfX=tOfX;
   const DCOL='#2962ff';
   const yOfV=v=>geo.padTv+(geo.mx-v)/(geo.mx-geo.mn)*geo.plotHv;   // bản dùng ngoài draw()
+  /* ---- KHUNG VẼ: 'main' = vùng giá · 'rsi' = dải RSI (thang cố định 0..100) ----
+     Hình vẽ neo theo (thời gian, GIÁ TRỊ) nên đổi khung là đổi cách quy giá trị ra y.
+     Dải RSI chỉ tồn tại khi bật chỉ báo -> tắt RSI thì hình của khung đó tạm ẩn,
+     bật lại là hiện đúng chỗ cũ (không xoá dữ liệu). */
+  const coRSI=()=>ind.rsi&&geo.rsiTop!=null&&geo.rsiH>0;
+  const yRSI=v=>geo.rsiTop+(100-Math.max(0,Math.min(100,v)))/100*geo.rsiH;
+  const vRSI=py=>100-(py-geo.rsiTop)/geo.rsiH*100;
+  const khungTaiY=py=>(coRSI()&&py>=geo.rsiTop-4&&py<=geo.rsiTop+geo.rsiH+4)?'rsi':'main';
+  const yOfP=(pane,v)=>pane==='rsi'?yRSI(v):yOfV(v);
+  const vOfP=(pane,py)=>pane==='rsi'?vRSI(py):vOfY(py);
+  const veDuoc=d=>d.pane!=='rsi'||coRSI();
   function paintOne(x,y,d,live,isSel){
-    const P=d.p.map(q=>({x:xOfT(q.t),y:y(q.v)}));
+    const yy2=d.pane==='rsi'?yRSI:y;                 // hình ở dải RSI dùng thang riêng
+    const P=d.p.map(q=>({x:xOfT(q.t),y:yy2(q.v)}));
     x.save();
     x.strokeStyle=d.col||DCOL; x.fillStyle=d.col||DCOL;
     x.lineWidth=(live?1.2:1.6)*(isSel?1.6:1); if(live) x.setLineDash([5,4]);
@@ -501,6 +527,12 @@ let dpen=null;                                     // mốc bấm xuống, để
       x.font='700 12px system-ui'; x.textAlign='left'; x.textBaseline='middle';
       x.fillText(d.txt||'Ghi chú',P[0].x+7,P[0].y);
       x.beginPath(); x.arc(P[0].x,P[0].y,3,0,7); x.fill();
+    }else if((d.k==='pen'||d.k==='poly')&&P.length>=1){
+      /* BÚT VẼ và ĐA ĐOẠN dùng chung cách vẽ: nối hết các điểm. Khác nhau ở cách
+         NHẬP điểm — bút lấy theo đường rê chuột, đa đoạn lấy theo từng cú bấm. */
+      x.lineJoin=x.lineCap='round';
+      x.beginPath(); P.forEach((q,i)=>i?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y));
+      x.stroke();
     }else if(P.length>=2){
       const a=P[0], b=P[1];
       if(d.k==='tl'){ x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); }
@@ -533,14 +565,32 @@ let dpen=null;                                     // mốc bấm xuống, để
       else if(d.k==='rc'){
         x.beginPath(); x.rect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
         x.stroke(); x.globalAlpha=0.10; x.fill(); x.globalAlpha=1;
-      }else if(d.k==='fib'){
+      }
+      /* FIBO MỞ RỘNG: 3 điểm A-B-C. Lấy biên độ A→B chiếu tiếp từ C để ước lượng
+         đích của nhịp sau — khác fibo thoái lui (2 điểm, đo mức lùi trong nhịp cũ). */
+      else if(d.k==='fibe'&&P.length>=3){
+        const vA=d.p[0].v, vB=d.p[1].v, vC=d.p[2].v, bien=vB-vA;
+        const x0=Math.min(a.x,P[2].x), x1=Math.max(b.x,P[2].x);
+        x.globalAlpha=.5; x.setLineDash([2,3]);
+        x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.lineTo(P[2].x,P[2].y); x.stroke();
+        x.globalAlpha=1; x.setLineDash([4,3]);
+        x.font='700 9.5px system-ui'; x.textBaseline='bottom';
+        const flip=x1>W-86; x.textAlign=flip?'right':'left';
+        for(const f of FIBE){
+          const v=vC+bien*f, yy=yy2(v);
+          x.beginPath(); x.moveTo(x0,yy); x.lineTo(x1,yy); x.stroke();
+          x.fillText((f*100).toFixed(1)+'%  '+fmtP(v),flip?x1-4:x1+4,yy-2.5);
+        }
+        x.setLineDash([]);
+      }
+      else if(d.k==='fib'){
         const v0=d.p[0].v, v1=d.p[1].v, x0=Math.min(a.x,b.x), x1=Math.max(a.x,b.x);
         x.font='700 9.5px system-ui'; x.textBaseline='bottom';   // chữ nằm TRÊN đường, khỏi bị gạch ngang
         x.setLineDash([4,3]);
         // nhãn nằm bên phải, nhưng nếu sát mép thì lật vào trong cho khỏi bị cắt
         const flip=x1>W-72; x.textAlign=flip?'right':'left';
         for(const f of FIB){
-          const v=v0+(v1-v0)*f, yy=y(v);
+          const v=v0+(v1-v0)*f, yy=yy2(v);
           x.beginPath(); x.moveTo(x0,yy); x.lineTo(x1,yy); x.stroke();
           x.fillText((f*100).toFixed(1)+'%  '+fmtP(v),flip?x1-4:x1+4,yy-2.5);
         }
@@ -548,23 +598,32 @@ let dpen=null;                                     // mốc bấm xuống, để
       }
     }
     // chấm neo để biết hình đang ở đâu; hình ĐANG CHỌN thì neo to hơn, viền trắng
-    if(!live) for(const q of P){
+    const neo=d.k==='pen'?[P[0],P[P.length-1]].filter(Boolean):P;   // bút: chỉ neo 2 đầu
+    if(!live) for(const q of neo){
       x.beginPath(); x.arc(q.x,q.y,isSel?5:2.6,0,7); x.fill();
       if(isSel){ x.strokeStyle='#fff'; x.lineWidth=1.6; x.stroke(); }
     }
     x.restore();
   }
-  function paintDraws(x,y){
-    // cắt gọn trong vùng giá: hình vẽ không được tràn xuống dải khối lượng / RSI / MACD
-    x.save(); x.beginPath(); x.rect(0,geo.padTv,geo.plotW,geo.plotHv); x.clip();
-    draws.forEach((d,i)=>paintOne(x,y,d,false,i===sel));
-    if(pending){
+  function paintDraws(x,y,chiKhung){
+    /* Cắt theo ĐÚNG KHUNG của từng hình: hình vùng giá không tràn xuống dải phụ,
+       hình dải RSI không trào ngược lên vùng giá. */
+    const cat=(pane,fn)=>{
+      x.save(); x.beginPath();
+      if(pane==='rsi') x.rect(0,geo.rsiTop-2,geo.plotW,geo.rsiH+4);
+      else x.rect(0,geo.padTv,geo.plotW,geo.plotHv);
+      x.clip(); fn(); x.restore();
+    };
+    const hop=p=>!chiKhung||(p||'main')===chiKhung;
+    draws.forEach((d,i)=>{ if(veDuoc(d)&&hop(d.pane)) cat(d.pane,()=>paintOne(x,y,d,false,i===sel)); });
+    if(pending&&hop(pending.pane)){
       const pts=pending.p.concat(preview?[preview]:[]);
-      if(pts.length) paintOne(x,y,{k:pending.k,p:pts,col:pending.col,txt:pending.txt},true);
+      if(pts.length) cat(pending.pane,()=>paintOne(x,y,
+        {k:pending.k,p:pts,col:pending.col,txt:pending.txt,pane:pending.pane},true));
     }
-    x.restore();
   }
-  const NEED={hl:1,vl:1,txt:1,tl:2,ray:2,rc:2,fib:2,msr:2,pc:3};
+  // 0 = số điểm KHÔNG cố định (bút, đa đoạn) — kết thúc bằng thả chuột / bấm đúp / Enter
+  const NEED={hl:1,vl:1,txt:1,tl:2,ray:2,rc:2,fib:2,msr:2,pc:3,fibe:3,pen:0,poly:0};
 
   /* ---- CHỌN / KÉO / XOÁ TỪNG HÌNH ---------------------------------------- */
   const HIT=8;                                          // bán kính bắt trúng (px)
@@ -574,8 +633,22 @@ let dpen=null;                                     // mốc bấm xuống, để
     return Math.hypot(px-(a.x+dx*t),py-(a.y+dy*t));
   }
   function hitOne(d,px,py){
-    const P=d.p.map(q=>({x:xOfT(q.t),y:yOfV(q.v)})), W=geo.plotW;
-    for(let i=0;i<P.length;i++) if(Math.hypot(px-P[i].x,py-P[i].y)<=HIT) return {pt:i};
+    if(!veDuoc(d)) return null;                     // hình dải RSI mà đang tắt RSI
+    const P=d.p.map(q=>({x:xOfT(q.t),y:yOfP(d.pane,q.v)})), W=geo.plotW;
+    // bút có hàng trăm điểm -> chỉ cho tóm hai đầu, kẻo rê chuột đâu cũng dính neo
+    const neoI=d.k==='pen'?[0,P.length-1]:P.map((_,i)=>i);
+    for(const i of neoI) if(P[i]&&Math.hypot(px-P[i].x,py-P[i].y)<=HIT) return {pt:i};
+    if(d.k==='pen'||d.k==='poly'){
+      for(let i=1;i<P.length;i++) if(segDist(px,py,P[i-1],P[i])<=HIT) return {};
+      return null;
+    }
+    if(d.k==='fibe'&&P.length>=3){
+      const vC=d.p[2].v, bien=d.p[1].v-d.p[0].v;
+      const X0=Math.min(P[0].x,P[2].x), X1=Math.max(P[1].x,P[2].x);
+      if(px<X0-HIT||px>X1+HIT) return null;
+      for(const f of FIBE) if(Math.abs(py-yOfP(d.pane,vC+bien*f))<=HIT) return {};
+      return null;
+    }
     if(d.k==='hl') return Math.abs(py-P[0].y)<=HIT?{}:null;
     if(d.k==='vl') return Math.abs(px-P[0].x)<=HIT?{}:null;
     if(d.k==='txt') return (px>P[0].x-HIT&&px<P[0].x+90&&Math.abs(py-P[0].y)<=10)?{}:null;
@@ -597,7 +670,7 @@ let dpen=null;                                     // mốc bấm xuống, để
     if(d.k==='fib'){
       const v0=d.p[0].v, v1=d.p[1].v, X0=Math.min(a.x,b.x), X1=Math.max(a.x,b.x);
       if(px<X0-HIT||px>X1+HIT) return null;
-      for(const f of FIB) if(Math.abs(py-yOfV(v0+(v1-v0)*f))<=HIT) return {};
+      for(const f of FIB) if(Math.abs(py-yOfP(d.pane,v0+(v1-v0)*f))<=HIT) return {};
       return null;
     }
     return null;
@@ -654,14 +727,25 @@ let dpen=null;                                     // mốc bấm xuống, để
     self.draw();
   }
   function addPoint(px,py){
-    // giữ điểm vẽ trong vùng giá, kể cả khi bấm/nhả trúng trục giá bên phải
     px=Math.max(0,Math.min(geo.plotW-1,px));
-    py=Math.max(geo.padTv,Math.min(geo.padTv+geo.plotHv,py));
-    const p={t:tOfX(px), v:snapV(px,py)};
-    if(!pending) pending={k:tool,p:[p],col:dcol||undefined};
+    // KHUNG do điểm ĐẦU TIÊN quyết định — bấm vào dải RSI thì cả hình thuộc dải RSI,
+    // các điểm sau bị giữ trong đúng khung đó để hình không vắt ngang hai vùng.
+    const pane=pending?pending.pane:khungTaiY(py);
+    if(pane==='rsi') py=Math.max(geo.rsiTop,Math.min(geo.rsiTop+geo.rsiH,py));
+    else py=Math.max(geo.padTv,Math.min(geo.padTv+geo.plotHv,py));
+    const p={t:tOfX(px), v:pane==='rsi'?vRSI(py):snapV(px,py)};
+    if(!pending) pending={k:tool,p:[p],col:dcol||undefined,pane};
     else pending.p.push(p);
-    if(pending.p.length>=(NEED[pending.k]||2)) finishDraw(); else self.draw();
+    const can=NEED[pending.k];
+    if(can&&pending.p.length>=can) finishDraw(); else self.draw();
   }
+  /* hình SỐ ĐIỂM KHÔNG CỐ ĐỊNH (bút, đa đoạn): tự chốt khi thả chuột / bấm đúp / Enter */
+  function chotMo(){
+    if(!pending||NEED[pending.k]!==0) return false;
+    if(pending.p.length<2){ cancelDraw(); return true; }
+    finishDraw(); return true;
+  }
+  self.chotMo=chotMo;
 
   /* ---- tương tác ---- */
   const idxAt=px=>{
@@ -687,13 +771,15 @@ let dpen=null;                                     // mốc bấm xuống, để
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
     if(tool){                                     // đang chọn công cụ vẽ
       addPoint(px,py);
+      if(tool==='pen'&&pending){ veBut=true; return; }   // bút: rê tới đâu ghi tới đó
       if(pending) dpen={x:px,y:py,n:pending.p.length};   // ghi mốc để biết có KÉO hay không
       return;
     }
     if(px<=geo.plotW){                            // không có công cụ -> thử CHỌN hình vẽ
       const h=hitTest(px,py);
       if(h){ sel=h.i;
-        dmove={i:h.i, pt:h.pt, t0:tOfX(px), v0:vOfY(py), p0:draws[h.i].p.map(q=>({...q}))};
+        dmove={i:h.i, pt:h.pt, t0:tOfX(px), v0:vOfP(draws[h.i].pane,py),
+               pane:draws[h.i].pane, p0:draws[h.i].p.map(q=>({...q}))};
         cvs.style.cursor='move'; self.draw(); return;
       }
       if(sel>=0){ sel=-1; self.draw(); }          // bấm ra chỗ trống -> bỏ chọn
@@ -703,6 +789,7 @@ let dpen=null;                                     // mốc bấm xuống, để
     cvs.style.cursor=drag.axis?'ns-resize':'grabbing';
   });
   window.addEventListener('mouseup',e=>{
+    if(veBut){ veBut=false; chotMo(); return; }   // bút: nhả tay là xong nét
     // nhả chuột sau khi KÉO -> chốt luôn điểm cuối (kiểu bấm–kéo–thả)
     if(dpen&&pending&&pending.p.length===dpen.n){
       const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
@@ -715,8 +802,15 @@ let dpen=null;                                     // mốc bấm xuống, để
   });
   cvs.addEventListener('mousemove',e=>{
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+    if(veBut&&pending){                           // bút đang chạy: gom điểm theo đường rê
+      const l=pending.p[pending.p.length-1];
+      // thưa bớt: chỉ ghi khi đã dịch >3px, kẻo một nét ngắn cũng thành ngàn điểm
+      if(!l||Math.hypot(px-xOfT(l.t),py-yOfP(pending.pane,l.v))>3) addPoint(px,py);
+      return;
+    }
     if(dmove){                                    // đang kéo hình vẽ (cả hình hoặc 1 điểm neo)
-      const dt=tOfX(px)-dmove.t0, dv=snapV(px,py)-dmove.v0, d=draws[dmove.i];
+      // hình ở dải RSI quy theo thang 0..100, không hít nến; hình vùng giá giữ hít nến
+      const dt=tOfX(px)-dmove.t0, dv=(dmove.pane==='rsi'?vRSI(py):snapV(px,py))-dmove.v0, d=draws[dmove.i];
       if(dmove.pt!=null){ d.p[dmove.pt]={t:dmove.p0[dmove.pt].t+dt, v:dmove.p0[dmove.pt].v+dv}; }
       else d.p=dmove.p0.map(q=>({t:q.t+dt, v:q.v+dv}));
       hover=-1; self.draw(); return;
@@ -748,11 +842,14 @@ let dpen=null;                                     // mốc bấm xuống, để
     if(!cvs.isConnected) return;
     const a=document.activeElement;
     if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable)) return;
+    if(e.key==='Enter'&&chotMo()){ e.preventDefault(); return; }   // chốt đa đoạn/bút
     if(sel<0) return;
     if(e.key!=='Delete'&&e.key!=='Backspace') return;
     e.preventDefault(); self.delSel();
   });
-  cvs.addEventListener('dblclick',()=>{ self.resetView(); });
+  /* BẤM ĐÚP có hai việc: đang vẽ hình nhiều điểm thì CHỐT nét, còn lại là xem lại
+     toàn bộ. Để hai listener riêng thì chốt nét xong bị listener kia reset khung ngay. */
+  cvs.addEventListener('dblclick',e=>{ if(chotMo()){ e.preventDefault(); return; } self.resetView(); });
   // cảm ứng: 1 ngón trượt/xem, 2 ngón chụm để phóng
   cvs.addEventListener('touchstart',e=>{
     if(e.touches.length===2){
@@ -783,7 +880,8 @@ let dpen=null;                                     // mốc bấm xuống, để
     if(dmove&&e.touches.length===1){          // kéo hình vẽ bằng ngón tay
       e.preventDefault();
       const px=e.touches[0].clientX-r.left, py=e.touches[0].clientY-r.top;
-      const dt=tOfX(px)-dmove.t0, dv=snapV(px,py)-dmove.v0, d=draws[dmove.i];
+      // hình ở dải RSI quy theo thang 0..100, không hít nến; hình vùng giá giữ hít nến
+      const dt=tOfX(px)-dmove.t0, dv=(dmove.pane==='rsi'?vRSI(py):snapV(px,py))-dmove.v0, d=draws[dmove.i];
       if(dmove.pt!=null) d.p[dmove.pt]={t:dmove.p0[dmove.pt].t+dt, v:dmove.p0[dmove.pt].v+dv};
       else d.p=dmove.p0.map(q=>({t:q.t+dt, v:q.v+dv}));
       hover=-1; self.draw(); return;
