@@ -658,7 +658,9 @@ function raceTick(ts){
   const end=raceEnd();
   RA.f+=dt*2.2*RA.speed;
   if(RA.f>=end){ RA.f=end; RA.playing=false;
-    const b=$('#raPlay'); if(b) b.textContent='▶ Chạy lại'; }
+    const b=$('#raPlay');
+    if(b){ b.dataset.t='again';
+      b.textContent=innerWidth<=640?'▶':'▶ Chạy lại'; } }
   const sl=$('#raSlide'); if(sl) sl.value=RA.f;
   curDraw();
   if(RA.playing) RA.raf=requestAnimationFrame(raceTick);
@@ -849,18 +851,23 @@ function renderRace(){
   for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
   const secKeys=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a]);
   const secOpts=sel=>secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
-  const thang=lb=>{ const p=String(lb).split('/'); return 'Tháng '+p[0]+'/20'+p[1]; };
+  // màn dọc: ô chọn hẹp -> bỏ chữ "Tháng" kẻo select cắt cụt mất số năm
+  const thang=lb=>{ const p=String(lb).split('/');
+    return (innerWidth<=640?'':'Tháng ')+p[0]+'/20'+p[1]; };
   const fromOpts=D.labels.map((lb,i)=>'<option value="'+i+'"'+(i===DCA.from?' selected':'')+'>'+thang(lb)+'</option>').join('');
   $('#m-race').innerHTML=head(m)
-    +'<div class="ctl"><button class="btn" id="raPlay">▶ Bắt đầu</button>'
-    +'<div class="seg" id="raMode"><button data-v="race"'+(RA.mode!=='dca'?' class="on"':'')+'>🏁 Đường đua</button>'
-    +'<button data-v="dca"'+(RA.mode==='dca'?' class="on"':'')+'>🌱 Đầu tư bền vững</button></div>'
-    +'<div class="seg" id="raSpeed"><button data-v="0.5">chậm</button><button data-v="1" class="on">vừa</button>'
-    +'<button data-v="2">nhanh</button><button data-v="4">rất nhanh</button></div>'
-    +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0" style="flex:1;min-width:170px"/></div>'
+    +'<div class="ctl" id="raBar"><button class="btn" id="raPlay"></button>'
+    +'<div class="seg" id="raMode">'
+    +'<button data-v="race"'+(RA.mode!=='dca'?' class="on"':'')+' data-lg="🏁 Đường đua" data-sm="🏁 Đua"></button>'
+    +'<button data-v="dca"'+(RA.mode==='dca'?' class="on"':'')+' data-lg="🌱 Đầu tư bền vững" data-sm="🌱 Bền vững"></button></div>'
+    +'<div class="seg" id="raSpeed"><button data-v="0.5" data-lg="chậm" data-sm="×½"></button>'
+    +'<button data-v="1" class="on" data-lg="vừa" data-sm="×1"></button>'
+    +'<button data-v="2" data-lg="nhanh" data-sm="×2"></button>'
+    +'<button data-v="4" data-lg="rất nhanh" data-sm="×4"></button></div>'
+    +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0"/></div>'
     /* ---- chế độ ĐƯỜNG ĐUA ---- */
     +'<div id="raView">'
-    +'<div class="ctl"><span class="lb">Nhóm ngành</span>'
+    +'<div class="ctl" id="raCtl"><span class="lb">Nhóm ngành</span>'
     +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts(RA.sector)+'</select>'
     +'<span class="note raRange" style="margin:0">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
     +'<div class="panel racePanel"><canvas id="cvRace" class="block" style="height:520px"></canvas></div>'
@@ -868,12 +875,12 @@ function renderRace(){
     +'</div>'
     /* ---- chế độ ĐẦU TƯ BỀN VỮNG ---- */
     +'<div id="dcaView" style="display:none">'
-    +'<div class="ctl"><span class="lb">Mỗi tháng</span>'
-    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+DCA.amt+'" style="width:80px"/>'
-    +'<span class="lb" style="text-transform:none;letter-spacing:0">triệu đồng</span>'
-    +'<span class="lb">Từ</span><select id="dcaFrom">'+fromOpts+'</select>'
-    +'<span class="lb">Nhóm ngành</span>'
-    +'<select id="dcaSec"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select></div>'
+    +'<div class="ctl" id="dcaCtl"><span class="lb lbMoi">Mỗi tháng</span>'
+    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+DCA.amt+'" title="Số tiền bỏ vào mỗi tháng (triệu đồng)"/>'
+    +'<span class="lb lbTr" style="text-transform:none;letter-spacing:0">triệu đồng</span>'
+    +'<span class="lb lbTu">Từ</span><select id="dcaFrom" title="Tháng bắt đầu">'+fromOpts+'</select>'
+    +'<span class="lb lbNg">Nhóm ngành</span>'
+    +'<select id="dcaSec" title="Nhóm ngành"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select></div>'
     +'<div class="panel racePanel"><canvas id="cvDca" class="block" style="height:520px"></canvas></div>'
     +'<div class="note">8 mã giá trị cao nhất trong nhóm — bấm ▶ để xem tiền lớn lên qua từng tháng. Đường đứt là vốn đã bỏ; đường vàng là gửi ngân hàng lãi 7%/năm (ghép lãi theo tháng) để so ngay đầu tư thắng hay thua tiết kiệm.</div>'
     +'<div class="panel"><div class="ph">Giá trị hôm nay<span id="dcaSum" style="margin-left:auto;font-weight:600;color:var(--mut)"></span></div>'
@@ -882,29 +889,44 @@ function renderRace(){
     +'(cả tiền lẫn cổ phiếu) đã nằm trong kết quả như thể được tái đầu tư; số ít đợt nguồn bỏ sót thì kết quả hơi thấp hơn thực nhận. '
     +'Mã phải có giao dịch đủ từ tháng bắt đầu mới được xếp hạng. Thống kê quá khứ, không phải khuyến nghị đầu tư.</div>'
     +'</div>';
+  /* nhãn nút dài/ngắn theo bề ngang — màn dọc phải nén để cả cụm nằm gọn MỘT hàng */
+  const hep=()=>innerWidth<=640;
+  const nhanPlay=t=>{ const b2=$('#raPlay');
+    b2.textContent=hep()?(t==='pause'?'⏸':'▶'):
+      (t==='pause'?'⏸ Tạm dừng':t==='again'?'▶ Chạy lại':t==='cont'?'▶ Tiếp tục':'▶ Bắt đầu');
+    b2.dataset.t=t; };
+  const capNhatNhan=()=>{
+    $$('#raMode button,#raSpeed button').forEach(b2=>b2.textContent=hep()?b2.dataset.sm:b2.dataset.lg);
+    nhanPlay($('#raPlay').dataset.t||'start');
+  };
   const syncMode=()=>{                            // đổi chế độ: dừng chạy, về vạch xuất phát
     RA.playing=false; RA.f=0; RA.curY={}; RA.dcaMx=0;
-    $('#raPlay').textContent='▶ Bắt đầu';
+    nhanPlay('start');
     $('#raView').style.display=RA.mode==='dca'?'none':'';
     $('#dcaView').style.display=RA.mode==='dca'?'':'none';
-    const sl=$('#raSlide'); sl.max=raceEnd(); sl.value=0;
+    /* THANH TUA đi theo chế độ: nhét vào cuối hàng điều khiển của view đang hiện.
+       Để nguyên ở hàng đầu thì màn dọc phải gánh 4 cụm -> tràn thành 4 hàng riêng. */
+    const sl=$('#raSlide');
+    (RA.mode==='dca'?$('#dcaCtl'):$('#raCtl')).appendChild(sl);
+    sl.max=raceEnd(); sl.value=0;
     requestAnimationFrame(()=>curDraw());         // canvas vừa hiện mới đo được kích thước
   };
+  addEventListener('resize',capNhatNhan);
   $('#raMode').querySelectorAll('button').forEach(b=>b.onclick=()=>{
     if(RA.mode===b.dataset.v) return;
     $('#raMode').querySelectorAll('button').forEach(x2=>x2.classList.remove('on'));
     b.classList.add('on'); RA.mode=b.dataset.v; syncMode();
   });
   $('#raPlay').onclick=()=>{
-    if(RA.playing){ RA.playing=false; $('#raPlay').textContent='▶ Tiếp tục'; return; }
+    if(RA.playing){ RA.playing=false; nhanPlay('cont'); return; }
     if(RA.f>=raceEnd()-0.01) RA.f=0;
-    RA.playing=true; RA.last=0; $('#raPlay').textContent='⏸ Tạm dừng';
+    RA.playing=true; RA.last=0; nhanPlay('pause');
     RA.raf=requestAnimationFrame(raceTick);
   };
   $('#raSpeed').querySelectorAll('button').forEach(b=>b.onclick=()=>{
     $('#raSpeed').querySelectorAll('button').forEach(x2=>x2.classList.remove('on'));
     b.classList.add('on'); RA.speed=+b.dataset.v; });
-  $('#raSlide').oninput=e=>{ RA.playing=false; $('#raPlay').textContent='▶ Tiếp tục';
+  $('#raSlide').oninput=e=>{ RA.playing=false; nhanPlay('cont');
     RA.f=+e.target.value; curDraw(); };
   $('#raSlide').onchange=()=>settleRace();        // thả tay -> hàng nào bay dở cũng về đúng chỗ
   $('#raSec').onchange=e=>{ RA.sector=e.target.value||null; RA.curY={}; drawRace(); settleRace(); };
@@ -912,7 +934,7 @@ function renderRace(){
   $('#dcaAmt').oninput=e=>{ DCA.amt=+e.target.value||0; DCA.calc=null; RA.dcaMx=0; renderDCA(); drawDCA(1); };
   $('#dcaFrom').onchange=e=>{ DCA.from=+e.target.value||0; DCA.calc=null; syncMode(); renderDCA(); };
   $('#dcaSec').onchange=e=>{ DCA.sec=e.target.value||null; DCA.calc=null; RA.dcaMx=0; renderDCA(); drawDCA(1); };
-  syncMode();
+  syncMode(); capNhatNhan();
   renderDCA();
 }
 MODULES.find(x=>x.id==='race').after=()=>requestAnimationFrame(()=>curDraw());

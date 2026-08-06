@@ -320,16 +320,27 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .dcarow .dval{text-align:right;font-weight:800;font-size:13.5px;white-space:nowrap;line-height:1.25}
 .dcarow .dval b{display:block;font-size:11px}
 @media(max-width:640px){
-  /* màn dọc: mỗi cụm điều khiển MỘT hàng (nút đua / chọn ngành / tốc độ / tua),
-     thẻ đua sát mép cho rộng đường đua */
+  /* MÀN DỌC — GỌN ĐÚNG 2 HÀNG (trước đây 5 hàng, ăn 218px trước khi thấy đường đua):
+     H1  ▶ · chế độ · tốc độ      (nhãn nút rút ngắn qua data-sm trong congcu.js)
+     H2  nhóm ngành · thanh tua   (bền vững: tiền · từ · ngành · tua)
+     Thanh tua do JS chuyển sang khối của chế độ đang hiện. */
   .racePanel{padding:8px 6px}
-  #raPlay{width:100%}
-  .ctl select{flex:1 1 120px;min-width:0}
-  .ctl input[type=number]{flex:0 1 80px}
-  .ctl .seg{display:flex;flex:1 1 100%}
-  .ctl .seg button{flex:1;padding:7px 4px}
-  .ctl input[type=range]{flex:1 1 100%}
-  .raRange{display:none}
+  #raBar{gap:5px;flex-wrap:nowrap}
+  #raPlay{flex:0 0 auto;padding:8px 11px;font-size:14px}
+  #raBar .seg{flex:1 1 auto;min-width:0}
+  #raBar .seg button{flex:1;padding:7px 3px;font-size:11.5px;white-space:nowrap}
+  #raCtl,#dcaCtl{gap:6px;flex-wrap:nowrap}
+  #raCtl select,#dcaCtl select{flex:1 1 70px;min-width:0;padding:8px 6px;font-size:12.5px}
+  #dcaCtl input[type=number]{flex:0 0 46px;min-width:0;padding:8px 4px;font-size:12.5px;text-align:center}
+  .ctl input[type=range]{flex:1 1 60px;min-width:0}
+  /* nhãn chữ nhường chỗ: ô chọn đã tự nói nội dung ("Toàn thị trường", "Tháng 3/2020"),
+     riêng "tr" giữ lại vì con số trần không nói được đơn vị */
+  .raRange,.lbMoi,.lbTu,.lbNg{display:none}
+  /* nhãn "triệu đồng" rút còn "tr": font-size:0 nuốt chữ gốc, ::after tự đặt lại cỡ */
+  .lbTr{font-size:0}
+  .lbTr::after{content:'tr';font-size:11px;letter-spacing:0}
+  #dcaFrom{flex:0 0 84px}
+  #dcaSec,#raSec{flex:1 1 104px}
   .dcarow{grid-template-columns:22px 52px 1fr minmax(96px,auto);gap:7px;padding:7px 8px}
   .dcarow .lgw,.dcarow .noimg{width:20px;height:20px}
   .dcarow .idn b{font-size:12px}
@@ -415,6 +426,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260809f"></script>
+<script src="assets/congcu.js?v=20260809h"></script>
 </body>
 </html>
