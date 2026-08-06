@@ -104,6 +104,17 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .statgrid .row span:last-child{font-weight:700;text-align:right}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
   .statgrid .row.hi span:last-child{color:var(--green)}   /* tiền mặt + LN sau thuế: xanh lá */
+  /* HÀNG CẶP: hai chỉ số ngắn cùng họ đứng cạnh nhau, mỗi cái vẫn có nhãn RIÊNG và
+     số nằm NGANG hàng nhãn. Trước đây dồn "P/E · P/B · EPS · ROA" vào một nhãn rồi
+     ghép 4 số bằng dấu chấm -> phải tự đếm xem số nào ứng nhãn nào, rất rối mắt. */
+  .statgrid .row.pair{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:0;border-bottom:0}
+  .statgrid .row.pair>i{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    font-style:normal;padding:7.5px 0;border-bottom:1px solid var(--rowline);min-width:0}
+  .statgrid .row.pair>i>b{font-weight:700;text-align:right;white-space:nowrap}
+  .statgrid .row.pair>i>u{text-decoration:none;color:var(--muted);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .statgrid .row.pair>i+i{padding-left:16px;border-left:1px solid var(--rowline)}
+  .statgrid .row.pair>i.g>b{color:var(--green)}
   /* chọn kỳ dòng tiền khối ngoại ngay trên dòng NN */
   .nnseg{display:inline-flex;gap:3px;margin-left:7px;vertical-align:-1px}
   .nnseg b{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:5px;cursor:pointer;
@@ -341,7 +352,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260809j"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260809l"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -490,8 +501,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260809j"></script>
-<script src="assets/chart.js?v=20260809j"></script>
+<script src="assets/core.js?v=20260809l"></script>
+<script src="assets/chart.js?v=20260809l"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -538,11 +549,11 @@ function renderHero(){
   }
   /* Chỉ giữ những con số người xem thật sự cần. Khối lượng quy ra TIỀN (tỷ đồng) —
      "bao nhiêu tỷ" dễ hình dung hơn "bao nhiêu cổ phiếu". */
-  /* GHÉP ĐÔI những chỉ số ngắn và cùng họ vào một dòng để bảng không dài thêm:
-     vốn hoá·SLCP (cùng nói về quy mô) · EPS·BVPS (cùng đơn vị đồng/cp) ·
-     cổ tức·room ngoại (cùng đơn vị %). */
+  /* Chỉ số ngắn đi theo CẶP trên cùng một hàng, mỗi cái giữ nhãn riêng và số nằm
+     ngang nhãn -> đọc thẳng, không phải dò xem số nào ứng nhãn nào. */
+  const cap=(a,b)=>['pair',a,b];      // [kiểu, [nhãn,số,màu], [nhãn,số,màu]]
   const rows=[
-    ['Vốn hoá · SLCP',CP.fmtVnd(C.mcapLive||C.mcap)+' · '+CP.fmtShares(C.shares),''],
+    cap(['Vốn hoá',CP.fmtVnd(C.mcapLive||C.mcap)],['SLCP',CP.fmtShares(C.shares)]),
     ['Khối lượng giao dịch',CP.fmtVnd(C.gtgd),''],
   ];
   // LN sau thuế TRƯỚC, tiền mặt SAU — đọc theo mạch "lãi bao nhiêu, rồi còn bao nhiêu tiền"
@@ -552,19 +563,24 @@ function renderHero(){
     // P/E tính SỐNG theo giá hiện tại (giá / EPS 4 quý) đúng như cột P/E ở bảng giá —
     // trước đây trang này in thẳng trường pe của kho nên cùng một mã ra hai số khác nhau
     // giữa hai trang. Rơi về pe của kho khi mã chưa có EPS.
-    ['P/E · P/B · ROA',
-      ((C.eps>0&&C.price>0)?(C.price/C.eps).toFixed(1):(C.pe!=null?(+C.pe).toFixed(1):'—'))
-      +' · '+(C.pb!=null?(+C.pb).toFixed(2):'—')
-      +' · '+(FIN.roa!=null?FIN.roa.toFixed(1)+'%':'—'),''],
-    // EPS và BVPS đi cặp: lãi trên mỗi cổ phiếu / giá trị sổ sách trên mỗi cổ phiếu
-    ['EPS · BVPS',(C.eps!=null&&C.eps!==0?CP.fmtD(C.eps):'—')
-      +' · '+(FIN.bvps!=null?CP.fmtD(FIN.bvps):'—')+' đ',''],
-    // room ngoại = số CP nước ngoài CÒN được mua, quy ra % SLCP (chạy theo bảng giá sống)
-    ['Tỷ suất cổ tức · Room ngoại',(C.divY!=null?(+C.divY).toFixed(1)+'%':'—')
-      +' · '+(C.froom!=null&&C.shares?(C.froom/C.shares*100).toFixed(1)+'%':'—'),''],
+    // P/E tính SỐNG theo giá hiện tại (giá / EPS 4 quý) đúng như cột P/E ở bảng giá
+    cap(['P/E',(C.eps>0&&C.price>0)?(C.price/C.eps).toFixed(1):(C.pe!=null?(+C.pe).toFixed(1):'—')],
+        ['P/B',C.pb!=null?(+C.pb).toFixed(2):'—']),
+    cap(['EPS',C.eps!=null&&C.eps!==0?CP.fmtD(C.eps)+' đ':'—'],
+        ['BVPS',FIN.bvps!=null?CP.fmtD(FIN.bvps)+' đ':'—']),
+    cap(['ROA',FIN.roa!=null?FIN.roa.toFixed(1)+'%':'—'],
+        ['Cổ tức',C.divY!=null?(+C.divY).toFixed(1)+'%/năm':'—']),
+    // KHỐI NGOẠI: kho lưu trần room (fcap) + room còn lại (froom), đều tính bằng CỔ PHIẾU.
+    // đang sở hữu = trần − còn lại. Thiếu trần thì chỉ hiện được room.
+    cap(['NN sở hữu',(C.fcap>0&&C.froom!=null&&C.shares)
+          ?((C.fcap-C.froom)/C.shares*100).toFixed(1)+'%':'—'],
+        ['Room còn',(C.froom!=null&&C.shares)?(C.froom/C.shares*100).toFixed(1)+'%':'—']),
     ['NN mua – bán ròng'+nnSegHTML(),`<span id="nnVal">${nnCell()}</span>`,''],
   );
-  $('stats').innerHTML=rows.map(r=>`<div class="row ${r[2]}"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  const oNho=(x,cl)=>`<i class="${cl||''}"><u>${x[0]}</u><b>${x[1]}</b></i>`;
+  $('stats').innerHTML=rows.map(r=>r[0]==='pair'
+    ? `<div class="row pair">${oNho(r[1],r[3])}${oNho(r[2],r[4])}</div>`
+    : `<div class="row ${r[2]}"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
   bindNnSeg();
 }
 

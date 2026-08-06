@@ -85,7 +85,10 @@ CP.loadBase=async function(){
       c.price=r.close||0; c.ref=r.ref||0; c.ceil=r.ceil||0; c.flr=r.floor||0;
       c.vol=r.vol||0; c.gtgd=r.gtgd||0; c.high=r.h||0; c.low=r.l||0; c.o=r.o||0;
       c.fbuy=r.fBuy||0; c.fsell=r.fSell||0; c.traded=(r.vol||0)>0;
-      if(r.fRoom!=null) c.froom=r.fRoom;   // room ngoại còn lại (cổ phiếu)
+      // KHỐI NGOẠI: cả hai đều tính bằng CỔ PHIẾU. fTotal = TRẦN room (nguồn VNDirect,
+      // VPS không có) -> có nó mới suy được "đang sở hữu = trần − còn lại".
+      if(r.fRoom!=null) c.froom=r.fRoom;
+      if(r.fTotal!=null) c.fcap=r.fTotal;
       /* nt = CHƯA KHỚP LỆNH phiên này (giá là giá khớp cuối cùng của một phiên cũ).
          KHÔNG được lấy giá cũ trừ tham chiếu hôm nay ra % — đó là biến động chưa từng
          xảy ra. Cũng không được tô nhãn trần/sàn cho một mã đứng im. */
@@ -209,9 +212,10 @@ async function doPoll(only){
       c.high=(parseFloat(t.highPrice)||0)*1000||c.high;
       c.low=(parseFloat(t.lowPrice)||0)*1000||c.low;
       c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
-      // fRoom trả THẲNG số CP, không nhân 10. Nhận cả số 0 — room=0 nghĩa là KỊCH TRẦN,
-      // đúng cái người xem cần biết nhất; lọc >0 là mã hết room lại hiện '—' như thiếu số.
-      const fr=parseFloat(t.fRoom); if(!isNaN(fr)&&fr>=0) c.froom=fr;
+      // fRoom của VPS tính theo LÔ 10 CỔ PHIẾU y như fBVol/fSVolume — đối chiếu
+      // currentRoom của VNDirect ra đúng hệ số 10,0 ở cả 4 mã thử. Quên nhân 10 là
+      // room nhỏ đi 10 lần (HPG 2,7% thay vì 27,3%). Nhận cả số 0 = KỊCH TRẦN.
+      const fr=parseFloat(t.fRoom); if(!isNaN(fr)&&fr>=0) c.froom=fr*10;
       // vừa có lệnh khớp -> mã hết "đứng im", % lại tính được bình thường
       if(last>0) c.nt=false;
       c.chg1d=(!c.nt&&c.ref>0&&c.price>0)?(c.price-c.ref)/c.ref*100:(c.nt?null:c.chg1d);

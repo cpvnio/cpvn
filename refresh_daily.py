@@ -102,8 +102,10 @@ for i in range(0,len(syms),150):
             board[x["sym"]]={"ref":(float(x.get("r") or 0))*1000,"ceil":(float(x.get("c") or 0))*1000,
                 "floor":(float(x.get("f") or 0))*1000,"fBuy":(float(x.get("fBVol") or 0))*10,
                 "fSell":(float(x.get("fSVolume") or 0))*10,
-                # fRoom = số CP nước ngoài CÒN được mua (đơn vị CỔ PHIẾU, không nhân 10)
-                "fRoom":float(x.get("fRoom") or 0),
+                # fRoom cũng theo LÔ 10 y như fBVol/fSVolume — đối chiếu currentRoom của
+                # VNDirect ra đúng hệ số 10,0 ở cả 4 mã thử. Quên nhân 10 là room nhỏ đi
+                # 10 lần (HPG 2,7% thay vì 27,3%).
+                "fRoom":(float(x.get("fRoom") or 0))*10,
                 "gtgd":(float(x.get("avePrice") or 0))*1000*(float(x.get("lot") or 0))*10}
     except Exception as e: print("  board lỗi:",e,flush=True)
 print(f"bảng giá: {len(board)} mã",flush=True)
@@ -245,6 +247,35 @@ print(f"ĐÃ CẬP NHẬT universe.json ({len(u['stocks'])} mã, phiên {sess_da
 
 # 5) snapshot EOD (client chỉ tải latest.json) + lịch sử chỉ số
 os.makedirs(EOD_DIR,exist_ok=True)
+
+# 5a) TRẦN ROOM NGOẠI — bảng giá VPS chỉ có room CÒN LẠI, không có trần, nên không suy
+# ra được "nước ngoài đang sở hữu bao nhiêu". VNDirect trả cả totalRoom (trần) lẫn
+# currentRoom (còn lại), gọi GỘP 50 mã một lượt nên cả sàn chỉ ~30 lượt, ~16 giây.
+froom_cap={}
+def fetch_room_caps():
+    tu=(datetime.date.today()-datetime.timedelta(days=12)).isoformat()
+    got=0
+    for i in range(0,len(syms),50):
+        lo=",".join(syms[i:i+50])
+        try:
+            d=get(f"https://api-finfo.vndirect.com.vn/v4/foreigns"
+                  f"?q=code:{lo}~tradingDate:gte:{tu}&sort=tradingDate:desc&size=900")
+            best={}
+            for r in d.get("data") or []:
+                c,day=r.get("code"),r.get("tradingDate") or ""
+                if not c: continue
+                if c not in best or day>best[c][0]:
+                    best[c]=(day,r.get("totalRoom") or 0)
+            for c,(_,cap) in best.items():
+                if cap>0: froom_cap[c]=cap; got+=1
+        except Exception: pass
+        time.sleep(0.12)
+    return got
+try:
+    print(f"trần room ngoại: {fetch_room_caps()} mã",flush=True)
+except Exception as e:
+    print("trần room ngoại: lỗi",e,flush=True)
+
 snap=[]
 for sym in syms:
     p,b=prices.get(sym),board.get(sym,{})
@@ -260,7 +291,8 @@ for sym in syms:
     r={"sym":sym,"close":p["close"],"o":p["o"],"h":p["h"],"l":p["l"],
        "vol":0 if nt else p["vol"],
        "ref":b.get("ref"),"ceil":b.get("ceil"),"floor":b.get("floor"),"fBuy":b.get("fBuy"),
-       "fSell":b.get("fSell"),"gtgd":b.get("gtgd"),"fRoom":b.get("fRoom")}
+       "fSell":b.get("fSell"),"gtgd":b.get("gtgd"),
+       "fRoom":b.get("fRoom"),"fTotal":froom_cap.get(sym)}
     if nt: r["nt"]=1
     snap.append(r)
 # BẢNG GIÁ CÓ SỐNG KHÔNG? snap dựng từ KHO NẾN nên luôn đủ 100 mã kể cả khi bảng giá
