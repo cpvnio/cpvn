@@ -292,7 +292,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260810a"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260810d"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -363,7 +363,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260810a"></script>
+<script src="assets/core.js?v=20260810d"></script>
 <script src="assets/screener.js?v=20260810a"></script>
 <script>
 'use strict';
@@ -612,7 +612,14 @@ function renderStats(){
   let html=(CP.indices||[]).map(d=>idx(d.name,d.value.toLocaleString('en-US',{maximumFractionDigits:2}),d.chg)).join('');
   html+='<span class="stsep"></span>';
   html+=idx('Vốn hoá TT',CP.fmtVnd(s.mcap),null);
-  html+=idx('Thanh khoản',Math.round(s.gtgd/1e9).toLocaleString('en-US')+' tỷ',null);
+  /* THANH KHOẢN dùng số CHÍNH THỨC cả sàn (VPS trả kèm chỉ số) chứ KHÔNG cộng gtgd từng
+     mã — bảng giá chỉ có phần khớp lệnh, thiếu hẳn thoả thuận. Đo phiên 06/08: cộng tay
+     HOSE ra 12.587 tỷ trong khi cả sàn 15.136 tỷ (hụt 17%), HNX 505 so với 1.074 (hụt 53%). */
+  const ty2=v=>Math.round(v/1e9).toLocaleString('en-US')+' tỷ';
+  const gSan=nm=>(((CP.indices||[]).find(d=>d.name===nm)||{}).gtgd)||0;
+  const gHose=gSan('VNINDEX'), gPhu=gSan('HNX')+gSan('UPCOM');
+  html+=idx('Thanh khoản HOSE',ty2(gHose||s.gtgd),null);
+  if(gPhu) html+=idx('HNX+UPCOM',ty2(gPhu),null);
   // chip màu: bấm để lọc bảng theo đúng nhóm màu đó (bấm lại = bỏ lọc). Trần/sàn chỉ còn MÀU, không chữ.
   const chip=(k,txt,bg,col,tip)=>`<b data-bd="${k}" title="${tip}"`+
     ` class="bchip${ST.bd===k?' on':''}" style="background:${bg};color:${col}">${txt}</b>`;

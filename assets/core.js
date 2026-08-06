@@ -275,7 +275,7 @@ CP.saveLive=function(){
     localStorage.setItem('cpvn_live',JSON.stringify({at:Date.now(),
       sess:CP.liveSess||CP.dayVN(),
       final:!CP.sessionOpen()&&CP.liveSess===CP.lastSessionDate(),
-      idx:(CP.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
+      idx:(CP.indices||[]).map(i=>[i.name,i.value,i.chg,i.gtgd||0,i.vol||0]), d}));
   }catch(e){}
 };
 /* áp BẢN ĐỆM lên coins khi nó MỚI HƠN kho EOD. Sau 15h15 server đẩy kho ngày
@@ -305,7 +305,7 @@ CP.applyLive=function(){
       c.chg1d=c.ref>0?(last-c.ref)/c.ref*100:c.chg1d;
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
     }
-    if(j.idx&&j.idx.length) CP.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
+    if(j.idx&&j.idx.length) CP.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2],gtgd:x[3]||0,vol:x[4]||0}));
     CP.lastPollAt=j.at;                                // nhịp hiển thị nối tiếp từ bản đệm
     CP.liveAt=j.at;                                    // đệm ghi lúc nào -> biết còn tươi không
     if(j.final) CP.liveSess=j.sess;                    // bản CHỐT CỨNG -> khỏi gọi mạng nữa
@@ -357,9 +357,15 @@ CP.loadIndices=async function(){
     const IDX=[['10','VNINDEX'],['11','VN30'],['02','HNX'],['03','UPCOM']];
     const arr=await fetch(BG+'/getlistindexdetail/'+IDX.map(x=>x[0]).join(',')).then(r=>r.json());
     const nameOf=Object.fromEntries(IDX);
+    const cu=Object.fromEntries((CP.indices||[]).map(d=>[d.name,d]));
     const out=(arr||[]).filter(Boolean).map(x=>{
-      const v=+x.cIndex||0, ref=+x.oIndex||0;
-      return {name:nameOf[x.mc]||x.mc, value:v, chg:ref?(v-ref)/ref*100:0};
+      const v=+x.cIndex||0, ref=+x.oIndex||0, nm=nameOf[x.mc]||x.mc;
+      /* THANH KHOẢN CẢ SÀN do VPS trả sẵn (`value` = triệu đồng) — gồm cả thoả thuận,
+         khác hẳn tổng gtgd từng mã (chỉ khớp lệnh). Đầu phiên mới `value` về 0 trong khi
+         chỉ số vẫn là giá đóng cửa cũ: lúc đó giữ số phiên trước, đừng hiện 0 tỷ. */
+      const g=(+x.value||0)*1e6;
+      return {name:nm, value:v, chg:ref?(v-ref)/ref*100:0,
+              gtgd:g>0?g:((cu[nm]||{}).gtgd||0), vol:+x.vol||((cu[nm]||{}).vol||0)};
     }).filter(d=>d.value>0);
     // đêm reset: mọi chỉ số +0.00% giả -> giữ % PHIÊN GẦN NHẤT từ kho
     if(out.length&&!CP.sessionOpen()&&out.every(d=>Math.abs(d.chg||0)<0.005)

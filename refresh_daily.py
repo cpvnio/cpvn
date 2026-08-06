@@ -127,8 +127,14 @@ try:
     for x in get("https://bgapidatafeed.vps.com.vn/getlistindexdetail/10,11,02,03") or []:
         if not x: continue
         v=float(x.get("cIndex") or 0); ref=float(x.get("oIndex") or 0)
+        # THANH KHOẢN CHÍNH THỨC của cả sàn, VPS trả sẵn ở đây (`value` tính bằng TRIỆU
+        # đồng, `vol` tính bằng cổ phiếu). Cộng gtgd của TỪNG MÃ trong bảng giá KHÔNG ra
+        # số này: bảng giá chỉ có phần KHỚP LỆNH, thiếu hẳn THOẢ THUẬN — phiên 06/08 HOSE
+        # khớp lệnh 12.587 tỷ trong khi cả sàn 15.136 tỷ, hụt 17%; HNX hụt tới 53%.
         if v>0: indices.append({"name":IDX_NAMES.get(str(x.get("mc")),str(x.get("mc"))),
-                                "value":round(v,2),"chg":round((v-ref)/ref*100,2) if ref else 0})
+                                "value":round(v,2),"chg":round((v-ref)/ref*100,2) if ref else 0,
+                                "gtgd":round(float(x.get("value") or 0)*1e6),
+                                "vol":int(float(x.get("vol") or 0))})
 except Exception as e: print("  chỉ số lỗi:",e,flush=True)
 
 # 3) KHO LỊCH SỬ data/hist/{SYM}.json + mốc giá m3/m6/last cho universe

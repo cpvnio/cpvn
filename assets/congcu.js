@@ -239,7 +239,7 @@ function applyLiveCache(){
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
     }
     if(nnB||nnS){ ST.nnBuy=nnB; ST.nnSell=nnS; }
-    if(j.idx&&j.idx.length) ST.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2]}));
+    if(j.idx&&j.idx.length) ST.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2],gtgd:x[3]||0,vol:x[4]||0}));
     liveAt=j.at;
     return true;
   }catch(e){ return false; }
@@ -255,7 +255,7 @@ function saveLiveCache(){
     const cur=JSON.parse(localStorage.getItem('cpvn_live')||'null');
     if(cur&&cur.at>=liveAt) return;
     localStorage.setItem('cpvn_live',JSON.stringify({at:liveAt, sess:dayVN(),
-      idx:(ST.indices||[]).map(i=>[i.name,i.value,i.chg]), d}));
+      idx:(ST.indices||[]).map(i=>[i.name,i.value,i.chg,i.gtgd||0,i.vol||0]), d}));
   }catch(e){}
 }
 const FORCE_LIVE=/[?&]forcelive/.test(location.search);   // cờ kiểm thử: poll cả khi tab ẩn
@@ -297,7 +297,11 @@ async function pollLive(){
       for(const d of arr||[]){
         const m=IDX.find(x=>x[0]===String(d.indexId||d.mc||'')); if(!m) continue;
         const v=+d.cIndex||0, o=+d.oIndex||0;
-        if(v>0) out.push({name:m[1], value:v, chg:o>0?(v-o)/o*100:null});
+        /* `value` (triệu đồng) là THANH KHOẢN CẢ SÀN, gồm cả thoả thuận — không cộng lại
+           được từ gtgd từng mã. Đầu phiên nó về 0 thì giữ số phiên trước, đừng hiện 0. */
+        const g=(+d.value||0)*1e6, cu=(ST.indices||[]).find(i=>i.name===m[1])||{};
+        if(v>0) out.push({name:m[1], value:v, chg:o>0?(v-o)/o*100:null,
+                          gtgd:g>0?g:(cu.gtgd||0), vol:+d.vol||(cu.vol||0)});
       }
       if(out.length) ST.indices=out;
     }catch(e){}
@@ -517,6 +521,12 @@ function renderRadar(){
   const G=ST.market&&ST.market.global;
   const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
   const nnNet=ST.nnBuy-ST.nnSell;
+  /* THANH KHOẢN lấy số CHÍNH THỨC của cả sàn (VPS trả kèm chỉ số), KHÔNG cộng gtgd từng
+     mã: bảng giá chỉ có phần khớp lệnh, thiếu hẳn thoả thuận. Phiên 06/08 cộng tay ra
+     13.411 tỷ cho cả 3 sàn, trong khi riêng HOSE đã là 15.136 tỷ. Kho cũ chưa có trường
+     này thì rơi về cách cộng cũ, thà thiếu còn hơn trống. */
+  const gSan=nm=>(((ST.indices||[]).find(i=>i.name===nm)||{}).gtgd)||0;
+  const gHose=gSan('VNINDEX'), gPhu=gSan('HNX')+gSan('UPCOM');
   const infoRow=(k,v,cls2)=>'<div class="rrRow"><span>'+k+'</span>'+
     '<b class="bdg '+(cls2||'')+'">'+v+'</b></div>';
   $('#m-radar').innerHTML=head(m)
@@ -537,7 +547,8 @@ function renderRadar(){
     +'<div class="panel mood rrInfo">'
     +(vni?infoRow('VNINDEX',(+vni.value).toLocaleString('en-US',{maximumFractionDigits:2})
         +' · '+pct(vni.chg), vni.chg>0.005?'bUp':vni.chg<-0.005?'bDn':'bFl'):'')
-    +infoRow('Thanh khoản ngày',ty(s.gtgd),'bGold')
+    +infoRow('Thanh khoản HOSE',ty(gHose||s.gtgd),'bGold')
+    +(gPhu?infoRow('HNX + UPCOM',ty(gPhu),''):'')
     +infoRow('Khối ngoại mua ròng',(nnNet>=0?'+':'−')+ty(Math.abs(nnNet)),nnNet>=0?'bUp':'bDn')
     +'</div>'
     +'</div>'
