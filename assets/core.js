@@ -209,7 +209,9 @@ async function doPoll(only){
       c.high=(parseFloat(t.highPrice)||0)*1000||c.high;
       c.low=(parseFloat(t.lowPrice)||0)*1000||c.low;
       c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
-      const fr=parseFloat(t.fRoom); if(fr>0) c.froom=fr;   // fRoom trả thẳng số CP, KHÔNG nhân 10
+      // fRoom trả THẲNG số CP, không nhân 10. Nhận cả số 0 — room=0 nghĩa là KỊCH TRẦN,
+      // đúng cái người xem cần biết nhất; lọc >0 là mã hết room lại hiện '—' như thiếu số.
+      const fr=parseFloat(t.fRoom); if(!isNaN(fr)&&fr>=0) c.froom=fr;
       // vừa có lệnh khớp -> mã hết "đứng im", % lại tính được bình thường
       if(last>0) c.nt=false;
       c.chg1d=(!c.nt&&c.ref>0&&c.price>0)?(c.price-c.ref)/c.ref*100:(c.nt?null:c.chg1d);
