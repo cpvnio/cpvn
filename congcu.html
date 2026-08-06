@@ -315,9 +315,26 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   padding:7px 12px;border-top:1px solid var(--line);cursor:pointer;transition:.12s}
 .dcarow:first-child{border-top:0}
 .dcarow:hover{background:var(--card2)}
-/* hàng CỐ ĐỊNH (ngân hàng, rổ chia đều): không phải một mã nên không bấm vào đâu được */
+/* hàng CỐ ĐỊNH (ngân hàng, rổ phân bổ đều): không phải một mã nên không bấm vào đâu được */
 .dcarow.fix{cursor:default;background:var(--card2)}
-#dcaCtl2 #dcaMa{width:170px;flex:0 1 auto}
+/* CỤM THAM SỐ theo chế độ: display:contents -> mấy ô bên trong nằm CHUNG hàng flex với
+   nút chọn chế độ, hẹp thì tự xuống dòng. Bọc thành thẻ thường là thành hàng cứng riêng. */
+.pgrp{display:contents}
+/* Bảy ô tham số phải nằm gọn MỘT hàng ở màn ngang: cho hai ô rộng nhất co lại (flex 0 1)
+   thay vì giữ nguyên bề ngang rồi đẩy ô cuối rớt xuống hàng riêng — một ô lẻ loi ở hàng
+   hai vừa xấu vừa tốn nguyên một hàng. Màn hẹp thì mới cho xuống dòng. */
+#raBar #dcaMa{flex:0 1 140px;min-width:92px}
+#raBar #dcaSec{flex:0 1 196px;min-width:112px}
+#raBar #dcaAmt{width:72px;flex:0 0 auto}
+#raBar .seg button{padding:7px 10px}
+/* THANH ĐIỀU KHIỂN nằm trong khung đồ thị, dưới canvas — như thanh tua của trình phát */
+.playbar{display:flex;align-items:center;gap:10px;margin-top:9px;padding-top:9px;
+  border-top:1px solid var(--line)}
+.playbar #raPlay{flex:0 0 auto;padding:8px 17px}
+.playbar .seg{flex:0 0 auto}
+.playbar .seg button{padding:6px 11px;font-size:12px}
+.playbar input[type=range]{flex:1 1 auto;min-width:0}
+.playbar .rng{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--faint);white-space:nowrap}
 .dcarow .lgw{width:24px;height:24px;border-radius:7px;background:#fff;overflow:hidden;display:flex;
   align-items:center;justify-content:center}
 .dcarow img{width:100%;height:100%;object-fit:contain}
@@ -332,34 +349,33 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .dcarow .dval{text-align:right;font-weight:800;font-size:13.5px;white-space:nowrap;line-height:1.25}
 .dcarow .dval b{display:block;font-size:11px}
 @media(max-width:640px){
-  /* MÀN DỌC — mỗi hàng một nhiệm vụ, không hàng nào thừa (trước đây 5 hàng, ăn 218px
-     trước khi thấy đường đua):
-     H1  ▶ · chế độ · tốc độ                 (nhãn nút rút ngắn qua data-sm trong congcu.js)
-     H2  đua: nhóm ngành · thanh tua
-         bền vững: kiểu bỏ vốn · số tiền · tháng bắt đầu
-     H3  bền vững: phân bổ đều · nhóm ngành · ô gõ mã · thanh tua
-     Thanh tua do JS chuyển sang khối của chế độ đang hiện. */
+  /* MÀN DỌC — chỉ còn HÀNG THAM SỐ ở trên, nút chạy/tốc độ/thanh tua đã dời hẳn vào
+     trong khung đồ thị. Đường đua: 1 hàng (chế độ · ngành). Bền vững: 2 hàng do
+     #raBar tự xuống dòng (chế độ · kiểu · tiền · tháng / phân bổ · ngành · mã).
+     Trước đây là 2 và 3 hàng riêng biệt, chưa kể hàng nút chạy. */
   .racePanel{padding:8px 6px}
-  #raBar{gap:5px;flex-wrap:nowrap}
-  #raPlay{flex:0 0 auto;padding:8px 11px;font-size:14px}
-  #raBar .seg{flex:1 1 auto;min-width:0}
-  #raBar .seg button{flex:1;padding:7px 3px;font-size:11.5px;white-space:nowrap}
-  #raCtl,#dcaCtl,#dcaCtl2{gap:6px;flex-wrap:nowrap;margin-bottom:9px}
-  #raCtl select,#dcaCtl select,#dcaCtl2 select{flex:1 1 70px;min-width:0;padding:8px 6px;font-size:12.5px}
-  #dcaCtl input[type=number]{flex:0 0 46px;min-width:0;padding:8px 4px;font-size:12.5px;text-align:center}
-  #dcaCtl .seg button{padding:7px 7px;font-size:11.5px;white-space:nowrap}
-  #dcaCtl2 #dcaGop{flex:0 0 auto;padding:8px 8px;font-size:11.5px}
-  #dcaCtl2 #dcaMa{flex:1 1 72px;width:auto;min-width:0;padding:8px 7px;font-size:12.5px}
-  .ctl input[type=range]{flex:1 1 60px;min-width:0}
-  /* nhãn chữ nhường chỗ: ô chọn đã tự nói nội dung ("Toàn thị trường", "Tháng 3/2020"),
-     riêng "tr" giữ lại vì con số trần không nói được đơn vị */
-  .raRange,.lbMoi,.lbTu,.lbNg{display:none}
-  /* nhãn "triệu đồng" rút còn "tr": font-size:0 nuốt chữ gốc, ::after tự đặt lại cỡ */
+  #raBar{gap:6px;margin-bottom:10px}
+  #raBar .seg button{padding:7px 7px;font-size:11.5px;white-space:nowrap}
+  #raBar select{min-width:0;padding:8px 6px;font-size:12.5px}
+  #raBar #dcaAmt{flex:0 0 46px;width:auto;min-width:0;padding:8px 4px;font-size:12.5px;text-align:center}
+  #raBar #dcaFrom{flex:0 0 82px}
+  #raBar #dcaGop{flex:0 0 auto;padding:8px 7px;font-size:11.5px}
+  #raBar #raSec{flex:1 1 120px}
+  /* KHÔNG cho hai ô này NỞ ra (flex 0 1): để chúng nở thì ô nhóm ngành ăn hết chỗ trống
+     của hàng, đẩy ô gõ mã xuống chiếm trọn một hàng thứ ba chỉ cho một ô. Chốt bề ngang
+     lại thì cả bốn ô nằm vừa hàng hai -> màn dọc còn ĐÚNG 2 hàng tham số. */
+  #raBar #dcaSec{flex:0 1 88px;min-width:60px;max-width:none}
+  #raBar #dcaMa{flex:0 1 78px;width:auto;min-width:54px;padding:8px 7px;font-size:12.5px}
+  .playbar{gap:7px;margin-top:7px;padding-top:8px}
+  .playbar #raPlay{padding:8px 12px;font-size:14px}
+  .playbar .seg button{padding:6px 7px;font-size:11.5px}
+  .playbar input[type=range]{flex:1 1 60px}
+  .playbar .rng{display:none}     /* mốc thời gian đã có sẵn dưới đáy đồ thị */
+  /* nhãn chữ nhường chỗ: ô chọn đã tự nói nội dung ("Toàn thị trường", "3/2020") */
+  .lbNg{display:none}
+  /* nhãn "triệu/tháng, từ" rút còn "tr": font-size:0 nuốt chữ gốc, ::after đặt lại cỡ */
   .lbTr{font-size:0}
   .lbTr::after{content:'tr';font-size:11px;letter-spacing:0}
-  #dcaFrom{flex:0 0 84px}
-  #raSec{flex:1 1 104px}
-  #dcaSec{flex:1 1 64px}          /* hàng 3 còn phải chứa ô gõ mã + thanh tua */
   .dcarow{grid-template-columns:22px 52px 1fr minmax(96px,auto);gap:7px;padding:7px 8px}
   .dcarow .lgw,.dcarow .noimg{width:20px;height:20px}
   .dcarow .idn b{font-size:12px}
@@ -445,6 +461,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260810b"></script>
+<script src="assets/congcu.js?v=20260810c"></script>
 </body>
 </html>

@@ -40,6 +40,22 @@ function catChu(ctx,s,maxW){
     if(ctx.measureText(s.slice(0,m)+'…').width<=maxW) lo=m; else hi=m-1; }
   return s.slice(0,lo).trimEnd()+'…';
 }
+/* bẻ chuỗi thành TỐI ĐA sd dòng, mỗi dòng vừa maxW px (nhớ set ctx.font trước khi gọi).
+   Chữ thừa dồn hết vào dòng cuối rồi mới cắt — không bao giờ mất chữ lặng lẽ giữa chừng. */
+function beDong(ctx,s,maxW,sd){
+  const tu=String(s||'').trim().split(/\s+/).filter(Boolean);
+  if(!tu.length) return [];
+  const ra=[]; let d=tu[0], i=1;
+  for(;i<tu.length;i++){
+    const thu=d+' '+tu[i];
+    if(ctx.measureText(thu).width<=maxW){ d=thu; continue; }
+    if(ra.length===sd-1) break;                  // đang ở dòng cuối -> để phần thừa cho catChu
+    ra.push(d); d=tu[i];
+  }
+  if(i<tu.length) d+=' '+tu.slice(i).join(' ');
+  ra.push(catChu(ctx,d,maxW));
+  return ra;
+}
 window.LB={};
 LB.logoErr=function(el){
   const cdn=el.getAttribute('data-cdn');
@@ -807,15 +823,16 @@ function drawDCA(lerp){
   const fNhan=mob?'800 10.5px system-ui':'800 12.5px system-ui';
   const padL=mob?10:14, padT=20, padB=30;
   const gopRo=DCA.gop&&C2.ro;
-  let padR=mob?110:210, nhanRo='';
+  let padR=mob?110:210, nhanRo=[];
   if(gopRo&&!mob){
-    /* Tên NGÀNH dài không đoán trước được ("Quản lý và phát triển bất động sản") nên tính
-       NGƯỢC: chốt trần padR trước, trừ phần cứng (chấm màu, số tiền, %), phần còn lại mới
-       là chỗ cho tên -> cắt tên cho vừa đúng chỗ đó. Làm xuôi (đo tên rồi nới padR) thì
-       tên dài hơn trần là tràn ra ngoài khung. */
-    const tran=W*0.42, cung=11+5+62+44+12;
-    x.font=fNhan; nhanRo=catChu(x,tenRo(C2),tran-cung);
-    padR=clamp(cung+x.measureText(nhanRo).width,padR,tran);
+    /* Tên NGÀNH dài không đoán trước được ("Quản lý và phát triển bất động sản"): thay vì
+       cắt cụt cho vừa một dòng, BẺ XUỐNG TỐI ĐA 2 DÒNG rồi số tiền nằm dòng dưới cùng.
+       Chốt trần padR trước (34% bề ngang) rồi mới bẻ theo chỗ đó — làm ngược lại thì tên
+       dài hơn trần là tràn khỏi khung. */
+    const tran=W*0.34, cung=11+12;
+    x.font=fNhan; nhanRo=beDong(x,tenRo(C2),tran-cung,2);
+    const rong=Math.max(...nhanRo.map(s=>x.measureText(s).width),0);
+    padR=clamp(cung+rong,padR,tran);
   }
   /* MÀN DỌC: nhét tên ngành vào đầu đường thì chỉ còn "Tài chính…" — cụt và mất chỗ vẽ.
      Đưa hẳn lên khối chữ lớn góc trên (chỗ đang trống trong chế độ này), đầu đường chỉ
@@ -896,7 +913,7 @@ function drawDCA(lerp){
     const vNow=cur(r.vals);
     const pts=ptsOf(i=>r.vals[i]); pts.push([X(f),Y(vNow)]);
     vien(pts,col,gop?3.2:2.6);
-    tips.push({s:gop?nhanRo:r.s,col,v:vNow,y:Y(vNow),gop});
+    tips.push({s:gop?'':r.s,dong:gop?nhanRo:null,col,v:vNow,y:Y(vNow),gop});
   });
   x.restore();
   tips.push({s:mob?'NH 7%':'Ngân hàng 7%',col:GOLD,v:bank(f),y:Y(bank(f)),bank:true});
@@ -905,27 +922,59 @@ function drawDCA(lerp){
   tips.push({s:'vốn đã bỏ',col:MUTC,v:von,y:Y(von),von:true});
   // nhãn: dồn cho khỏi đè nhau rồi vẽ logo/chấm màu + mã + giá trị + % lãi
   tips.sort((a,b)=>a.y-b.y);
-  const GAP=mob?16:19, x0=X(f);
+  const GAP=mob?18:22, LH=mob?12:14, x0=X(f);
+  /* Nhãn tên-ngành chiếm NHIỀU DÒNG nên mỗi nhãn mang bề cao riêng; dồn theo bề cao đó
+     chứ không theo một GAP chung, bằng không khối 3 dòng đè lên hàng xóm. */
+  for(const t of tips) t.h=t.dong&&t.dong.length?Math.max(GAP,(t.dong.length+1)*LH):GAP;
   /* KẸP VÀO TRONG KHUNG TRƯỚC KHI DỒN: đường nào đang nhô khỏi đỉnh (trục chưa giãn kịp)
      thì nhãn của nó rơi vào toạ độ ÂM và biến mất khỏi canvas ngay giữa lúc chạy — đúng
      lúc người xem đang nhìn con số đó. Kẹp xong mới dồn cho khỏi đè nhau. */
-  for(const t of tips) t.y=clamp(t.y,padT+8,padT+plotH);
-  for(let i=1;i<tips.length;i++) if(tips[i].y-tips[i-1].y<GAP) tips[i].y=tips[i-1].y+GAP;
+  for(const t of tips) t.y=clamp(t.y,padT+t.h/2,padT+plotH-t.h/2);
+  for(let i=1;i<tips.length;i++){
+    const can=(tips[i-1].h+tips[i].h)/2;
+    if(tips[i].y-tips[i-1].y<can) tips[i].y=tips[i-1].y+can;
+  }
   /* tràn đáy thì đẩy NGƯỢC LÊN theo dây chuyền — bản cũ chỉ nhích được đúng một nhãn
      nên khi 4-5 nhãn cùng dồn xuống đáy (kiểu mua một lần, mã đội sổ nằm sát nhau) là
      chúng đè chồng lên nhau thành một mớ chữ */
   for(let i=tips.length-1;i>=0;i--){
-    const lim=(i===tips.length-1?padT+plotH:tips[i+1].y-GAP);
+    const lim=(i===tips.length-1?padT+plotH-tips[i].h/2
+                                :tips[i+1].y-(tips[i].h+tips[i+1].h)/2);
     if(tips[i].y>lim) tips[i].y=lim;
   }
   x.textBaseline='middle';
+  const fTien=mob?'700 10px system-ui':'700 11.5px system-ui';
+  const veTien=(t,sx,yy)=>{                      // số tiền + % lãi/lỗ so vốn đã bỏ
+    const s1=dcaFmt(t.v);
+    x.fillStyle=TXTC; x.font=fTien;
+    x.fillText(s1,sx,yy);
+    const w1=x.measureText(s1).width;            // đo TRƯỚC khi đổi font sang cỡ của %
+    /* % kể cả đường ngân hàng, để đọc thẳng "cổ phiếu +323% / gửi +18%" */
+    if(!mob&&von>0){
+      const p=(t.v/von-1)*100;
+      x.fillStyle=p>=0?(isLight()?'#0a9e63':'#16c784'):(isLight()?'#dc3644':'#ea3943');
+      x.font='700 10.5px system-ui';
+      x.fillText((p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%',
+                 sx+w1+5,yy);
+    }
+  };
   for(const t of tips){
     let sx=x0+6;
     if(t.von){                                   // nhãn vốn: chỉ chữ mờ, không chấm/không %
       x.fillStyle=MUTC; x.font=mob?'700 10px system-ui':'700 11px system-ui';
       x.textAlign='left'; x.fillText('vốn đã bỏ '+dcaFmt(von),sx,t.y); continue;
     }
-    const im=(t.bank||t.gop)?null:RA.imgs[t.s];
+    x.textAlign='left';
+    if(t.dong&&t.dong.length){                   // TÊN NHÓM NGÀNH: tên xuống dòng, tiền dưới cùng
+      x.fillStyle=t.col; x.beginPath(); x.arc(sx+3.5,t.y-(t.dong.length)*LH/2,3.5,0,7); x.fill();
+      const sx2=sx+11;
+      let yy=t.y-(t.dong.length)*LH/2;
+      x.font=mob?'800 10.5px system-ui':'800 12.5px system-ui'; x.fillStyle=t.col;
+      for(const ln of t.dong){ x.fillText(ln,sx2,yy); yy+=LH; }
+      veTien(t,sx2,yy);
+      continue;
+    }
+    const im=t.bank?null:RA.imgs[t.s];
     if(im&&im.complete&&im.naturalWidth){        // logo công ty tròn ở đầu đường
       const R2=mob?7:8;
       x.save(); x.beginPath(); x.arc(sx+R2,t.y,R2,0,7); x.closePath();
@@ -935,19 +984,9 @@ function drawDCA(lerp){
     }else{
       x.fillStyle=t.col; x.beginPath(); x.arc(sx+3.5,t.y,3.5,0,7); x.fill(); sx+=11;
     }
-    x.fillStyle=t.bank?GOLD:(t.gop?RO:TXTC); x.font=mob?'800 10.5px system-ui':'800 12.5px system-ui';
-    x.textAlign='left'; x.fillText(t.s,sx,t.y);
-    sx+=x.measureText(t.s).width+5;
-    x.fillStyle=TXTC; x.font=mob?'700 10px system-ui':'700 11.5px system-ui';
-    x.fillText(dcaFmt(t.v),sx,t.y);
-    /* % lãi/lỗ so vốn — kể cả đường ngân hàng, để đọc thẳng "cổ phiếu +323% / gửi +18%" */
-    if(!mob&&von>0){
-      sx+=x.measureText(dcaFmt(t.v)).width+5;
-      const p=(t.v/von-1)*100;
-      x.fillStyle=p>=0?(isLight()?'#0a9e63':'#16c784'):(isLight()?'#dc3644':'#ea3943');
-      x.font='700 10.5px system-ui';
-      x.fillText((p>=0?'+':'')+(Math.abs(p)>=1000?Math.round(p).toLocaleString('en-US'):p.toFixed(0))+'%',sx,t.y);
-    }
+    x.fillStyle=t.bank?GOLD:TXTC; x.font=mob?'800 10.5px system-ui':'800 12.5px system-ui';
+    x.fillText(t.s,sx,t.y);
+    veTien(t,sx+x.measureText(t.s).width+5,t.y);
   }
 }
 function renderRace(){
@@ -958,48 +997,53 @@ function renderRace(){
   for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
   const secKeys=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a]);
   const secOpts=sel=>secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
-  // màn dọc: ô chọn hẹp -> bỏ chữ "Tháng" kẻo select cắt cụt mất số năm
-  const thang=lb=>{ const p=String(lb).split('/');
-    return (innerWidth<=640?'':'Tháng ')+p[0]+'/20'+p[1]; };
+  /* ô tháng chỉ ghi "3/2020": nhãn ngay trước nó đã là "triệu/tháng, từ" nên chữ "Tháng"
+     trong từng dòng chọn chỉ tổ làm ô rộng thêm 46px, đủ để đẩy ô gõ mã rớt xuống hàng hai */
+  const thang=lb=>{ const p=String(lb).split('/'); return p[0]+'/20'+p[1]; };
   const fromOpts=D.labels.map((lb,i)=>'<option value="'+i+'"'+(i===DCA.from?' selected':'')+'>'+thang(lb)+'</option>').join('');
+  /* MỘT hàng tham số duy nhất (#raBar) + MỘT thanh điều khiển nằm TRONG khung đồ thị
+     (#raPlayBar, do syncMode chuyển sang khung của chế độ đang hiện). Trước đây nút chạy,
+     tốc độ, thanh tua và tham số nằm rải ở 2-3 hàng riêng, ăn hết chỗ trước khi thấy đồ
+     thị. Hai cụm tham số dùng display:contents nên con của chúng nằm CHUNG một hàng flex,
+     hẹp thì tự xuống dòng — không phải hai hàng cứng. */
   $('#m-race').innerHTML=head(m)
-    +'<div class="ctl" id="raBar"><button class="btn" id="raPlay"></button>'
+    +'<div class="ctl" id="raBar">'
     +'<div class="seg" id="raMode">'
     +'<button data-v="race"'+(RA.mode!=='dca'?' class="on"':'')+' data-lg="🏁 Đường đua" data-sm="🏁 Đua"></button>'
     +'<button data-v="dca"'+(RA.mode==='dca'?' class="on"':'')+' data-lg="🌱 Đầu tư bền vững" data-sm="🌱 Bền vững"></button></div>'
-    +'<div class="seg" id="raSpeed"><button data-v="0.5" data-lg="chậm" data-sm="×½"></button>'
-    +'<button data-v="1" class="on" data-lg="vừa" data-sm="×1"></button>'
-    +'<button data-v="2" data-lg="nhanh" data-sm="×2"></button>'
-    +'<button data-v="4" data-lg="rất nhanh" data-sm="×4"></button></div>'
-    +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0"/></div>'
+    /* tham số của ĐƯỜNG ĐUA */
+    +'<span class="pgrp" id="pRace"><span class="lb lbNg">Nhóm ngành</span>'
+    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts(RA.sector)+'</select></span>'
+    /* tham số của ĐẦU TƯ BỀN VỮNG */
+    +'<span class="pgrp" id="pDca">'
+    +'<span class="seg" id="dcaKieu">'
+    +'<button data-v="deu"'+(DCA.kieu!=='mot'?' class="on"':'')+' data-lg="🔁 Hàng tháng" data-sm="🔁 Tháng"></button>'
+    +'<button data-v="mot"'+(DCA.kieu==='mot'?' class="on"':'')+' data-lg="1️⃣ Một lần" data-sm="1️⃣ 1 lần"></button></span>'
+    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+dcaTien()+'" title="Số tiền đầu tư (triệu đồng)"/>'
+    +'<span class="lb lbTr" id="dcaLbAmt" style="text-transform:none;letter-spacing:0">'
+    +(DCA.kieu==='mot'?'triệu, từ':'triệu/tháng, từ')+'</span>'
+    +'<select id="dcaFrom" title="Tháng bắt đầu">'+fromOpts+'</select>'
+    +'<button class="btn gh tog'+(DCA.gop?' on':'')+'" id="dcaGop" data-lg="⚖ Phân bổ đều" data-sm="⚖ Phân bổ"'
+    +' title="Gộp cả nhóm thành MỘT danh mục, tiền chia đều cho từng mã — thay vì xếp hạng từng mã"></button>'
+    +'<select id="dcaSec" title="Nhóm ngành"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select>'
+    +'<input type="text" id="dcaMa" value="'+esc(DCA.ma)+'" placeholder="hoặc gõ mã: HPG FPT"'
+    +' title="Gõ 1 hay nhiều mã (cách nhau bởi dấu cách/phẩy) để đầu tư đúng mấy mã đó — bỏ trống thì dùng nhóm ngành"/>'
+    +'</span></div>'
+    /* thanh điều khiển dùng chung, syncMode nhét vào khung đồ thị đang hiện */
+    +'<div class="playbar" id="raPlayBar"><button class="btn" id="raPlay"></button>'
+    +'<div class="seg" id="raSpeed"><button data-v="0.5">×½</button>'
+    +'<button data-v="1" class="on">×1</button>'
+    +'<button data-v="2">×2</button><button data-v="4">×4</button></div>'
+    +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0"/>'
+    +'<span class="rng">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
     /* ---- chế độ ĐƯỜNG ĐUA ---- */
     +'<div id="raView">'
-    +'<div class="ctl" id="raCtl"><span class="lb">Nhóm ngành</span>'
-    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts(RA.sector)+'</select>'
-    +'<span class="note raRange" style="margin:0">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
-    +'<div class="panel racePanel"><canvas id="cvRace" class="block" style="height:520px"></canvas></div>'
+    +'<div class="panel racePanel"><canvas id="cvRace" class="block"></canvas></div>'
     +'<div class="note">Top 10 vốn hoá lớn nhất tại từng thời điểm (chọn nhóm ngành để đua riêng ngành đó). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
     +'</div>'
     /* ---- chế độ ĐẦU TƯ BỀN VỮNG ---- */
     +'<div id="dcaView" style="display:none">'
-    +'<div class="ctl" id="dcaCtl">'
-    +'<div class="seg" id="dcaKieu">'
-    +'<button data-v="deu"'+(DCA.kieu!=='mot'?' class="on"':'')+' data-lg="🔁 Hàng tháng" data-sm="🔁 Tháng"></button>'
-    +'<button data-v="mot"'+(DCA.kieu==='mot'?' class="on"':'')+' data-lg="1️⃣ Một lần" data-sm="1️⃣ 1 lần"></button></div>'
-    +'<span class="lb lbMoi" id="dcaLbAmt">'+(DCA.kieu==='mot'?'Bỏ vào':'Mỗi tháng')+'</span>'
-    +'<input type="number" id="dcaAmt" min="0.5" step="0.5" value="'+dcaTien()+'" title="Số tiền đầu tư (triệu đồng)"/>'
-    +'<span class="lb lbTr" style="text-transform:none;letter-spacing:0">triệu đồng</span>'
-    +'<span class="lb lbTu">Từ</span><select id="dcaFrom" title="Tháng bắt đầu">'+fromOpts+'</select>'
-    +'</div>'
-    +'<div class="ctl" id="dcaCtl2">'
-    +'<button class="btn gh tog'+(DCA.gop?' on':'')+'" id="dcaGop" data-lg="⚖ Phân bổ đều" data-sm="⚖ Phân bổ"'
-    +' title="Gộp cả nhóm thành MỘT danh mục, tiền chia đều cho từng mã — thay vì xếp hạng từng mã"></button>'
-    +'<span class="lb lbNg">Nhóm ngành</span>'
-    +'<select id="dcaSec" title="Nhóm ngành"><option value="">Toàn thị trường</option>'+secOpts(DCA.sec)+'</select>'
-    +'<input type="text" id="dcaMa" value="'+esc(DCA.ma)+'" placeholder="hoặc gõ mã: HPG FPT"'
-    +' title="Gõ 1 hay nhiều mã (cách nhau bởi dấu cách/phẩy) để đầu tư đúng mấy mã đó — bỏ trống thì dùng nhóm ngành"/>'
-    +'</div>'
-    +'<div class="panel racePanel"><canvas id="cvDca" class="block" style="height:520px"></canvas></div>'
+    +'<div class="panel racePanel"><canvas id="cvDca" class="block"></canvas></div>'
     +'<div class="note">Bấm ▶ để xem tiền lớn lên qua từng tháng. <b>Hàng tháng</b> = tháng nào cũng bỏ thêm; '
     +'<b>Một lần</b> = bỏ đúng một lần vào tháng đã chọn rồi giữ tới nay. <b>Phân bổ đều</b> = cả nhóm ngành '
     +'(hoặc mấy mã vừa gõ) thành một danh mục, tiền chia đều cho từng mã — tắt thì xếp hạng 8 mã cao nhất. '
@@ -1018,21 +1062,34 @@ function renderRace(){
       (t==='pause'?'⏸ Tạm dừng':t==='again'?'▶ Chạy lại':t==='cont'?'▶ Tiếp tục':'▶ Bắt đầu');
     b2.dataset.t=t; };
   const capNhatNhan=()=>{
-    $$('#raMode button,#raSpeed button,#dcaKieu button,#dcaGop')
+    $$('#raMode button,#dcaKieu button,#dcaGop')
       .forEach(b2=>b2.textContent=hep()?b2.dataset.sm:b2.dataset.lg);
-    $('#dcaMa').placeholder=hep()?'gõ mã':'hoặc gõ mã: HPG FPT';
+    $('#dcaMa').placeholder=hep()?'gõ mã':'hoặc gõ mã riêng';
     nhanPlay($('#raPlay').dataset.t||'start');
+    capNhatCao();
+  };
+  /* BỀ CAO ĐỒ THỊ. Đường đua chỉ có 10 thanh ngang nên vừa phải là đủ; đầu tư bền vững
+     vẽ tới 8 đường CHỒNG CHÉO nhau + 2 mốc, cao thêm là mỗi đường được một khoảng thở
+     và nhãn hết dồn cục. Chế độ phân bổ đều chỉ có 1 đường nên không cần cao bằng. */
+  const capNhatCao=()=>{
+    const r=$('#cvRace'), d=$('#cvDca');
+    if(r) r.style.height=(hep()?520:624)+'px';
+    if(d) d.style.height=(DCA.gop?(hep()?520:600):(hep()?620:720))+'px';
   };
   const syncMode=()=>{                            // đổi chế độ: dừng chạy, về vạch xuất phát
+    const dca=RA.mode==='dca';
     RA.playing=false; RA.f=0; RA.curY={}; RA.dcaMx=0;
     nhanPlay('start');
-    $('#raView').style.display=RA.mode==='dca'?'none':'';
-    $('#dcaView').style.display=RA.mode==='dca'?'':'none';
-    /* THANH TUA đi theo chế độ: nhét vào cuối hàng điều khiển của view đang hiện.
-       Để nguyên ở hàng đầu thì màn dọc phải gánh 4 cụm -> tràn thành 4 hàng riêng. */
-    const sl=$('#raSlide');
-    (RA.mode==='dca'?$('#dcaCtl2'):$('#raCtl')).appendChild(sl);
-    sl.max=raceEnd(); sl.value=0;
+    $('#raView').style.display=dca?'none':'';
+    $('#dcaView').style.display=dca?'':'none';
+    /* display:contents -> con của cụm nằm chung hàng flex với nút chế độ; 'none' giấu cả cụm */
+    $('#pRace').style.display=dca?'none':'contents';
+    $('#pDca').style.display=dca?'contents':'none';
+    /* THANH ĐIỀU KHIỂN nằm TRONG khung đồ thị của chế độ đang hiện — như thanh tua của
+       trình phát video, và nhờ vậy hàng tham số phía trên chỉ còn đúng một hàng. */
+    (dca?$('#dcaView'):$('#raView')).querySelector('.racePanel').appendChild($('#raPlayBar'));
+    const sl=$('#raSlide'); sl.max=raceEnd(); sl.value=0;
+    capNhatCao();
     requestAnimationFrame(()=>curDraw());         // canvas vừa hiện mới đo được kích thước
   };
   addEventListener('resize',capNhatNhan);
@@ -1066,11 +1123,12 @@ function renderRace(){
     /* hai kiểu giữ SỐ TIỀN RIÊNG: 5 triệu/tháng và 100 triệu một lần là hai thói quen khác
        nhau, đổi qua đổi lại mà số tiền nhảy theo thì phải gõ lại mỗi lần */
     $('#dcaAmt').value=dcaTien();
-    $('#dcaLbAmt').textContent=DCA.kieu==='mot'?'Bỏ vào':'Mỗi tháng';
+    $('#dcaLbAmt').textContent=DCA.kieu==='mot'?'triệu, từ':'triệu/tháng, từ';
     DCA.calc=null; syncMode(); renderDCA();
   });
   $('#dcaGop').onclick=()=>{ DCA.gop=!DCA.gop;
-    $('#dcaGop').classList.toggle('on',DCA.gop); veLai(); };
+    $('#dcaGop').classList.toggle('on',DCA.gop);
+    capNhatCao(); veLai(); };
   $('#dcaAmt').oninput=e=>{ const v=+e.target.value||0;
     if(DCA.kieu==='mot') DCA.amtM=v; else DCA.amtD=v; veLai(); };
   $('#dcaFrom').onchange=e=>{ DCA.from=+e.target.value||0; DCA.calc=null; syncMode(); renderDCA(); };
