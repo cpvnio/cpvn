@@ -55,6 +55,10 @@ CPScreen.chips=[
 CPScreen.def=id=>{const x=CPScreen.chips.find(c=>c.id===id);return x&&x.def||0;};
 /* n = số kỳ người dùng chọn, chỉ có nghĩa với chip mang opts */
 CPScreen.chip=function(id,c,n){
+  /* CHIP NHÓM THEO DÕI ('nhom:<id>'): rổ mã chọn tay khai trong universe.json. Nó là một
+     TIÊU CHÍ LỌC, không phải một ngành — xếp thành ngành thì mã bị bốc khỏi ngành gốc và
+     mọi thống kê theo ngành méo theo. */
+  if(id.startsWith('nhom:')){ const g=CP.nhomTheoKhoa(id); return !!g&&g.set.has(c.sym); }
   const t=CPScreen.T[c.sym]||{},f=CPScreen.F[c.sym]||{},p=c.price||0;
   n=n||CPScreen.def(id);
   switch(id){

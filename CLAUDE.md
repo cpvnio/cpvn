@@ -158,12 +158,23 @@ giá sai hoặc giá nhảy — đừng đẩy.
   450đ ở cả Q1..Q4/25 như thể trả bốn lần, thực tế chỉ trả tháng 10 (Q4). Tháng chi
   trả có sẵn trong `dividend/histories.divMonths`, cổ tức CP lấy tháng của ngày chốt quyền.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
-- **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`),
-  hiện ở đầu cột ngành của bảng giá và đầu ô chọn ngành của đường đua, khoá lọc là
-  `'nhom:<id>'` để không đụng tên ngành thật. **Mã trong nhóm VẪN giữ nguyên ngành gốc** —
-  bốc chúng ra khỏi ngành là làm méo mọi thống kê theo ngành (bong bóng, ngành hôm nay,
-  đua theo ngành); nhóm chỉ là một LỐI LỌC nữa. `syms` rỗng thì nhóm tự ẩn.
+- **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
+  Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt
+  tiền tố này), **KHÔNG phải một ngành** — xếp thành ngành thì cột ngành có hai loại mục
+  khác bản chất, một mã đếm ở hai chỗ, và ô chọn ngành của đường đua cũng phải gánh theo.
+  Mã trong nhóm giữ nguyên ngành gốc. `syms` rỗng thì chip tự ẩn.
   Pipeline giữ nguyên khoá này vì `refresh_daily` sửa `u` tại chỗ rồi ghi đè.
+- **GỘP NGÀNH phải GIỐNG NHAU ở BA nơi**: `assets/core.js` (bảng giá + trang mã),
+  `bubbles.html`, `assets/congcu.js` (radar + đường đua). Sửa một chỗ thì phải sửa cả ba.
+  congcu.js từng thiếu bước này nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
+  "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng (38 ngành) trong khi
+  bảng giá đã gộp làm một từ lâu (35 ngành) — cùng một tên ngành, hai trang ra hai rổ mã.
+- **Đường đua lấy MỌI mã có SLCP**, không cắt bớt. Bản cũ chỉ lấy top 40 toàn thị trường +
+  top 10 mỗi ngành (401 mã) nên chọn ngành ngân hàng ra đua chỉ thấy 14/30 mã, gõ TPB/ABB
+  vào ô mã thì báo "không có trong dữ liệu đua" — người dùng không có cách nào biết rổ bị
+  cắt. `data/market.json` vì thế nặng 612KB (nén còn 132KB), chấp nhận được.
+  Mã CHƯA có giá ở tháng bắt đầu (niêm yết sau) vẫn bị loại — nhưng phải LIỆT KÊ RA
+  (`chuaCo`), không được im lặng.
 
 ## Quy ước toàn site
 

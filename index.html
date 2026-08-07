@@ -158,6 +158,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     padding:4.5px 11px;font-size:12px;font-weight:700;cursor:pointer}
   .chipbar button:hover{color:var(--txt)}
   .chipbar button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* CHIP NHÓM THEO DÕI: mang màu riêng của nhóm để tách khỏi đám chip tiêu chí chung.
+     KHÔNG dùng color-mix ở đây — html2canvas của nút chụp màn hình không hiểu nó. */
+  .chipbar button.chipnhom{color:var(--cg);border-color:var(--cg);background:transparent}
+  .chipbar button.chipnhom:hover{color:var(--cg)}
+  .chipbar button.chipnhom.on{background:var(--cg);border-color:var(--cg);color:#1a1205}
   /* CHIP CÓ THAM SỐ: ô chọn số kỳ nằm NGAY TRONG viên chip, đọc liền mạch thành câu
      "Lỗ [3] năm nhưng thu hẹp". Bấm phần chữ = bật/tắt, bấm ô số = đổi số kỳ. */
   .chipbar .chipn{display:inline-flex;align-items:center;gap:4px;background:var(--panel);color:var(--muted);
@@ -292,7 +297,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260810j"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260810m"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -363,8 +368,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260810f"></script>
-<script src="assets/screener.js?v=20260810a"></script>
+<script src="assets/core.js?v=20260810k"></script>
+<script src="assets/screener.js?v=20260810k"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -500,11 +505,7 @@ function filterRows(){
   if(ST.floor==='VN30') list=list.filter(c=>CP.vn30.has(c.sym));
   else if(ST.floor==='HNX30') list=list.filter(c=>CP.hnx30.has(c.sym));
   else if(ST.floor!=='all') list=list.filter(c=>c.ex===ST.floor);
-  if(ST.sector!=='all'){
-    // 'nhom:<id>' là NHÓM THEO DÕI (rổ mã chọn tay), còn lại là tên ngành thật
-    const g=CP.nhomTheoKhoa(ST.sector);
-    list=g?list.filter(c=>g.set.has(c.sym)):list.filter(c=>c.sector===ST.sector);
-  }
+  if(ST.sector!=='all') list=list.filter(c=>c.sector===ST.sector);
   if(ST.q){ const q=ST.q.toUpperCase();
     list=list.filter(c=>c.sym.includes(q)||c.name.toUpperCase().includes(q)); }
   if(ST.bd){                                  // lọc theo chip màu độ rộng
@@ -721,18 +722,10 @@ function buildSectorBar(){
       window.scrollTo({top:0,behavior:'smooth'}); };
     return d;
   };
+  /* CHỈ ngành thật nằm trong cột này. Nhóm theo dõi (rổ mã chọn tay) là một TIÊU CHÍ LỌC
+     nằm trong Bộ Lọc PRO — xếp nó thành ngành thì cột ngành có hai loại mục khác bản chất
+     và một mã đếm ở hai chỗ. */
   list.appendChild(mk('all','Tất cả ngành', CP.coins.size,false,'',null));
-  /* NHÓM THEO DÕI đứng ngay đầu cột, mang màu riêng của nhóm — người xem mở cột ngành
-     ra là thấy luôn, không phải cuộn tìm giữa 40 ngành. Mã trong nhóm VẪN nằm ở ngành
-     gốc của nó bên dưới, đây chỉ là một lối vào thứ hai. */
-  for(const g of (CP.nhom||[])){
-    const n=[...CP.coins.values()].filter(c=>g.set.has(c.sym)).length;
-    if(!n) continue;
-    const col=g.mau||'#f5b40a';
-    list.appendChild(mk('nhom:'+g.id, g.ten, n, true,
-      `${g.ten} · ${n} mã — nhóm theo dõi, các mã này vẫn nằm trong ngành gốc của chúng`,
-      [col,col]));
-  }
   secs.forEach((x,i)=>list.appendChild(mk(x,x,cnt[x], cap[x]>=SECTOR_BIG,
     `${x} · ${cnt[x]} mã · tổng vốn hoá ${CP.fmtVnd(cap[x])}`, sectorColor(i))));
 }
@@ -752,8 +745,7 @@ function setSecOn(on){
 }
 function syncSectorBtn(){
   const filt=ST.sector!=='all', b=$('secToggle');
-  const g=CP.nhomTheoKhoa(ST.sector);           // nhóm theo dõi -> hiện TÊN nhóm, không phải khoá
-  b.textContent=filt?'☰ '+(g?g.ten:ST.sector):'☰ Ngành';
+  b.textContent=filt?'☰ '+ST.sector:'☰ Ngành';
   b.classList.toggle('on',filt||(isWide()&&document.body.classList.contains('secon')));
   b.title=isWide()?'Bật/tắt cột lọc theo ngành':'Chọn nhóm ngành';
 }
@@ -817,7 +809,11 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
 
 /* ---------- PANEL BỘ LỌC ---------- */
 function scrBuild(){
-  $('scrChips').innerHTML=CPScreen.chips.map(x=>{
+  /* nhóm theo dõi đứng đầu hàng chip, mang màu riêng — nó là tiêu chí lọc, không phải ngành */
+  const nhomChip=(CP.nhom||[]).map(g=>
+    `<button data-id="nhom:${g.id}" class="chipnhom" style="--cg:${g.mau||'#f5b40a'}"`+
+    ` title="Nhóm theo dõi · ${CP.esc(g.ten)} · ${g.syms.length} mã">${CP.esc(g.ten)}</button>`).join('');
+  $('scrChips').innerHTML=nhomChip+CPScreen.chips.map(x=>{
     if(!x.opts) return `<button data-id="${x.id}" title="${x.g}">${x.nm}</button>`;
     SCR.num[x.id]=SCR.num[x.id]||x.def;             // nhớ số kỳ đã chọn khi dựng lại
     const sel=`<select data-num="${x.id}">`+x.opts.map(v=>

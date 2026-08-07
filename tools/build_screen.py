@@ -483,21 +483,12 @@ def main():
     t0 = time.time()
     uni = json.load(open(os.path.join(ROOT, 'universe.json'), encoding='utf-8'))
     meta = {s['sym']: s for s in uni['stocks']}
-    # đường đua vốn hoá: giá theo THÁNG cho top 40 toàn thị trường + TOP 10 MỖI NGÀNH
-    # (để web đua riêng từng nhóm ngành — danh sách ngành chung với trang bong bóng)
-    race_set = {s['sym'] for s in sorted(uni['stocks'], key=lambda x: -(x.get('mcap') or 0))[:40]
-                if s.get('shares')}
-    by_sec = defaultdict(list)
-    for s2 in uni['stocks']:
-        if s2.get('shares') and (s2.get('mcap') or 0) > 0:
-            by_sec[s2.get('sector') or 'Khác'].append(s2)
-    for arr in by_sec.values():
-        arr.sort(key=lambda x: -(x.get('mcap') or 0))
-        race_set.update(x['sym'] for x in arr[:10])
-    # NHÓM THEO DÕI luôn được đua ĐỦ mã, kể cả mã nhỏ không lọt top 10 ngành — chọn nhóm
-    # ra đua mà thiếu mất mấy mã trong đó thì người xem tưởng nhóm chỉ có bấy nhiêu.
-    for g in uni.get('nhom') or []:
-        race_set.update(s for s in (g.get('syms') or []) if (meta.get(s) or {}).get('shares'))
+    # ĐƯỜNG ĐUA VỐN HOÁ: giá theo THÁNG cho MỌI mã có số cổ phiếu lưu hành.
+    # Trước đây chỉ lấy top 40 toàn thị trường + top 10 mỗi ngành = 401 mã, nên chọn ngành
+    # ngân hàng ra đua chỉ thấy 14/30 mã — thiếu TPB, EIB, OCB, ABB... mà không báo gì, và
+    # gõ tay mấy mã đó vào ô "gõ mã" cũng ra "không có trong dữ liệu đua". Danh sách mã của
+    # đường đua PHẢI trùng với bảng giá, người dùng không có cách nào biết rổ bị cắt bớt.
+    race_set = {s['sym'] for s in uni['stocks'] if s.get('shares')}
     races = {}
     files = sorted(f for f in os.listdir(HIST) if f.endswith('.json'))
     print(f'Đọc {len(files)} file kho hist…')

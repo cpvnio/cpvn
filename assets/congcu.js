@@ -161,7 +161,26 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), nhom:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+/* GỘP NGÀNH — BẢN SAO Y HỆT core.js và bubbles.html. Trang này trước đây dùng thẳng
+   `sector` thô của nguồn, nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
+   "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng trong khi bảng giá
+   đã gộp làm một từ lâu — cùng một cái tên ngành mà hai trang ra hai rổ mã khác nhau.
+   Sửa ở đây thì PHẢI sửa cả hai file kia cho khớp. */
+const SECTOR_EXPLICIT={
+  'Bán lẻ chuyên dụng':'Bán lẻ','Bán lẻ thực phẩm và thuốc':'Bán lẻ','Bán lẻ tổng hợp':'Bán lẻ',
+  'Dược phẩm':'Dược phẩm & Y tế','Dịch vụ chăm sóc sức khỏe':'Dược phẩm & Y tế','Thiết bị vật tư Y tế':'Dược phẩm & Y tế',
+  'Phần mềm và dịch vụ CNTT':'Công nghệ & Điện tử','Chất bán dẫn & Thiết bị bán dẫn':'Công nghệ & Điện tử',
+  'Thiết bị & Phụ tùng điện tử':'Công nghệ & Điện tử','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Điện tử',
+  'Thiết bị văn phòng':'Công nghệ & Điện tử',
+  'Dịch vụ Viễn thông':'Viễn thông & Truyền thông','Truyền thông & Mạng':'Viễn thông & Truyền thông',
+  'Truyền thông và Xuất bản':'Viễn thông & Truyền thông',
+};
+function gopNganh(){
+  for(const c of ST.map.values()) c.sector=SECTOR_EXPLICIT[c.sector]||c.sector||'Khác';
+  const dem={}; for(const c of ST.map.values()) dem[c.sector]=(dem[c.sector]||0)+1;
+  for(const c of ST.map.values()) if(dem[c.sector]<4) c.sector='Khác';   // ngành vụn dồn về Khác
+}
 async function loadAll(){
   const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
   const [u,eod,pk,mk]=await Promise.all([
@@ -171,7 +190,6 @@ async function loadAll(){
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
   ST.vn30=new Set(u.vn30||[]);
-  ST.nhom=(u.nhom||[]).filter(g=>g&&g.ten&&(g.syms||[]).length);
   for(const s of u.stocks){
     ST.map.set(s.sym,{ sym:s.sym, name:s.name, ex:s.ex, sector:s.sector||'Khác', parent:s.parent||'Khác',
       img:s.img||null, shares:s.shares||0, mcap:s.mcap||0,
@@ -179,6 +197,7 @@ async function loadAll(){
       w:s.pct?s.pct.w:null, m:s.pct?s.pct.m:null, y:s.pct?s.pct.y:null,
       close:0,ref:0,vol:0,gtgd:0,chg:null,rpos:null,nnVal:0,ceil:0,floor:0,mcapLive:s.mcap||0 });
   }
+  gopNganh();                 // PHẢI gộp trước mọi thứ đọc c.sector
   if(eod&&eod.data) for(const r of eod.data){
     const c=ST.map.get(r.sym); if(!c) continue;
     c.close=r.close||0; c.ref=r.ref||0; c.vol=r.vol||0; c.gtgd=r.gtgd||0;
@@ -563,13 +582,8 @@ function renderRadar(){
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
-/* Ô "nhóm ngành" chứa CẢ ngành thật lẫn NHÓM THEO DÕI (rổ mã chọn tay trong
-   universe.json). Nhóm mang khoá 'nhom:<id>' nên không thể trùng tên một ngành. */
-const nhomTheoKhoa=k=>(ST.nhom||[]).find(g=>'nhom:'+g.id===k)||null;
-const tenNganh=k=>{ const g=nhomTheoKhoa(k); return g?g.ten:k; };
-const locNganh=k=>{ const g=nhomTheoKhoa(k);
-  if(g){ const t=new Set(g.syms); return s=>t.has(s); }
-  return s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; }; };
+const tenNganh=k=>k;
+const locNganh=k=>s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; };
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
   settling:false,maxDelta:0,mode:'race',dcaMx:0,top:10};
 const TOP_CHON=[10,15,20,25,30];   // số công ty hiện cùng lúc, dùng chung cho cả hai chế độ
@@ -767,10 +781,10 @@ function dcaAll(){
     pool=D.syms;
     if(DCA.sec) pool=pool.filter(locNganh(DCA.sec));
   }
-  const rows=[];
+  const rows=[], chuaCo=[];
   for(const s of pool){
     const a=D.series[s];
-    if(!(a[i0]>0)) continue;
+    if(!(a[i0]>0)){ chuaCo.push(s); continue; }   // chưa niêm yết / chưa có giá tháng đó
     let acc=0, ok=true; const vals=[];
     for(let i=i0;i<L;i++){ const v=a[i]; if(!(v>0)){ ok=false; break; }
       if(mot) vals.push(amt*v/a[i0]);
@@ -785,7 +799,7 @@ function dcaAll(){
     ro={s:'rổ',vals,fin:vals[n-1],n:N};
   }
   const rB=0.07/12;                   // 7%/năm ghép lãi theo tháng
-  DCA.calc={rows,ro,n,i0,amt,mot,thieu,laMa,
+  DCA.calc={rows,ro,n,i0,amt,mot,thieu,laMa,chuaCo,
     /* vốn đã bỏ tới tháng thứ k; một lần thì vốn đứng yên bằng đúng X */
     von:k=>mot?amt:amt*(k+1),
     /* ngân hàng cùng quy ước với cổ phiếu: khoản vừa bỏ tháng này chưa kịp sinh lời,
@@ -811,9 +825,13 @@ function renderDCA(){
   if(sum) sum.innerHTML=!(amt>0)?'':((C2.mot
       ? 'bỏ <b>'+dcaFmt(amt)+'</b> một lần tháng '+moc+' rồi giữ tới nay ('+n+' tháng)'
       : 'bỏ <b>'+dcaFmt(amt)+'</b>/tháng × '+n+' tháng = vốn <b>'+dcaFmt(von)+'</b>')
-    +(C2.thieu.length?' · <span style="color:var(--red)">không có dữ liệu: '+esc(C2.thieu.join(', '))+'</span>':''));
+    +(C2.thieu.length?' · <span style="color:var(--red)">không có dữ liệu: '+esc(C2.thieu.join(', '))+'</span>':'')
+    +(C2.chuaCo.length?' · <span style="color:var(--mut)">chưa có giá tháng '+moc+' nên đứng ngoài: '
+        +esc(C2.chuaCo.slice(0,14).join(', '))+(C2.chuaCo.length>14?' …+'+(C2.chuaCo.length-14):'')+'</span>':''));
   if(!(amt>0)){ box.innerHTML='<div class="empty">Nhập số tiền đầu tư</div>'; return; }
-  const top=C2.rows.slice(0,12);
+  /* bảng bám theo số công ty đang chọn — chốt cứng 12 thì chọn "30 công ty" xong bảng
+     vẫn chỉ ra 12 dòng, nhìn như dữ liệu bị thiếu. Sàn 12 để mặc định không hụt so với trước. */
+  const top=C2.rows.slice(0,Math.max(RA.top||10,12));
   const nh=C2.bank(n-1);
   const mxv=Math.max(nh,C2.ro?C2.ro.fin:0,top.length?top[0].fin:0)||1;
   /* một hàng của bảng: logo · tên · thanh tỉ lệ · giá trị + % so vốn đã bỏ */
@@ -1039,13 +1057,9 @@ function renderRace(){
   const secCnt={};
   for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
   const secKeys=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a]);
-  /* NHÓM THEO DÕI đứng ngay trên đầu danh sách ngành (khoá 'nhom:<id>' để khỏi đụng tên
-     ngành thật). Chỉ hiện nhóm nào có mã nằm trong dữ liệu đua, bằng không chọn vào là
-     biểu đồ trống trơn mà người dùng không hiểu tại sao. */
-  const nhomDua=(ST.nhom||[]).filter(g=>g.syms.some(x=>D.series[x]));
-  const secOpts=sel=>nhomDua.map(g=>'<option value="nhom:'+esc(g.id)+'"'
-      +(sel==='nhom:'+g.id?' selected':'')+'>'+esc(g.ten)+'</option>').join('')
-    +secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
+  /* CHỈ ngành thật. Nhóm theo dõi là tiêu chí lọc của Bộ Lọc PRO bên bảng giá, không phải
+     ngành — muốn đua đúng mấy mã đó thì gõ thẳng mã vào ô "gõ mã riêng". */
+  const secOpts=sel=>secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
   /* ô tháng chỉ ghi "3/2020": nhãn ngay trước nó đã là "triệu/tháng, từ" nên chữ "Tháng"
      trong từng dòng chọn chỉ tổ làm ô rộng thêm 46px, đủ để đẩy ô gõ mã rớt xuống hàng hai */
   const thang=lb=>{ const p=String(lb).split('/'); return p[0]+'/20'+p[1]; };
