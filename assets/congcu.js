@@ -571,7 +571,18 @@ const locNganh=k=>{ const g=nhomTheoKhoa(k);
   if(g){ const t=new Set(g.syms); return s=>t.has(s); }
   return s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; }; };
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
-  settling:false,maxDelta:0,mode:'race',dcaMx:0};
+  settling:false,maxDelta:0,mode:'race',dcaMx:0,top:10};
+const TOP_CHON=[10,15,20,25,30];   // số công ty hiện cùng lúc, dùng chung cho cả hai chế độ
+/* BẢNG MÀU KHÔNG GIỚI HẠN: 16 màu chọn tay cho những thứ hạng đầu (đẹp và quen mắt),
+   quá 16 thì sinh thêm bằng GÓC VÀNG 137,5° nên màu nào cũng cách xa màu liền kề —
+   30 công ty cùng lúc vẫn không có hai đường trùng tông. */
+const COL16=['#2dd4bf','#f43f5e','#f5b40a','#38bdf8','#a78bfa','#16c784','#fb923c','#e879f9',
+             '#4ade80','#60a5fa','#f87171','#facc15','#34d399','#c084fc','#fbbf24','#22d3ee'];
+function mauThu(i){
+  if(i<COL16.length) return COL16[i];
+  const h=Math.round((23+(i-COL16.length)*137.508)%360);
+  return 'hsl('+h+','+(isLight()?'68%,42%':'70%,64%')+')';
+}
 function raceData(){
   if(RA.data) return RA.data;
   const R=ST.market&&ST.market.race; if(!R) return null;
@@ -582,10 +593,10 @@ function raceData(){
     if(out.some(v=>v!=null)) series[sym]=out;
   }
   const syms=Object.keys(series);
-  const COL=['#2dd4bf','#f43f5e','#f5b40a','#38bdf8','#a78bfa','#16c784','#fb923c','#e879f9',
-             '#4ade80','#60a5fa','#f87171','#facc15','#34d399','#c084fc','#fbbf24','#22d3ee'];
-  const cols={}; syms.forEach((s,i)=>cols[s]=COL[i%COL.length]);
-  RA.data={labels:R.labels,series,syms,cols,note:R.note};
+  /* giữ THỨ TỰ chứ không giữ mã màu: màu sinh ra phụ thuộc nền sáng/tối, mà RA.data thì
+     nhớ suốt phiên — chốt cứng mã màu là đổi giao diện xong màu cũ vẫn nằm nguyên đó. */
+  const idx={}; syms.forEach((s,i)=>idx[s]=i);
+  RA.data={labels:R.labels,series,syms,idx,note:R.note};
   return RA.data;
 }
 function raceFmt(v){ if(v==null) return '—';   // v tính bằng NGHÌN TỶ -> quy về tỷ
@@ -622,8 +633,9 @@ function drawRace(lerp){
     return a+(b-a)*tt; };
   let pool=D.syms;
   if(RA.sector) pool=pool.filter(locNganh(RA.sector));
+  const N=RA.top||10;
   const rows2=pool.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0)
-    .sort((a,b)=>b.v-a.v).slice(0,10);          // tối đa 10 công ty trong cuộc đua
+    .sort((a,b)=>b.v-a.v).slice(0,N);           // số công ty do người xem chọn (10..30)
   if(!rows2.length){ x.fillStyle=isLight()?'#5d6272':'#9092a3'; x.font='13px system-ui';
     x.textAlign='center'; x.fillText('Ngành này chưa đủ dữ liệu đua',W/2,H/2); return; }
   for(const r of rows2) if(RA.imgs[r.s]===undefined){ const im=new Image();
@@ -632,9 +644,13 @@ function drawRace(lerp){
   /* MÀN HẸP (điện thoại dọc): logo+mã thu nhỏ để nhường đường đua cho thanh vốn hoá,
      con số vốn hoá in ĐẬM bám cuối thanh (hết chỗ thì nằm trong thanh) — nổi hơn hẳn. */
   const mob=W<560;
-  const logoR=mob?8:12, labX=mob?60:118, barX=labX+(mob?6:10);
+  const top=16, rowH=(H-top-(mob?38:46))/rows2.length;
+  /* CÀNG NHIỀU CÔNG TY thì hàng càng mỏng -> logo và chữ phải co theo, bằng không 30 hàng
+     chồng lấn nhau thành một mảng đặc. Trần giữ đúng cỡ cũ để 10 hàng nhìn y như trước. */
+  const logoR=clamp(rowH*.32,4.5,mob?8:12);
+  const fzTen=clamp(rowH*.42,8.5,mob?11.5:14), fzSo=clamp(rowH*.4,8,mob?11.5:12.5);
+  const labX=mob?60:118, barX=labX+(mob?6:10);
   const barW=W-barX-(mob?12:130);
-  const top=16, rowH=(H-top-(mob?38:46))/10;
   let md=0;                                     // độ lệch lớn nhất còn lại (cho pha xếp hàng)
   const K=lerp==null?.18:lerp;
   rows2.forEach((r,rank)=>{
@@ -645,7 +661,7 @@ function drawRace(lerp){
   });
   RA.maxDelta=md;
   for(const r of rows2){
-    const y=RA.curY[r.s], col=D.cols[r.s];
+    const y=RA.curY[r.s], col=mauThu(D.idx[r.s]||0);
     const bw=Math.max(2,r.v/mx*barW), bh=rowH*.66;
     x.fillStyle=col+'26'; x.beginPath(); x.roundRect(barX,y+rowH*.14,bw,bh,8); x.fill();
     x.fillStyle=col; x.beginPath(); x.roundRect(barX,y+rowH*.14,Math.min(bw,5),bh,2); x.fill();
@@ -659,11 +675,11 @@ function drawRace(lerp){
       x.drawImage(im,lcx-logoR,y+rowH*.5-logoR,logoR*2,logoR*2); x.restore();
     }
     x.fillStyle=isLight()?'#101321':'#ecedf4';
-    x.font=mob?'800 11.5px system-ui':'800 14px system-ui';
+    x.font='800 '+fzTen.toFixed(1)+'px system-ui';
     x.textAlign='left'; x.textBaseline='middle';
     x.fillText(r.s,mob?26:labX-52,y+rowH*.5);
     const vt=raceFmt(r.v);
-    x.font=mob?'800 11.5px system-ui':'700 12.5px system-ui';
+    x.font=(mob?'800 ':'700 ')+fzSo.toFixed(1)+'px system-ui';
     if(mob&&bw+8+x.measureText(vt).width>barW){   // thanh dài kịch khung -> số vào TRONG thanh
       x.textAlign='right'; x.fillStyle=isLight()?'#101321':'#fff';
       x.fillText(vt,barX+bw-7,y+rowH*.5); x.textAlign='left';
@@ -822,8 +838,8 @@ function drawDCA(lerp){
   const D=raceData(), C2=dcaAll(); if(!D||!C2) return;
   const W=cv.clientWidth||900, H=cv.clientHeight||520, x=dpr(cv,W,H);
   const mob=W<560, TXTC=isLight()?'#101321':'#ecedf4', MUTC=isLight()?'#5d6272':'#9092a3';
-  /* PHÂN BỔ ĐỀU -> đúng MỘT đường (cả danh mục); tắt -> 8 đường là trần đọc được */
-  const rows=DCA.gop?(C2.ro?[C2.ro]:[]):C2.rows.slice(0,8);
+  /* PHÂN BỔ ĐỀU -> đúng MỘT đường (cả danh mục); tắt -> bấy nhiêu đường người xem chọn */
+  const rows=DCA.gop?(C2.ro?[C2.ro]:[]):C2.rows.slice(0,RA.top||10);
   if(!rows.length||!(C2.amt>0)){
     x.fillStyle=MUTC; x.font='13px system-ui'; x.textAlign='center';
     x.fillText(!(C2.amt>0)?'Nhập số tiền đầu tư'
@@ -917,7 +933,6 @@ function drawDCA(lerp){
     }
   };
   const ptsOf=g=>{ const a2=[]; for(let i=0;i<=iA;i++) a2.push([X(i),Y(g(i))]); return a2; };
-  const PAL=['#f43f5e','#38bdf8','#16c784','#a78bfa','#fb923c','#2dd4bf','#e879f9','#60a5fa'];
   const RO=isLight()?'#0d9488':'#2dd4bf';        // đường PHÂN BỔ ĐỀU dùng màu ngọc riêng
   const tips=[];
   /* Trục tiền GIÃN TỪ TỪ theo giá trị lớn nhất đã hiện, nên giữa lúc chạy đường vọt lên
@@ -928,7 +943,7 @@ function drawDCA(lerp){
   const bPts=ptsOf(bank); bPts.push([X(f),Y(bank(f))]);
   vien(bPts,GOLD,2.6);                           // ngân hàng vẽ TRƯỚC: nó là mốc, nằm dưới
   rows.forEach((r,ri)=>{
-    const gop=r===C2.ro, col=gop?RO:PAL[ri%PAL.length];
+    const gop=r===C2.ro, col=gop?RO:mauThu(ri+1);   // +1: nhường màu ngọc cho đường phân bổ đều
     const vNow=cur(r.vals);
     const pts=ptsOf(i=>r.vals[i]); pts.push([X(f),Y(vNow)]);
     vien(pts,col,gop?3.2:2.6);
@@ -941,7 +956,8 @@ function drawDCA(lerp){
   tips.push({s:'vốn đã bỏ',col:MUTC,v:von,y:Y(von),von:true});
   // nhãn: dồn cho khỏi đè nhau rồi vẽ logo/chấm màu + mã + giá trị + % lãi
   tips.sort((a,b)=>a.y-b.y);
-  const GAP=mob?18:22, LH=mob?12:14, x0=X(f);
+  /* nhãn nhiều thì phải nép lại cho đủ chỗ: 30 đường × 22px là 660px, quá cả vùng vẽ */
+  const GAP=clamp(plotH/(tips.length+1),mob?11:12.5,mob?18:22), LH=mob?12:14, x0=X(f);
   /* Nhãn tên-ngành chiếm NHIỀU DÒNG nên mỗi nhãn mang bề cao riêng; dồn theo bề cao đó
      chứ không theo một GAP chung, bằng không khối 3 dòng đè lên hàng xóm. */
   for(const t of tips) t.h=t.dong&&t.dong.length?Math.max(GAP,(t.dong.length+1)*LH):GAP;
@@ -1059,19 +1075,24 @@ function renderRace(){
     +'<div class="seg" id="raSpeed"><button data-v="0.5">×½</button>'
     +'<button data-v="1" class="on">×1</button>'
     +'<button data-v="2">×2</button><button data-v="4">×4</button></div>'
+    +'<select id="raTop" title="Số công ty hiện cùng lúc trên biểu đồ">'
+    +TOP_CHON.map(n=>'<option value="'+n+'"'+(RA.top===n?' selected':'')+'>'+n+' công ty</option>').join('')
+    +'</select>'
     +'<input type="range" id="raSlide" min="0" max="'+(D.labels.length-1)+'" step="0.01" value="0"/>'
     +'<span class="rng">'+D.labels[0]+' → '+D.labels[D.labels.length-1]+'</span></div>'
     /* ---- chế độ ĐƯỜNG ĐUA ---- */
     +'<div id="raView">'
     +'<div class="panel racePanel"><canvas id="cvRace" class="block"></canvas></div>'
-    +'<div class="note">Top 10 vốn hoá lớn nhất tại từng thời điểm (chọn nhóm ngành để đua riêng ngành đó). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
+    +'<div class="note">Những công ty vốn hoá lớn nhất tại từng thời điểm — chọn nhóm ngành để đua riêng ngành đó, '
+    +'chọn số công ty ở ô ngay dưới biểu đồ (10 đến 30). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
     +'</div>'
     /* ---- chế độ ĐẦU TƯ BỀN VỮNG ---- */
     +'<div id="dcaView" style="display:none">'
     +'<div class="panel racePanel"><canvas id="cvDca" class="block"></canvas></div>'
     +'<div class="note">Bấm ▶ để xem tiền lớn lên qua từng tháng. <b>Hàng tháng</b> = tháng nào cũng bỏ thêm; '
     +'<b>Một lần</b> = bỏ đúng một lần vào tháng đã chọn rồi giữ tới nay. <b>Phân bổ đều</b> = cả nhóm ngành '
-    +'(hoặc mấy mã vừa gõ) thành một danh mục, tiền chia đều cho từng mã — tắt thì xếp hạng 8 mã cao nhất. '
+    +'(hoặc mấy mã vừa gõ) thành một danh mục, tiền chia đều cho từng mã — tắt thì xếp hạng từng mã, '
+    +'số công ty hiện cùng lúc chọn ở ô ngay dưới biểu đồ. '
     +'Đường đứt là vốn đã bỏ; đường vàng là gửi ngân hàng lãi 7%/năm (ghép lãi theo tháng) để so ngay đầu tư thắng hay thua tiết kiệm.</div>'
     +'<div class="panel"><div class="ph">Giá trị hôm nay<span id="dcaSum" style="margin-left:auto;font-weight:600;color:var(--mut)"></span></div>'
     +'<div class="pb" id="dcaOut"></div></div>'
@@ -1090,6 +1111,8 @@ function renderRace(){
     $$('#raMode button,#dcaKieu button,#dcaGop')
       .forEach(b2=>b2.textContent=hep()?b2.dataset.sm:b2.dataset.lg);
     $('#dcaMa').placeholder=hep()?'gõ mã':'hoặc gõ mã riêng';
+    /* màn dọc bỏ chữ "công ty" trong từng dòng chọn — ô hẹp, chỉ con số là đủ hiểu */
+    $$('#raTop option').forEach(o=>o.textContent=o.value+(hep()?'':' công ty'));
     nhanPlay($('#raPlay').dataset.t||'start');
     capNhatCao();
   };
@@ -1097,9 +1120,13 @@ function renderRace(){
      vẽ tới 8 đường CHỒNG CHÉO nhau + 2 mốc, cao thêm là mỗi đường được một khoảng thở
      và nhãn hết dồn cục. Chế độ phân bổ đều chỉ có 1 đường nên không cần cao bằng. */
   const capNhatCao=()=>{
+    const n=RA.top||10, m=hep();
     const r=$('#cvRace'), d=$('#cvDca');
-    if(r) r.style.height=(hep()?520:624)+'px';
-    if(d) d.style.height=(DCA.gop?(hep()?520:600):(hep()?620:720))+'px';
+    /* Hiện 30 công ty trong khung cao 624px thì mỗi hàng chỉ còn 19px — chữ với logo
+       dính chùm. Khung phải nở theo số công ty; 10 công ty vẫn đúng bề cao cũ. */
+    if(r) r.style.height=Math.round(clamp(n*(m?26:34)+96,m?520:624,m?1000:1280))+'px';
+    if(d) d.style.height=(DCA.gop?(m?520:600)
+          :Math.round(clamp(n*(m?24:30)+300,m?620:720,m?1000:1280)))+'px';
   };
   const syncMode=()=>{                            // đổi chế độ: dừng chạy, về vạch xuất phát
     const dca=RA.mode==='dca';
@@ -1128,6 +1155,12 @@ function renderRace(){
     if(RA.f>=raceEnd()-0.01) RA.f=0;
     RA.playing=true; RA.last=0; nhanPlay('pause');
     RA.raf=requestAnimationFrame(raceTick);
+  };
+  $('#raTop').onchange=e=>{
+    RA.top=+e.target.value||10;
+    RA.curY={};                                   // số hàng đổi -> vị trí cũ vô nghĩa
+    capNhatCao();
+    requestAnimationFrame(()=>{ curDraw(1); settleRace(); });
   };
   $('#raSpeed').querySelectorAll('button').forEach(b=>b.onclick=()=>{
     $('#raSpeed').querySelectorAll('button').forEach(x2=>x2.classList.remove('on'));
