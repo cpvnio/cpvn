@@ -606,13 +606,15 @@ function raceFmt(v){ if(v==null) return '—';   // v tính bằng NGHÌN TỶ -
 const BRAND=new Image(); let brandOK=false;
 BRAND.onload=()=>{ brandOK=true; if(cur==='race') curDraw(); };
 BRAND.src='assets/logo-128.png?v=3';
-function brandMark(x,W,H){
+/* `dam` = hệ số đậm nhạt so với mức nền (1 = như cũ). Biểu đồ đầu tư bền vững nhiều
+   khoảng trống hơn đường đua nên dấu chìm ở đó chịu được đậm hơn một chút. */
+function brandMark(x,W,H,dam){
   x.save(); x.textBaseline='middle';
-  const a=isLight()?0.09:0.11, s=clamp(W*0.055,20,30);
+  const a=(isLight()?0.09:0.11)*(dam||1), s=clamp(W*0.055,20,30);
   x.font='800 '+s+'px system-ui';
   const tw=x.measureText('CPVN.IO').width;
   const lg=brandOK?s*1.4:0, gap=lg?s*0.3:0, x0=(W-(lg+gap+tw))/2, cy=H/2;
-  if(lg){ x.globalAlpha=a+0.05; x.drawImage(BRAND,x0,cy-lg/2,lg,lg); }
+  if(lg){ x.globalAlpha=a+0.05*(dam||1); x.drawImage(BRAND,x0,cy-lg/2,lg,lg); }
   x.globalAlpha=a; x.fillStyle=isLight()?'#101321':'#ecedf4';
   x.textAlign='left'; x.fillText('CPVN.IO',x0+lg+gap,cy);
   x.restore();
@@ -898,7 +900,7 @@ function drawDCA(lerp){
   x.textAlign='center'; x.fillStyle=MUTC;
   for(let i=0;i<=Math.min(Math.ceil(f),n-1);i+=stepT)
     x.fillText(D.labels[C2.i0+i],X(i),H-12);
-  brandMark(x,W,H);                              // dấu thương hiệu dưới các đường
+  brandMark(x,W,H,1.32);                         // dấu thương hiệu dưới các đường: +15% hai lượt
   // tháng hiện tại to mờ + HUD "đã bỏ bao nhiêu" — nhìn phát biết ngay vốn theo từng tháng
   x.fillStyle=isLight()?'rgba(16,19,33,.12)':'rgba(255,255,255,.09)';
   x.font=mob?'900 30px system-ui':'900 44px system-ui'; x.textAlign='left';
