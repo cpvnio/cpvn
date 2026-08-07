@@ -603,6 +603,11 @@ function raceFmt(v){ if(v==null) return '—';   // v tính bằng NGHÌN TỶ -
   return Math.round(v*1000).toLocaleString('en-US')+' tỷ'; }
 /* DẤU THƯƠNG HIỆU mờ chính giữa canvas — ai quay màn hình cũng mang theo CPVN.IO.
    Ảnh nạp một lần; về sau khi canvas đã vẽ xong thì vẽ lại một lượt. */
+/* MỘT chỗ chỉnh duy nhất cho dấu chìm, dùng chung cả hai biểu đồ — trước đây chỉ biểu đồ
+   đầu tư bền vững được chỉnh nên nhìn sang đường đua lại tưởng chưa đổi gì.
+   Các bước +15%/+20% liên tiếp nằm dưới ngưỡng mắt nhận ra (alpha 0,090 -> 0,104 -> 0,119),
+   nên chốt hẳn một mức đọc rõ khi quay video: chữ ~0,20 và cỡ gấp rưỡi. */
+const DAU_DAM=2.2, DAU_TO=1.45;
 const BRAND=new Image(); let brandOK=false;
 BRAND.onload=()=>{ brandOK=true; if(cur==='race') curDraw(); };
 BRAND.src='assets/logo-128.png?v=3';
@@ -699,7 +704,7 @@ function drawRace(lerp){
     x.fillStyle=isLight()?'#9aa0af':'#5d5f70'; x.font='10.5px system-ui'; x.textAlign='left';
     x.fillText('Vốn hoá quy ước: số cổ phiếu HIỆN TẠI × giá tháng đó',14,H-10);
   }
-  brandMark(x,W,H);
+  brandMark(x,W,H,DAU_DAM,DAU_TO);
 }
 /* CÁN ĐÍCH XONG XẾP HÀNG: các hàng đang bay dở tiếp tục trườn về đúng vị trí rồi
    khoá thẳng hàng — trước đây dừng vẽ ngay tại đích nên logo đè lên nhau. */
@@ -901,7 +906,7 @@ function drawDCA(lerp){
   x.textAlign='center'; x.fillStyle=MUTC;
   for(let i=0;i<=Math.min(Math.ceil(f),n-1);i+=stepT)
     x.fillText(D.labels[C2.i0+i],X(i),H-12);
-  brandMark(x,W,H,1.58,1.2);                     // dấu thương hiệu: đậm +58%, to +20% so mức nền
+  brandMark(x,W,H,DAU_DAM,DAU_TO);               // dấu thương hiệu, dưới các đường
   // tháng hiện tại to mờ + HUD "đã bỏ bao nhiêu" — nhìn phát biết ngay vốn theo từng tháng
   x.fillStyle=isLight()?'rgba(16,19,33,.12)':'rgba(255,255,255,.09)';
   x.font=mob?'900 30px system-ui':'900 44px system-ui'; x.textAlign='left';
