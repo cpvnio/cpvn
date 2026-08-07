@@ -494,6 +494,10 @@ def main():
     for arr in by_sec.values():
         arr.sort(key=lambda x: -(x.get('mcap') or 0))
         race_set.update(x['sym'] for x in arr[:10])
+    # NHÓM THEO DÕI luôn được đua ĐỦ mã, kể cả mã nhỏ không lọt top 10 ngành — chọn nhóm
+    # ra đua mà thiếu mất mấy mã trong đó thì người xem tưởng nhóm chỉ có bấy nhiêu.
+    for g in uni.get('nhom') or []:
+        race_set.update(s for s in (g.get('syms') or []) if (meta.get(s) or {}).get('shares'))
     races = {}
     files = sorted(f for f in os.listdir(HIST) if f.endswith('.json'))
     print(f'Đọc {len(files)} file kho hist…')
