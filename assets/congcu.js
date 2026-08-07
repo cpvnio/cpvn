@@ -161,7 +161,7 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), nhom:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 async function loadAll(){
   const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
   const [u,eod,pk,mk]=await Promise.all([
@@ -171,6 +171,7 @@ async function loadAll(){
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
   ST.vn30=new Set(u.vn30||[]);
+  ST.nhom=(u.nhom||[]).filter(g=>g&&g.ten&&(g.syms||[]).length);
   for(const s of u.stocks){
     ST.map.set(s.sym,{ sym:s.sym, name:s.name, ex:s.ex, sector:s.sector||'Khác', parent:s.parent||'Khác',
       img:s.img||null, shares:s.shares||0, mcap:s.mcap||0,
@@ -562,6 +563,13 @@ function renderRadar(){
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
+/* Ô "nhóm ngành" chứa CẢ ngành thật lẫn NHÓM THEO DÕI (rổ mã chọn tay trong
+   universe.json). Nhóm mang khoá 'nhom:<id>' nên không thể trùng tên một ngành. */
+const nhomTheoKhoa=k=>(ST.nhom||[]).find(g=>'nhom:'+g.id===k)||null;
+const tenNganh=k=>{ const g=nhomTheoKhoa(k); return g?g.ten:k; };
+const locNganh=k=>{ const g=nhomTheoKhoa(k);
+  if(g){ const t=new Set(g.syms); return s=>t.has(s); }
+  return s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; }; };
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
   settling:false,maxDelta:0,mode:'race',dcaMx:0};
 function raceData(){
@@ -613,7 +621,7 @@ function drawRace(lerp){
     if(a==null&&b==null) return null; if(a==null) return b; if(b==null) return a;
     return a+(b-a)*tt; };
   let pool=D.syms;
-  if(RA.sector) pool=pool.filter(s=>{ const c=ST.map.get(s); return c&&c.sector===RA.sector; });
+  if(RA.sector) pool=pool.filter(locNganh(RA.sector));
   const rows2=pool.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0)
     .sort((a,b)=>b.v-a.v).slice(0,10);          // tối đa 10 công ty trong cuộc đua
   if(!rows2.length){ x.fillStyle=isLight()?'#5d6272':'#9092a3'; x.font='13px system-ui';
@@ -733,7 +741,7 @@ function dcaAll(){
   if(laMa) pool=goTay.filter(s=>{ if(D.series[s]) return true; thieu.push(s); return false; });
   else{
     pool=D.syms;
-    if(DCA.sec) pool=pool.filter(s=>{ const c=ST.map.get(s); return c&&c.sector===DCA.sec; });
+    if(DCA.sec) pool=pool.filter(locNganh(DCA.sec));
   }
   const rows=[];
   for(const s of pool){
@@ -770,7 +778,7 @@ const GRAD={up:'linear-gradient(90deg,rgba(22,199,132,.45),var(--green))',
 function tenRo(C2){
   if(C2.laMa){ const m=C2.rows.map(r=>r.s);
     return m.length<=3?m.join(' · '):m.length+' mã đã chọn'; }
-  return DCA.sec||'Toàn thị trường';
+  return tenNganh(DCA.sec)||'Toàn thị trường';
 }
 function renderDCA(){
   const D=raceData(), box=$('#dcaOut'); if(!D||!box) return;
@@ -1007,7 +1015,13 @@ function renderRace(){
   const secCnt={};
   for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
   const secKeys=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a]);
-  const secOpts=sel=>secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
+  /* NHÓM THEO DÕI đứng ngay trên đầu danh sách ngành (khoá 'nhom:<id>' để khỏi đụng tên
+     ngành thật). Chỉ hiện nhóm nào có mã nằm trong dữ liệu đua, bằng không chọn vào là
+     biểu đồ trống trơn mà người dùng không hiểu tại sao. */
+  const nhomDua=(ST.nhom||[]).filter(g=>g.syms.some(x=>D.series[x]));
+  const secOpts=sel=>nhomDua.map(g=>'<option value="nhom:'+esc(g.id)+'"'
+      +(sel==='nhom:'+g.id?' selected':'')+'>'+esc(g.ten)+'</option>').join('')
+    +secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
   /* ô tháng chỉ ghi "3/2020": nhãn ngay trước nó đã là "triệu/tháng, từ" nên chữ "Tháng"
      trong từng dòng chọn chỉ tổ làm ô rộng thêm 46px, đủ để đẩy ô gõ mã rớt xuống hàng hai */
   const thang=lb=>{ const p=String(lb).split('/'); return p[0]+'/20'+p[1]; };

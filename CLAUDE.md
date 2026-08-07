@@ -158,6 +158,12 @@ giá sai hoặc giá nhảy — đừng đẩy.
   450đ ở cả Q1..Q4/25 như thể trả bốn lần, thực tế chỉ trả tháng 10 (Q4). Tháng chi
   trả có sẵn trong `dividend/histories.divMonths`, cổ tức CP lấy tháng của ngày chốt quyền.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
+- **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`),
+  hiện ở đầu cột ngành của bảng giá và đầu ô chọn ngành của đường đua, khoá lọc là
+  `'nhom:<id>'` để không đụng tên ngành thật. **Mã trong nhóm VẪN giữ nguyên ngành gốc** —
+  bốc chúng ra khỏi ngành là làm méo mọi thống kê theo ngành (bong bóng, ngành hôm nay,
+  đua theo ngành); nhóm chỉ là một LỐI LỌC nữa. `syms` rỗng thì nhóm tự ẩn.
+  Pipeline giữ nguyên khoá này vì `refresh_daily` sửa `u` tại chỗ rồi ghi đè.
 
 ## Quy ước toàn site
 

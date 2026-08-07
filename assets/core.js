@@ -54,7 +54,9 @@ CP.col1d=function(c){
 /* ---------- trạng thái dữ liệu -------------------------------------------- */
 CP.coins=new Map();          // sym -> bản ghi đầy đủ
 CP.vn30=new Set(); CP.hnx30=new Set();
-CP.indices=[]; CP.eodDate=null; CP.spark={}; CP.health=null;
+CP.indices=[]; CP.eodDate=null; CP.spark={}; CP.health=null; CP.nhom=[];
+/* tra nhóm theo dõi theo mã lọc: 'nhom:<id>' -> đối tượng nhóm, không khớp thì null */
+CP.nhomTheoKhoa=k=>(CP.nhom||[]).find(g=>'nhom:'+g.id===k)||null;
 CP.lastPollAt=0; CP.liveOk=false;
 
 /* ---------- nạp nền tảng: universe + snapshot + spark (tất cả từ kho) ------ */
@@ -78,6 +80,12 @@ CP.loadBase=async function(){
   }
   CP.consolidateSectors();     // gộp ngành GIỐNG HỆT trang bong bóng -> cả site chung 1 cách chia
   CP.vn30=new Set(u.vn30||[]); CP.hnx30=new Set(u.hnx30||[]);
+  /* NHÓM THEO DÕI (universe.json -> "nhom"): rổ mã chọn tay, KHÔNG phải ngành thật.
+     Mã vẫn giữ nguyên ngành gốc — nếu bốc chúng ra khỏi ngành thì mọi thống kê theo
+     ngành (bong bóng, ngành hôm nay, đường đua ngành) đều méo. Đây chỉ là một lối lọc
+     nữa. Nhóm rỗng thì coi như không có, khỏi hiện một mục 0 mã. */
+  CP.nhom=(u.nhom||[]).filter(g=>g&&g.ten&&(g.syms||[]).length)
+                      .map(g=>({...g,set:new Set(g.syms)}));
   if(eod&&eod.data){
     CP.eodDate=eod.date; CP.indices=eod.indices||[];
     for(const r of eod.data){
