@@ -592,6 +592,7 @@ const locNganh=k=>{ const r=RO_CHISO[k];
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
   settling:false,maxDelta:0,mode:'race',dcaMx:0,top:10};
 const TOP_CHON=[10,15,20,25,30];   // số công ty hiện cùng lúc, dùng chung cho cả hai chế độ
+const NGUONG_VON=1e12;             // 1.000 tỷ — dưới mức này không vào rổ dựng sẵn
 /* BẢNG MÀU KHÔNG GIỚI HẠN: 16 màu chọn tay cho những thứ hạng đầu (đẹp và quen mắt),
    quá 16 thì sinh thêm bằng GÓC VÀNG 137,5° nên màu nào cũng cách xa màu liền kề —
    30 công ty cùng lúc vẫn không có hai đường trùng tông. */
@@ -615,7 +616,13 @@ function raceData(){
   /* giữ THỨ TỰ chứ không giữ mã màu: màu sinh ra phụ thuộc nền sáng/tối, mà RA.data thì
      nhớ suốt phiên — chốt cứng mã màu là đổi giao diện xong màu cũ vẫn nằm nguyên đó. */
   const idx={}; syms.forEach((s,i)=>idx[s]=i);
-  RA.data={labels:R.labels,series,syms,idx,note:R.note};
+  /* NGƯỠNG VỐN HOÁ: mã dưới 1.000 tỷ (theo vốn hoá HIỆN TẠI) không vào các rổ dựng sẵn —
+     thanh khoản mỏng, mua bán vài trăm triệu là đã đội giá, nên đưa vào đường đua chỉ tổ
+     đẻ ra những cú nhân mấy chục lần mà ngoài đời không ai vào được. 414/1.519 mã lọt.
+     Vẫn GÕ TAY được mã nhỏ ở ô "gõ mã riêng" — chặn cả lối đó là tước mất lựa chọn. */
+  const lon=new Set(syms.filter(x=>{ const c=ST.map.get(x);
+    return c&&(c.mcapLive||c.mcap||0)>=NGUONG_VON; }));
+  RA.data={labels:R.labels,series,syms,idx,lon,note:R.note};
   return RA.data;
 }
 function raceFmt(v){ if(v==null) return '—';   // v tính bằng NGHÌN TỶ -> quy về tỷ
@@ -658,7 +665,7 @@ function drawRace(lerp){
   const val=s=>{ const a=D.series[s][i0], b=D.series[s][i1];
     if(a==null&&b==null) return null; if(a==null) return b; if(b==null) return a;
     return a+(b-a)*tt; };
-  let pool=D.syms;
+  let pool=D.syms.filter(s=>D.lon.has(s));
   if(RA.sector) pool=pool.filter(locNganh(RA.sector));
   const N=RA.top||10;
   const rows2=pool.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0)
@@ -787,7 +794,7 @@ function dcaAll(){
   let pool;
   if(laMa) pool=goTay.filter(s=>{ if(D.series[s]) return true; thieu.push(s); return false; });
   else{
-    pool=D.syms;
+    pool=D.syms.filter(s=>D.lon.has(s));
     if(DCA.sec) pool=pool.filter(locNganh(DCA.sec));
   }
   const rows=[], chuaCo=[];
@@ -1118,7 +1125,8 @@ function renderRace(){
     +'<div id="raView">'
     +'<div class="panel racePanel"><canvas id="cvRace" class="block"></canvas></div>'
     +'<div class="note">Những công ty vốn hoá lớn nhất tại từng thời điểm — chọn nhóm ngành để đua riêng ngành đó, '
-    +'chọn số công ty ở ô ngay dưới biểu đồ (10 đến 30). '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
+    +'chọn số công ty ở ô ngay dưới biểu đồ (10 đến 30). Bỏ qua mã vốn hoá dưới 1.000 tỷ — '
+    +'thanh khoản mỏng, ngoài đời khó mua đủ lượng. '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
     +'</div>'
     /* ---- chế độ ĐẦU TƯ BỀN VỮNG ---- */
     +'<div id="dcaView" style="display:none">'
@@ -1132,6 +1140,7 @@ function renderRace(){
     +'<div class="pb" id="dcaOut"></div></div>'
     +'<div class="note">Mua tại giá đóng cửa THÁNG, giá ĐÃ HỒI TỐ cổ tức/chia tách theo nguồn — tức phần lớn cổ tức '
     +'(cả tiền lẫn cổ phiếu) đã nằm trong kết quả như thể được tái đầu tư; số ít đợt nguồn bỏ sót thì kết quả hơi thấp hơn thực nhận. '
+    +'Rổ dựng sẵn chỉ gồm mã vốn hoá từ 1.000 tỷ (gõ tay ở ô "gõ mã riêng" thì mã nào cũng chạy được). '
     +'Mã phải có giao dịch đủ từ tháng bắt đầu mới được xếp hạng — rổ chia đều cũng chỉ gồm những mã đó, '
     +'nên kết quả rổ không kể mã đã huỷ niêm yết giữa đường. Thống kê quá khứ, không phải khuyến nghị đầu tư.</div>'
     +'</div>';
