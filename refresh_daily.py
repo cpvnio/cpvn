@@ -473,6 +473,21 @@ def parse_generic(d):    # CĐKT/LCTT: giữ nguyên mọi dòng {k,n,v[]}, kỳ
         v=[rnd(x) for x in (r.get("values") or [])]; v.reverse()
         out.append({"k":r.get("key"),"n":(r.get("name") or "").strip(),"v":v})
     return {"labels":labels,"rows":out} if labels and out else None
+RX_MA_TIEUDE=re.compile(r"\(([A-Z0-9]{3,4})\)|(?:^|[\s\"'“(])([A-Z0-9]{3,4})\s*:")
+def tin_dung_ma(sym,tieu):
+    """Bài này có THẬT SỰ nói về mã `sym` không?
+
+    Cả hai nguồn tin đều gắn thẻ khá tay: bài "Thế Giới Di Động (MWG): Doanh thu..." mang
+    thẻ MWG,DXS nên lọt vào trang DXS; bài "IPO thành công, vốn hoá Điện Máy Xanh (DMX)..."
+    mang thẻ DCV,DXS. Người xem mở trang Đất Xanh Services lại đọc tin Điện Máy Xanh.
+    Luật: tiêu đề gọi đích danh MỘT MÃ KHÁC theo lối mạnh — "(MWG)" hoặc "MWG:" — thì bài
+    của công ty kia, bỏ. Trừ khi tiêu đề gọi luôn cả mã đang xem (bài so sánh hai doanh
+    nghiệp) thì giữ. Tin ngành/tin thị trường không gọi tên mã nào nên không bị đụng tới.
+    Giữ ĐÚNG một luật với `CP.tinDungMa` trong assets/core.js — sửa bên này phải sửa bên kia.
+    """
+    co={m.group(1) or m.group(2) for m in RX_MA_TIEUDE.finditer((tieu or "").upper())}
+    if not co or sym in co: return True
+    return not any(x in stocks for x in co)
 flock=threading.Lock(); fdone=[0,0]
 def work_fin(sym):
     url=lambda v,p:f"https://api-finance-t19.24hmoney.vn/v1/web/company/financial-report?symbol={sym}&view={v}&period={p}&expanded=false"
@@ -613,7 +628,7 @@ def work_news(sym):
     seen=set(); dedup=[]
     for it in sorted(o["news"],key=lambda x:-(x.get("ts") or 0)):
         k=(it.get("title") or "").lower()[:45]
-        if not k or k in seen: continue
+        if not k or k in seen or not tin_dung_ma(sym,it.get("title")): continue
         seen.add(k); dedup.append(it)
     o["news"]=dedup[:20]
     with nlock:

@@ -487,6 +487,27 @@ CP.loadFin=async function(sym){
 /* ---------- tin tức + báo cáo CTCK (sống -> kho news) ---------------------- */
 const newsCache=new Map();
 CP.newsFresh=function(sym){ newsCache.delete(sym); return CP.loadNews(sym); };  // ép lấy tin mới
+/* TIN CÓ THẬT SỰ NÓI VỀ MÃ NÀY KHÔNG?
+   Cả hai nguồn đều gắn thẻ khá tay: bài "Thế Giới Di Động (MWG): Doanh thu..." mang thẻ
+   MWG,DXS nên nó lọt vào trang DXS; bài "IPO thành công, vốn hoá Điện Máy Xanh (DMX)..."
+   mang thẻ DCV,DXS. Người xem mở trang Đất Xanh Services lại đọc tin Điện Máy Xanh.
+   Luật: tiêu đề gọi đích danh MỘT MÃ KHÁC theo lối mạnh — "(MWG)" hoặc "MWG:" — thì bài
+   đó là của công ty kia, bỏ. Trừ khi tiêu đề gọi luôn cả mã ĐANG XEM (bài so sánh hai
+   doanh nghiệp) thì vẫn giữ. Tin ngành và tin thị trường không gọi tên mã nào nên không
+   bị đụng tới — đó vẫn là bối cảnh đáng đọc. */
+CP.maTrongTieuDe=function(tieu){
+  const ra=new Set();
+  const th=String(tieu||'').toUpperCase();
+  let m; const rx=/\(([A-Z0-9]{3,4})\)|(?:^|[\s"'“(])([A-Z0-9]{3,4})\s*:/g;
+  while((m=rx.exec(th))) ra.add(m[1]||m[2]);
+  return ra;
+};
+CP.tinDungMa=function(sym,tieu){
+  const co=CP.maTrongTieuDe(tieu);
+  if(!co.size||co.has(sym)) return true;
+  for(const x of co) if(CP.coins.has(x)) return false;   // gọi đích danh mã khác -> của họ
+  return true;
+};
 CP.loadNews=async function(sym){
   if(newsCache.has(sym)&&Date.now()-newsCache.get(sym).at<300000) return newsCache.get(sym).d;
   let news=null, reports=null, total=0;
@@ -507,7 +528,7 @@ CP.loadNews=async function(sym){
         items.sort((a,b)=>b.ts-a.ts);
         const seen=new Set(); news=[];
         for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45);
-          if(!k||seen.has(k))continue; seen.add(k); news.push(it); }
+          if(!k||seen.has(k)||!CP.tinDungMa(sym,it.title))continue; seen.add(k); news.push(it); }
       }
     }catch(e){}
     try{
