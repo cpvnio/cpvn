@@ -350,9 +350,19 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .tdcon .rw{display:grid;grid-template-columns:28px minmax(130px,1fr) 70px 74px 110px;gap:11px;
   align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer;font-size:13px}
 .tdcon .rw:hover{background:var(--card2)}
-.tdcon .tdp{text-align:right;font-size:12px;color:var(--faint)}   /* % mẹ nắm */
+.tdcon .tdp{text-align:right;font-size:12px;color:var(--faint)}
 .tdcon .tdv{text-align:right;font-weight:800;font-size:13.5px}
 .tdcon .tdg{text-align:right;font-size:12px;color:var(--mut)}
+/* % SỞ HỮU dán liền sau mã, không đẩy ra cột riêng: mắt đọc "FOC ≈23,8%" là hiểu ngay
+   nhà mẹ nắm bao nhiêu, khỏi bắc cầu sang cột khác rồi dò ngược lại tên. */
+.tdcon .idn em.own{font-style:normal;font-size:10.5px;font-weight:800;margin-left:6px;
+  color:var(--mut);white-space:nowrap}
+.tdcon .idn em.own.gt{color:var(--gold);border-bottom:1px dotted currentColor}  /* nắm gián tiếp */
+.tdcon .idn em.own.me{color:var(--rose);text-transform:uppercase;letter-spacing:.04em;font-size:9.5px}
+.tdcon .rw.hd{cursor:default;padding-bottom:3px}
+.tdcon .rw.hd:hover{background:none}
+.tdcon .rw.hd span{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);opacity:.75}
 @media(max-width:640px){
   .tdrow{grid-template-columns:minmax(92px,1fr) 62px 96px;gap:8px;padding:11px 2px;font-size:13px}
   /* màn hẹp chỉ đủ chỗ cho TÊN · % · một cột tiền — bỏ thanh, đếm tăng giảm, NN, vốn hoá */
@@ -364,8 +374,11 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
     background:var(--gold);border:0}
   .tdrow .sn b.nn.cn{background:var(--violet)}
   .tdcon{padding-left:8px;margin-left:2px}
-  .tdcon .rw{grid-template-columns:20px minmax(58px,1fr) 46px 56px;gap:6px;padding:5px 4px}
-  .tdcon .tdg{display:none}
+  /* màn hẹp bỏ cột VỐN HOÁ chứ không bỏ GTGD: đây là tab soi DÒNG TIỀN, mà % sở hữu đã
+     nằm ngay cạnh mã rồi nên hàng con vẫn đủ nghĩa */
+  .tdcon .rw{grid-template-columns:20px minmax(58px,1fr) 54px 62px;gap:6px;padding:5px 4px}
+  .tdcon .tdp{display:none}
+  .tdcon .idn em.own{font-size:9.5px;margin-left:4px}
 }
 
 /* ---------- đường đua + đầu tư đều đặn (DCA) ---------- */
@@ -522,6 +535,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260810z"></script>
+<script src="assets/congcu.js?v=20260811a"></script>
 </body>
 </html>

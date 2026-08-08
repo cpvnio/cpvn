@@ -487,9 +487,19 @@ LB.shotSec=()=>shot($('#secPanel'),'cpvn-nganh-'+ST.date);
    Bản đồ do tools/build_tapdoan.py dựng từ DANH SÁCH CỔ ĐÔNG của từng mã (data/profile),
    không phải nhập tay. Bấm vào một nhóm là bung danh sách công ty con kèm giá/%/GTGD/NN. */
 const tdMo=new Set();
+/* Nhãn % SỞ HỮU dán ngay cạnh mã. Tỉ lệ đã nhân dồn dọc chuỗi nên đọc thẳng được: FOC ghi
+   23,8% là phần của cả nhà FPT chứ không phải 56,4% mà FPT Telecom đứng tên. Con nắm gián
+   tiếp mang dấu ≈ và di chuột vào là biết đi vòng qua ai. */
+const soHuu=o=>{
+  if(o.p==null) return '<em class="own me">mẹ</em>';
+  const s=(+o.p).toFixed(1).replace(/\.0$/,'').replace('.',',');
+  return '<em class="own'+(o.gt?' gt':'')+'"'
+    +(o.gt?' title="Nắm gián tiếp'+(o.qua?' qua '+esc(o.qua):'')+'"':'')
+    +'>'+(o.gt?'≈':'')+s+'%</em>';
+};
 function tapDoanPanel(){
   const ds=(ST.tapdoan||[]).map(g=>{      // g.me = mã công ty mẹ nếu mẹ cũng niêm yết
-    const ma=g.syms.map(x=>({p:x.p,c:ST.map.get(x.s)})).filter(x=>x.c&&x.c.close>0);
+    const ma=g.syms.map(x=>({p:x.p,gt:x.gt,qua:x.qua,c:ST.map.get(x.s)})).filter(x=>x.c&&x.c.close>0);
     let cap=0,d=0,gtgd=0,nn=0,up=0,dn=0;
     /* VỐN HOÁ CẢ NHÓM chỉ trừ chồng lấn KHI MẸ CŨNG NIÊM YẾT — vốn hoá VIC đã bao gồm 69%
        VHM nên cộng thô là đếm hai lần. Mẹ không niêm yết (PVN, Viettel, EVN) thì cộng đủ,
@@ -518,12 +528,14 @@ function tapDoanPanel(){
       +'<span class="sc"><i>GTGD</i>'+ty(x.gtgd)+'</span>'
       +'<span class="sn2 '+cls(x.nn)+'"><i>NN ròng</i>'+(x.nn>=0?'+':'−')+ty(Math.abs(x.nn))+'</span>'
       +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+'</span></div>'
-      +(mo?'<div class="tdcon">'+x.ma.map(({p,c})=>
-          '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
-          +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
-          +'<span class="tdp">'+(p!=null?p+'%':'—')+'</span>'
+      +(mo?'<div class="tdcon"><div class="rw hd"><span></span><span>công ty · % nhà mẹ nắm</span>'
+          +'<span>vốn hoá</span><span>hôm nay</span><span>GTGD</span></div>'
+        +x.ma.map(o=>{ const c=o.c;
+          return '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
+          +'<span class="idn"><b>'+c.sym+soHuu(o)+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
+          +'<span class="tdp">'+ty(c.mcapLive||c.mcap||0)+'</span>'
           +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
-          +'<span class="tdg">'+ty(c.gtgd)+'</span></div>').join('')+'</div>':'');
+          +'<span class="tdg">'+ty(c.gtgd)+'</span></div>'; }).join('')+'</div>':'');
   };
   return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn — xếp theo GTGD trong phiên'
     +'<span class="cnt">'+ds.length+' nhóm</span></div>'
@@ -1135,15 +1147,22 @@ function drawDCA(lerp){
 function tapDoanNote(){
   return '<div class="note">Bản đồ dựng TỰ ĐỘNG từ danh sách cổ đông của từng mã '
     +'(<code>tools/build_tapdoan.py</code>), không nhập tay: ai nắm từ 20% của hai mã trở lên '
-    +'thì xếp chung một nhà. Bảng xếp theo DÒNG TIỀN trong phiên, không theo vốn hoá — để thấy '
-    +'tiền đang chảy vào họ nào chứ không phải họ nào to nhất. % bên cạnh mã là tỉ lệ công ty '
-    +'mẹ nắm. Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
+    +'thì xếp chung một nhà, rồi lan tiếp theo danh sách công ty con nên bắt được cả '
+    +'<b>con gián tiếp</b> — FOC không có nổi một dòng cổ đông nhắc tới FPT, phải đi vòng qua '
+    +'FPT Telecom mới ra. Bảng xếp theo DÒNG TIỀN trong phiên, không theo vốn hoá — để thấy '
+    +'tiền đang chảy vào họ nào chứ không phải họ nào to nhất. <b>% cạnh mã là tỉ lệ nhà mẹ '
+    +'nắm, đã nhân dồn dọc chuỗi</b>: FPT nắm 45,7% FPT Telecom, FPT Telecom nắm 56,4% FOC thì '
+    +'FOC ghi ≈23,8% chứ không phải 56,4%. Dấu ≈ là nắm gián tiếp, rê chuột vào biết đi qua ai. '
+    +'Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
     +'nắm cả BID, VCB, CTG nhưng ba ngân hàng đó không cùng một nhà.</div>';
 }
 /* ---- SOI QUỸ ĐẦU TƯ: lật danh mục các quỹ, xem quỹ nào đang cầm mã nào ---- */
 const quyMo=new Set();
+/* Quỹ nhỏ hơn ngần này thì phần danh mục ghi nhận được quá mỏng để soi ra điều gì —
+   một quỹ hiện 116 tỷ rải trên 30 mã thì mỗi mã vài tỷ, đọc xong chẳng biết để làm gì. */
+const QUY_MIN=500;                                     // tỷ đồng
 function quyPanel(){
-  const ds=(ST.quy||[]).filter(q=>(q.syms||[]).length>=2);
+  const ds=(ST.quy||[]).filter(q=>(q.syms||[]).length>=2&&(q.tong||0)>=QUY_MIN);
   if(!ds.length) return '<div class="empty">Chưa có dữ liệu quỹ — chạy tools/build_tapdoan.py</div>';
   const cu=q=>(q.ky||'')<'2025-01-01';            // kỳ công bố đã quá cũ
   const hang=q=>{
@@ -1171,7 +1190,9 @@ function quyPanel(){
 }
 function quyNote(){
   return '<div class="note">Lật ngược từ danh sách quỹ nắm giữ của từng mã trong kho hồ sơ '
-    +'doanh nghiệp. <b>Kỳ công bố lệch nhau rất xa</b> — quỹ nội báo cáo đều nên có số tới '
+    +'doanh nghiệp. Chỉ hiện quỹ có danh mục ghi nhận được <b>từ '+QUY_MIN+' tỷ trở lên</b>; '
+    +'dưới ngưỡng đó mỗi mã chỉ vài tỷ, xem xong không rút ra được điều gì. '
+    +'<b>Kỳ công bố lệch nhau rất xa</b> — quỹ nội báo cáo đều nên có số tới '
     +'giữa 2026, còn Dragon Capital hay PYN thì nguồn chỉ có tới cuối 2023, hơn hai năm. '
     +'Cột "kỳ" ghi rõ ngày của từng quỹ và quỹ nào quá cũ bị dán nhãn — đừng đọc số cũ như '
     +'danh mục hiện tại. % là biến động hôm nay bình quân theo giá trị nắm giữ.</div>';
