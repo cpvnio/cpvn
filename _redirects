@@ -15,4 +15,6 @@
 /bandonhiet      /bubbles?view=heat    301
 /radar           /congcu?m=radar       200
 /sogang          /bandonhiet           301
+/tapdoan         /congcu?m=tapdoan     200
+/santapdoan      /tapdoan              301
 /duongdua        /congcu?m=race        200

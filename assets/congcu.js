@@ -411,12 +411,14 @@ function sectorPerf(){
 const MODULES=[
   {id:'radar', ic:'📡', name:'Radar phiên', tag:'',
    meta:[], render:renderRadar},
+  {id:'tapdoan', ic:'🏢', name:'Săn tập đoàn', tag:'Gom công ty cùng một nhà để soi tiền đang chảy vào cả họ — bấm tên nhóm là bung danh sách công ty con niêm yết.',
+   meta:[], render:renderTapDoan},
   {id:'race', ic:'🏁', name:'Đường đua vốn hoá', tag:'6,5 năm thị trường chạy lại trong 30 giây — bảng xếp hạng vốn hoá đổi ngôi theo từng tháng.',
    meta:[], render:renderRace},
 ];
 let cur=null; const done={};
-const PATHOF={radar:'/radar',race:'/duongdua'};
-const TITLEOF={radar:'Radar phiên',race:'Đường đua vốn hoá'};
+const PATHOF={radar:'/radar',tapdoan:'/tapdoan',race:'/duongdua'};
+const TITLEOF={radar:'Radar phiên',tapdoan:'Săn tập đoàn',race:'Đường đua vốn hoá'};
 function renderNav(){
   $$('.tabs a[data-m]').forEach(e=>{
     e.classList.toggle('on',e.dataset.m===cur);
@@ -488,12 +490,19 @@ LB.shotSec=()=>shot($('#secPanel'),'cpvn-nganh-'+ST.date);
    không phải nhập tay. Bấm vào một nhóm là bung danh sách công ty con kèm giá/%/GTGD/NN. */
 const tdMo=new Set();
 function tapDoanPanel(){
-  const ds=(ST.tapdoan||[]).map(g=>{
+  const ds=(ST.tapdoan||[]).map(g=>{      // g.me = mã công ty mẹ nếu mẹ cũng niêm yết
     const ma=g.syms.map(x=>({p:x.p,c:ST.map.get(x.s)})).filter(x=>x.c&&x.c.close>0);
     let cap=0,d=0,gtgd=0,nn=0,up=0,dn=0;
-    for(const {c} of ma){ const v=c.mcapLive||c.mcap||0; cap+=v; gtgd+=c.gtgd||0; nn+=c.nnVal||0;
+    /* VỐN HOÁ CẢ NHÓM chỉ trừ chồng lấn KHI MẸ CŨNG NIÊM YẾT — vốn hoá VIC đã bao gồm 69%
+       VHM nên cộng thô là đếm hai lần. Mẹ không niêm yết (PVN, Viettel, EVN) thì cộng đủ,
+       trừ đi là tự tay xoá phần lớn nhóm. */
+    const coMe=!!(g.me&&ST.map.has(g.me));
+    for(const {p,c} of ma){ const v=c.mcapLive||c.mcap||0;
+      cap+=(coMe&&p)?v*Math.max(0,1-Math.min(p,100)/100):v;
+      gtgd+=c.gtgd||0; nn+=c.nnVal||0;
       if(c.chg!=null){ d+=c.chg*v; if(c.chg>0.01)up++; else if(c.chg<-0.01)dn++; } }
-    return {g,ma,cap,d:cap?d/cap:0,gtgd,nn,up,dn};
+    const capTho=ma.reduce((a2,x)=>a2+(x.c.mcapLive||x.c.mcap||0),0);
+    return {g,ma,cap,d:capTho?d/capTho:0,gtgd,nn,up,dn};
   }).filter(x=>x.ma.length>=2);
   ds.sort((a,b)=>b.gtgd-a.gtgd);                 // DÒNG TIỀN dẫn dắt, không phải vốn hoá
   if(!ds.length) return '<div class="empty">Chưa có bản đồ tập đoàn — chạy tools/build_tapdoan.py</div>';
@@ -506,7 +515,8 @@ function tapDoanPanel(){
       +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
       +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
       +'<span class="sp '+cls(x.d)+'">'+pct(x.d)+'</span>'
-      +'<span class="sc">'+ty(x.gtgd)+' · '+x.ma.length+' mã</span></div>'
+      +'<span class="sc"><i>GTGD</i>'+ty(x.gtgd)+'</span>'
+      +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+' · '+x.ma.length+' mã</span></div>'
       +(mo?'<div class="tdcon">'+x.ma.map(({p,c})=>
           '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
           +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
@@ -514,7 +524,7 @@ function tapDoanPanel(){
           +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
           +'<span class="tdg">'+ty(c.gtgd)+'</span></div>').join('')+'</div>':'');
   };
-  return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn'
+  return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn — xếp theo GTGD trong phiên'
     +'<span class="cnt">'+ds.length+' nhóm</span></div>'
     +'<div class="pb" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
 }
@@ -613,7 +623,6 @@ function renderRadar(){
     +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
     +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
-    +sectionHead('r-td','🏢 Săn tập đoàn')+tapDoanPanel()
     +'</div>';
   drawSparks($('#m-radar'));
 }
@@ -1103,6 +1112,16 @@ function drawDCA(lerp){
     veTien(t,sx+x.measureText(t.s).width+5,t.y);
   }
 }
+function renderTapDoan(){
+  const m=MODULES.find(x=>x.id==='tapdoan');
+  $('#m-tapdoan').innerHTML=head(m)+tapDoanPanel()
+    +'<div class="note">Bản đồ dựng TỰ ĐỘNG từ danh sách cổ đông của từng mã '
+    +'(<code>tools/build_tapdoan.py</code>), không nhập tay: ai nắm từ 20% của hai mã trở lên '
+    +'thì xếp chung một nhà. Bảng xếp theo DÒNG TIỀN trong phiên, không theo vốn hoá — để thấy '
+    +'tiền đang chảy vào họ nào chứ không phải họ nào to nhất. % bên cạnh mã là tỉ lệ công ty '
+    +'mẹ nắm. Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
+    +'nắm cả BID, VCB, CTG nhưng ba ngân hàng đó không cùng một nhà.</div>';
+}
 function renderRace(){
   const m=MODULES.find(x=>x.id==='race');
   const D=raceData();
@@ -1303,10 +1322,7 @@ async function init(){
     if(td&&td.dataset.td){
       const id=td.dataset.td;
       tdMo.has(id)?tdMo.delete(id):tdMo.add(id);
-      const box=$('#tdPanel');
-      if(box){ box.outerHTML=tapDoanPanel().replace(/^[\s\S]*?<div class="pb"/,'<div class="pb"')
-        .replace(/<\/div>$/,''); }
-      renderRadar();                                // vẽ lại cả radar cho chắc, rẻ hơn vá tay
+      renderTapDoan();                              // vẽ lại cả bảng cho chắc, rẻ hơn vá tay
       const lai=document.querySelector('.tdrow[data-td="'+id.replace(/"/g,'')+'"]');
       if(lai) lai.scrollIntoView({block:'nearest'});
       return;
@@ -1318,7 +1334,7 @@ async function init(){
     rt=setTimeout(()=>{ const m=MODULES.find(x=>x.id===cur);
       if(m&&m.after) m.after(); },180); }; })());
   const q=new URLSearchParams(location.search).get('m');
-  const byPath={radar:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
+  const byPath={radar:'radar',tapdoan:'tapdoan',santapdoan:'tapdoan',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)

@@ -162,11 +162,20 @@ def main():
             ten = re.sub(r"\s+", " ", (ten_goc.get(khoa) or "").strip())
             if len(ten) > 46: ten = ten[:45].rstrip() + "…"
         syms = sorted(ds.items(), key=lambda kv: -mcap(kv[0]))
+        # VỐN HOÁ CẢ NHÓM. Cộng thô là đếm hai lần KHI MẸ CŨNG NIÊM YẾT: vốn hoá VIC đã
+        # bao gồm 69% VHM mà VHM lại được cộng nguyên cục -> Vingroup phình lên 2,23 triệu
+        # tỷ trong khi VIC chỉ có 1,70 triệu tỷ. Lúc đó mã con chỉ tính PHẦN NGOÀI NHÓM.
+        # NHƯNG mẹ KHÔNG niêm yết (PVN, Viettel, EVN, TKV) thì chẳng có gì bị đếm hai lần —
+        # trừ đi là tự tay xoá phần lớn nhóm: PVN từ 474 nghìn tỷ tụt còn 90.
+        co_me = (me in U) if me else False
+        von = (sum(mcap(s) * (1 - min(p, 100) / 100 if p else 1) for s, p in syms)
+               if co_me else sum(mcap(s) for s, _ in syms))
         ra.append({
             "id": khoa.replace("auto:", "a-").replace(" ", "-")[:40],
             "ten": ten, "me": me if me in U else None,
             "kieu": "nn" if la_nn.get(khoa) else ("tt" if la_dn.get(khoa) else "cn"),
-            "mcap": round(sum(mcap(s) for s, _ in syms) / 1e9),
+            "mcap": round(von / 1e9),
+            "mcapTho": round(sum(mcap(s) for s, _ in syms) / 1e9),
             "syms": [{"s": s, "p": (round(p, 1) if p else None)} for s, p in syms],
         })
     ra.sort(key=lambda g: -g["mcap"])
