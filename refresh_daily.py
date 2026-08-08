@@ -847,6 +847,15 @@ try:
     import build_screen as _bs
     _bs.main()
     HL["screen"]={"ok":1}
+    # BẢN ĐỒ TẬP ĐOÀN dựng từ danh sách cổ đông trong data/profile -> data/tapdoan.json.
+    # Chạy sau build_screen vì cũng đọc universe.json vừa cập nhật.
+    try:
+        import build_tapdoan as _btd
+        _btd.main()
+        HL["tapdoan"]={"ok":1}
+    except Exception as e2:
+        print(f"tapdoan.json LỖI (không chặn pipeline): {e2}",flush=True)
+        HL["tapdoan"]={"ok":0,"err":str(e2)[:120]}
 except Exception as e:
     print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
     HL["screen"]={"ok":0,"err":str(e)[:120]}

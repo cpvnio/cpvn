@@ -309,6 +309,40 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .secrow .sbr{display:none}
 }
 
+/* ---------- SĂN TẬP ĐOÀN: hàng nhóm bấm mở, bên trong là công ty con ---------- */
+.tdrow{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,1fr) 72px 118px;gap:10px;
+  align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:12.5px;
+  cursor:pointer;user-select:none;transition:.12s}
+.tdrow:first-child{border-top:0}
+.tdrow:hover .sn{color:var(--txt)}
+.tdrow.on .sn{color:var(--rose)}
+.tdrow .sn{font-weight:700;display:flex;align-items:center;gap:6px;min-width:0}
+.tdrow .sn .cr{font-style:normal;font-size:9px;opacity:.6;flex:0 0 auto}
+.tdrow .sn b.nn{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--gold);border:1px solid rgba(245,180,10,.45);border-radius:20px;padding:1px 6px;flex:0 0 auto}
+.tdrow .sn b.nn.cn{color:var(--violet);border-color:rgba(167,139,250,.45)}
+.tdrow .sbr{position:relative;height:9px;background:var(--card2);border-radius:5px;overflow:hidden}
+.tdrow .sbr i.z{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line2)}
+.tdrow .sbr i.b{position:absolute;top:0;bottom:0;border-radius:5px}
+.tdrow .sbr i.b.pos{left:50%;background:var(--green)}
+.tdrow .sbr i.b.neg{right:50%;background:var(--red)}
+.tdrow .sp{text-align:right;font-weight:800}
+.tdrow .sc{text-align:right;font-size:11px;color:var(--faint);white-space:nowrap}
+.tdcon{padding:2px 0 8px 14px;border-left:2px solid var(--line2);margin:0 0 4px 5px}
+.tdcon .rw{display:grid;grid-template-columns:24px minmax(120px,1fr) 60px 64px 96px;gap:9px;
+  align-items:center;padding:5px 6px;border-radius:9px;cursor:pointer;font-size:12.5px}
+.tdcon .rw:hover{background:var(--card2)}
+.tdcon .tdp{text-align:right;font-size:11.5px;color:var(--faint)}   /* % mẹ nắm */
+.tdcon .tdv{text-align:right;font-weight:800}
+.tdcon .tdg{text-align:right;font-size:11.5px;color:var(--mut)}
+@media(max-width:640px){
+  .tdrow{grid-template-columns:minmax(96px,1fr) 60px 88px;gap:7px}
+  .tdrow .sbr{display:none}
+  .tdcon{padding-left:8px;margin-left:2px}
+  .tdcon .rw{grid-template-columns:20px minmax(58px,1fr) 46px 56px;gap:6px;padding:5px 4px}
+  .tdcon .tdg{display:none}
+}
+
 /* ---------- đường đua + đầu tư đều đặn (DCA) ---------- */
 .racePanel{padding:12px}
 .dcarow{display:grid;grid-template-columns:26px 150px 1fr minmax(112px,auto);gap:10px;align-items:center;
@@ -463,6 +497,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260810r"></script>
+<script src="assets/congcu.js?v=20260810s"></script>
 </body>
 </html>

@@ -161,7 +161,7 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), tapdoan:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 /* GỘP NGÀNH — BẢN SAO Y HỆT core.js và bubbles.html. Trang này trước đây dùng thẳng
    `sector` thô của nguồn, nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
    "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng trong khi bảng giá
@@ -183,9 +183,10 @@ function gopNganh(){
 }
 async function loadAll(){
   const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
-  const [u,eod,pk,mk]=await Promise.all([
+  const [u,eod,pk,mk,td]=await Promise.all([
     j('universe.json'), j('data/eod/latest.json'),
-    j('data/screen.json'), j('data/market.json')]);
+    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json')]);
+  ST.tapdoan=(td&&td.nhom)||[];
   if(!u||!pk) throw new Error('thiếu dữ liệu');
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
@@ -482,6 +483,41 @@ function sectorPanel(){
     }).join('')+'</div></div>';
 }
 LB.shotSec=()=>shot($('#secPanel'),'cpvn-nganh-'+ST.date);
+/* ---- SĂN TẬP ĐOÀN: gom công ty cùng một nhà để soi dòng tiền chảy vào cả họ ----
+   Bản đồ do tools/build_tapdoan.py dựng từ DANH SÁCH CỔ ĐÔNG của từng mã (data/profile),
+   không phải nhập tay. Bấm vào một nhóm là bung danh sách công ty con kèm giá/%/GTGD/NN. */
+const tdMo=new Set();
+function tapDoanPanel(){
+  const ds=(ST.tapdoan||[]).map(g=>{
+    const ma=g.syms.map(x=>({p:x.p,c:ST.map.get(x.s)})).filter(x=>x.c&&x.c.close>0);
+    let cap=0,d=0,gtgd=0,nn=0,up=0,dn=0;
+    for(const {c} of ma){ const v=c.mcapLive||c.mcap||0; cap+=v; gtgd+=c.gtgd||0; nn+=c.nnVal||0;
+      if(c.chg!=null){ d+=c.chg*v; if(c.chg>0.01)up++; else if(c.chg<-0.01)dn++; } }
+    return {g,ma,cap,d:cap?d/cap:0,gtgd,nn,up,dn};
+  }).filter(x=>x.ma.length>=2);
+  ds.sort((a,b)=>b.gtgd-a.gtgd);                 // DÒNG TIỀN dẫn dắt, không phải vốn hoá
+  if(!ds.length) return '<div class="empty">Chưa có bản đồ tập đoàn — chạy tools/build_tapdoan.py</div>';
+  const mx=Math.max.apply(null,ds.map(x=>Math.abs(x.d)))||1;
+  const hang=x=>{
+    const g=x.g, mo=tdMo.has(g.id);
+    return '<div class="tdrow'+(mo?' on':'')+'" data-td="'+esc(g.id)+'">'
+      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+esc(g.ten)
+      +(g.kieu==='nn'?'<b class="nn">nhà nước</b>':g.kieu==='cn'?'<b class="nn cn">cá nhân</b>':'')+'</span>'
+      +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
+      +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
+      +'<span class="sp '+cls(x.d)+'">'+pct(x.d)+'</span>'
+      +'<span class="sc">'+ty(x.gtgd)+' · '+x.ma.length+' mã</span></div>'
+      +(mo?'<div class="tdcon">'+x.ma.map(({p,c})=>
+          '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
+          +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
+          +'<span class="tdp">'+(p!=null?p+'%':'—')+'</span>'
+          +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
+          +'<span class="tdg">'+ty(c.gtgd)+'</span></div>').join('')+'</div>':'');
+  };
+  return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn'
+    +'<span class="cnt">'+ds.length+' nhóm</span></div>'
+    +'<div class="pb" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
+}
 function renderRadar(){
   const m=MODULES.find(x=>x.id==='radar');
   const L=ST.list, liq=c=>(c.avgval20||0);
@@ -577,6 +613,7 @@ function renderRadar(){
     +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
     +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
+    +sectionHead('r-td','🏢 Săn tập đoàn')+tapDoanPanel()
     +'</div>';
   drawSparks($('#m-radar'));
 }
@@ -1259,7 +1296,21 @@ async function init(){
     Object.keys(done).forEach(k=>delete done[k]);
     showMod(cur);
   };
-  $('#mn').addEventListener('click',e=>{           // bấm dòng mã ở bất kỳ thẻ nào -> trang cổ phiếu
+  $('#mn').addEventListener('click',e=>{
+    /* bấm HÀNG TẬP ĐOÀN -> mở/thu danh sách công ty con. Phải bắt TRƯỚC dòng mã, bằng
+       không bấm trúng hàng nhóm lại nhảy sang trang một mã nào đó. */
+    const td=e.target.closest('.tdrow');
+    if(td&&td.dataset.td){
+      const id=td.dataset.td;
+      tdMo.has(id)?tdMo.delete(id):tdMo.add(id);
+      const box=$('#tdPanel');
+      if(box){ box.outerHTML=tapDoanPanel().replace(/^[\s\S]*?<div class="pb"/,'<div class="pb"')
+        .replace(/<\/div>$/,''); }
+      renderRadar();                                // vẽ lại cả radar cho chắc, rẻ hơn vá tay
+      const lai=document.querySelector('.tdrow[data-td="'+id.replace(/"/g,'')+'"]');
+      if(lai) lai.scrollIntoView({block:'nearest'});
+      return;
+    }
     const rw=e.target.closest('.rw,.dcarow');
     if(rw&&rw.dataset.sym) location.href='cophieu.html?sym='+rw.dataset.sym;
   });
