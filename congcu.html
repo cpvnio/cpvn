@@ -310,38 +310,50 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 }
 
 /* ---------- SĂN TẬP ĐOÀN: hàng nhóm bấm mở, bên trong là công ty con ---------- */
-.tdrow{display:grid;grid-template-columns:minmax(140px,1.1fr) minmax(96px,.9fr) 66px 94px 132px;gap:10px;
-  align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:12.5px;
-  cursor:pointer;user-select:none;transition:.12s}
+.tdrow{display:grid;grid-template-columns:minmax(150px,1.5fr) 96px 74px 116px 158px;gap:14px;
+  align-items:center;padding:12px 4px;border-top:1px solid var(--line);font-size:13.5px;
+  border-radius:10px;cursor:pointer;user-select:none;transition:.12s}
+.tdrow:hover{background:var(--card2)}
 .tdrow:first-child{border-top:0}
 .tdrow:hover .sn{color:var(--txt)}
 .tdrow.on .sn{color:var(--rose)}
-.tdrow .sn{font-weight:700;display:flex;align-items:center;gap:6px;min-width:0}
+.tdrow .sn{font-weight:800;display:flex;align-items:center;gap:7px;min-width:0}
+/* tên phải nằm trong thẻ RIÊNG mới cắt được bằng dấu ba chấm: đặt text-overflow lên chính
+   .sn không ăn vì nó là hộp flex, chữ bị xén cụt ngang không một dấu hiệu gì */
+.tdrow .sn .nm{font-style:normal;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tdrow .sn .cr{font-style:normal;font-size:9px;opacity:.6;flex:0 0 auto}
 .tdrow .sn b.nn{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
   color:var(--gold);border:1px solid rgba(245,180,10,.45);border-radius:20px;padding:1px 6px;flex:0 0 auto}
 .tdrow .sn b.nn.cn{color:var(--violet);border-color:rgba(167,139,250,.45)}
-.tdrow .sbr{position:relative;height:9px;background:var(--card2);border-radius:5px;overflow:hidden}
+/* thanh xanh đỏ CỐ Ý NGẮN — nó chỉ để liếc qua thấy nhóm nào đang khoẻ, con số bên phải
+   mới là thứ để đọc. Trước đây nó dài bằng cả cột tên, hút hết mắt mà chẳng nói thêm gì. */
+.tdrow .sbr{position:relative;height:7px;background:var(--card2);border-radius:4px;overflow:hidden}
 .tdrow .sbr i.z{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line2)}
 .tdrow .sbr i.b{position:absolute;top:0;bottom:0;border-radius:5px}
 .tdrow .sbr i.b.pos{left:50%;background:var(--green)}
 .tdrow .sbr i.b.neg{right:50%;background:var(--red)}
-.tdrow .sp{text-align:right;font-weight:800}
-.tdrow .sc,.tdrow .sv{text-align:right;font-size:11px;color:var(--faint);white-space:nowrap}
+.tdrow .sp{text-align:right;font-weight:800;font-size:14px}
+.tdrow .sc,.tdrow .sv{text-align:right;font-size:12.5px;color:var(--mut);white-space:nowrap;font-weight:600}
 /* nhãn nhỏ trước mỗi con số — không có nó thì hai cột tiền đứng cạnh nhau, người xem
    dễ đọc nhầm dòng tiền thành vốn hoá (Vingroup 2.012 tỷ GTGD vs 1,87 triệu tỷ vốn hoá) */
-.tdrow .sc i,.tdrow .sv i{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.05em;
-  text-transform:uppercase;color:var(--faint);opacity:.65;margin-right:5px}
-.tdcon{padding:2px 0 8px 14px;border-left:2px solid var(--line2);margin:0 0 4px 5px}
-.tdcon .rw{display:grid;grid-template-columns:24px minmax(120px,1fr) 60px 64px 96px;gap:9px;
-  align-items:center;padding:5px 6px;border-radius:9px;cursor:pointer;font-size:12.5px}
+.tdrow .sc i,.tdrow .sv i{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--faint);opacity:.7;margin-right:6px}
+.tdcon{padding:4px 0 12px 16px;border-left:2px solid var(--line2);margin:2px 0 6px 8px}
+.tdcon .rw{display:grid;grid-template-columns:28px minmax(130px,1fr) 70px 74px 110px;gap:11px;
+  align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer;font-size:13px}
 .tdcon .rw:hover{background:var(--card2)}
-.tdcon .tdp{text-align:right;font-size:11.5px;color:var(--faint)}   /* % mẹ nắm */
-.tdcon .tdv{text-align:right;font-weight:800}
-.tdcon .tdg{text-align:right;font-size:11.5px;color:var(--mut)}
+.tdcon .tdp{text-align:right;font-size:12px;color:var(--faint)}   /* % mẹ nắm */
+.tdcon .tdv{text-align:right;font-weight:800;font-size:13.5px}
+.tdcon .tdg{text-align:right;font-size:12px;color:var(--mut)}
 @media(max-width:640px){
-  .tdrow{grid-template-columns:minmax(96px,1fr) 58px 92px;gap:7px}
+  .tdrow{grid-template-columns:minmax(92px,1fr) 62px 96px;gap:8px;padding:11px 2px;font-size:13px}
   .tdrow .sbr,.tdrow .sv{display:none}   /* màn hẹp giữ dòng tiền, bỏ cột vốn hoá */
+  .tdrow .sc i{display:none}
+  /* nhãn "nhà nước"/"cá nhân" ăn mất chỗ của TÊN nhóm — màn hẹp rút còn một chấm tròn,
+     bằng không "Ngân hàng Nhà nước Việt Nam" cụt còn "Ngâ…" mà chẳng đọc ra là nhóm nào */
+  .tdrow .sn b.nn{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;
+    background:var(--gold);border:0}
+  .tdrow .sn b.nn.cn{background:var(--violet)}
   .tdcon{padding-left:8px;margin-left:2px}
   .tdcon .rw{grid-template-columns:20px minmax(58px,1fr) 46px 56px;gap:6px;padding:5px 4px}
   .tdcon .tdg{display:none}
@@ -480,7 +492,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
     <a href="/">Bảng giá</a>
     <a href="/bubbles">Bong bóng</a>
     <a data-m="radar">Radar</a>
-    <a data-m="tapdoan">Tập đoàn</a>
     <a data-m="race">Đường đua</a>
   </nav>
   <div class="spacer"></div>
@@ -502,6 +513,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260810v"></script>
+<script src="assets/congcu.js?v=20260810y"></script>
 </body>
 </html>

@@ -411,14 +411,12 @@ function sectorPerf(){
 const MODULES=[
   {id:'radar', ic:'📡', name:'Radar phiên', tag:'',
    meta:[], render:renderRadar},
-  {id:'tapdoan', ic:'🏢', name:'Săn tập đoàn', tag:'Gom công ty cùng một nhà để soi tiền đang chảy vào cả họ — bấm tên nhóm là bung danh sách công ty con niêm yết.',
-   meta:[], render:renderTapDoan},
   {id:'race', ic:'🏁', name:'Đường đua vốn hoá', tag:'6,5 năm thị trường chạy lại trong 30 giây — bảng xếp hạng vốn hoá đổi ngôi theo từng tháng.',
    meta:[], render:renderRace},
 ];
 let cur=null; const done={};
-const PATHOF={radar:'/radar',tapdoan:'/tapdoan',race:'/duongdua'};
-const TITLEOF={radar:'Radar phiên',tapdoan:'Săn tập đoàn',race:'Đường đua vốn hoá'};
+const PATHOF={radar:'/radar',race:'/duongdua'};
+const TITLEOF={radar:'Radar phiên',race:'Đường đua vốn hoá'};
 function renderNav(){
   $$('.tabs a[data-m]').forEach(e=>{
     e.classList.toggle('on',e.dataset.m===cur);
@@ -510,7 +508,7 @@ function tapDoanPanel(){
   const hang=x=>{
     const g=x.g, mo=tdMo.has(g.id);
     return '<div class="tdrow'+(mo?' on':'')+'" data-td="'+esc(g.id)+'">'
-      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+esc(g.ten)
+      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i><em class="nm">'+esc(g.ten)+'</em>'
       +(g.kieu==='nn'?'<b class="nn">nhà nước</b>':g.kieu==='cn'?'<b class="nn cn">cá nhân</b>':'')+'</span>'
       +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
       +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
@@ -528,6 +526,7 @@ function tapDoanPanel(){
     +'<span class="cnt">'+ds.length+' nhóm</span></div>'
     +'<div class="pb" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
 }
+let radarTab='phien';      // tab đang xem trong module radar: 'phien' | 'td'
 function renderRadar(){
   const m=MODULES.find(x=>x.id==='radar');
   const L=ST.list, liq=c=>(c.avgval20||0);
@@ -595,7 +594,17 @@ function renderRadar(){
   const gHose=gSan('VNINDEX'), gPhu=gSan('HNX')+gSan('UPCOM');
   const infoRow=(k,v,cls2)=>'<div class="rrRow"><span>'+k+'</span>'+
     '<b class="bdg '+(cls2||'')+'">'+v+'</b></div>';
+  /* TAB ngay đầu trang radar: xem nhịp phiên hay soi tập đoàn. Để tập đoàn thành một mục
+     riêng trên thanh điều hướng chính thì nó tách khỏi bối cảnh phiên, mà hai thứ này
+     người xem hay đọc nối nhau. */
   $('#m-radar').innerHTML=head(m)
+    +'<div class="ctl" id="rdTab"><div class="seg">'
+    +'<button data-v="phien"'+(radarTab!=='td'?' class="on"':'')+'>📡 Nhịp phiên</button>'
+    +'<button data-v="td"'+(radarTab==='td'?' class="on"':'')+'>🏢 Săn tập đoàn</button>'
+    +'</div></div>'
+    +'<div id="rdTd"'+(radarTab==='td'?'':' style="display:none"')+'>'
+    +(radarTab==='td'?tapDoanPanel()+tapDoanNote():'')+'</div>'
+    +'<div id="rdPhien"'+(radarTab==='td'?' style="display:none"':'')+'>'
     +'<div class="hero h3c">'
     +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
     +'<div class="word" style="color:'+moodCol(md)+'">'+moodWord(md)+'</div>'
@@ -623,8 +632,12 @@ function renderRadar(){
     +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
     +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
-    +'</div>';
-  drawSparks($('#m-radar'));
+    +'</div></div>';
+  $('#rdTab').querySelectorAll('button').forEach(b2=>b2.onclick=()=>{
+    if(radarTab===b2.dataset.v) return;
+    radarTab=b2.dataset.v; renderRadar(); scrollTo({top:0,behavior:'smooth'});
+  });
+  if(radarTab!=='td') drawSparks($('#m-radar'));
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
@@ -1112,10 +1125,8 @@ function drawDCA(lerp){
     veTien(t,sx+x.measureText(t.s).width+5,t.y);
   }
 }
-function renderTapDoan(){
-  const m=MODULES.find(x=>x.id==='tapdoan');
-  $('#m-tapdoan').innerHTML=head(m)+tapDoanPanel()
-    +'<div class="note">Bản đồ dựng TỰ ĐỘNG từ danh sách cổ đông của từng mã '
+function tapDoanNote(){
+  return '<div class="note">Bản đồ dựng TỰ ĐỘNG từ danh sách cổ đông của từng mã '
     +'(<code>tools/build_tapdoan.py</code>), không nhập tay: ai nắm từ 20% của hai mã trở lên '
     +'thì xếp chung một nhà. Bảng xếp theo DÒNG TIỀN trong phiên, không theo vốn hoá — để thấy '
     +'tiền đang chảy vào họ nào chứ không phải họ nào to nhất. % bên cạnh mã là tỉ lệ công ty '
@@ -1322,7 +1333,7 @@ async function init(){
     if(td&&td.dataset.td){
       const id=td.dataset.td;
       tdMo.has(id)?tdMo.delete(id):tdMo.add(id);
-      renderTapDoan();                              // vẽ lại cả bảng cho chắc, rẻ hơn vá tay
+      renderRadar();                                // vẽ lại cả bảng cho chắc, rẻ hơn vá tay
       const lai=document.querySelector('.tdrow[data-td="'+id.replace(/"/g,'')+'"]');
       if(lai) lai.scrollIntoView({block:'nearest'});
       return;
@@ -1334,7 +1345,8 @@ async function init(){
     rt=setTimeout(()=>{ const m=MODULES.find(x=>x.id===cur);
       if(m&&m.after) m.after(); },180); }; })());
   const q=new URLSearchParams(location.search).get('m');
-  const byPath={radar:'radar',tapdoan:'tapdoan',santapdoan:'tapdoan',duongdua:'race'}[location.pathname.replace(/\//g,'')];
+  const byPath={radar:'radar',tapdoan:'radar',duongdua:'race'}[location.pathname.replace(/\//g,'')];
+  if(/tapdoan/.test(location.pathname)||/[?&]tab=td\b/.test(location.search)) radarTab='td';
   const start=q||byPath||(location.hash||'').replace('#','');
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
