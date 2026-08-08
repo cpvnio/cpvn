@@ -203,6 +203,11 @@ giá sai hoặc giá nhảy — đừng đẩy.
      kéo HPG vào nhóm mang tên "Tran Dinh Long", chẳng ai gọi nhà đó bằng tên ấy.
   Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` (`nn`/`cn`) để giao diện
   dán nhãn — Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
+  Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự
+  áp cho cả hàng nhóm lẫn công ty con. **Màn hẹp chỉ đủ một cột tiền nên nó phải là cột
+  ĐANG XẾP THEO** (`#tdPanel.xcap` đổi `.sc`↔`.sv`), bằng không xếp theo vốn hoá mà cột hiện
+  ra là GTGD thì bảng trông như không xếp gì. Hàng nhãn cột phải mang **đúng class của từng
+  cột** (`tdp`/`tdv`/`tdg`) — thiếu class thì nhãn canh trái còn số canh phải.
 - **DANH MỤC QUỸ: kỳ công bố LỆCH NHAU HƠN HAI NĂM, phải hiện ngày.** Lật từ trường `funds`
   của data/profile: 13 quỹ, 238 lượt nắm. Quỹ nội báo cáo đều nên có số tới 30/06/2026, còn
   Dragon Capital và PYN thì nguồn chỉ tới 31/12/2023. Gộp chung rồi gọi "đang nắm giữ" là

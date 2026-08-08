@@ -497,6 +497,12 @@ const soHuu=o=>{
     +(o.gt?' title="Nắm gián tiếp'+(o.qua?' qua '+esc(o.qua):'')+'"':'')
     +'>'+(o.gt?'≈':'')+s+'%</em>';
 };
+/* Thứ tự bảng: mặc định VỐN HOÁ cao→thấp, bấm lại chính nút đang bật là lật chiều. Cùng
+   một lựa chọn áp cho cả hàng nhóm lẫn danh sách công ty con bên trong — xếp nhóm theo vốn
+   hoá mà con bên trong vẫn xếp theo thứ khác thì mắt phải đổi hệ quy chiếu giữa chừng. */
+let tdSort={k:'cap',d:-1};                       // d=-1: cao→thấp
+const tdKhoa={cap:o=>o.c.mcapLive||o.c.mcap||0, gtgd:o=>o.c.gtgd||0};
+const tdXep=ma=>ma.slice().sort((a,b)=>(tdKhoa[tdSort.k](a)-tdKhoa[tdSort.k](b))*tdSort.d);
 function tapDoanPanel(){
   const ds=(ST.tapdoan||[]).map(g=>{      // g.me = mã công ty mẹ nếu mẹ cũng niêm yết
     const ma=g.syms.map(x=>({p:x.p,gt:x.gt,qua:x.qua,c:ST.map.get(x.s)})).filter(x=>x.c&&x.c.close>0);
@@ -512,7 +518,7 @@ function tapDoanPanel(){
     const capTho=ma.reduce((a2,x)=>a2+(x.c.mcapLive||x.c.mcap||0),0);
     return {g,ma,cap,d:capTho?d/capTho:0,gtgd,nn,up,dn};
   }).filter(x=>x.ma.length>=2);
-  ds.sort((a,b)=>b.gtgd-a.gtgd);                 // DÒNG TIỀN dẫn dắt, không phải vốn hoá
+  ds.sort((a,b)=>((tdSort.k==='cap'?a.cap-b.cap:a.gtgd-b.gtgd))*tdSort.d);
   if(!ds.length) return '<div class="empty">Chưa có bản đồ tập đoàn — chạy tools/build_tapdoan.py</div>';
   const mx=Math.max.apply(null,ds.map(x=>Math.abs(x.d)))||1;
   const hang=x=>{
@@ -528,18 +534,27 @@ function tapDoanPanel(){
       +'<span class="sc"><i>GTGD</i>'+ty(x.gtgd)+'</span>'
       +'<span class="sn2 '+cls(x.nn)+'"><i>NN ròng</i>'+(x.nn>=0?'+':'−')+ty(Math.abs(x.nn))+'</span>'
       +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+'</span></div>'
-      +(mo?'<div class="tdcon"><div class="rw hd"><span></span><span>công ty · % nhà mẹ nắm</span>'
-          +'<span>vốn hoá</span><span>hôm nay</span><span>GTGD</span></div>'
-        +x.ma.map(o=>{ const c=o.c;
+      /* hàng nhãn phải mang ĐÚNG class của từng cột: thiếu class thì nhãn canh trái còn số
+         canh phải, "GTGD" đứng lệch hẳn khỏi cột số của nó — mà màn hẹp lại giấu nhầm cột */
+      +(mo?'<div class="tdcon"><div class="rw hd"><span></span><span>công ty<i> · % nhà mẹ nắm</i></span>'
+          +'<span class="tdp">vốn hoá</span><span class="tdv">hôm nay</span>'
+          +'<span class="tdg">GTGD</span></div>'
+        +tdXep(x.ma).map(o=>{ const c=o.c;
           return '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
           +'<span class="idn"><b>'+c.sym+soHuu(o)+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
           +'<span class="tdp">'+ty(c.mcapLive||c.mcap||0)+'</span>'
           +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
           +'<span class="tdg">'+ty(c.gtgd)+'</span></div>'; }).join('')+'</div>':'');
   };
-  return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn — xếp theo GTGD trong phiên'
+  const nutXep=(k,t)=>'<button class="srtb'+(tdSort.k===k?' on':'')+'" data-srt="'+k+'"'
+    +' title="Xếp theo '+t+(tdSort.k===k?' — bấm lại để lật chiều':'')+'">'+t
+    +(tdSort.k===k?'<i>'+(tdSort.d<0?'↓':'↑')+'</i>':'')+'</button>';
+  return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn'
+    +'<span class="tdsrt">xếp theo'+nutXep('cap','vốn hoá')+nutXep('gtgd','GTGD')+'</span>'
     +'<span class="cnt">'+ds.length+' nhóm</span></div>'
-    +'<div class="pb" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
+    /* lớp x<khoá> để màn hẹp hiện ĐÚNG cột đang xếp theo — nó chỉ đủ chỗ cho một cột tiền,
+       xếp theo vốn hoá mà cột hiện ra là GTGD thì bảng trông như không xếp gì cả */
+    +'<div class="pb x'+tdSort.k+'" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
 }
 let radarTab='phien';      // tab đang xem trong module radar: 'phien' | 'td'
 function renderRadar(){
@@ -1149,8 +1164,9 @@ function tapDoanNote(){
     +'(<code>tools/build_tapdoan.py</code>), không nhập tay: ai nắm từ 20% của hai mã trở lên '
     +'thì xếp chung một nhà, rồi lan tiếp theo danh sách công ty con nên bắt được cả '
     +'<b>con gián tiếp</b> — FOC không có nổi một dòng cổ đông nhắc tới FPT, phải đi vòng qua '
-    +'FPT Telecom mới ra. Bảng xếp theo DÒNG TIỀN trong phiên, không theo vốn hoá — để thấy '
-    +'tiền đang chảy vào họ nào chứ không phải họ nào to nhất. <b>% cạnh mã là tỉ lệ nhà mẹ '
+    +'FPT Telecom mới ra. Bảng mặc định xếp theo VỐN HOÁ cao→thấp; đổi sang GTGD để thấy tiền '
+    +'đang chảy vào họ nào chứ không phải họ nào to nhất, bấm lại nút đang bật là lật chiều. '
+    +'Thứ tự áp cho cả danh sách công ty con bên trong. <b>% cạnh mã là tỉ lệ nhà mẹ '
     +'nắm, đã nhân dồn dọc chuỗi</b>: FPT nắm 45,7% FPT Telecom, FPT Telecom nắm 56,4% FOC thì '
     +'FOC ghi ≈23,8% chứ không phải 56,4%. Dấu ≈ là nắm gián tiếp, rê chuột vào biết đi qua ai. '
     +'Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
@@ -1393,6 +1409,11 @@ async function init(){
   $('#mn').addEventListener('click',e=>{
     /* bấm HÀNG TẬP ĐOÀN -> mở/thu danh sách công ty con. Phải bắt TRƯỚC dòng mã, bằng
        không bấm trúng hàng nhóm lại nhảy sang trang một mã nào đó. */
+    /* nút xếp thứ tự nằm ở ĐẦU BẢNG, bắt trước mọi thứ — bấm lại nút đang bật thì lật chiều */
+    const sx=e.target.closest('[data-srt]');
+    if(sx){ const k=sx.dataset.srt;
+      if(tdSort.k===k) tdSort.d=-tdSort.d; else { tdSort.k=k; tdSort.d=-1; }
+      renderRadar(); return; }
     const tq=e.target.closest('.tdrow[data-quy]');
     if(tq){ const id=tq.dataset.quy;
       quyMo.has(id)?quyMo.delete(id):quyMo.add(id);
