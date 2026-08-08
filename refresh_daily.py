@@ -490,6 +490,23 @@ def work_fin(sym):
         except Exception: pass
         time.sleep(0.08)
     o["div"],o["divQ"]=fetch_div(sym)
+    # GOM DỒN chứ đừng ghi đè: nguồn chỉ trả 8 KỲ GẦN NHẤT và không có cách xin thêm
+    # (đã thử page/size/offset/fromYear — luôn trả đúng 8 quý). Ghi đè là mỗi lượt cào
+    # lại đẩy quý cũ ra khỏi kho, nên trang cổ phiếu bung năm 2023 ra không có quý nào.
+    # Gộp theo NHÃN, số mới thắng số cũ (nguồn có đính chính lại số đã công bố).
+    cu=None
+    try:
+        with open(os.path.join(FIN_DIR,f"{sym}.json"),encoding="utf-8") as fh: cu=json.load(fh)
+    except Exception: pass
+    if cu:
+        def _thu(lb):                      # 'Q3/24' -> 2024.75 · '2024' -> 2024 (để xếp thứ tự)
+            m=re.match(r"Q(\d)/(\d{2})$",str(lb))
+            if m: return 2000+int(m.group(2))+int(m.group(1))/10
+            m=re.match(r"(\d{4})$",str(lb));  return int(m.group(1)) if m else -1
+        for k in ("Y","Q"):
+            gop={r.get("label"):r for r in (cu.get(k) or []) if r.get("label")}
+            gop.update({r.get("label"):r for r in (o.get(k) or []) if r.get("label")})
+            o[k]=sorted(gop.values(),key=lambda r:_thu(r.get("label")))
     with flock:
         fdone[0]+=1
         if o["Y"] or o["Q"] or o["div"]: fdone[1]+=1

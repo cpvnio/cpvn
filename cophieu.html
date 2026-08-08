@@ -17,14 +17,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
     --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
     --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
-    --hdr1:#111114; --hdr2:#0d0d10; --thead:#0e0e12;
+    --hdr1:#111114; --hdr2:#0d0d10; --thead:#0e0e12; --qcolbg:rgba(255,255,255,.028);
     --rowline:rgba(255,255,255,.06)
   }
   html[data-theme="light"]{
     --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef2; --line:#dde1e8;
     --txt:#16181d; --muted:#66707f;
     --green:#0b9b61; --red:#dc3644; --yellow:#a16207; --purple:#9333ea; --cyan:#0369a1;
-    --hdr1:#ffffff; --hdr2:#f0f2f5; --thead:#f0f2f5;
+    --hdr1:#ffffff; --hdr2:#f0f2f5; --thead:#f0f2f5; --qcolbg:rgba(15,23,42,.035);
     --rowline:rgba(0,0,0,.07)
   }
   *{box-sizing:border-box}
@@ -246,6 +246,17 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     table.ft .lb{width:114px}
   }
   table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
+  /* ĐẦU CỘT NĂM bấm được -> bung 4 quý của năm đó. Mũi tên nói rõ nó bấm được, chứ một
+     con số trơ trọi thì không ai nghĩ tới việc bấm vào. */
+  table.ft th.yth{cursor:pointer;user-select:none;transition:.12s}
+  table.ft th.yth:hover,table.ft th.yth:focus-visible{color:var(--txt);background:var(--panel2);outline:none}
+  table.ft th.yth .cr{font-style:normal;font-size:9px;margin-left:5px;opacity:.6;vertical-align:1px}
+  table.ft th.yth.on{color:var(--accent)}
+  table.ft th.yth.on .cr{opacity:1}
+  /* cột QUÝ bung ra: hẹp hơn và chữ nhạt hơn để đọc ra ngay "mấy cột này là con của năm bên trái" */
+  table.ft th.qcol,table.ft td.qcol{width:88px;color:var(--muted);
+    background:linear-gradient(var(--qcolbg),var(--qcolbg))}
+  table.ft td.qcol.pos{color:var(--green)} table.ft td.qcol.neg{color:var(--red)}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   /* VỐN HOÁ theo kỳ: đậm vừa để dò nhanh cạnh dòng LN sau thuế, tách bằng vạch mảnh */
@@ -863,8 +874,9 @@ function drawFinChart(rows){
   cvs.style.width=w+'px'; cvs.style.height=h+'px';
   const g=cvs.getContext('2d'); g.setTransform(DPRl,0,0,DPRl,0,0); g.clearRect(0,0,w,h);
   if(!rows||!rows.length){ g.fillStyle='#666'; g.font='12px system-ui'; g.textAlign='center'; g.fillText('Chưa có dữ liệu',w/2,h/2); return; }
-  const show=rows.slice(-8).reverse();   // mới -> cũ, 8 kỳ = đúng số cột bảng (chung lưới với CĐKT/LCTT)
-  const n=show.length;
+  /* Nhận THẲNG danh sách cột mà bảng đang vẽ (đã gồm cả quý của năm được mở), không tự
+     cắt lại — hai bên tự cắt riêng thì mở một năm ra là cột biểu đồ lệch khỏi cột bảng. */
+  const show=rows, n=show.length;
   let centers=null,colW=70;
   if(tbl&&tbl.tHead&&tbl.tHead.rows.length){
     const ths=[...tbl.tHead.rows[0].cells].slice(1,1+n);
@@ -930,10 +942,11 @@ async function fillMcap(rows){
   return any;
 }
 function kqkdTable(rows,div){
-  const show=rows.slice(-8).reverse();
+  const show=rows;
+  const qc=r=>r._q?' qcol':'';                  // cột quý bung ra từ một năm -> tô nhạt hơn
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
   const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td><div class="lb">${lb}</div></td>`+show.map(r=>{
-    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';
+    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}${qc(r)}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';
   /* CỔ TỨC gộp thẳng vào bảng KQKD, ngay dưới Biên LN ròng — người xem thấy luôn
      "làm ra bao nhiêu / chia về túi mình bao nhiêu" mà không phải kéo xuống mục khác.
      Cổ tức xếp theo NĂM CHỐT QUYỀN (năm thực nhận) nên cột quý lấy số của năm chứa quý đó. */
@@ -949,26 +962,74 @@ function kqkdTable(rows,div){
   let divH='';
   if(has('cash')||has('div')||has('bonus')){
     const drow=(lb,k,fmt,first)=>`<tr class="divrow${first?' divsep':''}"><td><div class="lb">${lb}</div></td>`+
-      show.map(r=>{ const y=oCua(r.label); return `<td>${y&&y[k]>0?fmt(y[k]):'—'}</td>`; }).join('')+'<td class="sp"></td></tr>';
+      show.map(r=>{ const y=oCua(r.label); return `<td class="${qc(r).trim()}">${y&&y[k]>0?fmt(y[k]):'—'}</td>`; }).join('')+'<td class="sp"></td></tr>';
     let first=true;
     const add=(lb,k,fmt)=>{ if(!has(k)) return ''; const h=drow(lb,k,fmt,first); first=false; return h; };
     // ghi rõ NĂM NHẬN (năm chốt quyền) — cổ tức "của năm 2019" thường trả sang năm sau,
     // xếp theo năm nhận thì cả bảng đọc thống nhất "năm đó về túi bao nhiêu"
-    const nn=' <i style="font-style:normal;opacity:.65">('+(finPeriod==='Q'?'quý nhận':'năm nhận')+')</i>';
+    const coQ=show.some(r=>r._q);
+    const nn=' <i style="font-style:normal;opacity:.65">('
+      +(finPeriod==='Q'?'quý nhận':coQ?'năm/quý nhận':'năm nhận')+')</i>';
     divH=add('Cổ tức tiền mặt'+nn,'cash',v=>CP.fmtD(v)+' đ')
        + add('Cổ tức cổ phiếu'+nn,'div',v=>v.toFixed(0)+'%')
        + add('Thưởng cổ phiếu'+nn,'bonus',v=>v.toFixed(0)+'%');
   }
   const mcapH=show.some(r=>r._mcap!=null)
     ? `<tr class="mcapRow"><td><div class="lb">Vốn hoá</div></td>`+
-      show.map(r=>`<td>${r._mcap!=null?Math.round(r._mcap).toLocaleString('en-US'):'—'}</td>`).join('')+
+      show.map(r=>`<td class="${qc(r).trim()}">${r._mcap!=null?Math.round(r._mcap).toLocaleString('en-US'):'—'}</td>`).join('')+
       '<td class="sp"></td></tr>'
     : '';
-  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${show.map(r=>`<th>${r.label}</th>`).join('')}<th class="sp"></th></tr></thead><tbody>`+
+  /* ĐẦU CỘT NĂM BẤM ĐƯỢC -> bung 4 quý của chính năm đó ra ngay bên phải, xem xong bấm
+     lại để thu. Chỉ có ở chế độ "Theo năm"; mã nào kho thiếu quý của năm đó thì không
+     gắn nút, tránh bấm vào rồi chẳng có gì hiện ra. */
+  const thH=show.map(r=>{
+    if(r._q) return `<th class="qcol">${r.label}</th>`;
+    const nam=namCua(r.label);
+    if(finPeriod!=='Y'||!nam||!quyCuaNam(nam).length) return `<th>${r.label}</th>`;
+    const mo=qMoRong.has(nam);
+    return `<th class="yth${mo?' on':''}" data-nam="${nam}" role="button" tabindex="0"`+
+      ` title="${mo?'Thu các quý của năm '+nam:'Xem từng quý của năm '+nam}">${r.label}`+
+      `<i class="cr">${mo?'▾':'▸'}</i></th>`;
+  }).join('');
+  $('kqkdT').innerHTML=`<table class="ft"><thead><tr><th><div class="lb">Tỷ đồng</div></th>${thH}<th class="sp"></th></tr></thead><tbody>`+
     line('Doanh thu','rev')+line('Giá vốn','cogs')+line('Lợi nhuận gộp','gross')+
     line('LN trước thuế','pretax')+line('LN sau thuế','np',true,true)+
-    `<tr><td><div class="lb">Biên LN ròng</div></td>${show.map(r=>`<td>${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}<td class="sp"></td></tr>`+
+    `<tr><td><div class="lb">Biên LN ròng</div></td>${show.map(r=>`<td class="${qc(r).trim()}">${r.nm==null?'—':r.nm.toFixed(1)+'%'}</td>`).join('')}<td class="sp"></td></tr>`+
     mcapH+divH+`</tbody></table>`;
+  $('kqkdT').querySelectorAll('th.yth').forEach(th=>{
+    const bat=()=>{ const n2=th.dataset.nam;
+      qMoRong.has(n2)?qMoRong.delete(n2):qMoRong.add(n2); veKQKD(); };
+    th.onclick=bat;
+    th.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); bat(); } };
+  });
+}
+/* ---- cột của bảng KQKD: 8 kỳ mới nhất, kèm quý của những NĂM đang được mở ---- */
+const qMoRong=new Set();                          // năm (chuỗi '2025') đang bung quý
+const namCua=lb=>{ const m=String(lb).match(/(\d{4})$/); return m?m[1]:null; };
+function quyCuaNam(nam){
+  const Q=(finData&&finData.Q)||[], hai=String(nam).slice(2);
+  return Q.filter(q=>String(q.label).endsWith('/'+hai))
+          .sort((a,b)=>String(b.label).localeCompare(String(a.label)));   // Q4 -> Q1, mới nhất bên trái
+}
+function finCols(){
+  const base=(finData&&finData[finPeriod])||[];
+  const show=base.slice(-8).reverse();            // mới -> cũ, chung lưới với CĐKT/LCTT
+  if(finPeriod!=='Y') return show;
+  const out=[];
+  for(const r of show){
+    out.push(r);
+    const nam=namCua(r.label);
+    if(nam&&qMoRong.has(nam)) for(const q of quyCuaNam(nam)){ q._q=true; out.push(q); }
+  }
+  return out;
+}
+let finLuot=0;                                    // đánh số lượt vẽ, chặn kết quả về trễ
+function veKQKD(){
+  const cols=finCols(), dv=finData&&finData.div;
+  kqkdTable(cols,dv); drawFinChart(cols);         // bảng TRƯỚC -> biểu đồ đo cột bảng
+  const luot=++finLuot;
+  // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại (giữ nguyên kỳ và các năm đang mở)
+  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){ kqkdTable(cols,dv); drawFinChart(cols); } });
 }
 /* CÂN ĐỐI KẾ TOÁN: "TỔNG TÀI SẢN" và "TỔNG NGUỒN VỐN" là HAI VẾ CỦA MỘT ĐẲNG THỨC,
    luôn bằng nhau (đo toàn kho: 20.730/20.751 cặp khớp; 21 ca lệch là lỗi số liệu
@@ -1034,11 +1095,7 @@ function pickFinHighlights(){
 }
 async function renderFin(){
   finData=await CP.loadFin(C.sym);
-  const rows=finData&&finData[finPeriod]||[];
-  const dv=finData&&finData.div;
-  kqkdTable(rows,dv); drawFinChart(rows);   // bảng TRƯỚC -> biểu đồ đo cột bảng
-  // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại bảng (giữ nguyên kỳ đang xem)
-  fillMcap(rows).then(ok=>{ if(ok&&finData&&finData[finPeriod]===rows){ kqkdTable(rows,dv); drawFinChart(rows); } });
+  veKQKD();
   const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);

@@ -157,6 +157,15 @@ giá sai hoặc giá nhảy — đừng đẩy.
   **Cột QUÝ phải đọc `divQ`, không được lấy số cả năm rải ra 4 quý** — VCB từng hiện
   450đ ở cả Q1..Q4/25 như thể trả bốn lần, thực tế chỉ trả tháng 10 (Q4). Tháng chi
   trả có sẵn trong `dividend/histories.divMonths`, cổ tức CP lấy tháng của ngày chốt quyền.
+- **KQKD phải GOM DỒN, đừng ghi đè.** Nguồn 24hMoney chỉ trả **8 kỳ gần nhất** và không có
+  cách xin thêm (đã thử `page`/`size`/`offset`/`fromYear`/`year` — luôn đúng 8). Ghi đè là
+  mỗi lượt cào lại đẩy quý cũ ra khỏi kho; trang cổ phiếu bung năm 2023 ra thì không còn quý
+  nào. Bước 5 nay gộp `Y`/`Q` theo NHÃN, số mới thắng số cũ (nguồn có đính chính số đã công bố).
+  Muốn có quý cũ NGAY thay vì chờ tích luỹ: `api-finfo.vndirect.com.vn/v4/financial_statements`
+  có **81 quý từ 2005** — `reportType:QUARTER`, `modelType:2` là KQKD, mã dòng đã dò được
+  `21000` doanh thu · `22100` giá vốn · `23800` LN trước thuế · **`23003` LNST cổ đông công ty
+  mẹ** (đúng con số kho đang dùng, KHÔNG phải `23000`). Ngân hàng không có 21000/22100, công
+  ty chứng khoán không có 22100 — phải dò mã riêng cho hai nhóm đó trước khi dùng.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt
