@@ -582,8 +582,13 @@ function renderRadar(){
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
-const tenNganh=k=>k;
-const locNganh=k=>s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; };
+/* Ô chọn ngành có thêm RỔ CHỈ SỐ (VN30) đứng riêng trên đầu — không phải một ngành, nên
+   mang khoá '@vn30' để không bao giờ đụng tên ngành thật. Rổ lấy thẳng `u.vn30` trong
+   universe.json, pipeline làm mới mỗi lượt --full nên đổi rổ là web đổi theo. */
+const RO_CHISO={'@vn30':{ten:'VN30', co:s=>ST.vn30.has(s)}};
+const tenNganh=k=>(RO_CHISO[k]||{}).ten||k;
+const locNganh=k=>{ const r=RO_CHISO[k];
+  return r?r.co:(s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; }); };
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
   settling:false,maxDelta:0,mode:'race',dcaMx:0,top:10};
 const TOP_CHON=[10,15,20,25,30];   // số công ty hiện cùng lúc, dùng chung cho cả hai chế độ
@@ -759,7 +764,11 @@ const DCA={amtD:5,amtM:100,from:0,sec:null,ma:'',kieu:'deu',gop:false,calc:null}
 const dcaTien=()=>+(DCA.kieu==='mot'?DCA.amtM:DCA.amtD)||0;
 function dcaFmt(v){ // v tính bằng TRIỆU đồng
   if(v>=1000) return (v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+' tỷ';
-  return Math.round(v).toLocaleString('en-US')+' triệu';
+  if(v>=10) return Math.round(v).toLocaleString('en-US')+' triệu';
+  /* DƯỚI 10 TRIỆU phải giữ phần lẻ: chia đều 5 triệu cho rổ VN30 là 0,185 triệu mỗi mã,
+     làm tròn kiểu cũ ra "0 triệu" — đọc như thể không mua gì. */
+  if(v>=1) return (+v.toFixed(1))+' triệu';
+  return Math.round(v*1000).toLocaleString('en-US')+' nghìn';
 }
 function dcaPct(v,goc){ if(!(goc>0)) return '';
   const p=(v/goc-1)*100;
@@ -1057,9 +1066,12 @@ function renderRace(){
   const secCnt={};
   for(const c of ST.list) secCnt[c.sector]=(secCnt[c.sector]||0)+1;
   const secKeys=Object.keys(secCnt).sort((a,b)=>secCnt[b]-secCnt[a]);
-  /* CHỈ ngành thật. Nhóm theo dõi là tiêu chí lọc của Bộ Lọc PRO bên bảng giá, không phải
-     ngành — muốn đua đúng mấy mã đó thì gõ thẳng mã vào ô "gõ mã riêng". */
-  const secOpts=sel=>secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
+  /* Rổ chỉ số đứng trước, rồi mới tới ngành thật. Nhóm theo dõi (thoái vốn) KHÔNG nằm ở
+     đây — nó là tiêu chí lọc của Bộ Lọc PRO bên bảng giá; muốn đua mấy mã đó thì gõ thẳng
+     mã vào ô "gõ mã riêng". */
+  const secOpts=sel=>Object.entries(RO_CHISO).map(([k,r])=>
+      '<option value="'+k+'"'+(sel===k?' selected':'')+'>'+esc(r.ten)+'</option>').join('')
+    +secKeys.map(k=>'<option value="'+esc(k)+'"'+(sel===k?' selected':'')+'>'+esc(k)+'</option>').join('');
   /* ô tháng chỉ ghi "3/2020": nhãn ngay trước nó đã là "triệu/tháng, từ" nên chữ "Tháng"
      trong từng dòng chọn chỉ tổ làm ô rộng thêm 46px, đủ để đẩy ô gõ mã rớt xuống hàng hai */
   const thang=lb=>{ const p=String(lb).split('/'); return p[0]+'/20'+p[1]; };
