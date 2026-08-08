@@ -161,7 +161,7 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), tapdoan:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), tapdoan:[], quy:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 /* GỘP NGÀNH — BẢN SAO Y HỆT core.js và bubbles.html. Trang này trước đây dùng thẳng
    `sector` thô của nguồn, nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
    "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng trong khi bảng giá
@@ -183,10 +183,10 @@ function gopNganh(){
 }
 async function loadAll(){
   const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
-  const [u,eod,pk,mk,td]=await Promise.all([
+  const [u,eod,pk,mk,td,qy]=await Promise.all([
     j('universe.json'), j('data/eod/latest.json'),
-    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json')]);
-  ST.tapdoan=(td&&td.nhom)||[];
+    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json'), j('data/quy.json')]);
+  ST.tapdoan=(td&&td.nhom)||[]; ST.quy=(qy&&qy.quy)||[];
   if(!u||!pk) throw new Error('thiếu dữ liệu');
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
@@ -513,8 +513,11 @@ function tapDoanPanel(){
       +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
       +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
       +'<span class="sp '+cls(x.d)+'">'+pct(x.d)+'</span>'
+      +'<span class="sb"><b class="up">▲'+x.up+'</b> <b class="dn">▼'+x.dn+'</b>'
+      +'<u>/'+x.ma.length+'</u></span>'
       +'<span class="sc"><i>GTGD</i>'+ty(x.gtgd)+'</span>'
-      +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+' · '+x.ma.length+' mã</span></div>'
+      +'<span class="sn2 '+cls(x.nn)+'"><i>NN ròng</i>'+(x.nn>=0?'+':'−')+ty(Math.abs(x.nn))+'</span>'
+      +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+'</span></div>'
       +(mo?'<div class="tdcon">'+x.ma.map(({p,c})=>
           '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
           +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
@@ -601,10 +604,13 @@ function renderRadar(){
     +'<div class="ctl" id="rdTab"><div class="seg">'
     +'<button data-v="phien"'+(radarTab!=='td'?' class="on"':'')+'>📡 Nhịp phiên</button>'
     +'<button data-v="td"'+(radarTab==='td'?' class="on"':'')+'>🏢 Săn tập đoàn</button>'
+    +'<button data-v="quy"'+(radarTab==='quy'?' class="on"':'')+'>💼 Soi quỹ đầu tư</button>'
     +'</div></div>'
     +'<div id="rdTd"'+(radarTab==='td'?'':' style="display:none"')+'>'
     +(radarTab==='td'?tapDoanPanel()+tapDoanNote():'')+'</div>'
-    +'<div id="rdPhien"'+(radarTab==='td'?' style="display:none"':'')+'>'
+    +'<div id="rdQuy"'+(radarTab==='quy'?'':' style="display:none"')+'>'
+    +(radarTab==='quy'?quyPanel()+quyNote():'')+'</div>'
+    +'<div id="rdPhien"'+(radarTab!=='phien'?' style="display:none"':'')+'>'
     +'<div class="hero h3c">'
     +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
     +'<div class="word" style="color:'+moodCol(md)+'">'+moodWord(md)+'</div>'
@@ -633,11 +639,12 @@ function renderRadar(){
     +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
     +'</div></div>';
+  if(radarTab==='quy') LB.veQuy=1;
   $('#rdTab').querySelectorAll('button').forEach(b2=>b2.onclick=()=>{
     if(radarTab===b2.dataset.v) return;
     radarTab=b2.dataset.v; renderRadar(); scrollTo({top:0,behavior:'smooth'});
   });
-  if(radarTab!=='td') drawSparks($('#m-radar'));
+  if(radarTab==='phien') drawSparks($('#m-radar'));
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
@@ -1133,6 +1140,42 @@ function tapDoanNote(){
     +'mẹ nắm. Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
     +'nắm cả BID, VCB, CTG nhưng ba ngân hàng đó không cùng một nhà.</div>';
 }
+/* ---- SOI QUỸ ĐẦU TƯ: lật danh mục các quỹ, xem quỹ nào đang cầm mã nào ---- */
+const quyMo=new Set();
+function quyPanel(){
+  const ds=(ST.quy||[]).filter(q=>(q.syms||[]).length>=2);
+  if(!ds.length) return '<div class="empty">Chưa có dữ liệu quỹ — chạy tools/build_tapdoan.py</div>';
+  const cu=q=>(q.ky||'')<'2025-01-01';            // kỳ công bố đã quá cũ
+  const hang=q=>{
+    const mo=quyMo.has(q.ma);
+    const ma=q.syms.map(x=>({v:x.v,cp:x.cp,c:ST.map.get(x.s)||{sym:x.s,name:'',close:0,chg:null}}));
+    let d=0,tv=0;
+    for(const {v,c} of ma){ if(c.chg!=null){ d+=c.chg*v; tv+=v; } }
+    return '<div class="tdrow'+(mo?' on':'')+'" data-quy="'+esc(q.ma)+'">'
+      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i><em class="nm">'+esc(q.ma)+' · '
+      +esc(q.ten)+'</em>'+(cu(q)?'<b class="nn cu">số cũ</b>':'')+'</span>'
+      +'<span class="sp '+cls(tv?d/tv:0)+'">'+pct(tv?d/tv:0)+'</span>'
+      +'<span class="sb"><u>'+ma.length+' mã</u></span>'
+      +'<span class="sc"><i>giá trị</i>'+ty(q.tong*1e9)+'</span>'
+      +'<span class="sv"><i>kỳ</i>'+esc((q.ky||'').split('-').reverse().join('/'))+'</span></div>'
+      +(mo?'<div class="tdcon">'+ma.map(({v,c})=>
+          '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
+          +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
+          +'<span class="tdp">'+ty(v*1e9)+'</span>'
+          +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
+          +'<span class="tdg">'+ty(c.gtgd)+'</span></div>').join('')+'</div>':'');
+  };
+  return '<div class="panel"><div class="ph">Danh mục các quỹ đang nắm giữ'
+    +'<span class="cnt">'+ds.length+' quỹ</span></div>'
+    +'<div class="pb" style="padding:10px 16px" id="quyPanel">'+ds.map(hang).join('')+'</div></div>';
+}
+function quyNote(){
+  return '<div class="note">Lật ngược từ danh sách quỹ nắm giữ của từng mã trong kho hồ sơ '
+    +'doanh nghiệp. <b>Kỳ công bố lệch nhau rất xa</b> — quỹ nội báo cáo đều nên có số tới '
+    +'giữa 2026, còn Dragon Capital hay PYN thì nguồn chỉ có tới cuối 2023, hơn hai năm. '
+    +'Cột "kỳ" ghi rõ ngày của từng quỹ và quỹ nào quá cũ bị dán nhãn — đừng đọc số cũ như '
+    +'danh mục hiện tại. % là biến động hôm nay bình quân theo giá trị nắm giữ.</div>';
+}
 function renderRace(){
   const m=MODULES.find(x=>x.id==='race');
   const D=raceData();
@@ -1329,6 +1372,13 @@ async function init(){
   $('#mn').addEventListener('click',e=>{
     /* bấm HÀNG TẬP ĐOÀN -> mở/thu danh sách công ty con. Phải bắt TRƯỚC dòng mã, bằng
        không bấm trúng hàng nhóm lại nhảy sang trang một mã nào đó. */
+    const tq=e.target.closest('.tdrow[data-quy]');
+    if(tq){ const id=tq.dataset.quy;
+      quyMo.has(id)?quyMo.delete(id):quyMo.add(id);
+      renderRadar();
+      const l2=document.querySelector('.tdrow[data-quy="'+id.replace(/"/g,'')+'"]');
+      if(l2) l2.scrollIntoView({block:'nearest'});
+      return; }
     const td=e.target.closest('.tdrow');
     if(td&&td.dataset.td){
       const id=td.dataset.td;

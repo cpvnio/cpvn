@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-DỰNG BẢN ĐỒ TẬP ĐOÀN -> data/tapdoan.json (radar "Săn tập đoàn" đọc file này).
+DỰNG BẢN ĐỒ TẬP ĐOÀN -> data/tapdoan.json  (tab "Săn tập đoàn")
+DỰNG DANH MỤC CÁC QUỸ  -> data/quy.json      (tab "Soi quỹ đầu tư")
+Cả hai cùng đọc data/profile nên gộp chung một lượt quét.
 
 Nguyên liệu: `sh` (danh sách cổ đông) trong data/profile/{MÃ}.json. Mỗi mã niêm yết có
 danh sách cổ đông kèm tỉ lệ; ai nắm >= NGUONG% của từ 2 mã trở lên thì chính là một tập
@@ -31,6 +33,7 @@ import json, os, re, glob, unicodedata, datetime
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROF = os.path.join(BASE, "data", "profile")
 OUT = os.path.join(BASE, "data", "tapdoan.json")
+OUT_Q = os.path.join(BASE, "data", "quy.json")
 NGUONG = 20.0          # cổ đông LẠ nắm từ bấy nhiêu % mới coi là chi phối
 NGUONG_TAY = 10.0      # nhóm đã khai trong TU_KHOA thì hạ ngưỡng: đã biết chắc là một nhà,
                        # giữ 20% là mất VRE (Vingroup nắm 18,8%) và FTS (FPT nắm 17,6%)
@@ -90,10 +93,55 @@ def chuan(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _ngay(d):
+    """'30/06/2026' -> '2026-06-30' để so sánh và xếp thứ tự được."""
+    m = re.match(r"(\d{2})/(\d{2})/(\d{4})$", str(d or "").strip())
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ""
+
+
+def dung_quy(U):
+    """Lật danh mục: mỗi mã liệt kê quỹ đang nắm -> đảo thành mỗi quỹ nắm những mã nào.
+
+    KỲ DỮ LIỆU LỆCH NHAU RẤT XA và đó là điều phải nói thẳng: quỹ nội công bố đều đặn nên
+    có số tới 30/06/2026, còn Dragon Capital hay PYN thì nguồn chỉ có tới 31/12/2023 —
+    hơn hai năm. Gộp chung rồi gọi là "đang nắm giữ" là dựng nên một danh mục không còn
+    tồn tại. Nên mỗi quỹ mang theo `ky` của chính nó để giao diện ghi rõ ngày.
+    """
+    from collections import defaultdict
+    q = defaultdict(list)
+    ten = {}
+    for p in glob.glob(os.path.join(PROF, "*.json")):
+        sym = os.path.basename(p)[:-5]
+        if sym not in U: continue
+        try: d = json.load(open(p, encoding="utf-8"))
+        except Exception: continue
+        for x in d.get("funds") or []:
+            ma = (x.get("n") or "").strip()
+            if not ma or not (x.get("v") or 0) > 0: continue
+            q[ma].append({"s": sym, "v": round(x["v"] / 1e9, 2),
+                          "cp": int(x.get("s") or 0), "ky": _ngay(x.get("d"))})
+            ten.setdefault(ma, (x.get("fn") or ma).strip())
+    ra = []
+    for ma, ds in q.items():
+        if len(ds) < 2: continue
+        ds.sort(key=lambda r: -r["v"])
+        ra.append({"ma": ma, "ten": ten[ma], "ky": max(r["ky"] for r in ds),
+                   "tong": round(sum(r["v"] for r in ds), 1),
+                   "syms": [{"s": r["s"], "v": r["v"], "cp": r["cp"]} for r in ds]})
+    ra.sort(key=lambda g: (-(g["ky"] >= "2025-01-01"), -g["tong"]))   # kỳ mới đứng trước
+    json.dump({"generated": datetime.date.today().isoformat(), "quy": ra},
+              open(OUT_Q, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    moi = sum(1 for g in ra if g["ky"] >= "2025-01-01")
+    print(f"✓ data/quy.json: {len(ra)} quỹ ({moi} quỹ có số liệu từ 2025 trở lại) · "
+          f"{sum(len(g['syms']) for g in ra)} lượt nắm")
+    return ra
+
+
 def main():
     uni = json.load(open(os.path.join(BASE, "universe.json"), encoding="utf-8"))
     U = {s["sym"]: s for s in uni["stocks"]}
     mcap = lambda s: (U.get(s) or {}).get("mcap") or 0
+    dung_quy(U)
 
     # gom: khoá nhóm -> {mã con: % sở hữu}
     nhom, ten_goc, la_nn, la_dn = {}, {}, {}, {}
