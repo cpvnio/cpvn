@@ -325,7 +325,10 @@ CP.applyLive=function(){
    · mỗi 1 PHÚT: làm mới mã ĐANG HIỂN THỊ trên màn hình — 1 lượt gọi, giá nhảy gần như trực tiếp
    · mỗi 5 PHÚT: quét TOÀN BỘ thị trường (xếp hạng/lọc/thống kê luôn đúng)
    Chia 2 tầng để không nện nguồn dữ liệu 11 lượt gọi mỗi phút -> tránh bị chặn IP.
-   Tab ẩn thì NGỪNG hẳn, quay lại tab là làm mới ngay. Ngoài giờ: 30 phút/lần. */
+   Tab ẩn thì NGỪNG hẳn, quay lại tab là làm mới ngay.
+   NGOÀI GIỜ: hỏi lại mỗi 1 PHÚT cho tới khi chốt được phiên gần nhất, chốt xong thì
+   NGỪNG HẲN — không phải "30 phút/lần" như ghi chú cũ, giá đã cứng thì hỏi thêm vô nghĩa.
+   Ngày nghỉ lễ (trong giờ mà bảng trống trơn): giãn còn 5 phút/lần. */
 CP.startPolling=function(onUpdate,visibleSyms){
   const tick=async(fast)=>{
     const only=fast&&typeof visibleSyms==='function'?visibleSyms():null;
