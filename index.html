@@ -55,35 +55,20 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     border-radius:9px;padding:8px 12px;font-size:14px;outline:none;width:185px;flex-shrink:1;min-width:120px}
 
   /* hàng thống kê tổng quan */
-  /* DẢI CHỈ SỐ DẠNG BẢNG: mỗi ô một cột, nhãn nhỏ trên - số to dưới, ngăn nhau bằng vạch
-     dọc. Bản cũ nhồi tất cả vào MỘT hàng chữ 13px liền mạch nên VNINDEX, vốn hoá, thanh
-     khoản và độ rộng nhìn ngang nhau hết, mắt không biết bám vào đâu. */
-  #stats{display:flex;align-items:stretch;overflow-x:auto;scrollbar-width:none;
-    margin:12px 16px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-  #stats::-webkit-scrollbar{display:none}
-  .mcell{flex:0 0 auto;padding:10px 12px;border-left:1px solid var(--line);white-space:nowrap}
-  .mcell:first-child{border-left:0}
-  .mlb{font-size:10.5px;font-weight:800;letter-spacing:.085em;text-transform:uppercase;
-    color:var(--muted);line-height:1.2}
-  .mval{display:flex;align-items:baseline;gap:8px;margin-top:4px}
-  .mval b{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
-  .mval i{font-style:normal;font-size:13px;font-weight:800}
-  .mval i.sub{font-size:11.5px;font-weight:700;color:var(--muted)}
-  /* độ rộng thị trường: 4 viên màu, số to trên - chữ nhỏ dưới — nét riêng CPVN */
-  .mcell.mbd{display:flex;align-items:center;gap:11px}
-  .mbd .mlb{white-space:normal;max-width:46px}
-  .breadth{display:flex;gap:5px;align-items:center}
-  .breadth b{display:flex;flex-direction:column;align-items:center;gap:0;
-    padding:5px 9px;border-radius:10px;border:1px solid transparent;line-height:1.15}
-  .breadth b em{font-style:normal;font-size:15.5px;font-weight:800}
-  .breadth b span{font-size:10px;font-weight:700;opacity:.72}
-  .breadth b.bchip{cursor:pointer;transition:transform .08s}
-  .breadth b.bchip:hover{transform:translateY(-1px);filter:brightness(1.08)}
-  .breadth b.bchip.on{border-color:currentColor;box-shadow:0 0 0 2px currentColor inset}
-  .breadth b.bclear{cursor:pointer;background:var(--panel2);color:var(--muted);
-    border:1px solid var(--line);font-size:13px;padding:9px 11px}
+  #stats{display:flex;gap:16px;align-items:center;padding:7px 16px;font-size:13px;
+    border-bottom:1px solid var(--line);background:var(--hdr2);overflow-x:auto;white-space:nowrap}
+  .st{display:flex;gap:6px;align-items:baseline;flex-shrink:0}
+  .st .nm{color:var(--muted);font-weight:700}
+  .st .val{font-weight:800}
+  .stsep{width:1px;height:15px;background:var(--line);flex-shrink:0;align-self:center}
+  /* độ rộng thị trường: chip 3 màu — nét riêng CPVN */
+  .breadth{display:flex;gap:5px;align-items:center;flex-shrink:0}
+  .breadth b{padding:1px 8px;border-radius:6px;font-size:12px;font-weight:700}
+  .breadth b.bchip{cursor:pointer;border:1px solid transparent;transition:transform .08s}
+  .breadth b.bchip:hover{transform:translateY(-1px);filter:brightness(1.25)}
+  .breadth b.bchip.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(255,255,255,.08) inset}
+  .breadth b.bclear{cursor:pointer;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
   .breadth b.bclear:hover{color:var(--txt)}
-
 
   /* bộ lọc nằm cùng hàng header với ô tìm kiếm */
   header select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
@@ -193,17 +178,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
   #scrClear:hover{color:var(--txt)}
   @media(max-width:760px){
-    /* màn hẹp: hai dải thu nhỏ lại và CUỘN NGANG (khung cũ cũng cuộn), giữ đủ mọi con số */
-    #stats{margin:8px 10px 0;border-radius:12px}
-    .mcell{padding:8px 11px}
-    .mlb{font-size:9.5px;letter-spacing:.055em}
-    .mval{gap:6px;margin-top:3px}
-    .mval b{font-size:17px}
-    .mval i{font-size:11.5px}
-    .mcell.mbd{gap:9px}
-    .breadth b{padding:4px 8px}
-    .breadth b em{font-size:14px}
-    .breadth b span{font-size:9px}
     #scrPanel{padding:8px 10px}
     .scrLb{width:100%;margin-bottom:-3px}
     /* MOBILE GỌN: chips 2 hàng CUỘN NGANG + preset 2 hàng CUỘN NGANG -> panel thấp,
@@ -638,39 +612,29 @@ function renderPager(pages){
 /* hàng thống kê tổng quan + trạng thái kho */
 function renderStats(){
   const s=CP.marketStats();
-  /* MỘT Ô = một cột của bảng: nhãn nhỏ trên, số to dưới, phụ chú đi kèm số cho khỏi đội
-     chiều cao cả dải (ô thanh khoản phải chở thêm HNX+UPCOM). */
-  const idx=(nm,val,chg,phu)=>`<div class="mcell"><div class="mlb">${nm}</div><div class="mval">`+
-    `<b>${val}</b>`+
-    (chg!=null?`<i style="color:${CP.pcCol(chg)}">${CP.pcTxt(chg)}</i>`:'')+
-    (phu?`<i class="sub">${phu}</i>`:'')+`</div></div>`;
+  const idx=(nm,val,chg)=>`<span class="st"><span class="nm">${nm}</span><span class="val">${val}</span>`+
+    (chg!=null?`<span style="color:${CP.pcCol(chg)};font-weight:700">${CP.pcTxt(chg)}</span>`:'')+`</span>`;
   let html=(CP.indices||[]).map(d=>idx(d.name,d.value.toLocaleString('en-US',{maximumFractionDigits:2}),d.chg)).join('');
-  /* "9,851,216 tỷ" đọc phải đếm dấu phẩy mới ra con số; ô lại rộng thêm 55px cho một
-     con số nhích rất chậm. Rút về "9.85 triệu tỷ" — cùng lối nói đã dùng ở các trang khác. */
-  const tyTT=v=>{const t=v/1e9; return t>=1e6?(t/1e6).toFixed(2)+' triệu tỷ'
-    :Math.round(t).toLocaleString('en-US')+' tỷ';};
-  html+=idx('Vốn hoá TT',tyTT(s.mcap),null);
+  html+='<span class="stsep"></span>';
+  html+=idx('Vốn hoá TT',CP.fmtVnd(s.mcap),null);
   /* THANH KHOẢN dùng số CHÍNH THỨC cả sàn (VPS trả kèm chỉ số) chứ KHÔNG cộng gtgd từng
      mã — bảng giá chỉ có phần khớp lệnh, thiếu hẳn thoả thuận. Đo phiên 06/08: cộng tay
      HOSE ra 12.587 tỷ trong khi cả sàn 15.136 tỷ (hụt 17%), HNX 505 so với 1.074 (hụt 53%). */
   const ty2=v=>Math.round(v/1e9).toLocaleString('en-US')+' tỷ';
   const gSan=nm=>(((CP.indices||[]).find(d=>d.name===nm)||{}).gtgd)||0;
   const gHose=gSan('VNINDEX'), gPhu=gSan('HNX')+gSan('UPCOM');
-  /* Thanh khoản HOSE và HNX+UPCOM đi CHUNG một ô: gộp thành một số "thanh khoản" trơn là
-     nói dối (18.141 là riêng HOSE, cả thị trường 19.261), mà tách hai ô thì dải dài thêm
-     một cột chỉ để chở một con số nhỏ. */
-  html+=idx('Thanh khoản HOSE',ty2(gHose||s.gtgd),null,gPhu?'HNX+UP '+ty2(gPhu):null);
-  // viên màu: bấm để lọc bảng theo đúng nhóm màu đó (bấm lại = bỏ lọc)
-  const chip=(k,num,txt,bg,col,tip)=>`<b data-bd="${k}" title="${tip}"`+
-    ` class="bchip${ST.bd===k?' on':''}" style="background:${bg};color:${col}">`+
-    `<em>${num}</em><span>${txt}</span></b>`;
-  html+=`<div class="mcell mbd"><div class="mlb">Độ rộng</div><div class="breadth">`+
-    chip('up',`▲ ${s.up}`,'tăng','rgba(22,199,132,.15)','var(--green)','Mã tăng — bấm để lọc')+
-    chip('down',`▼ ${s.down}`,'giảm','rgba(234,57,67,.15)','var(--red)','Mã giảm — bấm để lọc')+
-    chip('flat',`= ${s.flat}`,'đứng','rgba(234,179,8,.13)','var(--yellow)','Mã đứng giá — bấm để lọc')+
-    (s.ceil?chip('ceil',String(s.ceil),'trần','rgba(192,38,211,.16)','var(--purple)','Mã trần — bấm để lọc'):'')+
-    (s.floor?chip('floor',String(s.floor),'sàn','rgba(56,189,248,.16)','var(--cyan)','Mã sàn — bấm để lọc'):'')+
-    (ST.bd?`<b class="bclear" title="Bỏ lọc">✕</b>`:'')+`</div></div>`;
+  html+=idx('Thanh khoản HOSE',ty2(gHose||s.gtgd),null);
+  if(gPhu) html+=idx('HNX+UPCOM',ty2(gPhu),null);
+  // chip màu: bấm để lọc bảng theo đúng nhóm màu đó (bấm lại = bỏ lọc). Trần/sàn chỉ còn MÀU, không chữ.
+  const chip=(k,txt,bg,col,tip)=>`<b data-bd="${k}" title="${tip}"`+
+    ` class="bchip${ST.bd===k?' on':''}" style="background:${bg};color:${col}">${txt}</b>`;
+  html+=`<span class="breadth"><span class="nm" style="color:var(--muted);font-weight:700">Độ rộng</span>`+
+    chip('up',`▲ ${s.up}`,'rgba(22,199,132,.15)','var(--green)','Mã tăng — bấm để lọc')+
+    chip('flat',`– ${s.flat}`,'rgba(234,179,8,.13)','var(--yellow)','Mã đứng giá — bấm để lọc')+
+    chip('down',`▼ ${s.down}`,'rgba(234,57,67,.15)','var(--red)','Mã giảm — bấm để lọc')+
+    (s.ceil?chip('ceil',String(s.ceil),'rgba(192,38,211,.16)','var(--purple)','Mã trần — bấm để lọc'):'')+
+    (s.floor?chip('floor',String(s.floor),'rgba(56,189,248,.16)','var(--cyan)','Mã sàn — bấm để lọc'):'')+
+    (ST.bd?`<b class="bclear" title="Bỏ lọc">✕</b>`:'')+`</span>`;
   $('stats').innerHTML=html;
   $('stats').querySelectorAll('b[data-bd]').forEach(el=>el.onclick=()=>{
     ST.bd=ST.bd===el.dataset.bd?null:el.dataset.bd; ST.page=1; render(); renderStats();
