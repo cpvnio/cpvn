@@ -534,17 +534,27 @@ function tapDoanPanel(){
       +'<span class="sc"><i>GTGD</i>'+ty(x.gtgd)+'</span>'
       +'<span class="sn2 '+cls(x.nn)+'"><i>NN ròng</i>'+(x.nn>=0?'+':'−')+ty(Math.abs(x.nn))+'</span>'
       +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+'</span></div>'
-      /* hàng nhãn phải mang ĐÚNG class của từng cột: thiếu class thì nhãn canh trái còn số
-         canh phải, "GTGD" đứng lệch hẳn khỏi cột số của nó — mà màn hẹp lại giấu nhầm cột */
-      +(mo?'<div class="tdcon"><div class="rw hd"><span></span><span>công ty<i> · % nhà mẹ nắm</i></span>'
-          +'<span class="tdp">vốn hoá</span><span class="tdv">hôm nay</span>'
-          +'<span class="tdg">GTGD</span></div>'
-        +tdXep(x.ma).map(o=>{ const c=o.c;
-          return '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
-          +'<span class="idn"><b>'+c.sym+soHuu(o)+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
-          +'<span class="tdp">'+ty(c.mcapLive||c.mcap||0)+'</span>'
+      /* HÀNG CON PHẢI ĂN KHỚP CỘT VỚI HÀNG NHÓM. Trước đây nó có lưới riêng (5 cột) lồng
+         trong khung thụt lề 26px nên mọi con số lệch hẳn khỏi cột của hàng nhóm ngay phía
+         trên — mắt vừa đọc "GTGD" ở một chỗ, bung ra lại thấy nó nhảy sang chỗ khác. Nay
+         dùng CHUNG lưới `--tdc`, mấy ô `sp0` là chỗ trống giữ đúng cột của thanh xanh đỏ
+         và ô đếm tăng giảm; màn hẹp giấu chúng đi thì cột tự dồn y hệt hàng nhóm. */
+      +(mo?'<div class="tdcon"><div class="rw hd">'
+          +'<span class="c1">công ty<i> · % nhà mẹ nắm</i></span><span class="sp0"></span>'
+          +'<span class="tdv">hôm nay</span><span class="sp0"></span>'
+          +'<span class="tdg">GTGD</span><span class="tdn">NN ròng</span>'
+          +'<span class="tdp">vốn hoá</span></div>'
+        +tdXep(x.ma).map(o=>{ const c=o.c, nn=c.nnVal||0;
+          return '<div class="rw" data-sym="'+c.sym+'">'
+          +'<span class="c1">'+logoHTML(c)
+          +'<span class="idn"><b>'+c.sym+soHuu(o)+'</b><i>'+esc(shortName(c.name||''))+'</i></span></span>'
+          +'<span class="sp0"></span>'
           +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
-          +'<span class="tdg">'+ty(c.gtgd)+'</span></div>'; }).join('')+'</div>':'');
+          +'<span class="sp0"></span>'
+          +'<span class="tdg">'+ty(c.gtgd)+'</span>'
+          /* không có số NN thì để gạch ngang trơ, đừng ghép dấu vào: VGI ra "+—" đọc như lỗi */
+          +'<span class="tdn '+cls(nn)+'">'+(nn?(nn>0?'+':'−')+ty(Math.abs(nn)):'—')+'</span>'
+          +'<span class="tdp">'+ty(c.mcapLive||c.mcap||0)+'</span></div>'; }).join('')+'</div>':'');
   };
   const nutXep=(k,t)=>'<button class="srtb'+(tdSort.k===k?' on':'')+'" data-srt="'+k+'"'
     +' title="Xếp theo '+t+(tdSort.k===k?' — bấm lại để lật chiều':'')+'">'+t
@@ -1193,11 +1203,17 @@ function quyPanel(){
       +'<span class="sb"><u>'+ma.length+' mã</u></span>'
       +'<span class="sc"><i>giá trị</i>'+ty(q.tong*1e9)+'</span>'
       +'<span class="sv"><i>kỳ</i>'+esc((q.ky||'').split('-').reverse().join('/'))+'</span></div>'
-      +(mo?'<div class="tdcon">'+ma.map(({v,c})=>
-          '<div class="rw" data-sym="'+c.sym+'">'+logoHTML(c)
-          +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
-          +'<span class="tdp">'+ty(v*1e9)+'</span>'
+      /* hàng quỹ có 5 ô (tên · % · số mã · giá trị · kỳ) nên hàng con xếp theo đúng chừng ấy
+         cột: giá trị nắm giữ rơi thẳng dưới cột "giá trị" của quỹ, khỏi phải dò ngang */
+      +(mo?'<div class="tdcon"><div class="rw hd"><span class="c1">công ty</span>'
+          +'<span class="tdv">hôm nay</span><span class="sp0"></span>'
+          +'<span class="tdp">đang nắm</span><span class="tdg">GTGD</span></div>'
+        +ma.map(({v,c})=>
+          '<div class="rw" data-sym="'+c.sym+'"><span class="c1">'+logoHTML(c)
+          +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span></span>'
           +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
+          +'<span class="sp0"></span>'
+          +'<span class="tdp">'+ty(v*1e9)+'</span>'
           +'<span class="tdg">'+ty(c.gtgd)+'</span></div>').join('')+'</div>':'');
   };
   return '<div class="panel"><div class="ph">Danh mục các quỹ đang nắm giữ'

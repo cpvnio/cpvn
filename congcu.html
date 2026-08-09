@@ -313,7 +313,13 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 /* 7 cột: tên co giãn · thanh · % · đếm tăng giảm · GTGD · NN ròng · vốn hoá.
    Trước đây chỉ 5 cột nên cột tên phình ra 1,5fr, để lại một khoảng trắng to giữa bảng
    mà chẳng nói gì; nay kéo mấy con số vào lấp chỗ đó. */
-.tdrow{display:grid;grid-template-columns:minmax(150px,1fr) 92px 72px 84px 116px 124px 122px;gap:12px;
+/* MỘT lưới cột duy nhất cho cả hàng nhóm lẫn hàng công ty con — khai một chỗ để hai bên
+   không bao giờ trôi ra khỏi nhau nữa. Đổi số cột thì cả hai cùng đổi. */
+#tdPanel,#quyPanel{--tdc:minmax(150px,1fr) 92px 72px 84px 116px 124px 122px}
+/* hàng quỹ chỉ có 5 ô — để nguyên lưới 7 cột của tập đoàn thì một phần ba bảng bên phải
+   bỏ trống trơ ra, mà mấy con số lại dồn cục vào giữa */
+#quyPanel{--tdc:minmax(160px,1fr) 96px 86px 150px 138px}
+.tdrow{display:grid;grid-template-columns:var(--tdc);gap:12px;
   align-items:center;padding:12px 4px;border-top:1px solid var(--line);font-size:13.5px;
   border-radius:10px;cursor:pointer;user-select:none;transition:.12s}
 .tdrow:hover{background:var(--card2)}
@@ -346,13 +352,21 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .tdrow .sc i,.tdrow .sv i,.tdrow .sn2 i{font-style:normal;font-size:9.5px;font-weight:800;
   letter-spacing:.05em;text-transform:uppercase;color:var(--faint);opacity:.7;margin-right:6px}
 .tdrow .sn b.nn.cu{color:var(--mut);border-color:var(--line2)}   /* quỹ có số liệu quá cũ */
-.tdcon{padding:4px 0 12px 16px;border-left:2px solid var(--line2);margin:2px 0 6px 8px}
-.tdcon .rw{display:grid;grid-template-columns:28px minmax(130px,1fr) 70px 74px 110px;gap:11px;
-  align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer;font-size:13px}
+/* Khung con KHÔNG được thụt lề bằng padding/border/margin: mỗi pixel thụt vào là cả lưới
+   bên trong trôi khỏi lưới hàng nhóm. Vạch dọc vẽ bằng ::before (nằm ngoài dòng chảy) còn
+   phần thụt đầu dòng dồn hết vào ô TÊN, mấy cột số vẫn đứng nguyên toạ độ. */
+.tdcon{position:relative;padding:4px 0 10px;margin:2px 0 6px}
+.tdcon::before{content:'';position:absolute;left:9px;top:2px;bottom:8px;width:2px;
+  background:var(--line2);border-radius:2px;opacity:.65}
+.tdcon .rw{display:grid;grid-template-columns:var(--tdc);gap:12px;
+  align-items:center;padding:7px 4px;border-radius:10px;cursor:pointer;font-size:13px}
 .tdcon .rw:hover{background:var(--card2)}
-.tdcon .tdp{text-align:right;font-size:12px;color:var(--faint)}
+.tdcon .rw .c1{display:flex;align-items:center;gap:10px;min-width:0;padding-left:27px}
+.tdcon .rw .c1 .lgw{flex:0 0 auto}
+.tdcon .tdp,.tdcon .tdg{text-align:right;font-size:12px;color:var(--mut);white-space:nowrap}
 .tdcon .tdv{text-align:right;font-weight:800;font-size:13.5px}
-.tdcon .tdg{text-align:right;font-size:12px;color:var(--mut)}
+.tdcon .tdn{text-align:right;font-size:12px;color:var(--mut);white-space:nowrap;font-weight:600}
+.tdcon .tdn.up{color:var(--green)} .tdcon .tdn.dn{color:var(--red)}
 /* % SỞ HỮU dán liền sau mã, không đẩy ra cột riêng: mắt đọc "FOC ≈23,8%" là hiểu ngay
    nhà mẹ nắm bao nhiêu, khỏi bắc cầu sang cột khác rồi dò ngược lại tên. */
 .tdcon .idn em.own{font-style:normal;font-size:10.5px;font-weight:800;margin-left:6px;
@@ -371,10 +385,11 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .tdcon .rw.hd{cursor:default;padding-bottom:3px}
 .tdcon .rw.hd:hover{background:none}
 .tdcon .rw.hd i{font-style:normal}
-.tdcon .rw.hd span{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--faint);opacity:.75}
+.tdcon .rw.hd>span{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:640px){
-  .tdrow{grid-template-columns:minmax(92px,1fr) 62px 96px;gap:8px;padding:11px 2px;font-size:13px}
+  #tdPanel,#quyPanel{--tdc:minmax(92px,1fr) 62px 96px}
+  .tdrow{gap:8px;padding:11px 2px;font-size:13px}
   /* màn hẹp chỉ đủ chỗ cho TÊN · % · một cột tiền — bỏ thanh, đếm tăng giảm, NN, vốn hoá */
   .tdrow .sbr,.tdrow .sv,.tdrow .sb,.tdrow .sn2{display:none}
   .tdrow .sc i{display:none}
@@ -383,9 +398,6 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .tdrow .sn b.nn{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;
     background:var(--gold);border:0}
   .tdrow .sn b.nn.cn{background:var(--violet)}
-  .tdcon{padding-left:8px;margin-left:2px}
-  /* màn hẹp bỏ cột VỐN HOÁ chứ không bỏ GTGD: đây là tab soi DÒNG TIỀN, mà % sở hữu đã
-     nằm ngay cạnh mã rồi nên hàng con vẫn đủ nghĩa */
   /* màn hẹp giấu chữ "xếp theo", giữ nguyên hai nút — chữ đó ăn mất chỗ của tên bảng */
   .panel>.ph .tdsrt{font-size:0;gap:5px}
   .tdcon .rw.hd i{display:none}          /* nhãn cột đầu rút còn "công ty", khỏi xuống dòng */
@@ -393,8 +405,18 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   #tdPanel.xcap .tdrow .sc{display:none}
   #tdPanel.xcap .tdrow .sv{display:block}
   #tdPanel.xcap .tdrow .sv i{display:none}
-  .tdcon .rw{grid-template-columns:20px minmax(58px,1fr) 54px 62px;gap:6px;padding:5px 4px}
-  .tdcon .tdp{display:none}
+  /* HÀNG CON dồn cột y hệt hàng nhóm: giấu đúng những ô mà hàng nhóm đang giấu, phần còn
+     lại tự trượt về ba cột tên · % · tiền. Đây là lý do phải dùng ô trống `sp0` chứ không
+     ghim grid-column cứng — ghim cứng thì màn hẹp lòi ra mấy cột rỗng. */
+  .tdcon .rw .sp0,.tdcon .rw .tdn{display:none}
+  #tdPanel.xcap .tdcon .rw .tdg{display:none}
+  #tdPanel.xgtgd .tdcon .rw .tdp{display:none}
+  #quyPanel .tdcon .rw .tdg{display:none}      /* quỹ giữ cột GIÁ TRỊ, khớp hàng quỹ ở trên */
+  .tdcon{padding-bottom:8px}
+  .tdcon::before{left:4px}
+  .tdcon .rw{gap:8px;padding:5px 2px}
+  .tdcon .rw .c1{padding-left:15px;gap:7px}
+  .tdcon .rw .c1 .lgw,.tdcon .rw .c1 .noimg{width:22px;height:22px;border-radius:6px}
   .tdcon .idn em.own{font-size:9.5px;margin-left:4px}
 }
 
@@ -552,6 +574,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811c"></script>
+<script src="assets/congcu.js?v=20260811d"></script>
 </body>
 </html>
