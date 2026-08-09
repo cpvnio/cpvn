@@ -150,7 +150,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      lấy kích thước nội tại (thuộc tính width/height) -> vẽ tràn ra ngoài thẻ */
   canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
     border-radius:10px;background:rgba(255,255,255,.02);touch-action:pan-y;cursor:crosshair}
-  #chelp{margin-top:7px}
   /* nút PTKT: xanh lá, nằm cuối hàng chọn khung nến (chỗ dòng ghi chú cũ) */
   .ptbtn{margin-left:auto;background:var(--green);color:#fff;border:1px solid var(--green);
     border-radius:9px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;
@@ -424,7 +423,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <!-- cột công cụ vẽ nằm BÊN TRÁI biểu đồ, theo đúng bố cục các trang PTKT -->
     <div class="cvrow"><div class="vtool" id="cvTool"></div>
       <div id="cvWrap"><canvas id="cv"></canvas></div></div>
-    <div class="note" id="chelp">Cuộn chuột để phóng to · kéo ngang trượt thời gian, kéo dọc dời vùng giá · kéo tiếp sang trái để chừa khoảng trống tương lai · bấm đúp xem lại toàn bộ</div>
     </div>
   </div>
 
