@@ -1172,7 +1172,10 @@ function drawDCA(lerp){
 function tapDoanNote(){
   return '<div class="note">Bản đồ dựng TỰ ĐỘNG từ danh sách cổ đông của từng mã '
     +'(<code>tools/build_tapdoan.py</code>), không nhập tay: ai nắm từ 20% của hai mã trở lên '
-    +'thì xếp chung một nhà, rồi lan tiếp theo danh sách công ty con nên bắt được cả '
+    +'thì xếp chung một nhà. <b>Cổ đông có mã niêm yết thì gom theo MÃ chứ không theo tên</b> — '
+    +'một công ty viết hai kiểu tên là tách thành hai nhóm rời, Sonadezi từng bị đúng vậy: 8 '
+    +'công ty con ghi cổ đông là "Tổng Công ty Cổ phần Phát triển Khu công nghiệp", không có '
+    +'chữ nào là "Sonadezi". Từ đó lan tiếp theo danh sách công ty con nên bắt được cả '
     +'<b>con gián tiếp</b> — FOC không có nổi một dòng cổ đông nhắc tới FPT, phải đi vòng qua '
     +'FPT Telecom mới ra. Bảng mặc định xếp theo VỐN HOÁ cao→thấp; đổi sang GTGD để thấy tiền '
     +'đang chảy vào họ nào chứ không phải họ nào to nhất, bấm lại nút đang bật là lật chiều. '

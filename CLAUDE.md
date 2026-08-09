@@ -175,7 +175,7 @@ giá sai hoặc giá nhảy — đừng đẩy.
   VCB với BID) nên quý cũ của bank để trống doanh thu/giá vốn — thà trống còn hơn đoán.
   Kiểm chứng độc lập: tổng 4 quý so cột năm lệch 0-0,3% ở mã ngoài ngành ngân hàng.
 - **BẢN ĐỒ TẬP ĐOÀN dựng TỪ DANH SÁCH CỔ ĐÔNG**, không nhập tay: `data/profile/{MÃ}.json`
-  → `sh` có tỉ lệ sở hữu; ai nắm ≥20% của từ 2 mã trở lên là một nhóm. 123 nhóm, 646 lượt mã.
+  → `sh` có tỉ lệ sở hữu; ai nắm ≥20% của từ 2 mã trở lên là một nhóm. 163 nhóm, 831 lượt mã.
   Sáu cái bẫy đã trả giá, sửa là phải giữ:
   1. **Mẹ thường KHÔNG niêm yết** (Viettel, PVN, EVN, TKV, Vinachem) — nối theo trường `t`
      (mã cổ đông) là mất sạch nhóm lớn nhất, phải gom theo TÊN đã chuẩn hoá.
@@ -197,10 +197,25 @@ giá sai hoặc giá nhảy — đừng đẩy.
      cả chuỗi còn ý nghĩa (22,5% × 20% = 4,5%), thiếu sàn thì đẻ ra cả loạt "tập đoàn" hai
      mã mà mã thứ hai chỉ là cháu hờ. Mã tìm được gián tiếp mang `gt:1` (+ `qua` = mã trung
      gian), giao diện hiện dấu `≈`.
-  6. **Nhóm khai tay được ưu tiên khi giành mã, và mẹ niêm yết LUÔN là hạt giống.** Chỉ xếp
+  6. **CỔ ĐÔNG CÓ MÃ NIÊM YẾT THÌ GOM THEO MÃ (`ma:XXX`), ĐỪNG GOM THEO TÊN.** Nguồn đã dò
+     sẵn mã vào trường `t` của `sh`; bản cũ bỏ qua nó và băm tên ra làm khoá, nên một công
+     ty viết hai kiểu tên là đẻ ra hai nhóm rời. Sonadezi dính đúng vậy: `TU_KHOA` bắt chữ
+     "sonadezi" còn 8 công ty con lại khai cổ đông là "Tổng Công ty Cổ phần Phát triển Khu
+     công nghiệp" (tên pháp lý, không có chữ nào là "sonadezi") → nhóm "Sonadezi" 4 mã đứng
+     cạnh một nhóm vô danh 11 mã, **cùng một nhà**. Gom theo mã còn được thêm: biết ngay mẹ
+     có niêm yết (để trừ chồng lấn vốn hoá) và lấy đúng tên công ty làm tên nhóm. Nếu mã đó
+     là `me` của một nhóm khai tay thì về thẳng nhóm ấy. Sonadezi 4 → 15 mã, phủ 596 → 676.
+  7. **Nhóm khai tay được ưu tiên khi giành mã, và mẹ niêm yết LUÔN là hạt giống.** Chỉ xếp
      theo tỉ lệ thì PRE về tay "HDI Global SE" (ngoại nắm 38,9% PVI) thay vì PVN — đúng số
      sai nhà. Còn đợi có mã khai tên mẹ mới mở nhóm thì HPA (không có nổi một dòng cổ đông)
      kéo HPG vào nhóm mang tên "Tran Dinh Long", chẳng ai gọi nhà đó bằng tên ấy.
+     Nhóm khai tay còn được **giành lại mã đã nằm trong nhóm gom-theo-mã** (chiều ngược lại
+     thì không): PVI là con của PVN mà bản thân cũng là mẹ của PRE — chặn cứng thì PRE ở
+     lại nhóm PVI còn PVN mất con, trong khi PRE là con của cả hai theo đúng nghĩa đen.
+  8. **Vốn hoá nhóm: mã tới QUA MỘT THÀNH VIÊN KHÁC chỉ tính PHẦN NGOÀI.** Thành viên trung
+     gian luôn là mã niêm yết nên vốn hoá của nó đã gồm phần nó nắm — vốn hoá GAS đã gồm
+     35% PGS. Trước chỉ trừ được ở tầng mẹ (`co_me`), có cháu chắt rồi mà không trừ là đếm
+     hai lần. Dùng **% CẠNH** (cha nắm con) chứ không phải % hiệu dụng của cả nhóm.
   Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` (`nn`/`cn`) để giao diện
   dán nhãn — Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
   Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự

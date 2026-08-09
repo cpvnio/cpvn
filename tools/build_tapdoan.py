@@ -186,18 +186,30 @@ def main():
     # gom: khoá nhóm -> {mã con: % sở hữu}
     nhom, ten_goc, la_nn, la_dn = {}, {}, {}, {}
     ten_map = {g: (ten, me) for g, ten, me, _ in TU_KHOA}
+    me_map = {me: g for g, _, me, _ in TU_KHOA if me}      # mã mẹ -> nhóm đã khai tay
     for sym, d in P.items():
         for x in d.get("sh") or []:
             pc = x.get("p") or 0
             if pc < NGUONG_TAY: continue
             thoTen = khong_dau(x.get("n"))
             if any(t in thoTen for t in LOAI_TRU): continue
+            tk = (x.get("t") or "").strip().upper()
             khoa = None
             for gid, _, _, tks in TU_KHOA:
                 # KHỚP TRỌN TỪ, không khớp chuỗi con: "gelex" mà khớp kiểu chuỗi con thì
                 # "Geleximco" (một tập đoàn hoàn toàn khác) cũng bị hút vào nhóm GELEX.
-                if any(re.search(r"\b" + re.escape(tk.strip()) + r"\b", thoTen) for tk in tks):
+                if any(re.search(r"\b" + re.escape(tk2.strip()) + r"\b", thoTen) for tk2 in tks):
                     khoa = gid; break
+            # CỔ ĐÔNG CÓ MÃ NIÊM YẾT THÌ GOM THEO MÃ, ĐỪNG GOM THEO TÊN. Nguồn đã dò sẵn
+            # mã vào trường `t` mà bản cũ bỏ qua, chỉ băm tên ra làm khoá — nên một công ty
+            # viết hai kiểu tên là đẻ ra hai nhóm rời. Sonadezi dính đúng vậy: TU_KHOA bắt
+            # chữ "sonadezi", còn 8 công ty con lại ghi cổ đông là "Tổng Công ty Cổ phần
+            # Phát triển Khu công nghiệp" (tên pháp lý, không có chữ nào là "sonadezi") →
+            # nhóm "Sonadezi" 4 mã đứng cạnh một nhóm vô danh 11 mã, cùng một nhà.
+            # Gom theo mã còn được thêm hai thứ: biết ngay mẹ có niêm yết (để trừ chồng lấn
+            # vốn hoá) và lấy đúng tên công ty làm tên nhóm.
+            if not khoa and tk in me_map: khoa = me_map[tk]      # mã mẹ của nhóm khai tay
+            if not khoa and tk and tk in U and tk != sym and pc >= NGUONG: khoa = "ma:" + tk
             if not khoa:
                 if pc < NGUONG: continue          # cổ đông lạ thì đòi ngưỡng cao hơn
                 c = chuan(x.get("n"))
@@ -211,7 +223,8 @@ def main():
             # Chấm theo từng tên rồi gán "cá nhân" ngay là hỏng: PVN vào nhóm qua cả "Tập đoàn
             # Dầu khí Việt Nam" lẫn "PVN" trơ trọi, chỉ cần một biến thể trống là cả tập đoàn
             # bị dán nhãn cá nhân.
-            if khoa in ten_map or any(t in thoTen for t in DAU_DN): la_dn[khoa] = True
+            if khoa in ten_map or khoa.startswith("ma:") or any(t in thoTen for t in DAU_DN):
+                la_dn[khoa] = True
 
     # MẸ NIÊM YẾT LUÔN LÀ HẠT GIỐNG của nhóm mình — gắn TRƯỚC vòng lan bên dưới, vì chính
     # danh sách công ty con CỦA MẸ mới là nguồn tìm ra cháu chắt. Không đợi có mã nào khai
@@ -222,6 +235,8 @@ def main():
         if me and me in U:
             nhom.setdefault(gid, {}).setdefault(me, None)
             la_dn[gid] = True
+    for gid in [k for k in nhom if k.startswith("ma:")]:      # nhóm gom theo mã: mẹ là chính mã đó
+        if gid[3:] in U: nhom[gid].setdefault(gid[3:], None)
 
     # CON CỦA CON: mã do một THÀNH VIÊN của nhóm nắm chi phối thì cũng thuộc nhóm đó. Lan
     # theo từng LỚP (mẹ -> con -> cháu -> chắt) chứ không quét lại cả kho mỗi vòng.
@@ -231,7 +246,7 @@ def main():
     # ~23-26%, khớp với con số 23,79% mà chính FPT khai. Mẹ tính là 100% của chính nó.
     thanh = {s: k for k, ds in nhom.items() for s in ds}    # đã có nhà thì không bị nhóm khác giành
     hieu = {(k, s): (p if p else 100.0) for k, ds in nhom.items() for s, p in ds.items()}
-    gian_tiep = {}
+    gian_tiep = {}; canh_pc = {}
     canh = canh_so_huu(P, U)
     lop = list(hieu)
     for _ in range(3):
@@ -240,15 +255,21 @@ def main():
         # PRE rơi vào tay "HDI Global SE" (cổ đông ngoại nắm 38,9% PVI) thay vì về PVN —
         # đúng số nhưng sai nhà, vì HDI là cổ đông chiến lược chứ không phải chủ sở hữu.
         for k, cha in sorted(lop, key=lambda ks: (ks[0] not in ten_map, -hieu[ks])):
-            tay = k in ten_map
+            tay = k in ten_map or k.startswith("ma:")   # có mã mẹ hẳn hoi -> tin như khai tay
             for con, (pc, lk) in sorted((canh.get(cha) or {}).items(), key=lambda kv: -kv[1][0]):
-                if con in thanh: continue
+                # Nhóm KHAI TAY vẫn nhận được mã đã nằm trong một nhóm gom-theo-mã. PVI là
+                # con của PVN mà bản thân cũng là mẹ của PRE — chặn cứng thì PRE ở lại nhóm
+                # PVI còn PVN mất con, trong khi nó là con của cả hai theo đúng nghĩa đen.
+                # Nhóm gom-theo-mã thì KHÔNG được giành ngược lại của nhóm khai tay.
+                if con in thanh and not (tay and k in ten_map and thanh[con] not in ten_map):
+                    continue
                 if pc < (NGUONG_TAY if (tay and not lk) else NGUONG): continue
                 hd = round(hieu[(k, cha)] * pc / 100, 1)
                 if hd < NGUONG_HIEU: continue
                 nhom[k][con] = hd
                 hieu[(k, con)] = hd
                 gian_tiep[(k, con)] = cha
+                canh_pc[(k, con)] = pc            # % CHA nắm con (khác % hiệu dụng của cả nhóm)
                 thanh[con] = k
                 sau.append((k, con))
         if not sau: break
@@ -258,18 +279,31 @@ def main():
     for khoa, ds in nhom.items():
         if len(ds) < TOI_THIEU: continue
         ten, me = ten_map.get(khoa, (None, None))
+        if not ten and khoa.startswith("ma:"):
+            # nhóm gom theo MÃ: mẹ chính là mã đó, tên lấy từ universe cho gọn và chuẩn
+            # Tên pháp lý dài lê thê ("Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển
+            # Việt Nam") mà cột tên lại hẹp -> cắt còn mẩu đầu thì nhóm nào cũng giống nhóm
+            # nào. Dán MÃ lên trước: đó mới là thứ đọc một cái là biết nhà ai.
+            me = khoa[3:]
+            ten = me + " · " + re.sub(r"\s+", " ", ((U.get(me) or {}).get("name") or me).strip())
         if not ten:
             ten = re.sub(r"\s+", " ", (ten_goc.get(khoa) or "").strip())
-            if len(ten) > 46: ten = ten[:45].rstrip() + "…"
+        if len(ten) > 46: ten = ten[:45].rstrip() + "…"
         syms = sorted(ds.items(), key=lambda kv: -mcap(kv[0]))
         # VỐN HOÁ CẢ NHÓM. Cộng thô là đếm hai lần KHI MẸ CŨNG NIÊM YẾT: vốn hoá VIC đã
         # bao gồm 69% VHM mà VHM lại được cộng nguyên cục -> Vingroup phình lên 2,23 triệu
         # tỷ trong khi VIC chỉ có 1,70 triệu tỷ. Lúc đó mã con chỉ tính PHẦN NGOÀI NHÓM.
         # NHƯNG mẹ KHÔNG niêm yết (PVN, Viettel, EVN, TKV) thì chẳng có gì bị đếm hai lần —
         # trừ đi là tự tay xoá phần lớn nhóm: PVN từ 474 nghìn tỷ tụt còn 90.
+        # Mã tới được QUA MỘT THÀNH VIÊN KHÁC thì phần cha nắm đã nằm sẵn trong vốn hoá của
+        # cha (cha luôn là mã niêm yết) -> chỉ tính PHẦN NGOÀI. Trước chỉ xử được tầng mẹ,
+        # nay có cả cháu chắt nên không xử là đếm hai lần: vốn hoá GAS đã gồm 35% PGS.
         co_me = (me in U) if me else False
-        von = (sum(mcap(s) * (1 - min(p, 100) / 100 if p else 1) for s, p in syms)
-               if co_me else sum(mcap(s) for s, _ in syms))
+        def ngoai(s, p):
+            cha = gian_tiep.get((khoa, s))
+            if cha: return max(0.0, 1 - min(canh_pc.get((khoa, s), 0), 100) / 100)
+            return max(0.0, 1 - min(p, 100) / 100) if (co_me and p) else 1.0
+        von = sum(mcap(s) * ngoai(s, p) for s, p in syms)
         sy = []
         for s, p in syms:
             o = {"s": s, "p": (round(p, 1) if p else None)}
@@ -279,7 +313,7 @@ def main():
                 if cha != me: o["qua"] = cha      # "qua chính mẹ" thì khỏi ghi, thừa
             sy.append(o)
         ra.append({
-            "id": khoa.replace("auto:", "a-").replace(" ", "-")[:40],
+            "id": khoa.replace("auto:", "a-").replace("ma:", "m-").replace(" ", "-")[:40],
             "ten": ten, "me": me if me in U else None,
             "kieu": "nn" if la_nn.get(khoa) else ("tt" if la_dn.get(khoa) else "cn"),
             "mcap": round(von / 1e9),
