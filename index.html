@@ -84,31 +84,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     border:1px solid var(--line);font-size:13px;padding:9px 11px}
   .breadth b.bclear:hover{color:var(--txt)}
 
-  /* LỌC NHANH: hàng chip LUÔN HIỆN, rút gọn từ Bộ Lọc PRO — sáu tiêu chí hay dùng nhất.
-     Trước đây muốn lọc gì cũng phải mở panel PRO trước, một cú bấm thừa cho việc thường
-     xuyên nhất. Panel PRO vẫn giữ nguyên toàn bộ 20 chip cho ai cần đào sâu. */
-  #quickBar{display:flex;align-items:center;gap:10px;margin:10px 16px 0;padding:9px 16px;
-    background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-x:auto;
-    scrollbar-width:none}
-  #quickBar::-webkit-scrollbar{display:none}
-  /* `width:auto` là BẮT BUỘC: luật màn hẹp của panel PRO cho `.scrLb{width:100%}` để nhãn
-     xuống dòng riêng, dính vào đây là nhãn chiếm trọn bề ngang và đẩy sạch chip ra ngoài
-     khung — màn hẹp chỉ còn trơ hai chữ "LỌC NHANH". */
-  #quickBar>.scrLb{flex:0 0 auto;margin:0;width:auto}
-  /* flex:1 là hộp chip co lại vừa khung rồi chip tràn ra ngoài bị cắt sạch — màn hẹp chỉ
-     còn trơ chữ "LỌC NHANH". Phải để nó rộng đúng bằng nội dung, khung ngoài lo cuộn. */
-  #qChips{display:flex;gap:7px;flex:0 0 auto}
-  #qChips button{flex:0 0 auto;background:transparent;color:var(--txt);border:1px solid var(--line);
-    border-radius:11px;padding:7px 15px;font-size:13.5px;font-weight:700;cursor:pointer;
-    white-space:nowrap;transition:.13s}
-  #qChips button:hover{border-color:var(--muted)}
-  /* KHÔNG dùng color-mix() ở đây: html2canvas không hiểu hàm đó, ảnh chụp sẽ mất nền chip.
-     Nền nhạt viết thẳng bằng rgba; riêng chip nhóm mang màu động nên chỉ tô khi bật. */
-  #qChips button.on{border-color:var(--accent);color:var(--accent);background:rgba(225,29,72,.09)}
-  #qChips button.on::before{content:'●';font-size:9px;margin-right:6px;vertical-align:1px}
-  #qChips button.qnhom{color:var(--cg);border-color:var(--cg)}
-  #qChips button.qnhom.on{background:var(--cg);border-color:var(--cg);color:#1a1205}
-  #qChips button.qnhom.on::before{content:none}
 
   /* bộ lọc nằm cùng hàng header với ô tìm kiếm */
   header select{background:var(--panel);color:var(--txt);border:1px solid var(--line);
@@ -219,7 +194,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #scrClear:hover{color:var(--txt)}
   @media(max-width:760px){
     /* màn hẹp: hai dải thu nhỏ lại và CUỘN NGANG (khung cũ cũng cuộn), giữ đủ mọi con số */
-    #stats,#quickBar{margin:8px 10px 0;border-radius:12px}
+    #stats{margin:8px 10px 0;border-radius:12px}
     .mcell{padding:8px 11px}
     .mlb{font-size:9.5px;letter-spacing:.055em}
     .mval{gap:6px;margin-top:3px}
@@ -229,8 +204,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .breadth b{padding:4px 8px}
     .breadth b em{font-size:14px}
     .breadth b span{font-size:9px}
-    #quickBar{padding:8px 11px;gap:9px}
-    #qChips button{padding:6px 13px;font-size:12.5px}
     #scrPanel{padding:8px 10px}
     .scrLb{width:100%;margin-bottom:-3px}
     /* MOBILE GỌN: chips 2 hàng CUỘN NGANG + preset 2 hàng CUỘN NGANG -> panel thấp,
@@ -380,8 +353,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <div id="stats"></div>
 
-<div id="quickBar"><span class="scrLb">Lọc nhanh</span><div id="qChips"></div></div>
-
 <div id="scrPanel">
   <div class="scrRow"><span class="scrLb">Lọc nhanh</span><div class="chipbar" id="scrChips"></div>
     <button id="scrClear">✕ Xoá hết lọc</button></div>
@@ -423,7 +394,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811a"></script>
+<script src="assets/core.js?v=20260811b"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -436,7 +407,7 @@ const ST={ scope:'all', floor:'all', sector:'all', q:'', sort:'mcap', dir:-1, pa
   set(); addEventListener('resize',set); })();
 /* trạng thái BỘ LỌC (assets/screener.js): chips 1 chạm.
    num[id] = số kỳ của chip có tham số (lỗ N quý) */
-const SCR={ on:false, pro:false, chips:new Set(), num:{} };
+const SCR={ on:false, chips:new Set(), num:{} };
 function scrPass(c){
   for(const id of SCR.chips) if(!CPScreen.chip(id,c,SCR.num[id])) return false;
   return true;
@@ -872,44 +843,7 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
   ST.page=1; render();
 });
 
-/* ---------- LỌC NHANH (luôn hiện) + PANEL BỘ LỌC PRO ----------
-   Hai thanh dùng CHUNG một trạng thái `SCR.chips`: bật ở đâu cũng sáng cả hai chỗ, và
-   `scrSync` là chỗ DUY NHẤT đổi trạng thái rồi vẽ lại. Trước đây muốn lọc gì cũng phải mở
-   panel PRO — một cú bấm thừa cho đúng mấy tiêu chí dùng nhiều nhất. */
-const QUICK=[['vn30','VN30'],['cap10k','Vốn hoá lớn'],['dy5','Cổ tức cao'],
-             ['pe10','P/E thấp'],['@nhom',''],['hi52','Gần đỉnh 52T']];
-function quickBuild(){
-  $('qChips').innerHTML=QUICK.map(([id,nm])=>{
-    if(id!=='@nhom') return `<button data-id="${id}">${nm}</button>`;
-    /* nhóm theo dõi mang màu riêng — nó là TIÊU CHÍ LỌC, không phải ngành */
-    return (CP.nhom||[]).map(g=>`<button data-id="nhom:${g.id}" class="qnhom"`+
-      ` style="--cg:${g.mau||'#f5b40a'}" title="Nhóm theo dõi · ${g.syms.length} mã"`+
-      `>${CP.esc(g.ten)}</button>`).join('');
-  }).join('');
-  $('qChips').querySelectorAll('button').forEach(b=>b.onclick=()=>scrToggle(b.dataset.id));
-  scrPaint();
-}
-let scrBuilt=false, scrBan=false;                       // chặn bấm dồn trong lúc kho lọc đang tải
-async function scrToggle(id){
-  if(!CPScreen.loaded){
-    if(scrBan) return;
-    scrBan=true; const ok=await CPScreen.load(); scrBan=false;
-    if(!ok) return;
-    if($('scrPanel').classList.contains('on')) scrBuild();
-  }
-  SCR.chips.has(id)?SCR.chips.delete(id):SCR.chips.add(id);
-  scrSync();
-}
-function scrPaint(){                    // tô lại trạng thái bật/tắt ở CẢ HAI thanh
-  document.querySelectorAll('#qChips [data-id],#scrChips [data-id]').forEach(el=>
-    el.classList.toggle('on',SCR.chips.has(el.dataset.id)));
-}
-function scrSync(){
-  /* Lọc có hiệu lực khi panel PRO đang mở HOẶC có chip nào đang bật. Bản cũ chỉ nhìn panel
-     nên chip của thanh lọc nhanh bấm xong bảng đứng im, không hiểu vì sao. */
-  SCR.on=SCR.pro||SCR.chips.size>0;
-  scrPaint(); ST.page=1; render();
-}
+/* ---------- PANEL BỘ LỌC ---------- */
 function scrBuild(){
   /* nhóm theo dõi đứng đầu hàng chip, mang màu riêng — nó là tiêu chí lọc, không phải ngành */
   const nhomChip=(CP.nhom||[]).map(g=>
@@ -922,17 +856,21 @@ function scrBuild(){
       `<option value="${v}"${v===SCR.num[x.id]?' selected':''}>${v}</option>`).join('')+'</select>';
     return `<span class="chipn" data-id="${x.id}" title="${x.g}">${x.nm.replace('{n}',sel)}</span>`;
   }).join('');
+  const bat=(el,id)=>{                              // bật/tắt một chip rồi vẽ lại bảng
+    SCR.chips.has(id)?SCR.chips.delete(id):SCR.chips.add(id);
+    el.classList.toggle('on',SCR.chips.has(id));
+    ST.page=1; render();
+  };
   document.querySelectorAll('#scrChips [data-id]').forEach(b=>b.onclick=e=>{
     if(e.target.tagName==='SELECT') return;         // bấm vào ô số thì đừng tắt chip
-    scrToggle(b.dataset.id);
+    bat(b,b.dataset.id);
   });
   document.querySelectorAll('#scrChips select[data-num]').forEach(s=>s.onchange=()=>{
-    const id=s.dataset.num;
+    const id=s.dataset.num, box=s.closest('[data-id]');
     SCR.num[id]=+s.value;
-    if(!SCR.chips.has(id)) return scrToggle(id);    // chọn số kỳ = có ý dùng -> bật luôn
-    scrSync();
+    if(!SCR.chips.has(id)) return bat(box,id);      // chọn số kỳ = có ý dùng -> bật luôn
+    ST.page=1; render();
   });
-  scrPaint();
 }
 $('scrBtn').onclick=async()=>{
   const open=!$('scrPanel').classList.contains('on');
@@ -943,21 +881,19 @@ $('scrBtn').onclick=async()=>{
       $('scrDesc').textContent='Đang nạp dữ liệu bộ lọc…';
       if(!await CPScreen.load()){ $('scrDesc').textContent='Không nạp được dữ liệu bộ lọc — thử tải lại trang.'; return; }
       $('scrDesc').textContent='';
+      scrBuild();
     }
-    /* dựng theo CỜ RIÊNG, đừng dựa vào `CPScreen.loaded`: thanh lọc nhanh có thể đã nạp
-       kho từ trước, lúc đó nhánh trên bị bỏ qua và panel PRO mở ra TRỐNG TRƠN. */
-    if(!scrBuilt){ scrBuild(); scrBuilt=true; }
-  }
-  /* đóng panel KHÔNG còn tắt lọc vô điều kiện: chip bật từ thanh lọc nhanh vẫn phải giữ,
-     bằng không đóng panel một cái là bảng lặng lẽ trở về đủ 1.526 mã trong khi chip vẫn sáng */
-  SCR.pro=open; scrSync();
+    SCR.on=true;
+  } else SCR.on=false;          // đóng panel = tắt lọc, bảng về nguyên trạng
+  ST.page=1; render();
 };
 $('scrClear').onclick=()=>{
   SCR.chips.clear();
+  document.querySelectorAll('#scrChips [data-id]').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('#scrChips select[data-num]').forEach(s=>{   // số kỳ về mặc định
     SCR.num[s.dataset.num]=CPScreen.def(s.dataset.num); s.value=SCR.num[s.dataset.num];
   });
-  scrSync();
+  ST.page=1; render();
 };
 
 /* giao diện sáng/tối — lưu lựa chọn, dùng chung cho các trang CPVN */
@@ -989,7 +925,7 @@ applyThmIcon();
   filterRows();
   const st0=(ST.page-1)*ST.PER;
   await CP.warmPrices(ST.rows.slice(st0,st0+ST.PER).map(c=>c.sym),800);
-  snapPrices(); quickBuild(); render(); renderStats(); renderKho();
+  snapPrices(); render(); renderStats(); renderKho();
   CP.loadIndices().then(renderStats);
   // mỗi phút chỉ làm mới các mã của TRANG ĐANG XEM; 5 phút quét lại toàn bộ để xếp hạng đúng
   CP.startPolling(()=>{ flashUpdate(); },
