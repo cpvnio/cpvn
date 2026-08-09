@@ -32,6 +32,8 @@ CPScreen.pe=c=>{ const p=(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:nu
 
 /* ---------- CHIPS 1 chạm --------------------------------------------------- */
 CPScreen.chips=[
+  {id:'vn30',  g:'Rổ · quy mô', nm:'Rổ VN30'},
+  {id:'cap10k',g:'Rổ · quy mô', nm:'Vốn hoá ≥ 10.000 tỷ'},
   {id:'pe10',  g:'Định giá', nm:'P/E < 10'},
   {id:'pb1',   g:'Định giá', nm:'P/B < 1'},
   {id:'eps3k', g:'Định giá', nm:'EPS > 3.000đ'},
@@ -62,6 +64,9 @@ CPScreen.chip=function(id,c,n){
   const t=CPScreen.T[c.sym]||{},f=CPScreen.F[c.sym]||{},p=c.price||0;
   n=n||CPScreen.def(id);
   switch(id){
+    // hai chip này KHÔNG cần kho chỉ báo, chỉ đọc thẳng universe -> lọc nhanh dùng được ngay
+    case 'vn30':  return CP.vn30.has(c.sym);
+    case 'cap10k':return (c.mcapLive||c.mcap||0)>=1e13;      // 10.000 tỷ đồng
     case 'pe10':  { const v=CPScreen.pe(c); return v!=null&&v<10; }
     case 'pb1':   return c.pb!=null&&c.pb>0&&c.pb<1;
     case 'eps3k': return (c.eps||0)>3000;
