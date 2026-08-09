@@ -337,6 +337,16 @@ news 6, profile 5) — tăng lên dễ bị chặn IP.
 > **Nguyên tắc chung: mọi bản vá một lần phải chuyển thành một phép kiểm trong pipeline** —
 > việc gì cần người ngồi chạy tay là việc sẽ bị quên.
 
+> **CÀO HỤT THÌ GIỮ SỐ CŨ, ĐỪNG GHI RỖNG ĐÈ LÊN.** `work_fin` và `work_prof` đều `jdump`
+> NGUYÊN file, mà mấy hàm cào con (`fetch_div`, `fetch_ownership`, khối `bsY/bsQ/cfY/cfQ`)
+> nuốt lỗi rồi trả về rỗng — một cú 5xx của nguồn là mất sạch cổ tức, cổ đông, công ty con
+> của mã đó. `fin_stale()`/`prof_stale()` KHÔNG bắt được: khoá vẫn còn, chỉ là ruột trống.
+> Nay cả hai lấy lại giá trị cũ khi lượt mới trả về rỗng (`Y`/`Q` thì gộp theo nhãn).
+> **Ngày phơi nhiễm nặng nhất là THỨ HAI**: `--full` cào lại cả 1.522 mã cùng lúc, và
+> `build_tapdoan` chạy ngay sau đó trong CÙNG lượt — hồ sơ bị khoét là bản đồ tập đoàn dựng
+> lại từ kho rỗng, im lặng. Guard này che sự cố nguồn nên `health.json` có `giu_cu` đếm số
+> mã phải lấy số cũ: **`giu_cu` vọt lên là nguồn đang hỏng**, đừng đọc thành "vẫn ổn".
+
 **Lịch chạy**: VPS Windows Scheduled Task 15:15 chạy `server/run_refresh.ps1` (commit
 `EOD <phiên> (server)`) — **đường chính**. GitHub Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN,
 so `data/health.json['date']` với **phiên gần nhất đã đóng sổ**, bằng nhau thì tự thoát.

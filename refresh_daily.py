@@ -488,7 +488,7 @@ def tin_dung_ma(sym,tieu):
     co={m.group(1) or m.group(2) for m in RX_MA_TIEUDE.finditer((tieu or "").upper())}
     if not co or sym in co: return True
     return not any(x in stocks for x in co)
-flock=threading.Lock(); fdone=[0,0]
+flock=threading.Lock(); fdone=[0,0]; fkeep=[0]   # fkeep: số mã phải lấy lại số cũ vì nguồn hụt
 def work_fin(sym):
     url=lambda v,p:f"https://api-finance-t19.24hmoney.vn/v1/web/company/financial-report?symbol={sym}&view={v}&period={p}&expanded=false"
     o={"sym":sym,"updated":sess_date,"Y":[],"Q":[],"div":[],"divQ":{}}
@@ -522,6 +522,15 @@ def work_fin(sym):
             gop={r.get("label"):r for r in (cu.get(k) or []) if r.get("label")}
             gop.update({r.get("label"):r for r in (o.get(k) or []) if r.get("label")})
             o[k]=sorted(gop.values(),key=lambda r:_thu(r.get("label")))
+        # CÙNG LUẬT ĐÓ CHO MẤY KHOÁ CÒN LẠI. Chúng đang ghi đè thẳng: bsY/bsQ/cfY/cfQ chỉ
+        # gán `if g:` nên cào hụt là khoá VẮNG MẶT, jdump xoá luôn khỏi file; div/divQ thì
+        # fetch_div nuốt lỗi và trả về rỗng, ghi rỗng đè lên số cũ. fin_stale() không thấy
+        # được vì khoá vẫn còn, chỉ là ruột trống -> mất im lặng tới lượt --full thứ Hai,
+        # mà thứ Hai cũng có thể hụt tiếp. Nguồn hỏng lẻ tẻ có thật: lượt 07/08 fail 10 mã.
+        _lay=[k for k in ("bsY","bsQ","cfY","cfQ","div","divQ") if not o.get(k) and cu.get(k)]
+        for k in _lay: o[k]=cu[k]
+        if _lay:
+            with flock: fkeep[0]+=1
     with flock:
         fdone[0]+=1
         if o["Y"] or o["Q"] or o["div"]: fdone[1]+=1
@@ -532,7 +541,7 @@ if need:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
         list(pool.map(work_fin,need))
 print(f"kho tài chính (KQKD+CĐKT+LCTT+cổ tức): cào {len(need)} mã, có dữ liệu {fdone[1]}",flush=True)
-HL["fin"]={"need":len(need),"ok":fdone[1]}
+HL["fin"]={"need":len(need),"ok":fdone[1],"giu_cu":fkeep[0]}
 
 # 6b) RÚT 3 CHỈ SỐ CƠ BẢN TỪ KHO TÀI CHÍNH -> universe.json (bảng giá đọc 1 lần, không phải
 #     tải 1.500 file lẻ). Không tốn thêm lượt gọi mạng nào — đọc lại file vừa ghi ở bước 6.
@@ -742,7 +751,7 @@ def prof_stale(s):
         return (datetime.date.fromisoformat(sess_date)-datetime.date.fromisoformat(u)).days>=3
     except Exception: return True
 ptargets=[s for s in syms if prof_stale(s)]
-plock=threading.Lock(); pdone=[0,0]
+plock=threading.Lock(); pdone=[0,0]; pkeep=[0]   # pkeep: số mã giữ lại cổ đông/cty con cũ
 def fetch_ownership(sym,o):
     """Điền sh (cổ đông lớn) / funds (quỹ nắm giữ) / subs (cty con-liên kết) / own (cơ cấu) vào o."""
     try:
@@ -809,6 +818,20 @@ def work_prof(sym):
        "riskLevel":d.get("overallRiskLevel"),"shares":d.get("outstandingSharesValue")}
     _learn(o.get("nameVi"),sym); _learn(o.get("nameEn"),sym)
     fetch_ownership(sym,o)
+    # GIỮ SỐ CŨ KHI LƯỢT NÀY CÀO HỤT. fetch_ownership nuốt mọi lỗi rồi trả về lặng thinh,
+    # mà jdump ghi đè NGUYÊN file -> một cú 5xx của Simplize là danh sách cổ đông/công ty
+    # con của mã đó biến mất, còn prof_stale() giữ nguyên file rỗng ấy thêm 3 ngày nữa vì
+    # nó chỉ nhìn `v` với `updated`. Thứ Hai --full cào lại CẢ 1.522 mã cùng lúc nên đó là
+    # ngày phơi nhiễm nặng nhất — và build_tapdoan chạy ngay sau đó trong CÙNG lượt, dựng
+    # lại bản đồ tập đoàn từ kho vừa bị khoét. Chỉ lấy số cũ khi lượt mới trả về RỖNG: cổ
+    # đông có bán sạch thì danh sách vẫn còn người khác, rỗng trơn chỉ có thể là nguồn hỏng.
+    try:
+        with open(os.path.join(PROF_DIR,f"{sym}.json"),encoding="utf-8") as fh: _cu=json.load(fh)
+        _lay=[k for k in ("sh","funds","subs","own") if not o.get(k) and _cu.get(k)]
+        for k in _lay: o[k]=_cu[k]
+        if _lay:
+            with plock: pkeep[0]+=1
+    except Exception: pass
     o={k:v for k,v in o.items() if v not in (None,"")}
     with plock:
         pdone[1]+=1
@@ -818,7 +841,7 @@ if ptargets:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
         list(pool.map(work_prof,ptargets))
 print(f"kho hồ sơ doanh nghiệp: cào {len(ptargets)} mã, ok {pdone[1]} (chu kỳ 3 ngày)",flush=True)
-HL["profile"]={"need":len(ptargets),"ok":pdone[1]}
+HL["profile"]={"need":len(ptargets),"ok":pdone[1],"giu_cu":pkeep[0]}
 
 # 9) KHO LOGO assets/logo/{SYM}.webp — mã mới niêm yết tự có logo, không phải đụng tay.
 #    (Kho gốc dựng 1 lần bằng tools/fetch_logos.py; ở đây chỉ vá phần thiếu.)
