@@ -14,14 +14,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
    Ngôn ngữ thiết kế: nền sâu, thẻ kính mờ, số to, ít viền, nhiều khoảng thở.
    ========================================================================== */
 :root{
-  --bg:#14161d; --bg2:#191c24;
-  --card:rgba(30,33,42,.72); --card2:rgba(255,255,255,.045); --solid:#1c1f28;
-  --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.19);
-  --txt:#ecedf4; --mut:#9aa2b4; --faint:#6b7183;
+  --bg:#1b2130; --bg2:#212939;
+  --card:rgba(35,43,61,.72); --card2:rgba(255,255,255,.045); --solid:#232b3d;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.20);
+  --txt:#e8ecf5; --mut:#9aa6bd; --faint:#74809a;
   --rose:#f43f5e; --teal:#2dd4bf; --gold:#f5b40a; --violet:#a78bfa; --cyan:#38bdf8;
   --tealT:#2dd4bf;      /* ngọc dùng cho CHỮ — nền sáng phải đậm hơn mới đọc nổi */
-  --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3;
-  --greenD:rgba(22,199,132,.13); --redD:rgba(234,57,67,.13);
+  --green:#22c98a; --red:#f0505c; --yellow:#eab308; --purple:#c026d3;
+  --greenD:rgba(34,201,138,.14); --redD:rgba(240,80,92,.14);
   --shadow:0 24px 60px rgba(0,0,0,.5);
   --r:18px;
 }
@@ -83,7 +83,7 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 /* ---------- khung tổng ---------- */
 html[data-theme="light"] header{background:rgba(247,248,250,.88)!important}
 header{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:6px;
-  padding:9px 13px;background:rgba(20,23,30,.86);
+  padding:9px 13px;background:rgba(27,33,48,.88);
   backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;letter-spacing:.3px;color:#fff;flex:0 0 160px;overflow:hidden}
 html[data-theme="light"] .brand{color:var(--txt)}
