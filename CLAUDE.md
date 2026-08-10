@@ -46,6 +46,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
 | `data/quy.json` | Danh mục các quỹ: quỹ → mã đang nắm + giá trị + **kỳ công bố**. Cùng script |
+| `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
 ## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
@@ -241,6 +242,14 @@ giá sai hoặc giá nhảy — đừng đẩy.
   (`congcu.js`) → còn 6/13. Lọc ở GIAO DIỆN chứ không ở script: `quy.json` giữ đủ để đổi
   ngưỡng là xong, khỏi phải cào lại. Lưu ý `tong` là tổng phần GHI NHẬN ĐƯỢC (nguồn chỉ
   công bố top-N quỹ mỗi mã) nên luôn nhỏ hơn NAV thật — đừng đọc như quy mô quỹ.
+- **LỊCH CHỐT QUYỀN lấy VNDirect finfo, KHÔNG lấy Simplize.** `api-finfo.vndirect.com.vn/v4/events`
+  nhóm `investorRight` là nguồn DUY NHẤT trong các nguồn đang dùng có **sự kiện SẮP TỚI** —
+  đã đo: kho sự kiện Simplize (thứ `fetch_div` đang đọc) trả 894 sự kiện trên 60 mã lớn mà
+  **không một sự kiện nào có ngày chốt quyền sau hôm nay**. Lịch chỉ có quá khứ là lịch sử,
+  không phải lịch. Đối chiếu chéo 170 sự kiện cổ tức tiền đã qua giữa hai nguồn: **khớp
+  170/170 ngày**. Ngày hiện ra phải là `effectiveDate` = **ngày giao dịch không hưởng
+  quyền**, không phải `actualDate` (ngày tiền về, thường sau cả tháng). Nguồn trả CẢ bản EN
+  lẫn VN nên phải lọc `locale=='VN'`, bằng không mọi sự kiện nhân đôi.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

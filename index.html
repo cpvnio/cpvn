@@ -148,6 +148,59 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     box-shadow:0 0 8px rgba(56,189,248,.9),0 0 2px rgba(2,132,247,.9);pointer-events:none}
   #scrBtn .ic{margin-right:5px}
   #scrBtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* ---------- LỊCH CHỐT QUYỀN ---------- */
+  #divPanel{display:none;padding:10px 16px 12px;border-bottom:1px solid var(--line);background:var(--hdr2)}
+  #divPanel.on{display:block}
+  .dvhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .dvhead>b{font-size:14px}
+  .dvseg{display:flex;gap:4px}
+  .dvseg button{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:14px;
+    padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .dvseg button:hover{color:var(--txt)}
+  .dvseg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .dvcnt{font-size:12px;color:var(--muted);font-weight:700}
+  .dvx{margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:7px;
+    color:var(--muted);padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer}
+  .dvx:hover{color:var(--txt)}
+  #dvBody{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  .dvday{display:flex;align-items:baseline;gap:9px;padding:8px 14px;background:var(--thead);
+    position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:800}
+  .dvday i{font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}
+  .dvday.nay{color:var(--accent)}
+  /* mỗi dòng một quyền: mã · tên · loại · số tiền|tỉ lệ · ngày tiền về */
+  .dvrow{display:grid;grid-template-columns:26px 62px minmax(90px,1fr) 118px 132px 96px;gap:10px;
+    align-items:center;padding:7px 14px;border-bottom:1px solid var(--rowline);cursor:pointer;font-size:13px}
+  .dvrow:hover{background:var(--rowhover)}
+  .dvrow img{width:26px;height:26px;border-radius:7px;background:#fff;object-fit:contain}
+  .dvrow .noimg{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
+    border-radius:7px;background:var(--panel2);font-size:10px;font-weight:800;color:var(--muted)}
+  .dvrow b{font-weight:800}
+  .dvrow .nm{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* KHÔNG dùng color-mix cho nền nhãn — html2canvas của nút chụp không hiểu hàm đó */
+  .dvk{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;text-align:center;white-space:nowrap}
+  .dvk.tien{background:rgba(22,199,132,.15);color:var(--green)}
+  .dvk.cp{background:rgba(56,189,248,.16);color:var(--cyan)}
+  .dvk.thuong{background:rgba(192,38,211,.16);color:var(--purple)}
+  .dvk.phathanh{background:rgba(234,179,8,.16);color:var(--yellow)}
+  .dvv{font-weight:800;text-align:right}
+  .dvtt{font-size:11.5px;color:var(--muted);text-align:right;white-space:nowrap}
+  .dvnote{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px}
+  .dvempty{padding:22px 14px;text-align:center;color:var(--muted);font-size:13px}
+  @media(max-width:760px){
+    #divPanel{padding:8px 10px 10px}
+    /* 5 nút loại quyền dài hơn bề ngang -> cho cuộn ngang, bằng không nút cuối bị xén mất */
+    .dvseg{overflow-x:auto;scrollbar-width:none;max-width:100%}
+    .dvseg::-webkit-scrollbar{display:none}
+    .dvseg button{flex:0 0 auto}
+    /* màn hẹp: bỏ tên công ty và ngày thanh toán, giữ MÃ · loại · số tiền */
+    .dvrow{grid-template-columns:24px 52px 1fr 96px;gap:8px;padding:7px 10px}
+    .dvrow .nm,.dvrow .dvtt{display:none}
+    .dvhead>b{width:100%}
+    #dvBody{max-height:none}
+  }
+  /* dưới 1400px thanh header không đủ chỗ cho cả chữ -> giữ mỗi biểu tượng lịch,
+     bằng không nút đổi giao diện bị đẩy xuống hàng hai */
+  @media(max-width:1520px){ #divBtn span{display:none} }
   #scrPanel{display:none;padding:10px 16px 12px;border-bottom:1px solid var(--line);background:var(--hdr2)}
   #scrPanel.on{display:block}
   .scrRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:7px 0}
@@ -231,7 +284,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
        thương hiệu không bị tràn xuống 2 dòng) */
     /* thứ tự trong cụm: ☰ Ngành -> sàn -> tìm mã (đặt ở khối media phía dưới) */
     #secToggle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #shotBtn{order:1} #scrBtn{order:1;margin-left:auto} #thm{order:1}
+    #shotBtn{order:1} #divBtn{order:1} #scrBtn{order:1;margin-left:auto} #thm{order:1}
     #sectorbar{position:fixed;left:0;top:0;bottom:0;z-index:60;width:78%;max-width:300px;
       max-height:none;transform:translateX(-100%);transition:transform .22s ease;
       box-shadow:6px 0 24px rgba(0,0,0,.45)}
@@ -257,6 +310,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
        chiếm trọn một hàng -> header ăn 42% màn hình, chưa xem được mã nào. */
     header{gap:6px;padding:7px 10px}
     .brand{order:1;font-size:19px;flex:0 0 auto} .brand .mark{width:26px;height:26px}
+    #divBtn{order:1}
     #scrBtn{order:1;margin-left:auto;padding:7px 12px}
     #thm{order:1;padding:7px 10px}
     .tabs{order:2;width:100%;margin-left:0;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
@@ -321,11 +375,24 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" data-mob="Tìm mã…" />
   <button class="thmbtn" id="secToggle" title="Chọn nhóm ngành">☰ Ngành</button>
   <button class="thmbtn" id="shotBtn" title="Chụp ảnh bảng giá tại đúng vị trí đang xem">📷</button>
+  <button class="thmbtn" id="divBtn" title="Lịch chốt quyền: cổ tức tiền, cổ tức cổ phiếu, cổ phiếu thưởng, phát hành thêm">🗓️ <span>Lịch cổ tức</span></button>
   <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Bộ Lọc</span></button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
 <div id="stats"></div>
+
+<div id="divPanel">
+  <div class="dvhead">
+    <b>🗓️ Lịch chốt quyền</b>
+    <span class="dvseg" id="dvKhi"><button data-dv="sap" class="on">Sắp tới</button><button data-dv="qua">Đã qua</button></span>
+    <span class="dvseg" id="dvLoai"><button data-dk="all" class="on">Tất cả</button><button data-dk="tien">Cổ tức tiền</button><button data-dk="cp">Cổ tức CP</button><button data-dk="thuong">CP thưởng</button><button data-dk="phathanh">Phát hành</button></span>
+    <span class="dvcnt" id="dvCnt"></span>
+    <button class="dvx" id="dvClose">✕</button>
+  </div>
+  <div id="dvBody"></div>
+  <div class="dvnote">Ngày ghi trong lịch là <b>ngày giao dịch không hưởng quyền</b> — mua từ ngày đó là KHÔNG còn quyền, muốn nhận thì phải nắm cổ phiếu từ phiên trước. "TT" là ngày tiền/cổ phiếu thực về. Nguồn cập nhật theo thông báo chốt quyền của doanh nghiệp, làm mới mỗi phiên.</div>
+</div>
 
 <div id="scrPanel">
   <div class="scrRow"><span class="scrLb">Lọc nhanh</span><div class="chipbar" id="scrChips"></div>
@@ -368,7 +435,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811c"></script>
+<script src="assets/core.js?v=20260811d"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -806,6 +873,62 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
   if(ST.sort===k) ST.dir*=-1; else { ST.sort=k; ST.dir=(k==='sym')?1:-1; }
   ST.page=1; render();
 });
+
+/* ---------- LỊCH CHỐT QUYỀN (data/cotuc.json) ----------
+   Ngày hiện ra là ngày GIAO DỊCH KHÔNG HƯỞNG QUYỀN, không phải ngày tiền về — đó mới là
+   ngày người cầm cổ phiếu phải canh. Kho nạp LƯỜI, chỉ tải khi bấm mở lần đầu. */
+const DV={ds:null, khi:'sap', loai:'all'};
+const DVTEN={tien:'Cổ tức tiền',cp:'Cổ tức CP',thuong:'CP thưởng',phathanh:'Phát hành thêm'};
+const THU=['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+const dvNgay=s=>{const p=s.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+function dvRender(){
+  const hom=CP.dayVN?CP.dayVN():new Date().toISOString().slice(0,10);
+  let ds=(DV.ds||[]).filter(x=>DV.khi==='sap'?x.d>=hom:x.d<hom);
+  if(DV.loai!=='all') ds=ds.filter(x=>x.k===DV.loai);
+  if(DV.khi==='qua') ds=ds.slice().reverse();          // đã qua: gần nhất lên trước
+  $('dvCnt').textContent=ds.length+' sự kiện';
+  if(!ds.length){ $('dvBody').innerHTML='<div class="dvempty">Không có sự kiện nào trong nhóm này.</div>'; return; }
+  let html='',ngay='';
+  for(const x of ds){
+    if(x.d!==ngay){
+      ngay=x.d;
+      const d=new Date(x.d+'T00:00:00'), cach=Math.round((d-new Date(hom+'T00:00:00'))/864e5);
+      const phu=cach===0?'hôm nay':cach>0?'còn '+cach+' ngày':Math.abs(cach)+' ngày trước';
+      html+=`<div class="dvday${cach===0?' nay':''}"><b>${THU[d.getDay()]} ${dvNgay(x.d)}</b><i>${phu}</i></div>`;
+    }
+    const c=CP.coins.get(x.s);
+    const gt=x.k==='tien'?(x.tien?CP.fmtD(x.tien)+' đ/cp':'—')
+      :x.k==='phathanh'?(x.gia?CP.fmtD(x.gia)+' đ/cp':'—')
+      :(x.tl?'100 : '+x.tl:'—');
+    html+=`<div class="dvrow" data-sym="${x.s}" title="${CP.esc(x.gc||'')}">`
+      +(c?CP.logoHTML(x.s,c.img):`<span class="noimg">${CP.esc(x.s.slice(0,2))}</span>`)
+      +`<b>${x.s}</b><span class="nm">${CP.esc(c?c.name:'')}</span>`
+      +`<span class="dvk ${x.k}">${DVTEN[x.k]}</span><span class="dvv">${gt}</span>`
+      +`<span class="dvtt">${x.tt?'TT '+dvNgay(x.tt):''}</span></div>`;
+  }
+  $('dvBody').innerHTML=html;
+  $('dvBody').querySelectorAll('.dvrow').forEach(r=>r.onclick=()=>{
+    location.href='cophieu.html?sym='+encodeURIComponent(r.dataset.sym); });
+}
+$('divBtn').onclick=async()=>{
+  const open=!$('divPanel').classList.contains('on');
+  $('divPanel').classList.toggle('on',open);
+  $('divBtn').classList.toggle('on',open);
+  if(!open) return;
+  if(!DV.ds){
+    $('dvBody').innerHTML='<div class="dvempty">Đang nạp lịch…</div>';
+    const j=await fetch('data/cotuc.json').then(r=>r.ok?r.json():null).catch(()=>null);
+    if(!j){ $('dvBody').innerHTML='<div class="dvempty">Chưa có lịch chốt quyền trong kho.</div>'; return; }
+    DV.ds=j.sk||[];
+  }
+  dvRender();
+  $('divPanel').scrollIntoView({block:'nearest',behavior:'smooth'});
+};
+$('dvClose').onclick=()=>{ $('divPanel').classList.remove('on'); $('divBtn').classList.remove('on'); };
+$('dvKhi').onclick=e=>{ const b=e.target.closest('[data-dv]'); if(!b) return;
+  DV.khi=b.dataset.dv; $('dvKhi').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); dvRender(); };
+$('dvLoai').onclick=e=>{ const b=e.target.closest('[data-dk]'); if(!b) return;
+  DV.loai=b.dataset.dk; $('dvLoai').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); dvRender(); };
 
 /* ---------- PANEL BỘ LỌC ---------- */
 function scrBuild(){

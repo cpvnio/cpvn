@@ -104,6 +104,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .statgrid .row span:last-child{font-weight:700;text-align:right}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
   .statgrid .row.hi span:last-child{color:var(--green)}   /* tiền mặt + LN sau thuế: xanh lá */
+  .statgrid .row.hi.lo span:last-child{color:var(--red)}  /* trừ khi LỖ — lỗ mà xanh là đọc ngược */
   /* HÀNG CẶP: hai chỉ số ngắn cùng họ đứng cạnh nhau, mỗi cái vẫn có nhãn RIÊNG và
      số nằm NGANG hàng nhãn. Trước đây dồn "P/E · P/B · EPS · ROA" vào một nhãn rồi
      ghép 4 số bằng dấu chấm -> phải tự đếm xem số nào ứng nhãn nào, rất rối mắt. */
@@ -510,7 +511,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260811c"></script>
+<script src="assets/core.js?v=20260811d"></script>
 <script src="assets/chart.js?v=20260810a"></script>
 <script>
 'use strict';
@@ -566,7 +567,9 @@ function renderHero(){
     ['Khối lượng giao dịch',CP.fmtVnd(C.gtgd),''],
   ];
   // LN sau thuế TRƯỚC, tiền mặt SAU — đọc theo mạch "lãi bao nhiêu, rồi còn bao nhiêu tiền"
-  if(FIN.np!=null)   rows.push(['LN sau thuế <span style="opacity:.7">'+CP.esc(FIN.npLb)+'</span>',CP.fmtVnd(FIN.np*1e9),'hi']);
+  /* LỖ THÌ PHẢI ĐỎ. Class `hi` ép xanh lá bất kể dấu nên HNG lỗ 987 tỷ vẫn hiện xanh
+     như đang lãi — con số duy nhất trên cả thẻ mà đọc lướt là hiểu ngược hẳn. */
+  if(FIN.np!=null)   rows.push(['LN sau thuế <span style="opacity:.7">'+CP.esc(FIN.npLb)+'</span>',CP.fmtVnd(FIN.np*1e9),FIN.np<0?'hi lo':'hi']);
   if(FIN.cash!=null) rows.push(['Tiền &amp; tương đương <span style="opacity:.7">'+CP.esc(FIN.cashLb)+'</span>',CP.fmtVnd(FIN.cash*1e9),'hi']);
   rows.push(
     // P/E tính SỐNG theo giá hiện tại (giá / EPS 4 quý) đúng như cột P/E ở bảng giá —

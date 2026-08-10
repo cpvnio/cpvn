@@ -879,6 +879,15 @@ try:
     except Exception as e2:
         print(f"tapdoan.json LỖI (không chặn pipeline): {e2}",flush=True)
         HL["tapdoan"]={"ok":0,"err":str(e2)[:120]}
+    # LỊCH CHỐT QUYỀN -> data/cotuc.json. Nguồn riêng (VNDirect finfo) vì đây là chỗ duy
+    # nhất có sự kiện SẮP TỚI — kho sự kiện của Simplize chỉ có quá khứ.
+    try:
+        import build_cotuc as _bct
+        _bct.main()
+        HL["cotuc"]={"ok":1}
+    except Exception as e3:
+        print(f"cotuc.json LỖI (không chặn pipeline): {e3}",flush=True)
+        HL["cotuc"]={"ok":0,"err":str(e3)[:120]}
 except Exception as e:
     print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
     HL["screen"]={"ok":0,"err":str(e)[:120]}
