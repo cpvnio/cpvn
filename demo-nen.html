@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CPVN — thử chất nền tối</title>
+<link rel="icon" type="image/png" href="assets/logo-64.png?v=3"/>
+<style>
+/* ============================================================================
+   TRANG THỬ CHẤT NỀN TỐI — không nằm trong luồng chính, chỉ để CHỌN.
+   Mỗi mẫu dựng lại đúng những mảng lớn của bảng giá thật: header, dải chỉ số,
+   vài hàng mã, một thẻ, mấy con chip. Chọn nền mà nhìn ô màu trơn thì mẫu nào
+   cũng thấy được; phải đặt số xanh đỏ lên trên mới biết mắt có chịu nổi không.
+   ========================================================================== */
+*{box-sizing:border-box}
+body{margin:0;background:#e9ecf1;color:#16181d;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-variant-numeric:tabular-nums;padding:26px 20px 60px}
+h1{margin:0 0 4px;font-size:24px;letter-spacing:-.3px}
+.sub{margin:0 0 22px;color:#5d6272;font-size:14px;line-height:1.6;max-width:760px}
+.sub b{color:#16181d}
+.wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:20px;max-width:1500px}
+
+/* ---- một MẪU: khung ngoài sáng, ruột dùng biến màu của chính mẫu đó ---- */
+.mau{border-radius:16px;overflow:hidden;border:1px solid #d5dae2;background:#fff;
+  box-shadow:0 6px 22px rgba(15,23,42,.07)}
+.mau>.tit{display:flex;align-items:center;gap:10px;padding:12px 15px;font-weight:800;font-size:14px}
+.mau>.tit small{font-weight:600;color:#5d6272;font-size:12px}
+.mau>.tit .ma{margin-left:auto;font-size:11px;font-weight:700;color:#5d6272;
+  background:#eef1f6;border-radius:20px;padding:3px 10px;font-family:ui-monospace,Menlo,monospace}
+.mau>.tit button{background:#16181d;color:#fff;border:0;border-radius:8px;padding:6px 12px;
+  font-size:12px;font-weight:700;cursor:pointer}
+
+/* ---- RUỘT: bản thu nhỏ của trang thật ---- */
+.demo{background:var(--bg);color:var(--txt);padding:0 0 12px}
+.dhead{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--hdr);
+  border-bottom:1px solid var(--line)}
+.dhead .br{font-weight:800;font-size:15px;letter-spacing:.3px}
+.dtabs{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dtabs i{font-style:normal;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--mut)}
+.dtabs i.on{background:#e11d48;color:#fff}
+.dbtn{margin-left:auto;font-size:11.5px;font-weight:700;color:#e11d48;
+  border:1px solid rgba(225,29,72,.5);border-radius:8px;padding:5px 11px}
+.didx{display:flex;gap:14px;padding:7px 13px;font-size:11.5px;font-weight:700;
+  border-bottom:1px solid var(--line);background:var(--hdr2);white-space:nowrap;overflow:hidden}
+.didx b{font-weight:800}
+.dth{display:grid;grid-template-columns:1fr 84px 74px 76px;gap:8px;padding:7px 13px;
+  background:var(--thead);border-bottom:1px solid var(--line);
+  font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+.dth span:not(:first-child){text-align:right}
+.drow{display:grid;grid-template-columns:1fr 84px 74px 76px;gap:8px;padding:9px 13px;
+  border-bottom:1px solid var(--rowline);font-size:13px;align-items:center}
+.drow:hover{background:var(--rowhover)}
+.drow b{font-weight:800;font-size:13.5px}
+.drow i{font-style:normal;font-size:10px;color:var(--mut);display:block}
+.drow span:not(:first-child){text-align:right;font-weight:700}
+.up{color:var(--green)}.dn{color:var(--red)}
+.dcard{margin:12px 13px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+.dcard .lb{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.dcard .big{font-size:26px;font-weight:800;margin-top:2px}
+.dchips{display:flex;gap:6px;margin:10px 13px 0;flex-wrap:wrap}
+.dchips em{font-style:normal;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;
+  border:1px solid var(--line);color:var(--mut);background:var(--panel)}
+.dchips em.on{color:#e11d48;border-color:#e11d48;background:rgba(225,29,72,.1)}
+
+/* ================= CÁC MẪU ================= */
+/* A — đang chạy trên trang, để đối chiếu */
+.m-a{--bg:#14161d;--panel:#1c1f28;--panel2:#262a35;--line:#323744;--txt:#e6e9f0;--mut:#9aa2b4;
+  --hdr:#1c1f28;--hdr2:#181b23;--thead:#191c24;--green:#16c784;--red:#ea3943;
+  --rowline:rgba(255,255,255,.07);--rowhover:rgba(255,255,255,.05)}
+/* B — xám xanh kiểu bảng điện chuyên nghiệp, nền nhạt hơn hẳn */
+.m-b{--bg:#1b2130;--panel:#232b3d;--panel2:#2c3548;--line:#38425a;--txt:#e8ecf5;--mut:#9aa6bd;
+  --hdr:#232b3d;--hdr2:#1f2637;--thead:#212939;--green:#22c98a;--red:#f0505c;
+  --rowline:rgba(255,255,255,.075);--rowhover:rgba(255,255,255,.055)}
+/* C — than ẤM, hơi ngả nâu, đỡ lạnh mắt khi nhìn lâu */
+.m-c{--bg:#1c1b19;--panel:#252320;--panel2:#302d29;--line:#3b3733;--txt:#eae7e2;--mut:#a8a29a;
+  --hdr:#252320;--hdr2:#211f1d;--thead:#232120;--green:#3ecf8e;--red:#f2555f;
+  --rowline:rgba(255,255,255,.07);--rowhover:rgba(255,255,255,.05)}
+/* D — xám CAO, gần như không còn cảm giác "đen" */
+.m-d{--bg:#242832;--panel:#2e3340;--panel2:#39404f;--line:#454d5e;--txt:#eef1f7;--mut:#a5aec1;
+  --hdr:#2e3340;--hdr2:#282d38;--thead:#2a2f3b;--green:#2ed898;--red:#f4606b;
+  --rowline:rgba(255,255,255,.08);--rowhover:rgba(255,255,255,.06)}
+/* E — xanh mực đêm, tông lạnh sâu nhưng không đen */
+.m-e{--bg:#151d2e;--panel:#1d273c;--panel2:#26324b;--line:#33415f;--txt:#e5ecf8;--mut:#94a3bf;
+  --hdr:#1d273c;--hdr2:#182135;--thead:#1a2337;--green:#25cf92;--red:#f2596a;
+  --rowline:rgba(255,255,255,.075);--rowhover:rgba(255,255,255,.055)}
+/* F — trung tính thuần, không ngả màu nào */
+.m-f{--bg:#1e1e21;--panel:#27272b;--panel2:#323238;--line:#3d3d44;--txt:#eaeaee;--mut:#a2a2ac;
+  --hdr:#27272b;--hdr2:#232326;--thead:#252528;--green:#2ecf8c;--red:#f05561;
+  --rowline:rgba(255,255,255,.075);--rowhover:rgba(255,255,255,.055)}
+
+/* xem CẢ MÀN HÌNH một mẫu */
+body.full .wrap{display:block}
+body.full .mau{display:none}
+body.full .mau.xem{display:block;border:0;border-radius:0;box-shadow:none}
+body.full{padding:0;background:#000}
+body.full h1,body.full .sub{display:none}
+body.full .mau.xem>.tit{position:sticky;top:0;z-index:5;background:#fff}
+</style>
+</head>
+<body>
+
+<h1>Thử chất nền tối</h1>
+<p class="sub">Sáu mẫu, cùng một bố cục thật của bảng giá — <b>đừng chọn bằng cách nhìn ô màu trơn</b>,
+phải có số xanh đỏ đè lên mới biết mắt chịu được tới đâu. Mẫu <b>A</b> là thứ đang chạy trên trang,
+để đối chiếu. Bấm <b>Xem cả màn</b> ở mẫu nào để phủ kín màn hình mẫu đó, bấm lần nữa để quay lại.
+Nhắn tao chữ cái mẫu mày chọn là tao áp cho cả bốn trang.</p>
+
+<div class="wrap" id="wrap"></div>
+
+<script>
+const MAU=[
+ ['a','A · Xám than',      'đang chạy trên trang',        '#14161d'],
+ ['b','B · Xám xanh bảng điện','nhạt hơn hẳn, tông chuyên nghiệp','#1b2130'],
+ ['c','C · Than ấm',       'ngả nâu, đỡ lạnh mắt khi nhìn lâu','#1c1b19'],
+ ['d','D · Xám cao',       'gần như không còn cảm giác đen','#242832'],
+ ['e','E · Xanh mực đêm',  'tông lạnh sâu nhưng không đen','#151d2e'],
+ ['f','F · Trung tính thuần','không ngả về màu nào',       '#1e1e21'],
+];
+const RUOT=`
+<div class="demo">
+  <div class="dhead"><span class="br">CPVN.IO</span>
+    <span class="dtabs"><i class="on">Bảng giá</i><i>Radar</i><i>Đường đua</i></span>
+    <span class="dbtn">Bộ Lọc</span></div>
+  <div class="didx"><span>VNINDEX <b>1,776.77</b> <b class="up">+0.49%</b></span>
+    <span>VN30 <b>1,925.18</b> <b class="up">+0.74%</b></span>
+    <span>HNX <b>287.68</b> <b class="dn">-1.96%</b></span></div>
+  <div class="dth"><span>Cổ phiếu</span><span>Giá</span><span>1D %</span><span>GTGD</span></div>
+  <div class="drow"><span><b>VIC</b><i>Vingroup</i></span><span class="dn">208,500</span>
+    <span class="dn">-3.02%</span><span>938 tỷ</span></div>
+  <div class="drow"><span><b>TCB</b><i>Kỹ Thương Việt Nam</i></span><span class="up">31,350</span>
+    <span class="up">+5.56%</span><span>1,063 tỷ</span></div>
+  <div class="drow"><span><b>VCB</b><i>Ngoại Thương Việt Nam</i></span><span class="up">60,300</span>
+    <span class="up">+1.01%</span><span>163 tỷ</span></div>
+  <div class="drow"><span><b>VHM</b><i>Vinhomes</i></span><span class="dn">71,600</span>
+    <span class="dn">-1.92%</span><span>593 tỷ</span></div>
+  <div class="dcard"><div class="lb">Nhịp sợ hãi thị trường</div><div class="big">54<span
+    style="font-size:15px;opacity:.6">/100</span></div></div>
+  <div class="dchips"><em class="on">VN30</em><em>Vốn hoá lớn</em><em>Cổ tức cao</em><em>P/E thấp</em></div>
+</div>`;
+document.getElementById('wrap').innerHTML=MAU.map(([k,ten,mo,hex])=>
+ `<div class="mau m-${k}" data-k="${k}"><div class="tit">${ten} <small>${mo}</small>
+   <span class="ma">${hex}</span><button data-full="${k}">Xem cả màn</button></div>${RUOT}</div>`).join('');
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-full]'); if(!b) return;
+  const m=b.closest('.mau'), dang=document.body.classList.contains('full')&&m.classList.contains('xem');
+  document.querySelectorAll('.mau').forEach(x=>x.classList.remove('xem'));
+  document.body.classList.toggle('full',!dang);
+  if(!dang) m.classList.add('xem');
+  document.querySelectorAll('[data-full]').forEach(x=>x.textContent='Xem cả màn');
+  if(!dang) b.textContent='Quay lại so sánh';
+  scrollTo({top:0});
+});
+</script>
+</body>
+</html>
