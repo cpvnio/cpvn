@@ -1220,6 +1220,49 @@ function cdBadge(kn){
   const m=/MUA|KHẢ QUAN/.test(k)?'mua':/BÁN|KÉM/.test(k)?'ban':/TRUNG LẬP|NẮM GIỮ/.test(k)?'giu':'';
   return kn?'<b class="cdkn '+m+'">'+esc(kn)+'</b>':'';
 }
+/* SƠ ĐỒ BA VÒNG (Venn) — dựng lại đúng dạng slide gốc của nguồn, vẽ bằng SVG nên co giãn
+   theo bề ngang và đổi màu theo giao diện sáng/tối. Ba vòng tô cùng một độ mờ, chỗ chồng
+   nhau tự đậm lên — đó chính là thứ nói lên "mã này hội tụ mấy chủ điểm", khỏi cần chú thích. */
+function vennSVG(D,T){
+  const tr=(D.truc||[]).slice(0,3);
+  if(tr.length<3) return '';
+  const R=210, d=165, C=[[0,-d],[-d*0.866,d*0.5],[d*0.866,d*0.5]];   // 0 trên · 1 trái · 2 phải
+  /* NEO TỪNG VÙNG đặt tay chứ không lấy trọng tâm hình học: trọng tâm của vùng "chỉ một
+     vòng" nằm lệch về phía chỗ chồng lấn, chữ hai vùng cạnh nhau sẽ đè lên nhau. */
+  const NEO={'0':[0,-258],'1':[-234,116],'2':[234,116],
+             '01':[-152,-86],'02':[152,-86],'12':[0,172],'012':[0,4]};
+  const LH=27, idx={};
+  tr.forEach((t,i)=>idx[t.id]=i);
+  const khoa=x=>x.truc.map(id=>idx[id]).filter(i=>i!=null).sort().join('');
+  const vung={};
+  for(const x of D.ma){ const k=khoa(x); if(NEO[k]) (vung[k]=vung[k]||[]).push(x); }
+  /* tên chủ điểm dài thì bẻ CÂN hai dòng — bẻ theo số ký tự tối đa sẽ ra một dòng dài
+     một dòng cụt lủn, nhìn lệch hẳn so với khối mã bên dưới */
+  const beDoi=s=>{ if(s.length<=17) return [s];
+    const w=s.split(' '); let a='',i=0;
+    while(i<w.length && (a+' '+w[i]).trim().length<=Math.ceil(s.length/2)) a=(a+' '+w[i++]).trim();
+    return [a||w[0], w.slice(a?i:1).join(' ')].filter(Boolean); };
+  let g='';
+  for(let i=0;i<3;i++) g+='<circle cx="'+C[i][0].toFixed(1)+'" cy="'+C[i][1].toFixed(1)+'" r="'+R
+    +'" fill="'+tr[i].mau+'" fill-opacity=".15" stroke="'+tr[i].mau+'" stroke-opacity=".45"/>';
+  for(const k in vung){
+    const mot=k.length===1, dong=mot?beDoi(tr[+k].ten):[];
+    const n=dong.length+vung[k].length, [ax,ay]=NEO[k];
+    let y=ay-(n-1)*LH/2;
+    for(const t of dong){ g+='<text class="vtt" x="'+ax+'" y="'+y+'" fill="'+tr[+k].mau+'">'+esc(t)+'</text>'; y+=LH; }
+    for(const x of vung[k]){
+      const c=ST.map.get(x.s), kn=x.ssi||{};
+      const chu=c&&c.chg!=null?'  '+pct(c.chg):'';
+      g+='<g class="cdsym" data-sym="'+x.s+'"><title>'+esc(x.s+(c?' · '+shortName(c.name||''):'')
+          +(kn.kn?' · SSI '+kn.kn:'')+(kn.tp?' · mục tiêu '+Math.round(kn.tp).toLocaleString('en-US')+' đ':''))+'</title>'
+        +'<text class="vsym" x="'+ax+'" y="'+y+'">'+x.s
+        +'<tspan class="vpc '+cls(c&&c.chg)+'">'+esc(chu)+'</tspan></text></g>';
+      y+=LH;
+    }
+  }
+  return '<div class="venn"><svg viewBox="-375 -395 750 700" role="img" aria-label="Sơ đồ chủ điểm đầu tư">'
+    +g+'</svg></div>';
+}
 function chuDiemPanel(){
   const D=ST.chudiem;
   if(!D||!(D.ma||[]).length) return '<div class="empty">Chưa có dữ liệu chủ điểm — chạy tools/build_chudiem.py</div>';
@@ -1250,8 +1293,7 @@ function chuDiemPanel(){
     +'<span class="cdsrc">nguồn <b>'+esc(D.nguon||'SSI Research')+'</b>'
     +(D.ky?' · '+esc(D.ky):'')+'</span>'
     +'<span class="cnt">'+D.ma.length+' mã</span></div><div class="pb" style="padding:12px 16px">';
-  /* ba trục hiện thành chú giải màu — bấm vào một mã là sang trang mã đó */
-  html+='<div class="cdleg">'+(D.truc||[]).map(t=>'<span style="--c:'+t.mau+'">'+esc(t.ten)+'</span>').join('')+'</div>';
+  html+=vennSVG(D,T);
   for(const [n,ten] of nhom){
     const ds=D.ma.filter(x=>x.truc.length===n);
     if(!ds.length) continue;
@@ -1534,7 +1576,7 @@ async function init(){
       if(lai) lai.scrollIntoView({block:'nearest'});
       return;
     }
-    const rw=e.target.closest('.rw,.dcarow,.cdcard');
+    const rw=e.target.closest('.rw,.dcarow,.cdcard,.cdsym');
     if(rw&&rw.dataset.sym) location.href='cophieu.html?sym='+rw.dataset.sym;
   });
   addEventListener('resize',(()=>{ let rt; return ()=>{ clearTimeout(rt);

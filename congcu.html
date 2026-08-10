@@ -423,6 +423,15 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 /* ---------- CHỦ ĐIỂM ĐẦU TƯ (dẫn nguồn bên thứ ba) ---------- */
 .panel>.ph .cdsrc{margin-left:auto;font-size:11px;font-weight:700;color:var(--mut);white-space:nowrap}
 .panel>.ph .cdsrc b{color:var(--rose)}
+.venn{margin:2px auto 6px;max-width:640px}
+.venn svg{width:100%;height:auto;display:block;overflow:visible}
+.venn text{text-anchor:middle;dominant-baseline:middle;font-variant-numeric:tabular-nums}
+.venn .vtt{font-size:15px;font-weight:900;letter-spacing:.01em}
+.venn .vsym{font-size:16.5px;font-weight:800;fill:var(--txt)}
+.venn .vpc{font-size:11.5px;font-weight:700}
+.venn .vpc.up{fill:var(--green)} .venn .vpc.dn{fill:var(--red)} .venn .vpc.fl{fill:var(--yellow)}
+.venn .cdsym{cursor:pointer}
+.venn .cdsym:hover .vsym{fill:var(--rose)}
 .cdleg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .cdleg span{font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;
   color:var(--c);border:1px solid var(--c)}
@@ -461,6 +470,10 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .cdd{margin-left:auto;color:var(--faint);font-size:10.5px}
 @media(max-width:640px){
   .cdgrid{grid-template-columns:1fr}
+  .venn{margin:0 -6px 4px}
+  .venn .vsym{font-size:19px}
+  .venn .vtt{font-size:17px}
+  .venn .vpc{font-size:13px}
   .panel>.ph .cdsrc{font-size:10px}
 }
 
@@ -618,6 +631,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811h"></script>
+<script src="assets/congcu.js?v=20260811i"></script>
 </body>
 </html>
