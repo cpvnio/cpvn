@@ -253,6 +253,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   congcu.js từng thiếu bước này nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
   "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng (38 ngành) trong khi
   bảng giá đã gộp làm một từ lâu (35 ngành) — cùng một tên ngành, hai trang ra hai rổ mã.
+  **Ngưỡng thật của việc gộp là ĐƯỜNG ĐUA, không phải bảng giá**: đường đua chỉ nhận mã vốn
+  hoá ≥1.000 tỷ nên một ngành 15 mã trên bảng giá có thể chỉ còn 1-3 mã lúc chạy đua —
+  "Than" đúng 1 mã, "Hàng gia dụng" 1, "Bán buôn hàng công nghiệp tổng hợp" 1. Đo bằng
+  ngưỡng đó khi cân nhắc gộp, đừng đo bằng tổng số mã. Lượt gộp 10/08/2026 đưa 35 → **25
+  ngành, ngành nhỏ nhất còn 6 mã** trong đường đua (chỉ "Khác" còn 2): dầu khí thượng nguồn
+  + dịch vụ dầu khí, xây dựng dân dụng về xây dựng, than về khai khoáng, giấy về bao bì,
+  hàng không về cùng khách sạn (Du lịch & Giải trí), ba rổ "đa ngành/thương mại" nhập một,
+  công nghệ + viễn thông nhập một, hoá chất + hàng gia dụng nhập một.
+  **Nguồn KHÔNG có ngành "Nông nghiệp"** — nông nghiệp/thuỷ sản/mía đường nằm trong "Thực
+  phẩm và thuốc lá". Tách ra được nhưng phải viết tay danh sách mã, `SECTOR_EXPLICIT` chỉ
+  ánh xạ ngành→ngành nên không tách nổi một ngành làm đôi.
 - **Đường đua lấy MỌI mã có SLCP**, không cắt bớt. Bản cũ chỉ lấy top 40 toàn thị trường +
   top 10 mỗi ngành (401 mã) nên chọn ngành ngân hàng ra đua chỉ thấy 14/30 mã, gõ TPB/ABB
   vào ô mã thì báo "không có trong dữ liệu đua" — người dùng không có cách nào biết rổ bị

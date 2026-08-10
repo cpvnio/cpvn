@@ -168,13 +168,32 @@ const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], 
    đã gộp làm một từ lâu — cùng một cái tên ngành mà hai trang ra hai rổ mã khác nhau.
    Sửa ở đây thì PHẢI sửa cả hai file kia cho khớp. */
 const SECTOR_EXPLICIT={
+  // bán lẻ (3 nhánh -> 1)
   'Bán lẻ chuyên dụng':'Bán lẻ','Bán lẻ thực phẩm và thuốc':'Bán lẻ','Bán lẻ tổng hợp':'Bán lẻ',
+  // y tế & dược
   'Dược phẩm':'Dược phẩm & Y tế','Dịch vụ chăm sóc sức khỏe':'Dược phẩm & Y tế','Thiết bị vật tư Y tế':'Dược phẩm & Y tế',
-  'Phần mềm và dịch vụ CNTT':'Công nghệ & Điện tử','Chất bán dẫn & Thiết bị bán dẫn':'Công nghệ & Điện tử',
-  'Thiết bị & Phụ tùng điện tử':'Công nghệ & Điện tử','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Điện tử',
-  'Thiết bị văn phòng':'Công nghệ & Điện tử',
-  'Dịch vụ Viễn thông':'Viễn thông & Truyền thông','Truyền thông & Mạng':'Viễn thông & Truyền thông',
-  'Truyền thông và Xuất bản':'Viễn thông & Truyền thông',
+  // công nghệ + viễn thông: tách ra thì mỗi bên chỉ 4-6 mã đủ lớn, đứng lẻ loi cả hai
+  'Phần mềm và dịch vụ CNTT':'Công nghệ & Viễn thông','Chất bán dẫn & Thiết bị bán dẫn':'Công nghệ & Viễn thông',
+  'Thiết bị & Phụ tùng điện tử':'Công nghệ & Viễn thông','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Viễn thông',
+  'Thiết bị văn phòng':'Công nghệ & Viễn thông','Dịch vụ Viễn thông':'Công nghệ & Viễn thông',
+  'Truyền thông & Mạng':'Công nghệ & Viễn thông','Truyền thông và Xuất bản':'Công nghệ & Viễn thông',
+  // dầu khí: thượng nguồn và dịch vụ khoan/thiết bị chạy chung một chu kỳ giá dầu
+  'Dầu và Khí đốt':'Dầu khí','Dịch vụ và Thiết bị Dầu khí':'Dầu khí',
+  // xây dựng dân dụng vốn là một nhánh của xây dựng
+  'Xây dựng và vật liệu xây dựng dân dụng':'Xây dựng',
+  // than là khai khoáng, nguồn để riêng nên còn đúng 1 mã đủ lớn
+  'Kim loại và Khai khoáng':'Khai khoáng & Kim loại','Than':'Khai khoáng & Kim loại',
+  // giấy -> bao bì: DHC, HHP làm cả hai thứ trong cùng một nhà máy
+  'Hộp đựng và Bao bì':'Giấy & Bao bì','Giấy và Lâm sản':'Giấy & Bao bì',
+  // hàng không đi cùng khách sạn: cùng nhịp mùa du lịch, cùng cú sốc dịch bệnh
+  'Khách sạn và Giải trí':'Du lịch & Giải trí','Vận chuyển hành khách':'Du lịch & Giải trí',
+  // ba rổ "đa ngành / thương mại tổng hợp" của nguồn vốn dĩ là một
+  'Dịch vụ công nghiệp và Thương mại':'Đa ngành & Thương mại',
+  'Bán buôn hàng công nghiệp tổng hợp':'Đa ngành & Thương mại',
+  'Tập đoàn đa ngành (hàng tiêu dùng)':'Đa ngành & Thương mại',
+  // bột giặt, hoá mỹ phẩm, đồ gia dụng — hoá chất tiêu dùng, cùng một kệ hàng
+  'Hóa chất':'Hoá chất & Hàng gia dụng','Hàng gia dụng':'Hoá chất & Hàng gia dụng',
+  'Sản phẩm Dịch vụ cá nhân, gia dụng':'Hoá chất & Hàng gia dụng',
 };
 function gopNganh(){
   for(const c of ST.map.values()) c.sector=SECTOR_EXPLICIT[c.sector]||c.sector||'Khác';
