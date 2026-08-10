@@ -407,6 +407,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 <nav class="subtabs" id="subBg"><a href="/" class="on">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></nav>
+<script>(function(){/* THẲNG HÀNG VỚI THANH CHÍNH: lề trái của dải mục con phải bám đúng
+mép trái thanh trên. Đo lúc chạy chứ đừng cộng tay — bề rộng ô logo mỗi trang một khác,
+và màn hẹp thì thanh trên xuống dòng nên mép trái đổi luôn. */
+var n=document.querySelector('.tabs'),t=n&&n.querySelector('a'),s=document.getElementById('subBg');if(!t||!s)return;
+function d(){s.style.paddingLeft=Math.max(10,Math.round(t.getBoundingClientRect().left))+'px';}
+d();addEventListener('resize',d);addEventListener('load',d);})();</script>
 
 <div id="stats"></div>
 
