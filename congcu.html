@@ -406,11 +406,14 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   /* màn hẹp chỉ đủ chỗ cho TÊN · % · một cột tiền — bỏ thanh, đếm tăng giảm, NN, vốn hoá */
   .tdrow .sbr,.tdrow .sv,.tdrow .sb,.tdrow .sn2{display:none}
   .tdrow .sc i{display:none}
-  /* nhãn "nhà nước"/"cá nhân" ăn mất chỗ của TÊN nhóm — màn hẹp rút còn một chấm tròn,
-     bằng không "Ngân hàng Nhà nước Việt Nam" cụt còn "Ngâ…" mà chẳng đọc ra là nhóm nào */
-  .tdrow .sn b.nn{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;
-    background:var(--gold);border:0}
-  .tdrow .sn b.nn.cn{background:var(--violet)}
+  /* NHÃN "NHÀ NƯỚC"/"CÁ NHÂN" XUỐNG DÒNG RIÊNG, đừng rút thành chấm tròn.
+     Bản trước bóp còn một chấm 7px không chữ — đọc không ra nghĩa, mà đây lại đúng là
+     thứ cần phân biệt nhất: Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng
+     đó KHÔNG cùng một nhà. Cho tên chiếm trọn dòng một để nhãn bị đẩy xuống dòng hai,
+     thụt vào ngang tên — nhãn đọc được đủ chữ mà tên vẫn không bị cụt. */
+  .tdrow .sn{flex-wrap:wrap;row-gap:4px}
+  .tdrow .sn .nm{flex:1 1 calc(100% - 16px)}
+  .tdrow .sn b.nn{margin-left:16px;font-size:9px;padding:2px 7px}
   /* màn hẹp giấu chữ "xếp theo", giữ nguyên hai nút — chữ đó ăn mất chỗ của tên bảng */
   .panel>.ph .tdsrt{font-size:0;gap:5px}
   .tdcon .rw.hd i{display:none}          /* nhãn cột đầu rút còn "công ty", khỏi xuống dòng */
