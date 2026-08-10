@@ -1300,7 +1300,7 @@ function vennSVG(D,T){
   return '<div class="venn"><svg viewBox="-375 -395 750 700" role="img" aria-label="Sơ đồ chủ điểm đầu tư">'
     +g+'</svg></div>';
 }
-/* ---- VỀ BỜ: mã đã rơi sâu khỏi ĐỈNH CỦA CẢ CHUỖI, xếp theo mức rơi ----------------
+/* ---- KHI NÀO VỀ BỜ: mã đã rơi sâu khỏi ĐỈNH CỦA CẢ CHUỖI, xếp theo mức rơi --------
    Đo bằng `dath` (đỉnh của toàn bộ chuỗi giá trong kho) chứ KHÔNG phải đỉnh 52 tuần:
    phần lớn mã sập từ 2021-2022, lấy đỉnh 52 tuần thì mã mất 80% bốn năm nay lại hiện
    ra như chỉ mới giảm nhẹ — đúng cái nhóm người ta muốn tìm thì lọt lưới.
