@@ -26,7 +26,7 @@ FIELDS = [
     'rsi','atrp','avgv20','volr','avgval20','ud',
     'hi52','lo52','dhi','dlo','tight',
     'r5','r20','r60','r120','r250','rs',
-    'nn20','streak','cross','ath','nsess',
+    'nn20','streak','cross','ath','dath','athP','nsess',
     'fs','fg1','fg2','fg3','fg4','fg5',   # điểm cơ bản tổng + 5 thành phần
     # CHỈ THÊM VÀO CUỐI (client đọc theo f.indexOf nên nối đuôi là an toàn):
     'ma150','m200s',                      # MA150 + độ dốc MA200 21 phiên (%) — Trend Template
@@ -188,6 +188,11 @@ def analyse(d, acc):
         'r5': ret(5), 'r20': ret(20), 'r60': ret(60), 'r120': ret(120), 'r250': ret(250),
         'rs': None, 'nn20': nn20, 'streak': streak, 'cross': cross,
         'ath': 1 if c[i] >= max(c) * 0.999 else 0, 'nsess': n,
+        # KHOẢNG CÁCH TỚI ĐỈNH CỦA CẢ CHUỖI (không phải đỉnh 52 tuần): mục "về bờ" hỏi
+        # "còn cách đỉnh cũ bao xa", mà đỉnh cũ của phần lớn mã rơi vào 2021-2022 — đo
+        # bằng đỉnh 52 tuần thì mã sập bốn năm nay lại hiện ra như chỉ mới giảm nhẹ.
+        'dath': round((c[i] / max(c) - 1) * 100, 2) if max(c) else None,
+        'athP': round(max(c)) if max(c) else None,
         'fs': None, 'fg1': None, 'fg2': None, 'fg3': None, 'fg4': None, 'fg5': None,
         'ma150': S['ma150'][i], 'm200s': m200s,
         'nn60': nn60, 'nnr20': nnr20, 'nnr60': nnr60,
@@ -547,7 +552,7 @@ def main():
 
     # ---- ghi demo-screen.json
     intish = {'c','ma20','ma50','ma200','ma150','avgv20','avgval20','hi52','lo52',
-              'nn20','nn60','streak','cross','rs','ath','nsess','fs','fg1','fg2','fg3','fg4','fg5'}
+              'nn20','nn60','streak','cross','rs','ath','dath','athP','nsess','fs','fg1','fg2','fg3','fg4','fg5'}
     def rd(x, k):
         if x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))): return None
         return round(x, 0 if k in intish else 2)

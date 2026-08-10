@@ -408,6 +408,25 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .panel>.ph .srtb:hover{color:var(--txt);border-color:var(--line2)}
 .panel>.ph .srtb.on{color:var(--rose);border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.09)}
 .panel>.ph .srtb i{font-style:normal;font-weight:900;margin-left:4px}
+/* ---------- VỀ BỜ ---------- */
+#vbPanel .rw{display:grid;grid-template-columns:28px minmax(120px,1fr) 62px 110px 96px 128px 74px;
+  gap:11px;align-items:center;padding:7px 6px;border-bottom:1px solid var(--line);
+  cursor:pointer;font-size:13px}
+#vbPanel .rw:hover{background:var(--card2)}
+#vbPanel .rw:last-child{border-bottom:0}
+.vbd{text-align:right;font-weight:800;font-size:14px;color:var(--red)}
+.vbb{position:relative;height:7px;background:var(--card2);border-radius:4px;overflow:hidden}
+.vbb i.b{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--red);opacity:.75}
+.vbl,.vbp{text-align:right;font-size:12.5px;font-weight:700;white-space:nowrap}
+.vbl u,.vbp u{display:block;text-decoration:none;font-size:9.5px;font-weight:700;color:var(--faint)}
+.vbl{color:var(--gold)}
+.vbv{text-align:right;font-weight:800;font-size:13px}
+@media(max-width:640px){
+  /* màn hẹp bỏ thanh và giá — giữ MÃ · mức rơi · số lần phải tăng để về bờ */
+  #vbPanel .rw{grid-template-columns:22px minmax(64px,1fr) 56px 84px;gap:8px;padding:6px 2px}
+  #vbPanel .vbb,#vbPanel .vbp,#vbPanel .vbv{display:none}
+  #vbPanel .rw .lgw,#vbPanel .rw .noimg{width:22px;height:22px}
+}
 .tdcon .rw.hd{cursor:default;padding-bottom:3px}
 .tdcon .rw.hd:hover{background:none}
 .tdcon .rw.hd i{font-style:normal}
@@ -639,7 +658,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
   <a class="brand" href="/"><img src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
-    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="cd">🎯 Chủ điểm đầu tư</a></span></span>
+    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="cd">🎯 Chủ điểm đầu tư</a><a data-md="radar" data-t="vb">🛟 Về bờ</a></span></span>
     <span class="tw"><a data-m="race">Đường đua</a><span class="dd"><a data-md="race" data-t="dua">🏁 Đường đua vốn hoá</a><a data-md="race" data-t="dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG KHÔNG CÓ CHUỘT: chạm lần đầu vào mục cha thì MỞ menu
@@ -671,6 +690,6 @@ document.addEventListener('click',function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811r"></script>
+<script src="assets/congcu.js?v=20260811v"></script>
 </body>
 </html>

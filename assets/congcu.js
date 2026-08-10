@@ -463,7 +463,7 @@ function head(m){
 }
 /* chọn tab bên trong của một module từ menu thả xuống */
 function moTab(m,t){
-  if(m==='radar'){ radarTab=(t==='cd'?'cd':'phien'); if(cur==='radar') renderRadar(); else done.radar=0; }
+  if(m==='radar'){ radarTab=(t==='cd'||t==='vb')?t:'phien'; if(cur==='radar') renderRadar(); else done.radar=0; }
   /* ĐANG Ở TRANG ĐUA thì BẤM THẲNG nút chuyển chế độ có sẵn, đừng dựng lại module:
      nút đó mới là chỗ chạy syncMode (dừng animation, về vạch xuất phát, đổi khung đồ thị).
      Dựng lại module tưởng gọn mà chế độ không đổi — đã dính đúng vậy. */
@@ -692,6 +692,8 @@ function renderRadar(){
        giữ lại ở đây là hai chỗ chọn cùng một thứ, lại ăn thêm một hàng */
     +'<div id="rdCd"'+(radarTab==='cd'?'':' style="display:none"')+'>'
     +(radarTab==='cd'?chuDiemPanel():'')+'</div>'
+    +'<div id="rdVb"'+(radarTab==='vb'?'':' style="display:none"')+'>'
+    +(radarTab==='vb'?veBoPanel():'')+'</div>'
     +'<div id="rdPhien"'+(radarTab!=='phien'?' style="display:none"':'')+'>'
     +'<div class="hero h3c">'
     +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
@@ -721,6 +723,7 @@ function renderRadar(){
     +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
     +'</div></div>';
+  const bt=$('#vbThem'); if(bt) bt.onclick=()=>{ vbTop+=100; renderRadar(); };
   if(radarTab==='phien') drawSparks($('#m-radar'));
 }
 
@@ -1294,6 +1297,44 @@ function vennSVG(D,T){
   return '<div class="venn"><svg viewBox="-375 -395 750 700" role="img" aria-label="Sơ đồ chủ điểm đầu tư">'
     +g+'</svg></div>';
 }
+/* ---- VỀ BỜ: mã đã rơi sâu khỏi ĐỈNH CỦA CẢ CHUỖI, xếp theo mức rơi ----------------
+   Đo bằng `dath` (đỉnh của toàn bộ chuỗi giá trong kho) chứ KHÔNG phải đỉnh 52 tuần:
+   phần lớn mã sập từ 2021-2022, lấy đỉnh 52 tuần thì mã mất 80% bốn năm nay lại hiện
+   ra như chỉ mới giảm nhẹ — đúng cái nhóm người ta muốn tìm thì lọt lưới.
+   KHÔNG lọc vốn hoá: đây là chỗ để soi mã đã rơi, mã nhỏ mới là phần đông. */
+const VB_NGUONG=-30;
+let vbTop=100;
+function veBoPanel(){
+  const ds=ST.list.filter(c=>c.close>0&&c.dath!=null&&c.dath<=VB_NGUONG)
+    .sort((a,b)=>a.dath-b.dath);
+  if(!ds.length) return '<div class="empty">Chưa có dữ liệu — chạy lại tools/build_screen.py</div>';
+  /* CẦN BAO NHIÊU LẦN để về bờ: rơi 50% thì phải tăng 100% mới hoà vốn. Đây mới là con
+     số người cầm hàng cần, chứ "-50%" nghe nhẹ hơn thực tế rất nhiều. */
+  const lai=d=>(100/(100+d)-1)*100;
+  const hang=c=>'<div class="rw" data-sym="'+c.sym+'" title="Bấm mở trang '+c.sym+'">'+logoHTML(c)
+    +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
+    +'<span class="vbd">'+c.dath.toFixed(0)+'%</span>'
+    +'<span class="vbb"><i class="z"></i><i class="b" style="width:'+Math.min(100,-c.dath)+'%"></i></span>'
+    +'<span class="vbl">×'+(100/(100+c.dath)).toFixed(1)+'<u>để về bờ</u></span>'
+    /* GIÁ MỘT CỔ PHIẾU tính bằng ĐỒNG — nhét vào ty() (đơn vị tỷ) là ra "0 tỷ" hết,
+       đúng cái bẫy đã dính ở giá mục tiêu bên Chủ điểm đầu tư */
+    +'<span class="vbp">'+Math.round(c.close).toLocaleString('en-US')
+      +'<u>đỉnh '+Math.round(c.athP||0).toLocaleString('en-US')+'</u></span>'
+    +'<span class="vbv '+cls(c.chg)+'">'+pct(c.chg)+'</span></div>';
+  return '<div class="panel"><div class="ph">Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh'
+    +'<span class="cnt">'+ds.length+' mã</span></div>'
+    +'<div class="pb" style="padding:8px 14px" id="vbPanel">'
+    +ds.slice(0,vbTop).map(hang).join('')+'</div></div>'
+    +(ds.length>vbTop?'<div class="note" style="text-align:center"><button class="pickbtn" id="vbThem" '
+      +'style="margin:0">Xem thêm '+Math.min(100,ds.length-vbTop)+' mã</button></div>':'')
+    +'<div class="note"><b>Đỉnh ở đây là đỉnh của CẢ CHUỖI giá trong kho</b> (từ 2020), không phải '
+    +'đỉnh 52 tuần — phần lớn mã sập từ 2021-2022, đo bằng đỉnh 52 tuần thì mã mất 80% bốn năm '
+    +'nay lại hiện ra như chỉ mới giảm nhẹ. Cột <b>×</b> là số lần giá phải tăng để về lại đỉnh cũ: '
+    +'rơi 50% thì phải tăng gấp đôi mới hoà vốn, rơi 80% thì phải gấp năm. '
+    +'Mục này KHÔNG lọc theo vốn hoá — mã nhỏ mới là phần đông trong nhóm rơi sâu, mà cũng là nhóm '
+    +'thanh khoản mỏng nhất. Rơi sâu KHÔNG có nghĩa là sắp hồi: nhiều mã rơi vì doanh nghiệp hỏng '
+    +'thật. Đây là danh sách để soi, không phải danh sách để mua.</div>';
+}
 function chuDiemPanel(){
   const D=ST.chudiem;
   if(!D||!(D.ma||[]).length) return '<div class="empty">Chưa có dữ liệu chủ điểm — chạy tools/build_chudiem.py</div>';
@@ -1636,7 +1677,7 @@ async function init(){
   const start=q||byPath||(location.hash||'').replace('#','');
   /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
   const t0=new URLSearchParams(location.search).get('t');
-  if(t0==='cd'||t0==='phien') radarTab=t0;
+  if(t0==='cd'||t0==='phien'||t0==='vb') radarTab=t0;
   if(t0==='dca'||t0==='dua') RA.mode=(t0==='dca'?'dca':'race');
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
