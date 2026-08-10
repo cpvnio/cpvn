@@ -65,10 +65,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      và danh mục tập đoàn. Gom làm một nhóm nên thanh trên cùng còn 3 mục thay vì 4. */
   .subtabs{display:flex;gap:4px;padding:8px 16px 0;overflow-x:auto;scrollbar-width:none}
   .subtabs::-webkit-scrollbar{display:none}
-  .subtabs a{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;
+  .subtabs a{padding:6px 14px;text-decoration:none;border-radius:20px;font-size:13px;font-weight:700;
     color:var(--muted);border:1px solid var(--line);white-space:nowrap;transition:.13s}
   .subtabs a:hover{color:var(--txt)}
-  .subtabs a.on{color:var(--txt);background:var(--panel);border-color:var(--muted)}
+  /* mục đang chọn phải TÔ MÀU: viền xám nhạt kiểu cũ nhìn gần như mục thường,
+     phải soi mới biết mình đang đứng ở đâu */
+  .subtabs a.on{color:var(--accent);border-color:var(--accent);background:rgba(225,29,72,.10);font-weight:800}
   @media(max-width:760px){ .subtabs{padding:7px 10px 0} .subtabs a{padding:6px 12px;font-size:12.5px} }
   .tabs a:not(.on):hover{color:var(--txt);background:var(--panel2)}
   .tmore{position:relative;display:flex}
