@@ -444,16 +444,33 @@ function renderNav(){
     e.classList.toggle('on',e.dataset.m===cur);
     if(!e._b){ e._b=1; e.onclick=ev=>{ ev.preventDefault(); showMod(e.dataset.m); }; }
   });
-  /* "Danh mục tập đoàn" tuy chạy trên trang công cụ nhưng thuộc NHÓM BẢNG GIÁ — thanh trên
-     cùng phải sáng ở mục Bảng giá, và dải mục con của nhóm đó mới hiện ra. */
-  const fam=$('.tabs a[data-fam="bg"]'), sub=$('#subBg');
+  $$('.dd a[data-md]').forEach(e=>{
+    if(!e._b){ e._b=1; e.onclick=ev=>{ ev.preventDefault();
+      e.closest('.tw').classList.remove('mo'); moTab(e.dataset.md,e.dataset.t); }; }
+  });
+  /* "Danh mục tập đoàn" chạy trên trang công cụ nhưng thuộc NHÓM BẢNG GIÁ — mục cha
+     "Bảng giá" phải sáng, bằng không đang ở trong nhóm mà thanh trên lại tối thui. */
+  const fam=$('.tabs .tw:first-child>a');
   if(fam) fam.classList.toggle('on',cur==='tapdoan');
-  if(sub) sub.style.display=cur==='tapdoan'?'':'none';
+  /* mục con đang xem cũng sáng theo, để mở menu ra là biết mình đứng ở đâu */
+  const tNay=cur==='radar'?radarTab:cur==='race'?(RA.mode==='dca'?'dca':'dua'):null;
+  $$('.dd a[data-md]').forEach(a=>a.classList.toggle('on',a.dataset.md===cur&&a.dataset.t===tNay));
 }
 function head(m){
   return '<div class="mhead"><span class="eyebrow">CPVN.IO — công cụ thị trường</span>'+
     '<h1>'+m.ic+' '+m.name+'</h1>'+(m.tag?'<p>'+esc(m.tag)+'</p>':'')+
     (m.meta.length?'<div class="mmeta">'+m.meta.map(t=>'<span class="tagc '+(t[1]||'')+'">'+t[0]+'</span>').join('')+'</div>':'')+'</div>';
+}
+/* chọn tab bên trong của một module từ menu thả xuống */
+function moTab(m,t){
+  if(m==='radar'){ radarTab=(t==='cd'?'cd':'phien'); if(cur==='radar') renderRadar(); else done.radar=0; }
+  /* ĐANG Ở TRANG ĐUA thì BẤM THẲNG nút chuyển chế độ có sẵn, đừng dựng lại module:
+     nút đó mới là chỗ chạy syncMode (dừng animation, về vạch xuất phát, đổi khung đồ thị).
+     Dựng lại module tưởng gọn mà chế độ không đổi — đã dính đúng vậy. */
+  if(m==='race'){ const v=(t==='dca'?'dca':'race'), b=$('#raMode button[data-v="'+v+'"]');
+    if(cur==='race'&&b){ if(!b.classList.contains('on')) b.click(); }
+    else RA.mode=v; }
+  showMod(m);
 }
 function showMod(id){
   const m=MODULES.find(x=>x.id===id); if(!m) return;
@@ -665,10 +682,8 @@ function renderRadar(){
      riêng trên thanh điều hướng chính thì nó tách khỏi bối cảnh phiên, mà hai thứ này
      người xem hay đọc nối nhau. */
   $('#m-radar').innerHTML=head(m)
-    +'<div class="ctl" id="rdTab"><div class="seg">'
-    +'<button data-v="phien"'+(radarTab==='phien'?' class="on"':'')+'>📡 Nhịp phiên</button>'
-    +'<button data-v="cd"'+(radarTab==='cd'?' class="on"':'')+'>🎯 Chủ điểm đầu tư</button>'
-    +'</div></div>'
+    /* dải tab của radar đã dọn lên MENU THẢ XUỐNG của mục "Radar" trên thanh trên —
+       giữ lại ở đây là hai chỗ chọn cùng một thứ, lại ăn thêm một hàng */
     +'<div id="rdCd"'+(radarTab==='cd'?'':' style="display:none"')+'>'
     +(radarTab==='cd'?chuDiemPanel():'')+'</div>'
     +'<div id="rdPhien"'+(radarTab!=='phien'?' style="display:none"':'')+'>'
@@ -700,10 +715,6 @@ function renderRadar(){
     +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
     +'</div></div>';
-  $('#rdTab').querySelectorAll('button').forEach(b2=>b2.onclick=()=>{
-    if(radarTab===b2.dataset.v) return;
-    radarTab=b2.dataset.v; renderRadar(); scrollTo({top:0,behavior:'smooth'});
-  });
   if(radarTab==='phien') drawSparks($('#m-radar'));
 }
 
@@ -1603,6 +1614,10 @@ async function init(){
   const q=new URLSearchParams(location.search).get('m');
   const byPath={radar:'radar',tapdoan:'tapdoan',duongdua:'race'}[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
+  /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
+  const t0=new URLSearchParams(location.search).get('t');
+  if(t0==='cd'||t0==='phien') radarTab=t0;
+  if(t0==='dca'||t0==='dua') RA.mode=(t0==='dca'?'dca':'race');
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
   showMod(MODULES.some(m=>m.id===start)?start:'radar');

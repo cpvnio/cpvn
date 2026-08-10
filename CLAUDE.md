@@ -266,13 +266,24 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > tham chiếu). Đừng rút gọn mấy thứ đó cho gọn mắt.
   > **Giá mục tiêu tính bằng ĐỒNG/cổ phiếu** — nhét vào `ty()` (đơn vị tỷ) thì 105.900 đ hiện
   > thành "0 tỷ", đọc như đang khuyên mua một mã vô giá trị.
-- **ĐIỀU HƯỚNG HAI TẦNG (10/08/2026).** Thanh trên cùng còn **3 mục**: Bảng giá · Radar ·
-  Đường đua. "Bảng giá" là một NHÓM gồm 3 trang cùng mạch "toàn thị trường trông ra sao",
-  hiện bằng dải `.subtabs` ngay dưới header: **Bảng giá** (`index.html`) · **Bản đồ bong
-  bóng** (`bubbles.html`) · **Danh mục tập đoàn** (`congcu.html?m=tapdoan`).
-  Cái bẫy: "Danh mục tập đoàn" CHẠY TRÊN congcu.html nhưng THUỘC nhóm Bảng giá — `renderNav`
-  phải tự tay bật `.on` cho `[data-fam="bg"]` và chỉ hiện `#subBg` khi `cur==='tapdoan'`,
-  bằng không đang ở trong nhóm mà thanh trên cùng lại sáng ở Radar.
+- **ĐIỀU HƯỚNG: MENU THẢ XUỐNG KHI RÊ CHUỘT (10/08/2026).** Thanh trên cùng **3 mục**:
+  Bảng giá · Radar · Đường đua, mỗi mục có menu con hiện khi rê chuột (`.tw:hover>.dd`).
+  Bảng giá → 3 trang (`index.html` · `bubbles.html` · `congcu.html?m=tapdoan`);
+  Radar → Nhịp phiên · Chủ điểm đầu tư; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
+  Bản trước để mục con thành dải LUÔN HIỆN dưới header + dải tab riêng trong Radar — ăn
+  một hàng cố định trên mọi trang chỉ để chờ người ta bấm. Cả hai dải đã gỡ.
+  Bốn thứ phải giữ, thiếu cái nào là menu hỏng:
+  1. **`.tabs{overflow:visible}`** — khung tab vốn `overflow-x:auto`, để nguyên là menu bị cắt cụt.
+  2. **Cầu nối vô hình `.dd::before`** bắc qua khe 6px giữa tab và menu, không có nó thì rê
+     chuột xuống là rời vùng hover, menu tắt giữa đường.
+  3. **Màn cảm ứng không có chuột** — `matchMedia('(hover:hover)')` sai thì chạm lần đầu MỞ
+     menu (chặn `preventDefault`), chạm ra ngoài đóng.
+  4. **Đổi chế độ Đường đua phải BẤM THẲNG nút `#raMode`**, đừng dựng lại module: nút đó mới
+     là chỗ chạy `syncMode` (dừng animation, về vạch xuất phát, đổi khung đồ thị). Dựng lại
+     module tưởng gọn mà chế độ không đổi — đã dính đúng vậy.
+  `?t=` trên URL chọn sẵn tab bên trong (`t=cd`, `t=dca`…) để trang khác trỏ thẳng vào.
+  "Danh mục tập đoàn" chạy trên congcu.html nhưng THUỘC nhóm Bảng giá — `renderNav` phải tự
+  tay bật `.on` cho mục cha đầu tiên khi `cur==='tapdoan'`.
   Radar nay chỉ còn **Nhịp phiên · Chủ điểm đầu tư**; tập đoàn và quỹ đã dọn sang module
   riêng vì khác nhịp hẳn: radar soi TRONG PHIÊN, còn cấu trúc sở hữu cả tháng mới nhúc nhích.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.

@@ -61,18 +61,24 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 .tabs a.on{color:#fff;background:var(--rose)}
 .tabs a:not(.on):hover{color:var(--txt)}
 
-  /* ---------- DẢI MỤC CON của nhóm "Bảng giá" ----------
-     Ba trang cùng một mạch "toàn thị trường trông ra sao": bảng số, bản đồ bong bóng,
-     và danh mục tập đoàn. Gom làm một nhóm nên thanh trên cùng còn 3 mục thay vì 4. */
-  .subtabs{display:flex;gap:4px;padding:8px 16px 0;overflow-x:auto;scrollbar-width:none}
-  .subtabs::-webkit-scrollbar{display:none}
-  .subtabs a{padding:6px 14px;text-decoration:none;border-radius:20px;font-size:13px;font-weight:700;
-    color:var(--mut);border:1px solid var(--line);white-space:nowrap;transition:.13s}
-  .subtabs a:hover{color:var(--txt)}
-  /* mục đang chọn phải TÔ MÀU: viền xám nhạt kiểu cũ nhìn gần như mục thường,
-     phải soi mới biết mình đang đứng ở đâu */
-  .subtabs a.on{color:var(--rose);border-color:var(--rose);background:rgba(244,63,94,.10);font-weight:800}
-  @media(max-width:760px){ .subtabs{padding:7px 10px 0} .subtabs a{padding:6px 12px;font-size:12.5px} }
+  /* ---------- MENU THẢ XUỐNG: rê chuột là hiện, khỏi tốn một hàng cố định ----------
+     Trước đây mục con nằm thành một dải LUÔN HIỆN dưới header — ăn nguyên một hàng
+     trên mọi trang chỉ để chờ người ta bấm. Nay nằm trong menu thả xuống của chính
+     mục cha. Màn cảm ứng không có chuột nên chạm lần đầu mở menu, chạm mục con mới đi. */
+  .tabs{overflow:visible}
+  .tw{position:relative;display:flex}
+  .tw>a{cursor:pointer}
+  .dd{position:absolute;top:100%;left:0;min-width:max(100%,196px);display:none;flex-direction:column;
+    gap:2px;padding:6px;margin-top:6px;border-radius:12px;background:var(--solid);
+    border:1px solid var(--line2);box-shadow:0 18px 44px rgba(0,0,0,.28);z-index:70}
+  /* CẦU NỐI VÔ HÌNH bắc qua khe 6px giữa tab và menu — không có nó thì rê chuột xuống
+     là chuột rời khỏi vùng hover, menu tắt ngay giữa đường, không cách nào chọn được */
+  .dd::before{content:'';position:absolute;left:0;right:0;top:-8px;height:10px}
+  .tw:hover>.dd,.tw.mo>.dd{display:flex}
+  .dd a{padding:8px 13px;border-radius:8px;font-size:13.5px;font-weight:700;
+    color:var(--mut);white-space:nowrap;background:none}
+  .dd a:hover{background:var(--card2);color:var(--txt)}
+  .dd a.on{color:var(--rose);background:none}
 
 /* ---------- khung tổng ---------- */
 html[data-theme="light"] header{background:rgba(247,248,250,.88)!important}
@@ -623,23 +629,26 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <header>
   <a class="brand" href="/"><img src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
-    <a href="/" data-fam="bg">Bảng giá</a>
-    <a data-m="radar">Radar</a>
-    <a data-m="race">Đường đua</a>
+    <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
+    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="cd">🎯 Chủ điểm đầu tư</a></span></span>
+    <span class="tw"><a data-m="race">Đường đua</a><span class="dd"><a data-md="race" data-t="dua">🏁 Đường đua vốn hoá</a><a data-md="race" data-t="dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
+<script>(function(){/* MÀN CẢM ỨNG KHÔNG CÓ CHUỘT: chạm lần đầu vào mục cha thì MỞ menu
+chứ đừng đi luôn, chạm ra ngoài thì đóng. Máy có chuột giữ nguyên lối rê chuột của CSS. */
+var ws=[].slice.call(document.querySelectorAll('.tabs .tw'));
+if(!matchMedia('(hover:hover)').matches) ws.forEach(function(w){
+  var a=w.firstElementChild; a.addEventListener('click',function(e){
+    if(w.classList.contains('mo')) return;
+    e.preventDefault(); ws.forEach(function(x){x.classList.remove('mo')}); w.classList.add('mo');});});
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.tw')) ws.forEach(function(x){x.classList.remove('mo')});});
+})();</script>
   <div class="spacer"></div>
   <span class="hchip" id="hMood"></span>
   <span class="hchip" id="hDate"></span>
   <button class="iconbtn" id="btnShot" title="Chụp màn hình đang xem (có đóng dấu CPVN.IO)">📷</button>
   <button class="iconbtn" id="btnThm">🌙</button>
 </header>
-<nav class="subtabs" id="subBg" style="display:none"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan" class="on">Danh mục tập đoàn</a></nav>
-<script>(function(){/* THẲNG HÀNG VỚI THANH CHÍNH: lề trái của dải mục con phải bám đúng
-mép trái thanh trên. Đo lúc chạy chứ đừng cộng tay — bề rộng ô logo mỗi trang một khác,
-và màn hẹp thì thanh trên xuống dòng nên mép trái đổi luôn. */
-var n=document.querySelector('.tabs'),t=n&&n.querySelector('a'),s=document.getElementById('subBg');if(!t||!s)return;
-function d(){s.style.paddingLeft=Math.max(10,Math.round(t.getBoundingClientRect().left))+'px';}
-d();addEventListener('resize',d);addEventListener('load',d);})();</script>
 
 <div id="shell">
   <main id="mn"></main>
@@ -653,6 +662,6 @@ d();addEventListener('resize',d);addEventListener('load',d);})();</script>
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811j"></script>
+<script src="assets/congcu.js?v=20260811n"></script>
 </body>
 </html>
