@@ -26,7 +26,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc pro |
 | `cophieu.html` | 1169 | Trang một mã: hero giá · thống kê · nến · PTKT toàn màn hình · 5 thẻ nội dung |
 | `bubbles.html` | 2185 | Bong bóng (canvas vật lý) + bản đồ nhiệt (treemap DOM). **Tự chứa bản sao lõi giá** |
-| `congcu.html` + `assets/congcu.js` | 384+676 | 2 module: Radar phiên (18 thẻ) · Đường đua vốn hoá (78 tháng) |
+| `congcu.html` + `assets/congcu.js` | 384+676 | 3 module: Radar phiên · **Danh mục tập đoàn** (kèm tab quỹ) · Đường đua vốn hoá |
 | `assets/core.js` | 522 | **Lõi dữ liệu `CP`** — chỉ index + cophieu dùng. Phần lớn là cơ chế giá |
 | `assets/chart.js` | 798 | **`CPChart`** — bộ vẽ nến canvas tự viết + lớp vẽ PTKT. Không phụ thuộc core.js |
 | `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
@@ -266,6 +266,15 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > tham chiếu). Đừng rút gọn mấy thứ đó cho gọn mắt.
   > **Giá mục tiêu tính bằng ĐỒNG/cổ phiếu** — nhét vào `ty()` (đơn vị tỷ) thì 105.900 đ hiện
   > thành "0 tỷ", đọc như đang khuyên mua một mã vô giá trị.
+- **ĐIỀU HƯỚNG HAI TẦNG (10/08/2026).** Thanh trên cùng còn **3 mục**: Bảng giá · Radar ·
+  Đường đua. "Bảng giá" là một NHÓM gồm 3 trang cùng mạch "toàn thị trường trông ra sao",
+  hiện bằng dải `.subtabs` ngay dưới header: **Bảng giá** (`index.html`) · **Bản đồ bong
+  bóng** (`bubbles.html`) · **Danh mục tập đoàn** (`congcu.html?m=tapdoan`).
+  Cái bẫy: "Danh mục tập đoàn" CHẠY TRÊN congcu.html nhưng THUỘC nhóm Bảng giá — `renderNav`
+  phải tự tay bật `.on` cho `[data-fam="bg"]` và chỉ hiện `#subBg` khi `cur==='tapdoan'`,
+  bằng không đang ở trong nhóm mà thanh trên cùng lại sáng ở Radar.
+  Radar nay chỉ còn **Nhịp phiên · Chủ điểm đầu tư**; tập đoàn và quỹ đã dọn sang module
+  riêng vì khác nhịp hẳn: radar soi TRONG PHIÊN, còn cấu trúc sở hữu cả tháng mới nhúc nhích.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

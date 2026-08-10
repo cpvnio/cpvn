@@ -148,6 +148,17 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     box-shadow:0 0 8px rgba(56,189,248,.9),0 0 2px rgba(2,132,247,.9);pointer-events:none}
   #scrBtn .ic{margin-right:5px}
   #scrBtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* ---------- DẢI MỤC CON của nhóm "Bảng giá" ----------
+     Ba trang cùng một mạch "toàn thị trường trông ra sao": bảng số, bản đồ bong bóng,
+     và danh mục tập đoàn. Gom làm một nhóm nên thanh trên cùng còn 3 mục thay vì 4. */
+  .subtabs{display:flex;gap:4px;padding:8px 16px 0;overflow-x:auto;scrollbar-width:none}
+  .subtabs::-webkit-scrollbar{display:none}
+  .subtabs a{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;
+    color:var(--muted);border:1px solid var(--line);white-space:nowrap;transition:.13s}
+  .subtabs a:hover{color:var(--txt)}
+  .subtabs a.on{color:var(--txt);background:var(--panel);border-color:var(--muted)}
+  @media(max-width:760px){ .subtabs{padding:7px 10px 0} .subtabs a{padding:6px 12px;font-size:12.5px} }
   /* ---------- LỊCH CHỐT QUYỀN — BẢNG NỔI ----------
      Cố ý KHÔNG phải một khối chen vào dòng chảy trang: nó chỉ là thứ liếc qua rồi đóng,
      mà chen vào thì cả bảng giá bị đẩy tụt xuống, đóng lại bảng lại nhảy ngược lên —
@@ -366,7 +377,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260811i"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260811j"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -376,7 +387,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <a class="brand" href="/"><img class="mark" src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <a class="on" href="/">Bảng giá</a>
-    <a href="/bubbles">Bong bóng</a>
     <a href="congcu.html?m=radar">Radar</a>
     <a href="congcu.html?m=race">Đường đua</a>
   </nav>
@@ -394,8 +404,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Bộ Lọc</span></button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
+<nav class="subtabs" id="subBg"><a href="/" class="on">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></nav>
 
 <div id="stats"></div>
+
 
 <div id="dvBackdrop"></div>
 <div id="divPanel">

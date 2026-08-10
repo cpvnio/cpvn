@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DỰNG BẢN ĐỒ TẬP ĐOÀN -> data/tapdoan.json  (tab "Săn tập đoàn")
+DỰNG BẢN ĐỒ TẬP ĐOÀN -> data/tapdoan.json  (mục "Danh mục tập đoàn")
 DỰNG DANH MỤC CÁC QUỸ  -> data/quy.json      (tab "Soi quỹ đầu tư")
 Cả hai cùng đọc data/profile nên gộp chung một lượt quét.
 

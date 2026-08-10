@@ -61,6 +61,17 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 .tabs a.on{color:#fff;background:var(--rose)}
 .tabs a:not(.on):hover{color:var(--txt)}
 
+  /* ---------- DẢI MỤC CON của nhóm "Bảng giá" ----------
+     Ba trang cùng một mạch "toàn thị trường trông ra sao": bảng số, bản đồ bong bóng,
+     và danh mục tập đoàn. Gom làm một nhóm nên thanh trên cùng còn 3 mục thay vì 4. */
+  .subtabs{display:flex;gap:4px;padding:8px 16px 0;overflow-x:auto;scrollbar-width:none}
+  .subtabs::-webkit-scrollbar{display:none}
+  .subtabs a{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;
+    color:var(--mut);border:1px solid var(--line);white-space:nowrap;transition:.13s}
+  .subtabs a:hover{color:var(--txt)}
+  .subtabs a.on{color:var(--txt);background:var(--card2);border-color:var(--line2)}
+  @media(max-width:760px){ .subtabs{padding:7px 10px 0} .subtabs a{padding:6px 12px;font-size:12.5px} }
+
 /* ---------- khung tổng ---------- */
 html[data-theme="light"] header{background:rgba(247,248,250,.88)!important}
 header{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:6px;
@@ -607,8 +618,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <header>
   <a class="brand" href="/"><img src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
-    <a href="/">Bảng giá</a>
-    <a href="/bubbles">Bong bóng</a>
+    <a href="/" data-fam="bg">Bảng giá</a>
     <a data-m="radar">Radar</a>
     <a data-m="race">Đường đua</a>
   </nav>
@@ -618,6 +628,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
   <button class="iconbtn" id="btnShot" title="Chụp màn hình đang xem (có đóng dấu CPVN.IO)">📷</button>
   <button class="iconbtn" id="btnThm">🌙</button>
 </header>
+<nav class="subtabs" id="subBg" style="display:none"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan" class="on">Danh mục tập đoàn</a></nav>
 
 <div id="shell">
   <main id="mn"></main>
@@ -631,6 +642,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811i"></script>
+<script src="assets/congcu.js?v=20260811j"></script>
 </body>
 </html>
