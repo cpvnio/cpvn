@@ -67,7 +67,9 @@ CP.tips=function(){
     +'.cptip::after{content:"";position:absolute;left:var(--ax,50%);margin-left:-7px;'
     +'border:7px solid transparent;border-top-color:#26324c;top:100%}'
     +'.cptip.duoi::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#26324c}'
-    +'[data-tip]{cursor:help}';
+    /* con trỏ THEO THẺ CHA: hàng bấm được thì vẫn là bàn tay, chỗ khác là mũi tên thường.
+       Dấu hỏi chấm của `cursor:help` trông như báo lỗi hơn là mời rê vào. */
+    +'[data-tip]{cursor:inherit}';
   document.head.appendChild(st);
   const el=document.createElement('div'); el.className='cptip'; el.style.display='none';
   document.body.appendChild(el); CP._tip=el;
