@@ -148,9 +148,20 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     box-shadow:0 0 8px rgba(56,189,248,.9),0 0 2px rgba(2,132,247,.9);pointer-events:none}
   #scrBtn .ic{margin-right:5px}
   #scrBtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
-  /* ---------- LỊCH CHỐT QUYỀN ---------- */
-  #divPanel{display:none;padding:10px 16px 12px;border-bottom:1px solid var(--line);background:var(--hdr2)}
-  #divPanel.on{display:block}
+  /* ---------- LỊCH CHỐT QUYỀN — BẢNG NỔI ----------
+     Cố ý KHÔNG phải một khối chen vào dòng chảy trang: nó chỉ là thứ liếc qua rồi đóng,
+     mà chen vào thì cả bảng giá bị đẩy tụt xuống, đóng lại bảng lại nhảy ngược lên —
+     mất chỗ đang đọc. Nay nổi đè lên, nền dưới giữ nguyên vị trí. */
+  #dvBackdrop{display:none}
+  #dvBackdrop.on{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:58}
+  #divPanel{display:none;position:fixed;z-index:60;top:58px;right:12px;
+    width:min(760px,calc(100vw - 24px));padding:12px 14px 13px;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 24px 60px rgba(0,0,0,.28)}
+  html[data-theme="light"] #divPanel{box-shadow:0 24px 60px rgba(15,23,42,.22)}
+  /* cao tối đa vừa màn hình, phần DANH SÁCH co giãn — bảng nổi mà dài quá màn thì
+     cái ghi chú dưới cùng rơi ra ngoài, đóng cũng không thấy nút */
+  #divPanel.on{display:flex;flex-direction:column;max-height:calc(100vh - 72px)}
   .dvhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .dvhead>b{font-size:14px}
   .dvseg{display:flex;gap:4px}
@@ -162,7 +173,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .dvx{margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:7px;
     color:var(--muted);padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer}
   .dvx:hover{color:var(--txt)}
-  #dvBody{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  #dvBody{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
   .dvday{display:flex;align-items:baseline;gap:9px;padding:8px 14px;background:var(--thead);
     position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:800}
   .dvday i{font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}
@@ -187,7 +198,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .dvnote{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px}
   .dvempty{padding:22px 14px;text-align:center;color:var(--muted);font-size:13px}
   @media(max-width:760px){
-    #divPanel{padding:8px 10px 10px}
+    /* màn hẹp: bám sát hai mép, vẫn là bảng nổi chứ không chen vào trang */
+    #divPanel{top:auto;bottom:0;right:0;left:0;width:auto;padding:10px 10px 12px;
+      border-radius:16px 16px 0 0;border-bottom:0}
+    #divPanel.on{max-height:82vh}
+    /* ghi chú 5 dòng ăn hết đáy tấm trượt -> thu nhỏ, danh sách mới là thứ cần chỗ */
+    .dvnote{font-size:11px;line-height:1.45;margin-top:6px}
     /* 5 nút loại quyền dài hơn bề ngang -> cho cuộn ngang, bằng không nút cuối bị xén mất */
     .dvseg{overflow-x:auto;scrollbar-width:none;max-width:100%}
     .dvseg::-webkit-scrollbar{display:none}
@@ -196,7 +212,6 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .dvrow{grid-template-columns:24px 52px 1fr 96px;gap:8px;padding:7px 10px}
     .dvrow .nm,.dvrow .dvtt{display:none}
     .dvhead>b{width:100%}
-    #dvBody{max-height:none}
   }
   /* dưới 1400px thanh header không đủ chỗ cho cả chữ -> giữ mỗi biểu tượng lịch,
      bằng không nút đổi giao diện bị đẩy xuống hàng hai */
@@ -382,6 +397,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
 <div id="stats"></div>
 
+<div id="dvBackdrop"></div>
 <div id="divPanel">
   <div class="dvhead">
     <b>🗓️ Lịch chốt quyền</b>
@@ -435,7 +451,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811d"></script>
+<script src="assets/core.js?v=20260811e"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -910,11 +926,15 @@ function dvRender(){
   $('dvBody').querySelectorAll('.dvrow').forEach(r=>r.onclick=()=>{
     location.href='cophieu.html?sym='+encodeURIComponent(r.dataset.sym); });
 }
+function dvDong(){
+  $('divPanel').classList.remove('on'); $('dvBackdrop').classList.remove('on');
+  $('divBtn').classList.remove('on');
+}
 $('divBtn').onclick=async()=>{
   const open=!$('divPanel').classList.contains('on');
-  $('divPanel').classList.toggle('on',open);
-  $('divBtn').classList.toggle('on',open);
-  if(!open) return;
+  if(!open) return dvDong();
+  $('divPanel').classList.add('on'); $('dvBackdrop').classList.add('on');
+  $('divBtn').classList.add('on');
   if(!DV.ds){
     $('dvBody').innerHTML='<div class="dvempty">Đang nạp lịch…</div>';
     const j=await fetch('data/cotuc.json').then(r=>r.ok?r.json():null).catch(()=>null);
@@ -922,9 +942,11 @@ $('divBtn').onclick=async()=>{
     DV.ds=j.sk||[];
   }
   dvRender();
-  $('divPanel').scrollIntoView({block:'nearest',behavior:'smooth'});
+  $('dvBody').scrollTop=0;      // bảng NỔI nên đừng cuộn trang, chỉ đưa danh sách về đầu
 };
-$('dvClose').onclick=()=>{ $('divPanel').classList.remove('on'); $('divBtn').classList.remove('on'); };
+$('dvClose').onclick=dvDong;
+$('dvBackdrop').onclick=dvDong;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') dvDong(); });
 $('dvKhi').onclick=e=>{ const b=e.target.closest('[data-dv]'); if(!b) return;
   DV.khi=b.dataset.dv; $('dvKhi').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); dvRender(); };
 $('dvLoai').onclick=e=>{ const b=e.target.closest('[data-dk]'); if(!b) return;
