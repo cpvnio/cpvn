@@ -543,7 +543,7 @@ document.addEventListener('click',function(e){
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260811h"></script>
+<script src="assets/core.js?v=20260811k"></script>
 <script src="assets/chart.js?v=20260810a"></script>
 <script>
 'use strict';
@@ -650,10 +650,10 @@ function renderHero(){
         ['Room còn',(C.froom!=null&&C.shares)?(C.froom/C.shares*100).toFixed(1)+'%':'—']),
     ['NN mua – bán ròng'+nnSegHTML(),`<span id="nnVal">${nnCell()}</span>`,''],
   );
-  const oNho=(x,cl)=>{const g=gt(x[0]);return `<i class="${cl||''}"><u${g?` class="gt" title="${CP.esc(g)}"`:''}>${x[0]}</u><b>${x[1]}</b></i>`;};
+  const oNho=(x,cl)=>{const g=gt(x[0]);return `<i class="${cl||''}"><u${g?` class="gt" data-tip="${CP.esc(g)}"`:''}>${x[0]}</u><b>${x[1]}</b></i>`;};
   $('stats').innerHTML=rows.map(r=>r[0]==='pair'
     ? `<div class="row pair">${oNho(r[1],r[3])}${oNho(r[2],r[4])}</div>`
-    : (g=>`<div class="row ${r[2]}"><span${g?` class="gt" title="${CP.esc(g)}"`:''}>${r[0]}</span><span>${r[1]}</span></div>`)(gt(r[0]))).join('');
+    : (g=>`<div class="row ${r[2]}"><span${g?` class="gt" data-tip="${CP.esc(g)}"`:''}>${r[0]}</span><span>${r[1]}</span></div>`)(gt(r[0]))).join('');
   bindNnSeg();
 }
 
@@ -1010,7 +1010,7 @@ function kqkdTable(rows,div){
   /* nhãn dòng nào có trong bảng chú giải thì gắn title — rê chuột vào là hiểu nghĩa,
      khỏi phải đoán "biên LN ròng" là gì */
   const line=(lb,key,sign,big)=>{const g=gt(lb);return `<tr${big?' class="npRow"':''}>`
-    +`<td><div class="lb${g?' gt':''}"${g?` title="${CP.esc(g)}"`:''}>${lb}</div></td>`+show.map(r=>{
+    +`<td><div class="lb${g?' gt':''}"${g?` data-tip="${CP.esc(g)}"`:''}>${lb}</div></td>`+show.map(r=>{
     const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}${qc(r)}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';};
   /* CỔ TỨC gộp thẳng vào bảng KQKD, ngay dưới Biên LN ròng — người xem thấy luôn
      "làm ra bao nhiêu / chia về túi mình bao nhiêu" mà không phải kéo xuống mục khác.
@@ -1399,6 +1399,7 @@ thmBtn.onclick=()=>{ const l=!isLight();
 applyThmIcon();
 
 (async function init(){
+  CP.tips();                      // bong bóng chú giải dùng chung
   if(!SYM){ location.href='/'; return; }
   await CP.loadBase();
   C=CP.coins.get(SYM);

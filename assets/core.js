@@ -51,6 +51,50 @@ CP.col1d=function(c){
   return CP.pcCol(c.chg1d);
 };
 
+/* ---------- CHÚ GIẢI DẠNG BONG BÓNG (dùng chung cả trang) ------------------
+   KHÔNG dùng thuộc tính `title` của trình duyệt: nó chờ gần một giây mới hiện, chữ bé
+   tí, không theo giao diện sáng/tối, và trên máy cảm ứng thì KHÔNG BAO GIỜ hiện. Ở đây
+   tự vẽ một bong bóng dùng chung, bám theo phần tử mang `data-tip`.
+   Tự nhét luôn CSS để chỉ phải khai một chỗ — trang nào nạp core.js là có. */
+CP.tips=function(){
+  if(CP._tip) return;
+  const st=document.createElement('style');
+  st.textContent='.cptip{position:absolute;z-index:9999;max-width:290px;padding:8px 11px;'
+    +'border-radius:10px;background:#26324c;color:#fff;font-size:12.5px;line-height:1.45;'
+    /* KHÔNG hiệu ứng mờ dần: đổi display rồi thêm class trong CÙNG một nhịp thì
+       transition không chạy, bong bóng đứng nguyên opacity 0 — hiện ngay cho chắc */
+    +'font-weight:600;box-shadow:0 12px 32px rgba(0,0,0,.3);pointer-events:none}'
+    +'.cptip::after{content:"";position:absolute;left:var(--ax,50%);margin-left:-7px;'
+    +'border:7px solid transparent;border-top-color:#26324c;top:100%}'
+    +'.cptip.duoi::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#26324c}'
+    +'[data-tip]{cursor:help}';
+  document.head.appendChild(st);
+  const el=document.createElement('div'); el.className='cptip'; el.style.display='none';
+  document.body.appendChild(el); CP._tip=el;
+  let cur=null;
+  const an=()=>{ el.style.display='none'; cur=null; };
+  const hien=t=>{
+    const s2=t.getAttribute('data-tip'); if(!s2) return;
+    el.textContent=s2; el.style.display=''; el.style.left='0px'; el.style.top='0px';
+    const r=t.getBoundingClientRect(), b=el.getBoundingClientRect();
+    /* GHÌM TRONG KHUNG NHÌN: nhãn sát mép phải mà thả bong bóng canh giữa là nó tràn ra
+       ngoài màn, đọc mất nửa câu. Mũi tên bù lại phần đã ghì để vẫn chỉ đúng nhãn. */
+    let x=Math.max(8,Math.min(r.left+r.width/2-b.width/2,innerWidth-b.width-8));
+    let y=r.top-b.height-11, duoi=false;
+    if(y<6){ y=r.bottom+11; duoi=true; }
+    el.style.left=Math.round(x)+'px'; el.style.top=Math.round(y+scrollY)+'px';
+    el.classList.toggle('duoi',duoi);
+    el.style.setProperty('--ax',Math.round(Math.max(12,Math.min(r.left+r.width/2-x,b.width-12)))+'px');
+    cur=t;
+  };
+  document.addEventListener('mouseover',e=>{ const t=e.target.closest('[data-tip]');
+    if(t){ if(t!==cur) hien(t); } else if(cur) an(); });
+  /* máy cảm ứng không có chuột: chạm vào nhãn là hiện, chạm chỗ khác thì tắt */
+  document.addEventListener('click',e=>{ const t=e.target.closest('[data-tip]');
+    if(t) hien(t); else an(); });
+  addEventListener('scroll',an,true); addEventListener('resize',an);
+};
+
 /* ---------- trạng thái dữ liệu -------------------------------------------- */
 CP.coins=new Map();          // sym -> bản ghi đầy đủ
 CP.vn30=new Set(); CP.hnx30=new Set();

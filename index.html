@@ -174,7 +174,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #dvBackdrop{display:none}
   #dvBackdrop.on{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:58}
   #divPanel{display:none;position:fixed;z-index:60;top:58px;right:12px;
-    width:min(760px,calc(100vw - 24px));padding:12px 14px 13px;
+    width:min(560px,calc(100vw - 24px));padding:10px 12px 11px;
     background:var(--panel);border:1px solid var(--line);border-radius:16px;
     box-shadow:0 24px 60px rgba(0,0,0,.28)}
   html[data-theme="light"] #divPanel{box-shadow:0 24px 60px rgba(15,23,42,.22)}
@@ -182,10 +182,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      cái ghi chú dưới cùng rơi ra ngoài, đóng cũng không thấy nút */
   #divPanel.on{display:flex;flex-direction:column;max-height:calc(100vh - 72px)}
   .dvhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-  .dvhead>b{font-size:14px}
+  .dvhead>b{font-size:13px}
   .dvseg{display:flex;gap:4px}
   .dvseg button{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:14px;
-    padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+    padding:3px 9px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
   .dvseg button:hover{color:var(--txt)}
   .dvseg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .dvcnt{font-size:12px;color:var(--muted);font-weight:700}
@@ -195,23 +195,23 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #dvBody{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
   .dvday u{text-decoration:none;font-size:9.5px;font-weight:800;letter-spacing:.05em;
     text-transform:uppercase;color:var(--accent);border-bottom:1px dotted currentColor;cursor:help}
-  .dvday{display:flex;align-items:baseline;gap:9px;padding:8px 14px;background:var(--thead);
-    position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:800}
+  .dvday{display:flex;align-items:baseline;gap:7px;padding:6px 10px;background:var(--thead);
+    position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line);font-size:12px;font-weight:800}
   .dvday i{font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}
   .dvday.nay{color:var(--accent)}
   /* mỗi dòng một quyền: mã · tên · loại · số tiền|tỉ lệ · ngày tiền về */
   /* BỎ CỘT TÊN CÔNG TY: bảng này để LƯỚT theo ngày, tên dài chỉ tổ đẩy mấy con số
      đáng đọc ra xa. Ai cần tên thì rê chuột vào mã, hoặc bấm vào là sang trang mã. */
-  .dvrow{display:grid;grid-template-columns:26px 64px 134px 1fr 122px;gap:10px;
-    align-items:center;padding:7px 14px;border-bottom:1px solid var(--rowline);cursor:pointer;font-size:13px}
+  .dvrow{display:grid;grid-template-columns:22px 54px 118px 1fr 104px;gap:8px;
+    align-items:center;padding:5px 10px;border-bottom:1px solid var(--rowline);cursor:pointer;font-size:12.5px}
   .dvrow:hover{background:var(--rowhover)}
-  .dvrow img{width:26px;height:26px;border-radius:7px;background:#fff;object-fit:contain}
-  .dvrow .noimg{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
-    border-radius:7px;background:var(--panel2);font-size:10px;font-weight:800;color:var(--muted)}
+  .dvrow img{width:22px;height:22px;border-radius:6px;background:#fff;object-fit:contain}
+  .dvrow .noimg{display:flex;align-items:center;justify-content:center;width:22px;height:22px;
+    border-radius:6px;background:var(--panel2);font-size:9px;font-weight:800;color:var(--muted)}
   .dvrow b{font-weight:800}
   .dvrow .nm{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* KHÔNG dùng color-mix cho nền nhãn — html2canvas của nút chụp không hiểu hàm đó */
-  .dvk{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;text-align:center;white-space:nowrap}
+  .dvk{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:20px;text-align:center;white-space:nowrap}
   .dvk.tien{background:rgba(22,199,132,.15);color:var(--green)}
   .dvk.cp{background:rgba(56,189,248,.16);color:var(--cyan)}
   .dvk.thuong{background:rgba(192,38,211,.16);color:var(--purple)}
@@ -220,7 +220,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .dvtt{font-size:11.5px;color:var(--muted);text-align:right;white-space:nowrap}
   .dvtt u{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
   .dvrow .dvk{cursor:help}
-  .dvnote{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px}
+  .dvnote{font-size:11px;color:var(--muted);line-height:1.5;margin-top:7px}
   .dvempty{padding:22px 14px;text-align:center;color:var(--muted);font-size:13px}
   @media(max-width:760px){
     /* màn hẹp: bám sát hai mép, vẫn là bảng nổi chứ không chen vào trang */
@@ -234,7 +234,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .dvseg::-webkit-scrollbar{display:none}
     .dvseg button{flex:0 0 auto}
     /* màn hẹp: bỏ tên công ty và ngày thanh toán, giữ MÃ · loại · số tiền */
-    .dvrow{grid-template-columns:22px 52px 118px 1fr;gap:8px;padding:7px 10px}
+    .dvrow{grid-template-columns:20px 48px 108px 1fr;gap:7px;padding:5px 8px}
     .dvrow .dvtt{display:none}
     .dvhead>b{width:100%}
   }
@@ -486,7 +486,7 @@ document.addEventListener('click',function(e){
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811h"></script>
+<script src="assets/core.js?v=20260811k"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -953,7 +953,7 @@ function dvRender(){
       /* GHI RÕ ĐÂY LÀ NGÀY GÌ. Một cái ngày trơ trọi thì người xem tự hiểu thành ngày
          nhận tiền — sai hẳn: đây là ngày MẤT quyền nếu mua vào. */
       html+=`<div class="dvday${cach===0?' nay':''}"><b>${THU[d.getDay()]} ${dvNgay(x.d)}</b>`
-        +`<u title="Giao dịch không hưởng quyền — mua từ ngày này là KHÔNG còn quyền. `
+        +`<u data-tip="Giao dịch không hưởng quyền — mua từ ngày này là KHÔNG còn quyền. `
         +`Muốn nhận thì phải nắm cổ phiếu từ phiên liền trước.">ngày GDKHQ</u><i>${phu}</i></div>`;
     }
     const c=CP.coins.get(x.s);
@@ -962,10 +962,10 @@ function dvRender(){
       :(x.tl?'100 : '+x.tl:'—');
     html+=`<div class="dvrow" data-sym="${x.s}" title="${CP.esc(x.gc||'')}">`
       +(c?CP.logoHTML(x.s,c.img):`<span class="noimg">${CP.esc(x.s.slice(0,2))}</span>`)
-      +`<b title="${CP.esc((c?c.name+' — ':'')+'bấm để mở trang '+x.s)}">${x.s}</b>`
-      +`<span class="dvk ${x.k}" title="${DVGT[x.k]}">${DVTEN[x.k]}</span>`
+      +`<b data-tip="${CP.esc((c?c.name+' — ':'')+'bấm để mở trang '+x.s)}">${x.s}</b>`
+      +`<span class="dvk ${x.k}" data-tip="${DVGT[x.k]}">${DVTEN[x.k]}</span>`
       +`<span class="dvv">${gt}</span>`
-      +`<span class="dvtt">${x.tt?`<u title="Ngày thanh toán — ngày tiền hoặc cổ phiếu thực về tài khoản">TT</u> `+dvNgay(x.tt):''}</span></div>`;
+      +`<span class="dvtt">${x.tt?`<u data-tip="Ngày thanh toán — ngày tiền hoặc cổ phiếu thực về tài khoản">TT</u> `+dvNgay(x.tt):''}</span></div>`;
   }
   $('dvBody').innerHTML=html;
   $('dvBody').querySelectorAll('.dvrow').forEach(r=>r.onclick=()=>{
@@ -1085,6 +1085,7 @@ applyThmIcon();
   filterRows();
   const st0=(ST.page-1)*ST.PER;
   await CP.warmPrices(ST.rows.slice(st0,st0+ST.PER).map(c=>c.sym),800);
+  CP.tips();                      // bong bóng chú giải dùng chung
   snapPrices(); render(); renderStats(); renderKho();
   CP.loadIndices().then(renderStats);
   // mỗi phút chỉ làm mới các mã của TRANG ĐANG XEM; 5 phút quét lại toàn bộ để xếp hạng đúng
