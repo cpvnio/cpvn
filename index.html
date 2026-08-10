@@ -16,11 +16,11 @@
 var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=(t===null?'light':t);})();</script>
 <style>
   :root{
-    --bg:#0a0a0c; --panel:#15151a; --panel2:#1e1e26; --line:#2a2a33;
-    --txt:#e9e9ef; --muted:#8a8a99; --accent:#e11d48;
+    --bg:#14161d; --panel:#1c1f28; --panel2:#262a35; --line:#323744;
+    --txt:#e6e9f0; --muted:#9aa2b4; --accent:#e11d48;
     --green:#16c784; --red:#ea3943; --yellow:#eab308; --purple:#c026d3; --cyan:#38bdf8;
-    --hdr1:#111114; --hdr2:#0d0d10; --thead:#0e0e12; --sticky:#0b0b0e; --side:#0c0c0f;
-    --rowline:rgba(255,255,255,.05); --rowhover:rgba(255,255,255,.035);
+    --hdr1:#1c1f28; --hdr2:#181b23; --thead:#191c24; --sticky:#161922; --side:#171a22;
+    --rowline:rgba(255,255,255,.07); --rowhover:rgba(255,255,255,.05);
   }
   html[data-theme="light"]{
     --bg:#f4f5f7; --panel:#ffffff; --panel2:#eceef2; --line:#dde1e8;
@@ -485,7 +485,7 @@ document.addEventListener('click',function(e){
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811m"></script>
+<script src="assets/core.js?v=20260811n"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -877,7 +877,7 @@ function shotTable(){
   const run=()=>{
     const b=$('shotBtn'), old=b.textContent; b.textContent='…';
     window.html2canvas(document.body,{
-      backgroundColor:light?'#f4f5f7':'#0a0a0c', scale:2, logging:false, useCORS:true,
+      backgroundColor:light?'#f4f5f7':'#14161d', scale:2, logging:false, useCORS:true,
       x:scrollX, y:scrollY, width:innerWidth, height:innerHeight,
       windowWidth:innerWidth, windowHeight:innerHeight,
       onclone:doc=>{ doc.body.classList.add('shotmode'); },
