@@ -47,6 +47,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
 | `data/quy.json` | Danh mục các quỹ: quỹ → mã đang nắm + giá trị + **kỳ công bố**. Cùng script |
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
+| `data/chudiem.json` | Chủ điểm đầu tư **dẫn nguồn SSI** — sơ đồ 3 trục nhập tay + khuyến nghị/giá mục tiêu SSI tự cào. `tools/build_chudiem.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
 ## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
@@ -250,6 +251,21 @@ giá sai hoặc giá nhảy — đừng đẩy.
   170/170 ngày**. Ngày hiện ra phải là `effectiveDate` = **ngày giao dịch không hưởng
   quyền**, không phải `actualDate` (ngày tiền về, thường sau cả tháng). Nguồn trả CẢ bản EN
   lẫn VN nên phải lọc `locale=='VN'`, bằng không mọi sự kiện nhân đôi.
+- **CHỦ ĐIỂM ĐẦU TƯ: KHÔNG có nguồn SSI nào lấy được tự động cho phần SƠ ĐỒ.** Đã dò hết:
+  `iboard-api.ssi.com.vn/research/*` → **401** (đòi đăng nhập), `api.ssi.com.vn/research/*` →
+  **404**, `ssi.com.vn/.../bao-cao-phan-tich` chặn máy, và API báo cáo của Simplize **bắt buộc
+  có `ticker=`** (để rỗng trả 0 bản ghi) nên không có cửa lấy báo cáo chiến lược toàn thị
+  trường. Sơ đồ ba trục nằm trong slide báo cáo chiến lược → **nhập tay** ở bảng `SO_DO` của
+  `tools/build_chudiem.py`, SSI ra kỳ mới thì sửa đúng bảng đó và cập nhật trường `ky`.
+  **Phần TỰ CẬP NHẬT được** là khuyến nghị + giá mục tiêu từng mã của SSI: đã nằm sẵn trong
+  `data/news/{MÃ}.json` (bước 7 cào từ Simplize, 97 báo cáo SSI trên 61 mã) — build_chudiem
+  rút bản mới nhất mỗi mã nên chạy SAU bước 7.
+  > **GHI NGUỒN LÀ RÀNG BUỘC, KHÔNG PHẢI TRANG TRÍ** — đây là khuyến nghị đầu tư của một đơn
+  > vị có giấy phép, chủ trang thì không. Tên nguồn phải nằm ở đầu mục, lời miễn trừ nằm ngay
+  > dưới, và ngày ra báo cáo phải đi kèm từng mã (báo cáo cũ thì giá mục tiêu hết giá trị
+  > tham chiếu). Đừng rút gọn mấy thứ đó cho gọn mắt.
+  > **Giá mục tiêu tính bằng ĐỒNG/cổ phiếu** — nhét vào `ty()` (đơn vị tỷ) thì 105.900 đ hiện
+  > thành "0 tỷ", đọc như đang khuyên mua một mã vô giá trị.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

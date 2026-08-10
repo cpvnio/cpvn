@@ -420,6 +420,50 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .tdcon .idn em.own{font-size:9.5px;margin-left:4px}
 }
 
+/* ---------- CHỦ ĐIỂM ĐẦU TƯ (dẫn nguồn bên thứ ba) ---------- */
+.panel>.ph .cdsrc{margin-left:auto;font-size:11px;font-weight:700;color:var(--mut);white-space:nowrap}
+.panel>.ph .cdsrc b{color:var(--rose)}
+.cdleg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.cdleg span{font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;
+  color:var(--c);border:1px solid var(--c)}
+.cdgrp{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:900;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--faint);margin:14px 0 8px}
+.cdgrp u{text-decoration:none;font-size:10.5px;font-weight:700;opacity:.8}
+.cdgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:10px}
+.cdcard{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:11px 13px;
+  cursor:pointer;transition:.14s}
+.cdcard:hover{border-color:var(--line2);transform:translateY(-1px)}
+.cdtop{display:flex;align-items:center;gap:9px}
+.cdtop .lgw{flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:#fff;
+  overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cdtop .lgw img{width:100%;height:100%;object-fit:contain}
+.cdtop .noimg{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:32px;height:32px;
+  border-radius:9px;background:var(--card2);font-size:11px;font-weight:800;color:var(--mut)}
+.cdid{min-width:0;line-height:1.2;flex:1}
+.cdid b{display:block;font-size:15px;font-weight:800}
+.cdid i{display:block;font-style:normal;font-size:10.5px;color:var(--faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cdpc{font-weight:800;font-size:13.5px;flex:0 0 auto}
+.cdtruc{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.cdtruc em{font-style:normal;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;
+  border:1px solid currentColor}
+.cdssi{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:9px;padding-top:8px;
+  border-top:1px solid var(--line);font-size:11.5px}
+.cdssi.trong{color:var(--faint);font-size:10.5px}
+/* KHÔNG dùng color-mix — html2canvas của nút chụp màn hình không hiểu hàm đó */
+.cdkn{font-size:10px;font-weight:900;letter-spacing:.03em;padding:3px 8px;border-radius:20px;
+  background:var(--card2);border:1px solid var(--line2);color:var(--mut)}
+.cdkn.mua{background:rgba(22,199,132,.15);border-color:transparent;color:var(--green)}
+.cdkn.ban{background:rgba(234,57,67,.15);border-color:transparent;color:var(--red)}
+.cdkn.giu{background:rgba(234,179,8,.15);border-color:transparent;color:var(--yellow)}
+.cdtp{color:var(--mut)} .cdtp b{color:var(--txt);font-weight:800}
+.cdch{font-weight:800} .cdch.up{color:var(--green)} .cdch.dn{color:var(--red)}
+.cdd{margin-left:auto;color:var(--faint);font-size:10.5px}
+@media(max-width:640px){
+  .cdgrid{grid-template-columns:1fr}
+  .panel>.ph .cdsrc{font-size:10px}
+}
+
 /* ---------- đường đua + đầu tư đều đặn (DCA) ---------- */
 .racePanel{padding:12px}
 .dcarow{display:grid;grid-template-columns:26px 150px 1fr minmax(112px,auto);gap:10px;align-items:center;
@@ -574,6 +618,6 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811f"></script>
+<script src="assets/congcu.js?v=20260811h"></script>
 </body>
 </html>

@@ -161,7 +161,7 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), tapdoan:[], quy:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), tapdoan:[], quy:[], chudiem:null, pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 /* GỘP NGÀNH — BẢN SAO Y HỆT core.js và bubbles.html. Trang này trước đây dùng thẳng
    `sector` thô của nguồn, nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
    "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng trong khi bảng giá
@@ -202,10 +202,11 @@ function gopNganh(){
 }
 async function loadAll(){
   const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
-  const [u,eod,pk,mk,td,qy]=await Promise.all([
+  const [u,eod,pk,mk,td,qy,cd]=await Promise.all([
     j('universe.json'), j('data/eod/latest.json'),
-    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json'), j('data/quy.json')]);
-  ST.tapdoan=(td&&td.nhom)||[]; ST.quy=(qy&&qy.quy)||[];
+    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json'), j('data/quy.json'),
+    j('data/chudiem.json')]);
+  ST.tapdoan=(td&&td.nhom)||[]; ST.quy=(qy&&qy.quy)||[]; ST.chudiem=cd||null;
   if(!u||!pk) throw new Error('thiếu dữ liệu');
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
@@ -585,7 +586,7 @@ function tapDoanPanel(){
        xếp theo vốn hoá mà cột hiện ra là GTGD thì bảng trông như không xếp gì cả */
     +'<div class="pb x'+tdSort.k+'" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
 }
-let radarTab='phien';      // tab đang xem trong module radar: 'phien' | 'td'
+let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'td' | 'quy' | 'cd'
 function renderRadar(){
   const m=MODULES.find(x=>x.id==='radar');
   const L=ST.list, liq=c=>(c.avgval20||0);
@@ -661,7 +662,10 @@ function renderRadar(){
     +'<button data-v="phien"'+(radarTab!=='td'?' class="on"':'')+'>📡 Nhịp phiên</button>'
     +'<button data-v="td"'+(radarTab==='td'?' class="on"':'')+'>🏢 Săn tập đoàn</button>'
     +'<button data-v="quy"'+(radarTab==='quy'?' class="on"':'')+'>💼 Soi quỹ đầu tư</button>'
+    +'<button data-v="cd"'+(radarTab==='cd'?' class="on"':'')+'>🎯 Chủ điểm đầu tư</button>'
     +'</div></div>'
+    +'<div id="rdCd"'+(radarTab==='cd'?'':' style="display:none"')+'>'
+    +(radarTab==='cd'?chuDiemPanel():'')+'</div>'
     +'<div id="rdTd"'+(radarTab==='td'?'':' style="display:none"')+'>'
     +(radarTab==='td'?tapDoanPanel()+tapDoanNote():'')+'</div>'
     +'<div id="rdQuy"'+(radarTab==='quy'?'':' style="display:none"')+'>'
@@ -1204,6 +1208,68 @@ function tapDoanNote(){
     +'Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
     +'nắm cả BID, VCB, CTG nhưng ba ngân hàng đó không cùng một nhà.</div>';
 }
+/* ---- CHỦ ĐIỂM ĐẦU TƯ — DẪN NGUỒN SSI RESEARCH ----------------------------------
+   ĐÂY LÀ Ý KIẾN KHUYẾN NGHỊ CỦA BÊN THỨ BA, KHÔNG PHẢI của trang. Trang chỉ dẫn lại,
+   nên tên nguồn phải nằm ngay đầu mục và lời miễn trừ nằm ngay dưới — cả hai KHÔNG
+   được rút gọn cho gọn mắt.
+
+   Sơ đồ ba trục nhập tay (SSI không mở dữ liệu này ra ngoài — xem tools/build_chudiem.py),
+   còn khuyến nghị + giá mục tiêu từng mã thì tự cập nhật mỗi phiên từ kho báo cáo. */
+function cdBadge(kn){
+  const k=(kn||'').toUpperCase();
+  const m=/MUA|KHẢ QUAN/.test(k)?'mua':/BÁN|KÉM/.test(k)?'ban':/TRUNG LẬP|NẮM GIỮ/.test(k)?'giu':'';
+  return kn?'<b class="cdkn '+m+'">'+esc(kn)+'</b>':'';
+}
+function chuDiemPanel(){
+  const D=ST.chudiem;
+  if(!D||!(D.ma||[]).length) return '<div class="empty">Chưa có dữ liệu chủ điểm — chạy tools/build_chudiem.py</div>';
+  const T={}; for(const t of D.truc||[]) T[t.id]=t;
+  const nhom=[[3,'Trọng tâm — hội tụ cả 3 chủ điểm'],[2,'Giao hai chủ điểm'],[1,'Từng chủ điểm riêng']];
+  const the=x=>{
+    const c=ST.map.get(x.s), k=x.ssi||{};
+    /* CHÊNH so với giá mục tiêu của SSI — con số đáng xem nhất, nhưng chỉ tính khi có
+       ĐỦ cả giá hiện tại lẫn giá mục tiêu, đừng suy ra từ một nửa dữ liệu */
+    const gia=c&&c.close>0?c.close:0, tp=k.tp||0;
+    const ch=(gia&&tp)?(tp-gia)/gia*100:null;
+    return '<div class="cdcard" data-sym="'+x.s+'">'
+      +'<div class="cdtop">'+(c?logoHTML(c):'')
+      +'<span class="cdid"><b>'+x.s+'</b><i>'+esc(c?shortName(c.name||''):'')+'</i></span>'
+      +'<span class="cdpc '+cls(c&&c.chg)+'">'+(c?pct(c.chg):'—')+'</span></div>'
+      +'<div class="cdtruc">'+x.truc.map(id=>T[id]
+          ?'<em style="color:'+T[id].mau+';border-color:'+T[id].mau+'">'+esc(T[id].ten)+'</em>':'').join('')+'</div>'
+      +(k.kn||k.tp?'<div class="cdssi">'+cdBadge(k.kn)
+          /* GIÁ MỤC TIÊU LÀ GIÁ MỘT CỔ PHIẾU, tính bằng ĐỒNG — nhét vào ty() (đơn vị tỷ)
+             thì 105.900 đ ra thành "0 tỷ", đọc như báo cáo khuyên mua một mã vô giá trị */
+          +(tp?'<span class="cdtp">mục tiêu <b>'+Math.round(tp).toLocaleString('en-US')+' đ</b></span>':'')
+          +(ch!=null?'<span class="cdch '+(ch>=0?'up':'dn')+'">'+(ch>=0?'+':'')+ch.toFixed(0)+'%</span>':'')
+          +(k.d?'<span class="cdd">'+k.d.split('-').reverse().join('/')+'</span>':'')
+          +'</div>':'<div class="cdssi trong">SSI chưa có báo cáo riêng cho mã này trong kho</div>')
+      +'</div>';
+  };
+  let html='<div class="panel"><div class="ph">Chủ điểm đầu tư'
+    +'<span class="cdsrc">nguồn <b>'+esc(D.nguon||'SSI Research')+'</b>'
+    +(D.ky?' · '+esc(D.ky):'')+'</span>'
+    +'<span class="cnt">'+D.ma.length+' mã</span></div><div class="pb" style="padding:12px 16px">';
+  /* ba trục hiện thành chú giải màu — bấm vào một mã là sang trang mã đó */
+  html+='<div class="cdleg">'+(D.truc||[]).map(t=>'<span style="--c:'+t.mau+'">'+esc(t.ten)+'</span>').join('')+'</div>';
+  for(const [n,ten] of nhom){
+    const ds=D.ma.filter(x=>x.truc.length===n);
+    if(!ds.length) continue;
+    html+='<div class="cdgrp">'+esc(ten)+'<u>'+ds.length+' mã</u></div>'
+      +'<div class="cdgrid">'+ds.map(the).join('')+'</div>';
+  }
+  html+='</div></div>'
+    +'<div class="note"><b>Dẫn nguồn '+esc(D.nguon||'SSI Research')+'</b>'+(D.ky?' — '+esc(D.ky):'')+'. '
+    +'Sơ đồ ba chủ điểm là quan điểm của '+esc(D.nguon||'SSI Research')+', CPVN.IO chỉ dẫn lại và '
+    +'ghép thêm giá cùng khuyến nghị đang lưu trong kho, <b>không đưa ra khuyến nghị nào của riêng '
+    +'mình</b>. Khuyến nghị và giá mục tiêu từng mã lấy từ báo cáo phân tích của chính '
+    +esc(D.nguon||'SSI Research')+', tự làm mới mỗi phiên; ngày ghi cạnh mỗi mã là ngày ra báo cáo — '
+    +'báo cáo càng cũ thì giá mục tiêu càng ít còn giá trị tham chiếu. '
+    +'Sơ đồ thuần phân tích cơ bản và câu chuyện doanh nghiệp, <b>chưa tính tới dòng tiền, thanh khoản '
+    +'hay trạng thái của VN-Index</b>. Đây là thông tin tham khảo, không phải lời mời hay khuyến nghị '
+    +'mua bán.</div>';
+  return html;
+}
 /* ---- SOI QUỸ ĐẦU TƯ: lật danh mục các quỹ, xem quỹ nào đang cầm mã nào ---- */
 const quyMo=new Set();
 /* Quỹ nhỏ hơn ngần này thì phần danh mục ghi nhận được quá mỏng để soi ra điều gì —
@@ -1468,7 +1534,7 @@ async function init(){
       if(lai) lai.scrollIntoView({block:'nearest'});
       return;
     }
-    const rw=e.target.closest('.rw,.dcarow');
+    const rw=e.target.closest('.rw,.dcarow,.cdcard');
     if(rw&&rw.dataset.sym) location.href='cophieu.html?sym='+rw.dataset.sym;
   });
   addEventListener('resize',(()=>{ let rt; return ()=>{ clearTimeout(rt);

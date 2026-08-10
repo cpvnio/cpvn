@@ -888,6 +888,16 @@ try:
     except Exception as e3:
         print(f"cotuc.json LỖI (không chặn pipeline): {e3}",flush=True)
         HL["cotuc"]={"ok":0,"err":str(e3)[:120]}
+    # CHỦ ĐIỂM ĐẦU TƯ (dẫn nguồn SSI) -> data/chudiem.json. Sơ đồ ba trục nhập tay trong
+    # chính script đó; phần chạy ở đây là bồi khuyến nghị + giá mục tiêu MỚI NHẤT của SSI
+    # rút từ kho tin/báo cáo vừa cào ở bước 7 — nên phải đứng SAU bước ấy.
+    try:
+        import build_chudiem as _bcd
+        _bcd.main()
+        HL["chudiem"]={"ok":1}
+    except Exception as e4:
+        print(f"chudiem.json LỖI (không chặn pipeline): {e4}",flush=True)
+        HL["chudiem"]={"ok":0,"err":str(e4)[:120]}
 except Exception as e:
     print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
     HL["screen"]={"ok":0,"err":str(e)[:120]}
