@@ -937,7 +937,12 @@ function dcaAll(){
   let pool;
   if(laMa) pool=goTay.filter(s=>{ if(D.series[s]) return true; thieu.push(s); return false; });
   else{
-    pool=D.syms.filter(s=>D.lon.has(s));
+    /* RỔ CHIA ĐỀU TÍNH TRÊN TOÀN NGÀNH, không cắt theo vốn hoá. Ngưỡng 1.000 tỷ sinh ra
+       để chặn mấy cú "nhân ba mươi lần" của mã thanh khoản mỏng chiếm hết đường vẽ —
+       nhưng khi chia đều thì mỗi mã chỉ gánh 1/N, không mã nào lái được cả rổ, mà bỏ
+       chúng ra thì rổ "ngành X" lại không phải ngành X. Ngưỡng vì vậy chỉ còn áp cho
+       ĐƯỜNG VẼ RIÊNG từng mã, xử ở dưới. */
+    pool=D.syms.slice();
     if(DCA.sec) pool=pool.filter(locNganh(DCA.sec));
   }
   const rows=[], chuaCo=[];
@@ -957,8 +962,12 @@ function dcaAll(){
     for(const r of rows) for(let k=0;k<n;k++) vals[k]+=r.vals[k]/N;
     ro={s:'rổ',vals,fin:vals[n-1],n:N};
   }
+  /* ĐƯỜNG VẼ RIÊNG mới chịu ngưỡng vốn hoá — rổ ở trên đã tính đủ cả ngành rồi.
+     Gõ mã tay thì không cắt gì: đã gõ đích danh là có ý xem đúng mã đó. */
+  const veRieng=laMa?rows:rows.filter(r=>D.lon.has(r.s));
+  const nhoBiAn=rows.length-veRieng.length;
   const rB=0.07/12;                   // 7%/năm ghép lãi theo tháng
-  DCA.calc={rows,ro,n,i0,amt,mot,thieu,laMa,chuaCo,
+  DCA.calc={rows:veRieng,roRows:rows,nhoBiAn,ro,n,i0,amt,mot,thieu,laMa,chuaCo,
     /* vốn đã bỏ tới tháng thứ k; một lần thì vốn đứng yên bằng đúng X */
     von:k=>mot?amt:amt*(k+1),
     /* ngân hàng cùng quy ước với cổ phiếu: khoản vừa bỏ tháng này chưa kịp sinh lời,
@@ -984,6 +993,11 @@ function renderDCA(){
   if(sum) sum.innerHTML=!(amt>0)?'':((C2.mot
       ? 'bỏ <b>'+dcaFmt(amt)+'</b> một lần tháng '+moc+' rồi giữ tới nay ('+n+' tháng)'
       : 'bỏ <b>'+dcaFmt(amt)+'</b>/tháng × '+n+' tháng = vốn <b>'+dcaFmt(von)+'</b>')
+    /* NÓI THẲNG SỐ MÃ TRONG RỔ và vì sao nó khác con số người ta trông đợi: VN30 chọn từ
+       3/2020 chỉ ra 27 vì TCX, VPL, SSB niêm yết sau. Không ghi ra thì người xem tưởng
+       thiếu dữ liệu. */
+    +(C2.ro&&!C2.laMa?' · rổ <b>'+C2.ro.n+' mã</b>':'')
+    +(C2.nhoBiAn?' <span style="color:var(--mut)">('+C2.nhoBiAn+' mã dưới 1.000 tỷ có tính vào rổ nhưng không vẽ đường riêng)</span>':'')
     +(C2.thieu.length?' · <span style="color:var(--red)">không có dữ liệu: '+esc(C2.thieu.join(', '))+'</span>':'')
     +(C2.chuaCo.length?' · <span style="color:var(--mut)">chưa có giá tháng '+moc+' nên đứng ngoài: '
         +esc(C2.chuaCo.slice(0,14).join(', '))+(C2.chuaCo.length>14?' …+'+(C2.chuaCo.length-14):'')+'</span>':''));
