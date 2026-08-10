@@ -451,7 +451,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811e"></script>
+<script src="assets/core.js?v=20260811f"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -941,6 +941,12 @@ $('divBtn').onclick=async()=>{
     if(!j){ $('dvBody').innerHTML='<div class="dvempty">Chưa có lịch chốt quyền trong kho.</div>'; return; }
     DV.ds=j.sk||[];
   }
+  /* MỞ LẠI LÀ VỀ MẶC ĐỊNH. Lần trước lỡ để "Đã qua" hoặc lọc một loại quyền thì lần sau
+     mở ra vẫn nguyên bộ lọc cũ — nhìn thấy toàn sự kiện đã qua rồi tưởng sắp tới chẳng
+     còn gì. Bảng này mở ra để xem cái SẮP TỚI, đó mới là trạng thái đúng của lượt mở. */
+  DV.khi='sap'; DV.loai='all';
+  $('dvKhi').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.dv==='sap'));
+  $('dvLoai').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.dk==='all'));
   dvRender();
   $('dvBody').scrollTop=0;      // bảng NỔI nên đừng cuộn trang, chỉ đưa danh sách về đầu
 };
