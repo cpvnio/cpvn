@@ -123,7 +123,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .statgrid .row span:last-child{font-weight:700;text-align:right}
   .tcl{color:var(--yellow)} .cel{color:var(--purple)} .flo{color:var(--cyan)}
   .statgrid .row.hi span:last-child{color:var(--green)}   /* tiền mặt + LN sau thuế: xanh lá */
-  .statgrid .row.hi.lo span:last-child{color:var(--red)}  /* trừ khi LỖ — lỗ mà xanh là đọc ngược */
+  .statgrid .row.hi.lo span:last-child{color:var(--red)}
+  /* nhãn có chú giải: gạch chấm mảnh + con trỏ dấu hỏi, để người ta biết là rê vào được */
+  .gt{border-bottom:1px dotted currentColor;cursor:help}
+  .ft td.gt,.ft th.gt{border-bottom:0}
+  .ft .lb.gt{border-bottom:1px dotted currentColor;cursor:help;display:inline-block}  /* trừ khi LỖ — lỗ mà xanh là đọc ngược */
   /* HÀNG CẶP: hai chỉ số ngắn cùng họ đứng cạnh nhau, mỗi cái vẫn có nhãn RIÊNG và
      số nằm NGANG hàng nhãn. Trước đây dồn "P/E · P/B · EPS · ROA" vào một nhãn rồi
      ghép 4 số bằng dấu chấm -> phải tự đếm xem số nào ứng nhãn nào, rất rối mắt. */
@@ -382,7 +386,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260811n"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260811p"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -539,7 +543,7 @@ document.addEventListener('click',function(e){
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260811f"></script>
+<script src="assets/core.js?v=20260811h"></script>
 <script src="assets/chart.js?v=20260810a"></script>
 <script>
 'use strict';
@@ -559,6 +563,35 @@ if(SYM&&/^[A-Z0-9]{2,10}$/.test(SYM)){
   document.head.appendChild(cn);
 }
 let C=null, candles=null, candleSaved=false, candleSrc='', tf='D', finPeriod='Q', peerK='m', finData=null;
+/* CHÚ GIẢI NGẮN cho mọi nhãn viết tắt. Khai ở MỘT chỗ theo tên nhãn thay vì rải title
+   vào từng dòng — thêm dòng mới chỉ cần khai thêm một mục ở đây là có chú giải. */
+const GT={
+ 'Vốn hoá':'Vốn hoá thị trường = giá hiện tại × số cổ phiếu đang lưu hành',
+ 'SLCP':'Số lượng cổ phiếu đang lưu hành',
+ 'Khối lượng giao dịch':'Giá trị khớp lệnh trong phiên hôm nay (đơn vị tiền, không phải số cổ phiếu)',
+ 'P/E':'Giá chia lợi nhuận mỗi cổ phiếu — bỏ ra bao nhiêu đồng cho một đồng lãi mỗi năm. Thấp thường là rẻ, nhưng chỉ có nghĩa khi so trong cùng ngành',
+ 'P/B':'Giá chia giá trị sổ sách mỗi cổ phiếu — dưới 1 là đang bán rẻ hơn phần vốn chủ sở hữu ghi trên sổ',
+ 'EPS':'Lợi nhuận sau thuế trên mỗi cổ phiếu, tính theo 4 quý gần nhất',
+ 'BVPS':'Giá trị sổ sách trên mỗi cổ phiếu = vốn chủ sở hữu chia số cổ phiếu',
+ 'ROA':'Lợi nhuận sau thuế 4 quý chia tổng tài sản — một đồng tài sản đẻ ra bao nhiêu đồng lãi',
+ 'Cổ tức':'Tỉ suất cổ tức TIỀN MẶT một năm so với giá hiện tại',
+ 'NN sở hữu':'Tỉ lệ cổ phiếu nhà đầu tư NƯỚC NGOÀI đang nắm giữ',
+ 'Room còn':'Phần room ngoại còn trống — nước ngoài còn được phép mua thêm bấy nhiêu',
+ 'LN sau thuế':'Lợi nhuận sau thuế thuộc cổ đông công ty mẹ, năm tài chính gần nhất đã hoàn thành',
+ 'Tiền & tương đương':'Tiền mặt và các khoản tương đương tiền tại kỳ báo cáo gần nhất',
+ 'Tiền &amp; tương đương':'Tiền mặt và các khoản tương đương tiền tại kỳ báo cáo gần nhất',
+ 'NN mua – bán ròng':'Nhà đầu tư nước ngoài MUA trừ BÁN trong kỳ — dương là họ đang gom, âm là đang rút',
+ 'Doanh thu':'Doanh thu thuần, đã trừ các khoản giảm trừ',
+ 'Giá vốn':'Giá vốn hàng bán — chi phí trực tiếp làm ra thứ đã bán',
+ 'Lợi nhuận gộp':'Doanh thu thuần trừ giá vốn, chưa trừ chi phí bán hàng và quản lý',
+ 'LN trước thuế':'Lợi nhuận trước thuế thu nhập doanh nghiệp',
+ 'Biên LN ròng':'Lợi nhuận sau thuế chia doanh thu — trăm đồng doanh thu giữ lại được mấy đồng lãi',
+ 'Biên ròng':'Lợi nhuận sau thuế chia doanh thu — trăm đồng doanh thu giữ lại được mấy đồng lãi',
+};
+const gt=nh=>{const k=String(nh).replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').trim();
+  for(const t in GT) if(k===t||k.indexOf(t)===0) return GT[t];
+  return ''; };
+
 /* số liệu rút từ BCTC đưa lên bảng thống kê đầu trang (tiền mặt + LN sau thuế năm gần nhất) */
 const FIN={cash:null,cashLb:'',np:null,npLb:'',roa:null,bvps:null};
 let chart=null, dailyRows=null;      // dailyRows = TOÀN BỘ nến ngày (kho ~6,5 năm) -> gộp tại chỗ
@@ -617,10 +650,10 @@ function renderHero(){
         ['Room còn',(C.froom!=null&&C.shares)?(C.froom/C.shares*100).toFixed(1)+'%':'—']),
     ['NN mua – bán ròng'+nnSegHTML(),`<span id="nnVal">${nnCell()}</span>`,''],
   );
-  const oNho=(x,cl)=>`<i class="${cl||''}"><u>${x[0]}</u><b>${x[1]}</b></i>`;
+  const oNho=(x,cl)=>{const g=gt(x[0]);return `<i class="${cl||''}"><u${g?` class="gt" title="${CP.esc(g)}"`:''}>${x[0]}</u><b>${x[1]}</b></i>`;};
   $('stats').innerHTML=rows.map(r=>r[0]==='pair'
     ? `<div class="row pair">${oNho(r[1],r[3])}${oNho(r[2],r[4])}</div>`
-    : `<div class="row ${r[2]}"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+    : (g=>`<div class="row ${r[2]}"><span${g?` class="gt" title="${CP.esc(g)}"`:''}>${r[0]}</span><span>${r[1]}</span></div>`)(gt(r[0]))).join('');
   bindNnSeg();
 }
 
@@ -974,8 +1007,11 @@ function kqkdTable(rows,div){
   const show=rows;
   const qc=r=>r._q?' qcol':'';                  // cột quý bung ra từ một năm -> tô nhạt hơn
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
-  const line=(lb,key,sign,big)=>`<tr${big?' class="npRow"':''}><td><div class="lb">${lb}</div></td>`+show.map(r=>{
-    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}${qc(r)}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';
+  /* nhãn dòng nào có trong bảng chú giải thì gắn title — rê chuột vào là hiểu nghĩa,
+     khỏi phải đoán "biên LN ròng" là gì */
+  const line=(lb,key,sign,big)=>{const g=gt(lb);return `<tr${big?' class="npRow"':''}>`
+    +`<td><div class="lb${g?' gt':''}"${g?` title="${CP.esc(g)}"`:''}>${lb}</div></td>`+show.map(r=>{
+    const v=r[key], c=sign&&v!=null?(v>=0?'pos':'neg'):''; return `<td class="${c}${qc(r)}">${cell(v)}</td>`;}).join('')+'<td class="sp"></td></tr>';};
   /* CỔ TỨC gộp thẳng vào bảng KQKD, ngay dưới Biên LN ròng — người xem thấy luôn
      "làm ra bao nhiêu / chia về túi mình bao nhiêu" mà không phải kéo xuống mục khác.
      Cổ tức xếp theo NĂM CHỐT QUYỀN (năm thực nhận) nên cột quý lấy số của năm chứa quý đó. */

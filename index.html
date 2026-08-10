@@ -193,12 +193,16 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     color:var(--muted);padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer}
   .dvx:hover{color:var(--txt)}
   #dvBody{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  .dvday u{text-decoration:none;font-size:9.5px;font-weight:800;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--accent);border-bottom:1px dotted currentColor;cursor:help}
   .dvday{display:flex;align-items:baseline;gap:9px;padding:8px 14px;background:var(--thead);
     position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:800}
   .dvday i{font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}
   .dvday.nay{color:var(--accent)}
   /* mỗi dòng một quyền: mã · tên · loại · số tiền|tỉ lệ · ngày tiền về */
-  .dvrow{display:grid;grid-template-columns:26px 62px minmax(90px,1fr) 118px 132px 96px;gap:10px;
+  /* BỎ CỘT TÊN CÔNG TY: bảng này để LƯỚT theo ngày, tên dài chỉ tổ đẩy mấy con số
+     đáng đọc ra xa. Ai cần tên thì rê chuột vào mã, hoặc bấm vào là sang trang mã. */
+  .dvrow{display:grid;grid-template-columns:26px 64px 134px 1fr 122px;gap:10px;
     align-items:center;padding:7px 14px;border-bottom:1px solid var(--rowline);cursor:pointer;font-size:13px}
   .dvrow:hover{background:var(--rowhover)}
   .dvrow img{width:26px;height:26px;border-radius:7px;background:#fff;object-fit:contain}
@@ -214,6 +218,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .dvk.phathanh{background:rgba(234,179,8,.16);color:var(--yellow)}
   .dvv{font-weight:800;text-align:right}
   .dvtt{font-size:11.5px;color:var(--muted);text-align:right;white-space:nowrap}
+  .dvtt u{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
+  .dvrow .dvk{cursor:help}
   .dvnote{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px}
   .dvempty{padding:22px 14px;text-align:center;color:var(--muted);font-size:13px}
   @media(max-width:760px){
@@ -228,8 +234,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     .dvseg::-webkit-scrollbar{display:none}
     .dvseg button{flex:0 0 auto}
     /* màn hẹp: bỏ tên công ty và ngày thanh toán, giữ MÃ · loại · số tiền */
-    .dvrow{grid-template-columns:24px 52px 1fr 96px;gap:8px;padding:7px 10px}
-    .dvrow .nm,.dvrow .dvtt{display:none}
+    .dvrow{grid-template-columns:22px 52px 118px 1fr;gap:8px;padding:7px 10px}
+    .dvrow .dvtt{display:none}
     .dvhead>b{width:100%}
   }
   /* dưới 1400px thanh header không đủ chỗ cho cả chữ -> giữ mỗi biểu tượng lịch,
@@ -385,7 +391,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260811n"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260811p"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -480,7 +486,7 @@ document.addEventListener('click',function(e){
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
 </footer>
 
-<script src="assets/core.js?v=20260811f"></script>
+<script src="assets/core.js?v=20260811h"></script>
 <script src="assets/screener.js?v=20260811a"></script>
 <script>
 'use strict';
@@ -924,6 +930,11 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
    ngày người cầm cổ phiếu phải canh. Kho nạp LƯỜI, chỉ tải khi bấm mở lần đầu. */
 const DV={ds:null, khi:'sap', loai:'all'};
 const DVTEN={tien:'Cổ tức tiền',cp:'Cổ tức CP',thuong:'CP thưởng',phathanh:'Phát hành thêm'};
+/* chú giải cho từng loại quyền — chữ viết tắt trên bảng phải rê chuột vào là hiểu ngay */
+const DVGT={tien:'Cổ tức bằng TIỀN MẶT, trả theo số đồng trên mỗi cổ phiếu đang nắm',
+  cp:'Cổ tức bằng CỔ PHIẾU — nhận thêm cổ phiếu thay vì tiền, tỉ lệ 100:x nghĩa là nắm 100 cp được thêm x cp',
+  thuong:'CỔ PHIẾU THƯỞNG chia từ nguồn vốn của công ty, tỉ lệ 100:x như trên. Không mất tiền mua',
+  phathanh:'PHÁT HÀNH THÊM cho cổ đông hiện hữu — được quyền MUA thêm ở mức giá ghi bên cạnh, phải bỏ tiền'};
 const THU=['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
 const dvNgay=s=>{const p=s.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
 function dvRender(){
@@ -939,7 +950,11 @@ function dvRender(){
       ngay=x.d;
       const d=new Date(x.d+'T00:00:00'), cach=Math.round((d-new Date(hom+'T00:00:00'))/864e5);
       const phu=cach===0?'hôm nay':cach>0?'còn '+cach+' ngày':Math.abs(cach)+' ngày trước';
-      html+=`<div class="dvday${cach===0?' nay':''}"><b>${THU[d.getDay()]} ${dvNgay(x.d)}</b><i>${phu}</i></div>`;
+      /* GHI RÕ ĐÂY LÀ NGÀY GÌ. Một cái ngày trơ trọi thì người xem tự hiểu thành ngày
+         nhận tiền — sai hẳn: đây là ngày MẤT quyền nếu mua vào. */
+      html+=`<div class="dvday${cach===0?' nay':''}"><b>${THU[d.getDay()]} ${dvNgay(x.d)}</b>`
+        +`<u title="Giao dịch không hưởng quyền — mua từ ngày này là KHÔNG còn quyền. `
+        +`Muốn nhận thì phải nắm cổ phiếu từ phiên liền trước.">ngày GDKHQ</u><i>${phu}</i></div>`;
     }
     const c=CP.coins.get(x.s);
     const gt=x.k==='tien'?(x.tien?CP.fmtD(x.tien)+' đ/cp':'—')
@@ -947,9 +962,10 @@ function dvRender(){
       :(x.tl?'100 : '+x.tl:'—');
     html+=`<div class="dvrow" data-sym="${x.s}" title="${CP.esc(x.gc||'')}">`
       +(c?CP.logoHTML(x.s,c.img):`<span class="noimg">${CP.esc(x.s.slice(0,2))}</span>`)
-      +`<b>${x.s}</b><span class="nm">${CP.esc(c?c.name:'')}</span>`
-      +`<span class="dvk ${x.k}">${DVTEN[x.k]}</span><span class="dvv">${gt}</span>`
-      +`<span class="dvtt">${x.tt?'TT '+dvNgay(x.tt):''}</span></div>`;
+      +`<b title="${CP.esc((c?c.name+' — ':'')+'bấm để mở trang '+x.s)}">${x.s}</b>`
+      +`<span class="dvk ${x.k}" title="${DVGT[x.k]}">${DVTEN[x.k]}</span>`
+      +`<span class="dvv">${gt}</span>`
+      +`<span class="dvtt">${x.tt?`<u title="Ngày thanh toán — ngày tiền hoặc cổ phiếu thực về tài khoản">TT</u> `+dvNgay(x.tt):''}</span></div>`;
   }
   $('dvBody').innerHTML=html;
   $('dvBody').querySelectorAll('.dvrow').forEach(r=>r.onclick=()=>{

@@ -567,8 +567,14 @@ function tapDoanPanel(){
   const mx=Math.max.apply(null,ds.map(x=>Math.abs(x.d)))||1;
   const hang=x=>{
     const g=x.g, mo=tdMo.has(g.id);
+    /* LOGO CỦA NHÀ: lấy logo mã MẸ khi mẹ có niêm yết (80/164 nhóm). Mẹ không lên sàn
+       (PVN, Viettel, SCIC, các Bộ) thì KHÔNG mượn logo của mã con to nhất — nhìn logo GAS
+       mà tưởng đó là PVN thì sai hẳn; thay bằng ô chữ tắt lấy từ chính tên nhóm. */
+    const cMe=g.me&&ST.map.get(g.me);
+    const dau=cMe?logoHTML(cMe)
+      :'<span class="gini">'+esc((g.ten||'').replace(/[^\p{L}\p{N}]/gu,'').slice(0,2).toUpperCase())+'</span>';
     return '<div class="tdrow'+(mo?' on':'')+'" data-td="'+esc(g.id)+'">'
-      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i><em class="nm">'+esc(g.ten)+'</em>'
+      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+dau+'<em class="nm">'+esc(g.ten)+'</em>'
       +(g.kieu==='nn'?'<b class="nn">nhà nước</b>':g.kieu==='cn'?'<b class="nn cn">cá nhân</b>':'')+'</span>'
       +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
       +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
