@@ -724,6 +724,9 @@ function renderRadar(){
     +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
     +'</div></div>';
   const bt=$('#vbThem'); if(bt) bt.onclick=()=>{ vbTop+=100; renderRadar(); };
+  $$('#m-radar [data-vbs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vbs;
+    if(vbSort.k===k) vbSort.d=-vbSort.d; else { vbSort.k=k; vbSort.d=(k==='roi'?1:-1); }
+    vbTop=100; renderRadar(); });
   if(radarTab==='phien') drawSparks($('#m-radar'));
 }
 
@@ -1304,13 +1307,23 @@ function vennSVG(D,T){
    KHÔNG lọc vốn hoá: đây là chỗ để soi mã đã rơi, mã nhỏ mới là phần đông. */
 const VB_NGUONG=-30;
 let vbTop=100;
+/* d=1: rơi NHIỀU nhất trước (dath âm sâu nhất) · d=-1: rơi ít nhất trước.
+   Với vốn hoá thì d=-1 là to→nhỏ, cùng một quy ước "bấm lại là lật chiều". */
+let vbSort={k:'roi',d:1};
+const VBK={roi:c=>c.dath, von:c=>c.mcapLive||c.mcap||0};
 function veBoPanel(){
   const ds=ST.list.filter(c=>c.close>0&&c.dath!=null&&c.dath<=VB_NGUONG)
-    .sort((a,b)=>a.dath-b.dath);
+    .sort((a,b)=>(VBK[vbSort.k](a)-VBK[vbSort.k](b))*vbSort.d);
   if(!ds.length) return '<div class="empty">Chưa có dữ liệu — chạy lại tools/build_screen.py</div>';
   /* CẦN BAO NHIÊU LẦN để về bờ: rơi 50% thì phải tăng 100% mới hoà vốn. Đây mới là con
      số người cầm hàng cần, chứ "-50%" nghe nhẹ hơn thực tế rất nhiều. */
   const lai=d=>(100/(100+d)-1)*100;
+  const nut=(k,t)=>'<button class="srtb'+(vbSort.k===k?' on':'')+'" data-vbs="'+k+'"'
+    +' title="Xếp theo '+t+(vbSort.k===k?' — bấm lại để lật chiều':'')+'">'+t
+    +(vbSort.k===k?'<i>'+(vbSort.d===(k==='roi'?1:-1)?'↓':'↑')+'</i>':'')+'</button>';
+  const hd='<div class="rw hd"><span></span><span>công ty</span><span>rơi khỏi đỉnh</span>'
+    +'<span></span><span>để về bờ</span><span>giá · đỉnh cũ</span><span>vốn hoá</span>'
+    +'<span>hôm nay</span></div>';
   const hang=c=>'<div class="rw" data-sym="'+c.sym+'" title="Bấm mở trang '+c.sym+'">'+logoHTML(c)
     +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
     +'<span class="vbd">'+c.dath.toFixed(0)+'%</span>'
@@ -1320,11 +1333,13 @@ function veBoPanel(){
        đúng cái bẫy đã dính ở giá mục tiêu bên Chủ điểm đầu tư */
     +'<span class="vbp">'+Math.round(c.close).toLocaleString('en-US')
       +'<u>đỉnh '+Math.round(c.athP||0).toLocaleString('en-US')+'</u></span>'
+    +'<span class="vbm">'+ty(c.mcapLive||c.mcap||0)+'</span>'
     +'<span class="vbv '+cls(c.chg)+'">'+pct(c.chg)+'</span></div>';
   return '<div class="panel"><div class="ph">Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh'
+    +'<span class="tdsrt">xếp theo'+nut('roi','mức rơi')+nut('von','vốn hoá')+'</span>'
     +'<span class="cnt">'+ds.length+' mã</span></div>'
     +'<div class="pb" style="padding:8px 14px" id="vbPanel">'
-    +ds.slice(0,vbTop).map(hang).join('')+'</div></div>'
+    +hd+ds.slice(0,vbTop).map(hang).join('')+'</div></div>'
     +(ds.length>vbTop?'<div class="note" style="text-align:center"><button class="pickbtn" id="vbThem" '
       +'style="margin:0">Xem thêm '+Math.min(100,ds.length-vbTop)+' mã</button></div>':'')
     +'<div class="note"><b>Đỉnh ở đây là đỉnh của CẢ CHUỖI giá trong kho</b> (từ 2020), không phải '

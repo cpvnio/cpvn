@@ -409,9 +409,15 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .panel>.ph .srtb.on{color:var(--rose);border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.09)}
 .panel>.ph .srtb i{font-style:normal;font-weight:900;margin-left:4px}
 /* ---------- VỀ BỜ ---------- */
-#vbPanel .rw{display:grid;grid-template-columns:28px minmax(120px,1fr) 62px 110px 96px 128px 74px;
-  gap:11px;align-items:center;padding:7px 6px;border-bottom:1px solid var(--line);
+#vbPanel .rw{display:grid;grid-template-columns:28px minmax(110px,1fr) 62px 96px 92px 122px 104px 70px;
+  gap:10px;align-items:center;padding:7px 6px;border-bottom:1px solid var(--line);
   cursor:pointer;font-size:13px}
+/* hàng NHÃN CỘT mang đúng class của từng cột, bằng không nhãn canh trái mà số canh phải */
+#vbPanel .rw.hd{cursor:default;padding:2px 6px 6px;border-bottom:1px solid var(--line2)}
+#vbPanel .rw.hd:hover{background:none}
+#vbPanel .rw.hd>span{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);opacity:.75;white-space:nowrap}
+#vbPanel .rw.hd>span:nth-child(3),#vbPanel .rw.hd>span:nth-child(n+5){text-align:right}
 #vbPanel .rw:hover{background:var(--card2)}
 #vbPanel .rw:last-child{border-bottom:0}
 .vbd{text-align:right;font-weight:800;font-size:14px;color:var(--red)}
@@ -420,11 +426,13 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .vbl,.vbp{text-align:right;font-size:12.5px;font-weight:700;white-space:nowrap}
 .vbl u,.vbp u{display:block;text-decoration:none;font-size:9.5px;font-weight:700;color:var(--faint)}
 .vbl{color:var(--gold)}
+.vbm{text-align:right;font-size:12.5px;color:var(--mut);white-space:nowrap;font-weight:600}
 .vbv{text-align:right;font-weight:800;font-size:13px}
 @media(max-width:640px){
   /* màn hẹp bỏ thanh và giá — giữ MÃ · mức rơi · số lần phải tăng để về bờ */
-  #vbPanel .rw{grid-template-columns:22px minmax(64px,1fr) 56px 84px;gap:8px;padding:6px 2px}
+  #vbPanel .rw{grid-template-columns:22px minmax(58px,1fr) 54px 78px 84px;gap:7px;padding:6px 2px}
   #vbPanel .vbb,#vbPanel .vbp,#vbPanel .vbv{display:none}
+  #vbPanel .rw.hd>span:nth-child(3),#vbPanel .rw.hd>span:nth-child(n+5){text-align:right}
   #vbPanel .rw .lgw,#vbPanel .rw .noimg{width:22px;height:22px}
 }
 .tdcon .rw.hd{cursor:default;padding-bottom:3px}
@@ -690,6 +698,6 @@ document.addEventListener('click',function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260811v"></script>
+<script src="assets/congcu.js?v=20260811x"></script>
 </body>
 </html>
