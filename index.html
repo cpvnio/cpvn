@@ -114,6 +114,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     cursor:pointer;user-select:none;white-space:nowrap;z-index:5}
   thead th:hover{color:var(--txt)}
   thead th.sorted{color:#ffd60a}
+  thead th.sorted::after{content:"";display:inline-block;margin-left:5px;
+    vertical-align:middle;border-left:3.5px solid transparent;border-right:3.5px solid transparent}
+  thead th.sorted[data-dir="d"]::after{border-top:4.5px solid currentColor}
+  thead th.sorted[data-dir="u"]::after{border-bottom:4.5px solid currentColor}
   /* MỌI con số giá trị ĐẬM ĐỀU NHAU (trước lẫn lộn 400/600/700/800 giữa các cột nên
      nhìn cột nào cũng "nặng nhẹ" khác nhau, mất cảm giác giá trị doanh nghiệp) */
   tbody td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--rowline);
@@ -476,107 +480,67 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     BẢNG GIÁ TRÊN ĐIỆN THOẠI — mẫu A "Bảng điện" (user chốt 11/08/2026)
-     Bản cũ là bảng rộng 1120px CUỘN NGANG với ba cột ghim: muốn xem GTGD phải
-     vuốt sang, xem xong vuốt về thì mất chỗ đang đọc. Nay bảng vừa đúng bề
-     ngang màn, chỉ còn ba khối: DANH TÍNH · GIÁ+GTGD · 1D%.
+     BẢNG GIÁ TRÊN ĐIỆN THOẠI — CUỘN NGANG, CHỮ NHỎ (user chốt 11/08/2026)
 
-     Không dựng lại HTML: vẫn nguyên 13 <td> như máy bàn, chỉ biến <tr> thành
-     LƯỚI rồi xếp lại chỗ. Nhờ vậy toàn bộ mạch sort / lọc / sao theo dõi /
-     phân trang / cập nhật giá sống giữ nguyên, không phải viết bản mobile riêng
-     rồi hai bản trôi dạt khỏi nhau.
+     Đã thử gập còn ba cột cho vừa bề ngang màn. Gọn, nhưng mất hẳn tám cột —
+     vốn hoá, P/E, EPS, tiền mặt, LNST, khối ngoại — mà đó lại là mấy con số
+     người ta mở bảng giá ra để soi. Nay quay về BẢNG ĐẦY ĐỦ CUỘN NGANG, đổi lại
+     thu nhỏ cả chữ lẫn SỐ một bậc để một khung nhìn ôm được nhiều cột hơn và
+     nhiều hàng hơn.
+
+     Hai cột ghim bên trái (sao + mã) đứng yên khi vuốt, nên vuốt sang xem P/E
+     vẫn biết đang đọc của mã nào. Cột "#" bỏ đi ở khổ này: nó chỉ là số thứ tự,
+     mà 19px đó để dành cho ô ghim mã thì đáng hơn.
+
+     Sắp xếp: BẤM THẲNG TÊN CỘT, bấm lại lật chiều — không còn ô "Sắp theo" riêng.
      ══════════════════════════════════════════════════════════════════════════ */
   @media(max-width:760px){
-    #wrap{overflow-x:visible;padding:0 0 8px}
-    table{min-width:0;width:100%;font-size:14px;table-layout:auto}
-    colgroup{display:none}
+    #wrap{overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
+    /* THANG CHỮ nhỏ hơn một bậc so với máy bàn, SỐ cũng nhỏ theo cho cân — số to
+       hơn chữ một bậc thì bảng trông như hai cỡ font đánh nhau. */
+    table{min-width:980px;font-size:13px}
+    #tb td{padding:7px 8px;line-height:1.25}
+    thead th{padding:7px 8px;font-size:10.5px;letter-spacing:.03em}
+    thead th .n{font-size:10.5px}
+    #tb td .n{font-size:13px}
+    #tb td .u{font-size:10.5px}
+    #tb td:nth-child(4){font-size:13.5px}          /* giá: nhỉnh hơn chút */
+    #tb .badge{font-size:12.5px;padding:2px 6px}
 
-    thead tr,#tb tr{
-      display:grid;
-      grid-template-columns:18px minmax(0,1fr) 86px 62px;
-      column-gap:8px;align-items:center;
-      padding:0 12px;border:0}
-    #tb tr{min-height:58px;box-shadow:inset 0 -1px 0 var(--mrule)}
-    #tb tr:active{background:var(--rowhover)}
-    thead tr{padding-top:7px;padding-bottom:7px;background:var(--thead);
-      box-shadow:inset 0 -1px 0 var(--line)}
+    /* Bỏ cột số thứ tự ở khổ hẹp */
+    thead th:nth-child(1),#tb td:nth-child(1){display:none}
 
-    /* Tám cột kia không mất chức năng — chúng vẫn sắp xếp được qua ô "Sắp xếp"
-       ngay trên bảng, chỉ là không chiếm chỗ trên màn 375px nữa. */
-    thead th:nth-child(1),#tb td:nth-child(1),
-    thead th:nth-child(5),#tb td:nth-child(5),
-    thead th:nth-child(8),#tb td:nth-child(8),
-    thead th:nth-child(9),#tb td:nth-child(9),
-    thead th:nth-child(10),#tb td:nth-child(10),
-    thead th:nth-child(11),#tb td:nth-child(11),
-    thead th:nth-child(12),#tb td:nth-child(12),
-    thead th:nth-child(13),#tb td:nth-child(13){display:none}
+    /* HAI CỘT GHIM: sao + mã. Bản cũ ghim ba cột (kể cả "#") ăn 42px trước khi
+       tới tên mã; bỏ một cột là trả lại chừng ấy cho phần cuộn. */
+    th#thStar,td.star{width:26px;min-width:26px;max-width:26px;padding:7px 0;
+      font-size:14px;position:sticky;left:0;background:var(--sticky);z-index:6}
+    td.star.on{color:var(--yellow)}
+    /* 122px là mức cân được: đủ cho "Ngoại Thương", "Công Thương", "Kỹ Thương"
+       hiện trọn, mà khối ghim vẫn chỉ chiếm 39% bề ngang màn — rộng hơn nữa thì
+       phần cuộn không còn đủ chỗ để thấy hai cột số cùng lúc. */
+    th:nth-child(3),td:nth-child(3){width:122px;min-width:122px;max-width:122px;
+      padding-left:4px;padding-right:6px;position:sticky;left:26px;
+      background:var(--sticky);z-index:6}
+    /* Vệt đổ bóng ở mép phải khối ghim — không có nó thì lúc cuộn, cột số trôi
+       vào dưới cột mã mà mắt không nhận ra đâu là ranh giới. */
+    th:nth-child(3)::after,td:nth-child(3)::after{content:"";position:absolute;
+      top:0;bottom:0;right:0;width:10px;transform:translateX(100%);pointer-events:none;
+      background:linear-gradient(90deg,rgba(0,0,0,.16),rgba(0,0,0,0))}
+    html[data-theme="light"] th:nth-child(3)::after,
+    html[data-theme="light"] td:nth-child(3)::after{
+      background:linear-gradient(90deg,rgba(15,23,42,.10),rgba(15,23,42,0))}
 
-    /* GIÁ và GTGD xếp CHỒNG trong cùng một cột, ở CẢ hàng tiêu đề lẫn hàng dữ
-       liệu — nhờ vậy hai nhãn vẫn bấm được để đổi thứ tự, không mất chức năng
-       nào so với bản cuộn ngang. */
-    thead th:nth-child(2),#tb td:nth-child(2){grid-area:1/1/3/2;position:static}
-    thead th:nth-child(3),#tb td:nth-child(3){grid-area:1/2/3/3;position:static;
-      width:auto;min-width:0;max-width:none;padding:0}
-    /* Ô dữ liệu vẫn xếp CHỒNG giá trên GTGD dưới, nhưng NHÃN thì gộp làm một
-       dòng "Giá · GTGD" (xem nhanCotMobi) — hai nhãn chồng nhau làm hàng tiêu đề
-       cao gấp đôi mà không nói thêm được gì. */
-    #tb td:nth-child(4){grid-area:1/3/2/4}
-    #tb td:nth-child(7){grid-area:2/3/3/4}
-    thead th:nth-child(4){grid-area:1/3/3/4}
-    thead th:nth-child(7){display:none}
-    thead th:nth-child(6),#tb td:nth-child(6){grid-area:1/4/3/5}
-
-    /* Mấy rule ghim cột của bản cũ dùng th:nth-child(n) — hạng đặc hiệu (0,1,1)
-       cao hơn "thead th" (0,0,2) nên nền xám dính lại thành ba cái hộp lệch nhau
-       ở hàng tiêu đề. Thêm #wrap để vượt qua, khỏi phải rải !important. */
-    #wrap thead th{padding:0;font-size:11px;letter-spacing:.04em;white-space:nowrap;
-      line-height:1.5;background:transparent;border:0;text-align:right}
-    #wrap thead th:nth-child(2){text-align:left}
-    #wrap thead th:nth-child(3){text-align:left;padding-left:0}
-    thead th .n{font-size:11px}
-    thead th.sorted{color:var(--accent)}
-    #tb td{padding:0;border:0;background:transparent}
-
-    /* danh tính: logo + mã, tên công ty xuống dòng dưới.
+    /* danh tính: mã trên, tên công ty gọn ở dưới.
        CHUỖI min-width:0 phải liền mạch từ ô xuống tới thẻ chữ — thiếu một mắt là
-       tên dài không chịu cắt, nó đẩy phình cả lưới và đè lên cột GTGD (đo được
-       tài liệu rộng 534px trên màn 375px). */
+       tên dài không chịu cắt, nó đẩy phình cả cột ghim. */
     #tb td:nth-child(3),#tb td:nth-child(3) .co,#tb td:nth-child(3) .co>div{min-width:0}
-    #tb td:nth-child(3) .co{gap:9px;align-items:center}
-    #tb .co img,#tb .co .noimg{width:28px;height:28px;border-radius:9px}
-    #tb .co .sym{font-size:15.5px;font-weight:800;letter-spacing:.2px;line-height:1.2}
-    #tb .co .ex{display:none}
-    #tb .co .nm{display:block;font-size:12px;color:var(--muted);line-height:1.25;
-      margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    /* GIÁ to và mang màu hướng; GTGD nhỏ, xám, ngay dưới */
-    #tb td:nth-child(4){text-align:right;font-size:15.5px;font-weight:700;line-height:1.2}
-    #tb td:nth-child(7){text-align:right;font-size:12.5px;color:var(--muted);line-height:1.25}
-    #tb td:nth-child(7) .u{font-size:11px}
-
-    /* Chip % ôm sát con số chứ không kéo hết bề ngang cột — kéo hết thì nó thành
-       một mảng màu, mà cả bảng toàn mảng màu thì hết chỗ nào là điểm nhấn. */
-    #tb td:nth-child(6){text-align:right}
-    #tb td:nth-child(6) .badge{display:inline-block;min-width:60px;text-align:right;
-      padding:4px 6px;border-radius:6px;font-size:14px;font-weight:800}
-
-    #tb td.star{font-size:15px;width:auto;min-width:0;padding:0;text-align:left;
-      color:var(--muted)}
-    #tb td.star.on{color:var(--yellow)}
-
-    /* Ô SẮP XẾP: tám cột ẩn đi thì phải có đường khác chạm tới, bằng không mobile
-       mất hẳn "xếp theo vốn hoá / P/E / EPS…" mà không ai biết là đã mất. */
-    #mSortRow{display:flex;gap:8px;align-items:center;padding:8px 12px;
-      background:var(--hdr2);box-shadow:inset 0 -1px 0 var(--line)}
-    #mSortRow label{font-size:11px;font-weight:800;letter-spacing:.04em;
-      text-transform:uppercase;color:var(--muted);white-space:nowrap}
-    #mSort{flex:1;min-width:0;font-size:13.5px;padding:8px 9px}
-    #mDir{flex:0 0 auto;min-width:44px;height:36px;display:flex;align-items:center;
-      justify-content:center;background:var(--panel);color:var(--txt);
-      border:1px solid var(--line);border-radius:9px;font-size:13px;font-weight:800}
+    .co{gap:6px}
+    .co img,.co .noimg{width:24px;height:24px;border-radius:7px}
+    .co .sym{font-size:14px;font-weight:800;letter-spacing:.2px;line-height:1.2}
+    .co .ex{display:none}
+    #tb .co .nm{display:block;font-size:11px;color:var(--muted);line-height:1.2;
+      margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   }
-  @media(min-width:761px){ #mSortRow{display:none} }
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
@@ -657,11 +621,6 @@ document.addEventListener(MO,function(e){
 <div id="main">
 <aside id="sectorbar"><div class="sbhead">Ngành</div><div id="sectorList"></div></aside>
 <div id="tblcol">
-<div id="mSortRow">
-  <label for="mSort">Sắp theo</label>
-  <select id="mSort"></select>
-  <button id="mDir" title="Đảo chiều sắp xếp"></button>
-</div>
 <div id="wrap">
   <table>
     <thead>
@@ -747,6 +706,13 @@ const peLive=c=>{ const p=(c.eps>0&&c.price>0)?c.price/c.eps:(c.pe!=null?+c.pe:n
 const MCOLS=[4,6,7,8,11,12];         // 6 cột tiền (số + đơn vị) — NN mua/bán nay đứng cuối
 const PCOLS=[3,9,10];               // cột số KHÔNG có đơn vị (Giá, P/E, EPS)
 const NCOLS=[3,4,5,6,7,8,9,10,11,12];  // toàn bộ cột số, dùng để chia đều khoảng cách
+/* Đo bằng documentElement.clientWidth, KHÔNG dùng innerWidth: khi trang đang tràn
+   ngang thì innerWidth phình theo phần tràn (đo được 414 trên màn 375) — mà bảng
+   giá ở khổ hẹp thì LUÔN tràn (cuộn ngang là cố ý), nên hỏi innerWidth là luôn
+   nhận nhầm thành khổ máy bàn. Khai TRƯỚC fitNumCols vì const không được hoisted:
+   để dưới là hàm gọi phải biến chưa khởi tạo, ném lỗi ngay ở lượt vẽ đầu. */
+const _hep=()=>document.documentElement.clientWidth<=760;
+
 function fitNumCols(){
   /* Màn hẹp không dùng bảng nữa mà dùng LƯỚI ba khối, bề rộng cột do
      grid-template-columns quyết định — nên phải XOÁ bảng CSS đã sinh ra chứ không
@@ -913,26 +879,8 @@ function tenNgan(n){
   return n;
 }
 
-/* Ô SẮP XẾP CỦA MOBILE — màn hẹp giấu 8 cột nên phải có đường khác chạm tới
-   chúng, bằng không người dùng mất hẳn "xếp theo vốn hoá / P/E / EPS…" mà không
-   hề biết là đã mất. Dùng CHUNG ST.sort/ST.dir với thao tác bấm tiêu đề cột. */
-const MSORT=[['gtgd','GTGD'],['mcap','Vốn hoá'],['chg1d','1D %'],['price','Giá'],
-  ['sym','Mã cổ phiếu'],['pe','P/E'],['eps','EPS'],['cash','Tiền mặt'],['np','LNST'],
-  ['nnb','NN mua'],['nns','NN bán']];
-function syncMSort(){
-  const s=$('mSort'), d=$('mDir'); if(!s) return;
-  if(!s.options.length) s.innerHTML=MSORT.map(([k,t])=>`<option value="${k}">${t}</option>`).join('');
-  s.value=MSORT.some(m=>m[0]===ST.sort)?ST.sort:'gtgd';
-  d.innerHTML=`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-    stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${
-    ST.dir<0?'<path d="M12 5v13M6 12l6 6 6-6"/>':'<path d="M12 19V6M6 12l6-6 6 6"/>'}</svg>`;
-  d.title=ST.dir<0?'Đang xếp từ cao xuống thấp':'Đang xếp từ thấp lên cao';
-}
-
 function render(){
-  syncMSort();
   filterRows();
-  nhanCotMobi();
   if(ST.bd) ST.rows=ST.rows.slice(0,100);     // lọc theo màu: 100 mã lớn nhất là đủ xem
   const total=ST.rows.length, pages=Math.max(1,Math.ceil(total/ST.PER));
   if(ST.page>pages) ST.page=pages;
@@ -979,7 +927,15 @@ function render(){
     td.classList.toggle('on',on); td.textContent=on?'★':'☆';
     if(ST.scope==='watch') render();
   });
-  document.querySelectorAll('thead th').forEach(th=>th.classList.toggle('sorted',th.dataset.k===ST.sort));
+  document.querySelectorAll('thead th').forEach(th=>{
+    const on=th.dataset.k===ST.sort;
+    th.classList.toggle('sorted',on);
+    /* Tam giác chỉ chiều vẽ bằng VIỀN CSS chứ không dùng ký tự ▲▼: ký tự lấy nét
+       theo font hệ thống nên mỗi máy một kiểu, có máy còn không có glyph.
+       Cần thiết hẳn từ khi bỏ ô "Sắp theo" — giờ đây là dấu hiệu DUY NHẤT cho
+       biết bảng đang xếp theo cột nào, chiều nào. */
+    if(on) th.dataset.dir=ST.dir<0?'d':'u'; else th.removeAttribute('data-dir');
+  });
   fitNumCols();
   renderPager(pages);
 }
@@ -1201,10 +1157,6 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
   if(ST.sort===k) ST.dir*=-1; else { ST.sort=k; ST.dir=(k==='sym')?1:-1; }
   ST.page=1; render();
 });
-$('mSort').onchange=e=>{ ST.sort=e.target.value; ST.dir=(ST.sort==='sym')?1:-1;
-  ST.page=1; render(); };
-$('mDir').onclick=()=>{ ST.dir*=-1; ST.page=1; render(); };
-
 /* Ô TÌM MÃ VÀ BỘ LỌC Ở NGUYÊN CHỖ CŨ — luật user chốt 11/08/2026.
    Đã thử dọn cả hai vào tấm trượt cho đầu trang còn một hàng: gọn thật, nhưng
    tìm một mã hoá ra phải mở bảng rồi mới gõ được, và bấm Lọc thì bật lên một tấm
@@ -1212,31 +1164,6 @@ $('mDir').onclick=()=>{ ST.dir*=-1; ST.page=1; render(); };
    đắt thêm một cú chạm thì gọn mấy cũng lỗ. Chỉ giữ lại phần bố cục: ô tìm nằm
    đầu hàng hai, ngay trên danh sách mã. */
 
-/* Nhãn cột trên màn hẹp: gộp "Giá (đ)" và "GTGD" thành MỘT dòng như bản demo —
-   hai dòng chồng nhau làm hàng tiêu đề cao gấp đôi mà chẳng nói thêm gì. Số mã
-   nhét luôn vào nhãn cột đầu vì ô đếm riêng (#cnt) đã ẩn ở khổ này. */
-function nhanCotMobi(){
-  const th4=document.querySelector('thead th[data-k="price"]');
-  const th3=document.querySelector('thead th[data-k="sym"]');
-  if(!th4||!th3) return;
-  const hep=_hep();
-  th4.innerHTML=hep?'Giá · GTGD':'<span class="n">Giá (đ)</span>';
-  const n=(ST.rows||[]).length;
-  th3.textContent=hep&&n?`Cổ phiếu · ${n.toLocaleString('en-US')} mã`:'Cổ phiếu';
-}
-/* Nghe CẢ resize chứ đừng chỉ nghe matchMedia: đo thật thì sự kiện 'change' của
-   matchMedia có lúc không tới (đổi khổ cửa sổ bằng công cụ, chia đôi màn hình…),
-   và khi nó không tới thì công cụ nằm lì trong tấm trượt còn đầu trang thì trống
-   trơn — máy bàn mất sạch ô tìm mã, chọn sàn, chọn ngành. */
-/* Đo bằng documentElement.clientWidth, KHÔNG dùng innerWidth: khi trang đang tràn
-   ngang thì innerWidth phình theo phần tràn (đo được 414 trên màn 375) — mà lúc bố
-   cục mobile chưa kịp áp thì trang tràn thật, thành ra hàm tự đọc sai khổ màn rồi
-   không bao giờ áp, kẹt luôn ở bố cục máy bàn. */
-const _hep=()=>document.documentElement.clientWidth<=760;
-function apMobi(){ nhanCotMobi(); }
-let _rzM=0;
-addEventListener('resize',()=>{ clearTimeout(_rzM); _rzM=setTimeout(apMobi,120); });
-apMobi();
 
 /* ---------- LỊCH CHỐT QUYỀN (data/cotuc.json) ----------
    Ngày hiện ra là ngày GIAO DỊCH KHÔNG HƯỞNG QUYỀN, không phải ngày tiền về — đó mới là
