@@ -28,14 +28,20 @@
   ];
   /* Mục con của nhóm Bảng giá — ba TRANG khác nhau nên không trang nào tự dựng
      được dải này, phải dựng ở đây một lần cho cả ba. */
-  /* Nhãn RÚT GỌN, không bê nguyên tên đầy đủ như menu máy bàn: ba chip ngắn thì
-     nằm trọn một hàng 375px, còn "Bản đồ bong bóng" + "Danh mục tập đoàn" là
-     phải cuộn ngang — mà cuộn để thấy mục thứ ba thì coi như mục đó bị giấu. */
-  var CON=[
-    ['bang','Bảng giá',  '/'],
-    ['bong','Bong bóng', '/bubbles'],
-    ['tap','Tập đoàn',   'congcu.html?m=tapdoan']
-  ];
+  /* MỤC CON KHÔNG CHIẾM CHỖ TRÊN ĐỈNH. Dải chip cố định dưới header ăn đứt 54px
+     của mọi màn hình, cả ngày chỉ để chờ người ta bấm một lần. Nay bấm vào mục
+     chính ở thanh đáy thì mục con mới bung lên — đúng chỗ ngón cái đang đặt,
+     và không tốn một pixel nào khi không dùng. */
+  var CON={
+    bang:[['bang','Bảng giá','/'],
+          ['bong','Bản đồ bong bóng','/bubbles'],
+          ['tap','Danh mục tập đoàn','congcu.html?m=tapdoan']],
+    radar:[['phien','Nhịp phiên','congcu.html?m=radar&t=phien'],
+           ['cd','Chủ điểm đầu tư','congcu.html?m=radar&t=cd'],
+           ['vb','Khi nào về bờ','congcu.html?m=radar&t=vb']],
+    dua:[['dua','Đường đua vốn hoá','congcu.html?m=race&t=dua'],
+         ['dca','Đầu tư bền vững','congcu.html?m=race&t=dca']]
+  };
 
   /* Đang đứng ở đâu: trang công cụ phải soi thêm ?m= vì ba module khác nhau cùng
      chạy trên một file. Trả về [mục chính, mục con]. */
@@ -56,27 +62,42 @@
     if(document.querySelector('.mobibar')) return;
     var o=dangO(), cur=o[0], con=o[1];
 
-    /* Dải mục con chỉ hiện khi đang Ở TRONG nhóm Bảng giá, và không hiện ở trang
-       một mã — ở đó người ta đang xem một cổ phiếu, không phải đang chọn cách
-       nhìn cả rổ. */
-    if(con){
-      var h=document.querySelector('header'), s=document.createElement('div');
-      s.className='mobisub';
-      s.innerHTML='<div class="mobisub-in">'+CON.map(function(m){
-        return '<a href="'+m[2]+'"'+(m[0]===con?' class="on"':'')+'>'+m[1]+'</a>';
-      }).join('')+'</div>';
-      if(h&&h.parentNode) h.parentNode.insertBefore(s,h.nextSibling);
-      else document.body.insertBefore(s,document.body.firstChild);
-    }
-
     var n=document.createElement('nav');
     n.className='mobibar';
     n.innerHTML=MUC.map(function(m){
-      return '<a href="'+m[2]+'"'+(m[0]===cur?' class="on"':'')+'>'+
+      return '<a href="'+m[2]+'" data-muc="'+m[0]+'"'+(m[0]===cur?' class="on"':'')+'>'+
         '<svg viewBox="0 0 24 24" aria-hidden="true">'+IC[m[0]]+'</svg>'+
         '<span>'+m[1]+'</span></a>';
     }).join('');
     document.body.appendChild(n);
+
+    var nen=document.createElement('div'); nen.className='mobinen';
+    var pop=document.createElement('div'); pop.className='mobipop';
+    document.body.appendChild(nen); document.body.appendChild(pop);
+
+    function dong(){ pop.classList.remove('on'); nen.classList.remove('on'); }
+    function mo(muc){
+      var ds=CON[muc]||[];
+      pop.innerHTML='<div class="mobipop-in"><div class="grab"></div>'+ds.map(function(m){
+        return '<a href="'+m[2]+'"'+((muc===cur&&m[0]===con)?' class="on"':'')+'>'+m[1]+
+          '<i></i></a>';
+      }).join('')+'</div>';
+      pop.classList.add('on'); nen.classList.add('on');
+    }
+    nen.addEventListener('click',dong);
+
+    /* Bấm mục chính = BUNG mục con, không đi thẳng. Chặn ở pointerdown chứ đừng
+       đợi click: cú chạm làm hiện nội dung đang ẩn hay bị trình duyệt nuốt mất
+       click (đã đo trên máy ảo Android khi làm menu thả xuống ở máy bàn). */
+    n.addEventListener('click',function(e){
+      var a=e.target.closest('a[data-muc]'); if(!a) return;
+      var muc=a.dataset.muc;
+      if(!CON[muc]) return;                 /* không có mục con thì đi luôn */
+      e.preventDefault(); e.stopPropagation();
+      if(pop.classList.contains('on')&&pop.dataset.muc===muc){ dong(); return; }
+      pop.dataset.muc=muc; mo(muc);
+    });
+    addEventListener('keydown',function(e){ if(e.key==='Escape') dong(); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',dung);
   else dung();

@@ -405,6 +405,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   /* Tên gọn CHỈ dành cho màn hẹp — máy bàn đã có cột riêng và tên đầy đủ ở title,
      để nó hiện thì chữ tràn đè lên cột Giá. */
   .co .nm{display:none}
+  .st .stgt{display:none}   /* dòng thanh khoản trong thẻ chỉ số: chỉ dành cho màn hẹp */
 
   /* ══════════════════════════════════════════════════════════════════════════
      ĐẦU TRANG MOBILE THEO MẪU A — dải chỉ số thành THẺ, hai nút thành viên nén
@@ -431,19 +432,34 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #stats .breadth{background:var(--panel);border:1px solid var(--line);
       border-radius:12px;padding:7px 10px;gap:4px}
 
-    /* HAI NÚT THẬT SỰ HAY DÙNG: Lọc và Cổ tức — hiện đủ chữ, viền mảnh, biểu
-       tượng một nét. Chụp ảnh và đổi đèn lùi về nút vuông chỉ có biểu tượng. */
+    #stats .stgt{display:block;font-size:11px;color:var(--muted);font-weight:600}
+
+    /* ĐẦU TRANG ĐÚNG MỘT HÀNG, y như bản demo đã chốt: tên trang + Lọc + Cổ tức.
+       Ô tìm mã, chọn sàn, chọn ngành, sắp theo, chụp ảnh, đổi đèn đều dọn vào
+       trong tấm trượt Bộ lọc (xem donVaoBoLoc()). Bản trước để chúng ở đầu trang
+       thành hai hàng — 152px chưa xem được mã nào, đúng cái bệnh của bản cũ mà
+       mẫu A sinh ra để chữa. */
     #divBtn span{display:inline;font-size:0}
     #divBtn span::after{content:"Cổ tức";font-size:12.5px}
-    #divBtn,#scrBtn{display:flex;align-items:center;gap:5px;height:36px;padding:0 10px;
+    #divBtn,#scrBtn{display:flex;align-items:center;gap:5px;height:36px;padding:0 11px;
       border-radius:8px;font-size:12.5px;font-weight:700;background:var(--panel2);
       border:1px solid var(--line);color:var(--txt)}
-    #scrBtn{background:rgba(225,29,72,.1);border-color:rgba(225,29,72,.45);color:var(--accent)}
+    #scrBtn .lb{font-size:0}
+    #scrBtn .lb::after{content:"Lọc";font-size:12.5px}
+    #scrBtn.on{background:rgba(225,29,72,.1);border-color:rgba(225,29,72,.45);color:var(--accent)}
     #divBtn .ic,#scrBtn .ic{width:15px;height:15px;flex:0 0 auto}
     #scrBtn .pro{display:none}
-    #shotBtn,#thm{width:36px;height:36px;padding:0;display:flex;align-items:center;
-      justify-content:center;border-radius:8px}
-    #shotBtn .ic,#thm .ic{width:16px;height:16px}
+    #scrBtn{order:2;margin-left:auto} #divBtn{order:3}
+
+    /* Cụm công cụ đã dọn vào tấm trượt */
+    #mTools{display:flex;flex-wrap:wrap;gap:8px;padding:2px 6px 10px}
+    #mTools>*{order:0}
+    #mTools input.search{flex:1 1 100%;font-size:14px;padding:10px 11px}
+    #mTools #secToggle{flex:1 1 46%;max-width:none;justify-content:center}
+    #mTools select{flex:1 1 46%;max-width:none}
+    #mTools #mSortRow{flex:1 1 100%;background:transparent;box-shadow:none;padding:0;gap:8px}
+    #mTools #shotBtn,#mTools #thm{flex:0 0 auto;width:44px;height:40px;display:flex;
+      align-items:center;justify-content:center;border-radius:9px}
 
     /* TẤM TRƯỢT phải nằm TRÊN thanh tab đáy (z-index 200) — bản trước để z-index 60
        nên mép dưới bảng cổ tức bị thanh tab che mất một khoảng, đọc hụt mấy dòng
@@ -505,8 +521,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     thead th:nth-child(2),#tb td:nth-child(2){grid-area:1/1/3/2;position:static}
     thead th:nth-child(3),#tb td:nth-child(3){grid-area:1/2/3/3;position:static;
       width:auto;min-width:0;max-width:none;padding:0}
-    thead th:nth-child(4),#tb td:nth-child(4){grid-area:1/3/2/4}
-    thead th:nth-child(7),#tb td:nth-child(7){grid-area:2/3/3/4}
+    /* Ô dữ liệu vẫn xếp CHỒNG giá trên GTGD dưới, nhưng NHÃN thì gộp làm một
+       dòng "Giá · GTGD" (xem nhanCotMobi) — hai nhãn chồng nhau làm hàng tiêu đề
+       cao gấp đôi mà không nói thêm được gì. */
+    #tb td:nth-child(4){grid-area:1/3/2/4}
+    #tb td:nth-child(7){grid-area:2/3/3/4}
+    thead th:nth-child(4){grid-area:1/3/3/4}
+    thead th:nth-child(7){display:none}
     thead th:nth-child(6),#tb td:nth-child(6){grid-area:1/4/3/5}
 
     /* Mấy rule ghim cột của bản cũ dùng th:nth-child(n) — hạng đặc hiệu (0,1,1)
@@ -609,7 +630,7 @@ document.addEventListener(MO,function(e){
   <button class="thmbtn" id="secToggle" title="Chọn nhóm ngành">☰ Ngành</button>
   <button class="thmbtn" id="shotBtn" title="Chụp ảnh bảng giá tại đúng vị trí đang xem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6.5" width="18" height="13.5" rx="2.5"/><circle cx="12" cy="13.2" r="3.8"/><path d="M8.5 6.5l1.4-2.5h4.2l1.4 2.5"/></svg></button>
   <button class="thmbtn" id="divBtn" title="Lịch chốt quyền: cổ tức tiền, cổ tức cổ phiếu, cổ phiếu thưởng, phát hành thêm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg><span>Lịch cổ tức</span></button>
-  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Bộ Lọc</span></button>
+  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="lb">Bộ Lọc</span></button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
@@ -735,7 +756,7 @@ function fitNumCols(){
      chỉ thoát sớm. Thoát sớm thôi thì mấy dòng `width:180px` đo hồi còn ở khổ máy
      bàn vẫn nằm nguyên trong <style id="numw">, ô 1D% bị ghim 114px trong rãnh
      66px và đâm lòi ra khỏi mép màn 36px. Xoay ngang rồi xoay dọc lại là dính. */
-  if(innerWidth<=760){ const st0=$('numw'); if(st0&&st0.textContent) st0.textContent=''; return; }
+  if(_hep()){ const st0=$('numw'); if(st0&&st0.textContent) st0.textContent=''; return; }
   const rows=[...document.querySelectorAll('#tb tr')];
   if(!rows.length) return;
   const rg=document.createRange();
@@ -914,6 +935,7 @@ function syncMSort(){
 function render(){
   syncMSort();
   filterRows();
+  nhanCotMobi();
   if(ST.bd) ST.rows=ST.rows.slice(0,100);     // lọc theo màu: 100 mã lớn nhất là đủ xem
   const total=ST.rows.length, pages=Math.max(1,Math.ceil(total/ST.PER));
   if(ST.page>pages) ST.page=pages;
@@ -982,9 +1004,15 @@ function renderPager(pages){
 /* hàng thống kê tổng quan + trạng thái kho */
 function renderStats(){
   const s=CP.marketStats();
-  const idx=(nm,val,chg)=>`<span class="st"><span class="nm">${nm}</span><span class="val">${val}</span>`+
-    (chg!=null?`<span style="color:${CP.pcCol(chg)};font-weight:700">${CP.pcTxt(chg)}</span>`:'')+`</span>`;
-  let html=(CP.indices||[]).map(d=>idx(d.name,d.value.toLocaleString('en-US',{maximumFractionDigits:2}),d.chg)).join('');
+  const idx=(nm,val,chg,gt)=>`<span class="st"><span class="nm">${nm}</span><span class="val">${val}</span>`+
+    (chg!=null?`<span style="color:${CP.pcCol(chg)};font-weight:700">${CP.pcTxt(chg)}</span>`:'')+
+    (gt?`<span class="stgt">${gt}</span>`:'')+`</span>`;
+  /* Thanh khoản của CHÍNH chỉ số đó, in ngay trong thẻ — màn hẹp không còn chỗ cho
+     mấy mục "Thanh khoản HOSE" đứng riêng, mà bỏ hẳn thì mất một con số hay dùng.
+     Máy bàn giấu dòng này đi vì đã có mục riêng, khỏi lặp hai lần. */
+  const tyGt=v=>v?Math.round(v/1e9).toLocaleString('en-US')+' tỷ':'';
+  let html=(CP.indices||[]).map(d=>idx(d.name,d.value.toLocaleString('en-US',{maximumFractionDigits:2}),
+    d.chg,tyGt(d.gtgd))).join('');
   html+='<span class="stsep"></span>';
   html+=idx('Vốn hoá TT',CP.fmtVnd(s.mcap),null);
   /* THANH KHOẢN dùng số CHÍNH THỨC cả sàn (VPS trả kèm chỉ số) chứ KHÔNG cộng gtgd từng
@@ -1179,6 +1207,59 @@ document.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
 $('mSort').onchange=e=>{ ST.sort=e.target.value; ST.dir=(ST.sort==='sym')?1:-1;
   ST.page=1; render(); };
 $('mDir').onclick=()=>{ ST.dir*=-1; ST.page=1; render(); };
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MÀN HẸP: DỌN CÔNG CỤ VÀO TẤM TRƯỢT BỘ LỌC
+   Đầu trang phải còn ĐÚNG MỘT HÀNG (tên trang + Lọc + Cổ tức) như bản demo đã
+   chốt. Ô tìm mã, chọn sàn, chọn ngành, sắp theo, chụp ảnh, đổi đèn đều là thứ
+   thỉnh thoảng mới đụng — để chúng nằm thường trực ở đầu trang là ăn mất 152px,
+   chưa xem được mã nào đã hết nửa màn, đúng cái bệnh mà mẫu A sinh ra để chữa.
+
+   DI CHUYỂN NÚT CHỨ KHÔNG DỰNG BẢN SAO: nút gốc đã gắn sẵn sự kiện, chép ra bản
+   thứ hai là phải nhớ gắn lại từng cái, và hai bản sẽ lệch nhau ngay lần sửa sau.
+   Nút đi đâu thì mạch xử lý đi theo đó. */
+const MTOOLS=['q','secToggle','floor','mSortRow','shotBtn','thm'];
+let _mNeo=null;
+function donVaoBoLoc(){
+  const sp=$('scrPanel'); if(!sp||$('mTools')) return;
+  _mNeo=MTOOLS.map(id=>{ const el=$(id); return el?[el,el.parentNode,el.nextSibling]:null; });
+  const box=document.createElement('div'); box.id='mTools';
+  for(const id of MTOOLS){ const el=$(id); if(el) box.appendChild(el); }
+  sp.insertBefore(box,sp.firstChild);
+}
+function traVeDauTrang(){
+  const box=$('mTools'); if(!box||!_mNeo) return;
+  for(const g of _mNeo){ if(g&&g[1]) g[1].insertBefore(g[0],g[2]); }
+  box.remove();
+}
+/* Nhãn cột trên màn hẹp: gộp "Giá (đ)" và "GTGD" thành MỘT dòng như bản demo —
+   hai dòng chồng nhau làm hàng tiêu đề cao gấp đôi mà chẳng nói thêm gì. Số mã
+   nhét luôn vào nhãn cột đầu vì ô đếm riêng (#cnt) đã ẩn ở khổ này. */
+function nhanCotMobi(){
+  const th4=document.querySelector('thead th[data-k="price"]');
+  const th3=document.querySelector('thead th[data-k="sym"]');
+  if(!th4||!th3) return;
+  const hep=_hep();
+  th4.innerHTML=hep?'Giá · GTGD':'<span class="n">Giá (đ)</span>';
+  const n=(ST.rows||[]).length;
+  th3.textContent=hep&&n?`Cổ phiếu · ${n.toLocaleString('en-US')} mã`:'Cổ phiếu';
+}
+/* Nghe CẢ resize chứ đừng chỉ nghe matchMedia: đo thật thì sự kiện 'change' của
+   matchMedia có lúc không tới (đổi khổ cửa sổ bằng công cụ, chia đôi màn hình…),
+   và khi nó không tới thì công cụ nằm lì trong tấm trượt còn đầu trang thì trống
+   trơn — máy bàn mất sạch ô tìm mã, chọn sàn, chọn ngành. */
+/* Đo bằng documentElement.clientWidth, KHÔNG dùng innerWidth: khi trang đang tràn
+   ngang thì innerWidth phình theo phần tràn (đo được 414 trên màn 375) — mà lúc bố
+   cục mobile chưa kịp áp thì trang tràn thật, thành ra hàm tự đọc sai khổ màn rồi
+   không bao giờ áp, kẹt luôn ở bố cục máy bàn. */
+const _hep=()=>document.documentElement.clientWidth<=760;
+function apMobi(){
+  _hep()?donVaoBoLoc():traVeDauTrang();
+  nhanCotMobi();
+}
+let _rzM=0;
+addEventListener('resize',()=>{ clearTimeout(_rzM); _rzM=setTimeout(apMobi,120); });
+apMobi();
 
 /* ---------- LỊCH CHỐT QUYỀN (data/cotuc.json) ----------
    Ngày hiện ra là ngày GIAO DỊCH KHÔNG HƯỞNG QUYỀN, không phải ngày tiền về — đó mới là
