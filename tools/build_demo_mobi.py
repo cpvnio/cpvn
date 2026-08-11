@@ -178,6 +178,11 @@ for q in quy:
     q['cu'] = (q.get('ky') or '') < '2025-01-01'
 quy.sort(key=lambda q: (q['cu'], -(q['tong'] or 0)))
 
+# chuỗi THẬT để vẽ sparkline — kho không có lịch sử VNINDEX dài nên chỉ nhận đúng
+# 7 phiên đang có; tâm lý thị trường thì giữ 250 phiên nên cắt lấy 120.
+idx7 = [dict(d=r['date'], v=r['VNINDEX']) for r in J('data/idx.json')]
+mood120 = [x for x in (mkt['breadth'].get('mood') or [])[-120:] if x is not None]
+
 br = mkt['breadth']
 last = lambda k: (br.get(k) or [None])[-1]
 out = dict(
@@ -185,6 +190,7 @@ out = dict(
     idx=[dict(n=d['name'], v=d['value'], chg=d['chg'], gt=round(d['gtgd'] / 1e9)) for d in eod['indices']],
     board=board, bigs=bigs, spark=sk, tang=tang, giam=giam,
     td=tds, ct=sk_ct, cd=cdx, vb=vb, race=race, cp=CPS, quy=quy,
+    idx7=idx7, mood120=mood120,
     fg=mkt['global'], mood=last('mood'), ud=last('ud'), c50=last('c50'), c200=last('c200'),
     nh=last('nh'), nl=last('nl'), nn=last('nn'),
     secs=sorted({v['sec'] for v in U.values()}),

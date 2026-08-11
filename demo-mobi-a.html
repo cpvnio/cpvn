@@ -33,8 +33,15 @@
   --f6:22px;   /* tiêu đề màn */
   --f7:30px;   /* giá lớn trang cổ phiếu */
   --w-norm:450; --w-med:600; --w-bold:700; --w-black:800;
-  --r:12px; --r-lg:16px;
+
+  /* THANG CÁCH 4px. Mọi padding/gap/margin đều là bội của 4 — mắt không đọc ra
+     con số, nhưng đọc ra được sự KHÔNG đều: 9px cạnh 11px cạnh 13px thì từng chỗ
+     đều "gần đúng" mà cả trang thì lệch nhịp. */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  /* THANG BO GÓC 4 bậc, gắn với cỡ vật: chip nhỏ 8 · ô 12 · thẻ 16 · tấm trượt 20 */
+  --r1:8px; --r2:12px; --r3:16px; --r4:20px;
   --tap:44px;  /* cạnh nhỏ nhất của mọi thứ bấm được */
+  --ms:120ms;  /* mọi phản hồi khi nhấn dùng chung một nhịp */
 }
 
 /* ---------------- MÀU ------------------------------------------------------
@@ -42,21 +49,34 @@
    màu nào khác, gần như ở mọi nước và cả hai giới — nên lấy làm màu thương hiệu
    / màu đang-chọn. Nhưng MÀU GIÁ thì không được đụng: xanh lá tăng, đỏ giảm,
    tím trần, xanh lơ sàn, vàng tham chiếu — dân sàn VN đọc theo phản xạ. */
+/* HAI SẮC ĐỘ ĐƯỜNG KẺ, đừng dùng chung một màu cho tất cả: `--line` là đường có
+   NHIỆM VỤ CHIA KHỐI (đáy header, viền thẻ), `--rule` là vạch giữa các hàng trong
+   cùng một khối — phải nhạt hơn hẳn, bằng không bảng 60 hàng trông như lưới kẻ ô.
+   `--mut2` đã nâng cho đạt tương phản 4.5:1 (bản cũ 4.37 ở nền tối, 3.28 ở nền
+   sáng — chữ phụ mờ đúng kiểu "nhìn thì thấy, đọc thì mỏi"). */
 .dark{
-  --bg:#1b2130; --bg2:#161b28; --pan:#232b3d; --pan2:#2b3448; --line:#37415a;
-  --txt:#e9edf6; --mut:#98a4bc; --mut2:#78849c;
+  --bg:#1b2130; --bg2:#161b28; --pan:#232b3d; --pan2:#2b3448;
+  --line:#39435c; --rule:rgba(255,255,255,.07);
+  --txt:#e9edf6; --mut:#98a4bc; --mut2:#838fa6;
   --acc:#5b93ff; --acc-bg:rgba(91,147,255,.15); --acc-line:rgba(91,147,255,.45);
   --up:#22c98a; --dn:#f0505c; --ref:#eab308; --cei:#c084fc; --flo:#22d3ee;
-  --up-bg:rgba(34,201,138,.14); --dn-bg:rgba(240,80,92,.14);
+  --up-bg:rgba(34,201,138,.13); --dn-bg:rgba(240,80,92,.13);
+  --lgbg:#eef1f6; --lgring:rgba(255,255,255,.10);
   --sh:0 6px 20px rgba(0,0,0,.35);
+  --fade:linear-gradient(90deg,rgba(27,33,48,0),rgba(27,33,48,.96));
+  --skel:rgba(255,255,255,.055);
 }
 .light{
-  --bg:#f1f4f9; --bg2:#e7ecf4; --pan:#ffffff; --pan2:#f4f7fb; --line:#dde4ee;
-  --txt:#131a26; --mut:#5c6880; --mut2:#7d879b;
+  --bg:#f1f4f9; --bg2:#e7ecf4; --pan:#ffffff; --pan2:#f4f7fb;
+  --line:#dbe2ed; --rule:rgba(19,26,38,.075);
+  --txt:#131a26; --mut:#5c6880; --mut2:#626d7e;
   --acc:#2563eb; --acc-bg:rgba(37,99,235,.1); --acc-line:rgba(37,99,235,.4);
   --up:#0f9d58; --dn:#d92c3c; --ref:#c98a00; --cei:#9333ea; --flo:#0891b2;
-  --up-bg:rgba(15,157,88,.1); --dn-bg:rgba(217,44,60,.1);
+  --up-bg:rgba(15,157,88,.09); --dn-bg:rgba(217,44,60,.09);
+  --lgbg:#ffffff; --lgring:rgba(19,26,38,.09);
   --sh:0 6px 20px rgba(15,23,42,.09);
+  --fade:linear-gradient(90deg,rgba(241,244,249,0),rgba(241,244,249,.96));
+  --skel:rgba(19,26,38,.06);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -88,176 +108,242 @@ img{display:block}
   padding-bottom:16px}
 
 /* ---- ĐẦU TRANG: mảnh hết mức. Chỉ giữ thứ luôn cần: chỉ số + hai nút ---- */
-.top{background:var(--pan);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
-.tbar{display:flex;align-items:center;gap:9px;padding:9px 13px;height:52px}
+.top{background:var(--pan);box-shadow:0 1px 0 var(--line);position:sticky;top:0;z-index:20}
+.tbar{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);height:52px}
 .brand{font-size:15px;font-weight:var(--w-black);letter-spacing:.2px}
 .brand em{font-style:normal;color:var(--acc)}
 .tbar .sp{flex:1}
-.ico{width:var(--tap);height:36px;min-width:36px;display:flex;align-items:center;justify-content:center;
-  border-radius:10px;background:var(--pan2);border:1px solid var(--line);font-size:12.5px;
-  font-weight:var(--w-bold);gap:5px;padding:0 10px;width:auto}
+.ico{height:36px;min-width:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r1);background:var(--pan2);border:1px solid var(--line);font-size:12.5px;
+  font-weight:var(--w-bold);gap:var(--s1);padding:0 10px;
+  transition:background var(--ms),border-color var(--ms),transform var(--ms)}
+.ico:active{transform:scale(.96)}
 .ico.on{background:var(--acc-bg);border-color:var(--acc-line);color:var(--acc)}
+.ico svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 
-/* dải chỉ số: cuộn ngang, mỗi chip là một khối đọc trọn vẹn */
-.idxrow{display:flex;gap:7px;padding:8px 13px 9px;overflow-x:auto;scrollbar-width:none;
-  border-bottom:1px solid var(--line);background:var(--bg2)}
+/* Dải chỉ số cuộn ngang. Mép phải LUÔN có dải mờ để nói "còn nữa" — bản cũ cắt
+   phẳng giữa chữ, trông như lỗi tràn chứ không như một dải cuộn được. */
+.scrx{position:relative}
+.scrx::after{content:"";position:absolute;right:0;top:0;bottom:1px;width:26px;
+  background:var(--fade);pointer-events:none}
+.idxrow{display:flex;gap:var(--s2);padding:var(--s2) var(--s3);overflow-x:auto;scrollbar-width:none;
+  box-shadow:0 1px 0 var(--line);background:var(--bg2)}
 .idxrow::-webkit-scrollbar{display:none}
-.chipx{flex:0 0 auto;background:var(--pan);border:1px solid var(--line);border-radius:11px;
-  padding:6px 10px;min-width:104px}
+.chipx{flex:0 0 auto;background:var(--pan);border:1px solid var(--line);border-radius:var(--r2);
+  padding:var(--s2) 10px;min-width:112px}
 .chipx .k{font-size:var(--f1);font-weight:var(--w-black);color:var(--mut2);letter-spacing:.06em}
-.chipx .v{font-size:var(--f4);font-weight:var(--w-black);margin-top:1px;line-height:1.15}
-.chipx .c{font-size:var(--f2);font-weight:var(--w-bold)}
+.chipx .v{font-size:var(--f4);font-weight:var(--w-black);margin-top:2px;line-height:1.15}
+.chipx .c{font-size:var(--f2);font-weight:var(--w-bold);margin-top:1px}
+.chipx .g{font-size:var(--f1);font-weight:var(--w-med);color:var(--mut2);margin-top:2px}
 
 /* ---- THANH TAB ĐÁY: 5 mục, đúng vùng ngón cái với tới ---- */
-.tabbar{display:flex;background:var(--pan);border-top:1px solid var(--line);
+.tabbar{display:flex;background:var(--pan);box-shadow:0 -1px 0 var(--line);
   padding-bottom:env(safe-area-inset-bottom);z-index:30}
 .tabbar button{flex:1;min-height:54px;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:3px;color:var(--mut2);font-size:10.5px;font-weight:var(--w-bold);
-  position:relative;padding-top:3px}
-.tabbar button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;
+  justify-content:center;gap:var(--s1);color:var(--mut2);font-size:10.5px;font-weight:var(--w-bold);
+  position:relative;padding-top:3px;transition:color var(--ms)}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round}
 .tabbar button.on{color:var(--acc)}
-.tabbar button.on::before{content:"";position:absolute;top:0;left:26%;right:26%;height:2.5px;
-  background:var(--acc);border-radius:0 0 3px 3px}
+.tabbar button.on::before{content:"";position:absolute;top:0;left:26%;right:26%;height:2px;
+  background:var(--acc);border-radius:0 0 2px 2px}
 
 /* ---- thanh mục con: chỉ hiện ở tab nào thật sự có mục con ---- */
-.subs{display:flex;gap:6px;padding:9px 13px;overflow-x:auto;scrollbar-width:none;
-  border-bottom:1px solid var(--line);background:var(--bg)}
+.subs{display:flex;gap:var(--s2);padding:10px var(--s3);overflow-x:auto;scrollbar-width:none;
+  box-shadow:0 1px 0 var(--line);background:var(--bg)}
 .subs::-webkit-scrollbar{display:none}
-.subs button{flex:0 0 auto;height:32px;padding:0 13px;border-radius:16px;background:var(--pan);
-  border:1px solid var(--line);font-size:var(--f3);font-weight:var(--w-bold);color:var(--mut)}
+.subs button{flex:0 0 auto;height:34px;padding:0 var(--s3);border-radius:var(--r1);background:var(--pan);
+  border:1px solid var(--line);font-size:var(--f3);font-weight:var(--w-bold);color:var(--mut);
+  display:flex;align-items:center;gap:6px;transition:background var(--ms),color var(--ms),
+  border-color var(--ms),transform var(--ms)}
+.subs button:active{transform:scale(.97)}
+.subs button svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
 .subs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 
-/* ---- ĐẦU BẢNG + HÀNG MÃ: xương sống của mẫu này ------------------------- */
-.thead{display:grid;grid-template-columns:1fr 96px 72px;gap:8px;padding:8px 13px;
-  background:var(--bg2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;
-  font-size:var(--f1);font-weight:var(--w-black);letter-spacing:.06em;color:var(--mut2);
-  text-transform:uppercase}
+/* ---- ĐẦU BẢNG + HÀNG MÃ: xương sống của mẫu này -------------------------
+   ĐƠN VỊ NẰM Ở ĐẦU CỘT, KHÔNG LẶP TRONG TỪNG Ô. Bản cũ ghi "1.1N tỷ" cạnh
+   "938 tỷ" — vừa lặp chữ "tỷ" 60 lần một màn, vừa đổi bậc giữa chừng nên hai số
+   cùng cột không so thẳng được bằng mắt. Nay đầu cột ghi "GIÁ · GTGD (TỶ)" và ô
+   chỉ còn con số thuần. */
+.thead{display:grid;grid-template-columns:1fr 96px 72px;gap:var(--s2);padding:var(--s2) var(--s3);
+  background:var(--bg2);box-shadow:0 1px 0 var(--line);position:sticky;top:0;z-index:10;
+  font-size:var(--f1);font-weight:var(--w-black);letter-spacing:.04em;color:var(--mut2);
+  text-transform:uppercase;white-space:nowrap}
 .thead b{font-weight:var(--w-black);text-align:right;display:flex;align-items:center;
-  justify-content:flex-end;gap:3px}
+  justify-content:flex-end;gap:3px;transition:color var(--ms)}
 .thead b.act{color:var(--acc)}
-.row{display:grid;grid-template-columns:1fr 96px 72px;gap:8px;align-items:center;
-  padding:0 13px;min-height:56px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.thead b svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.4;
+  stroke-linecap:round;stroke-linejoin:round}
+.row{display:grid;grid-template-columns:1fr 96px 72px;gap:var(--s2);align-items:center;
+  padding:0 var(--s3);min-height:56px;box-shadow:inset 0 -1px 0 var(--rule);width:100%;text-align:left;
+  transition:background var(--ms)}
 .row:active{background:var(--pan2)}
-.co{display:flex;align-items:center;gap:9px;min-width:0}
+.co{display:flex;align-items:center;gap:10px;min-width:0}
 .co .s,.co .n,.px .p,.px .g{display:block}
-.lg{width:28px;height:28px;border-radius:8px;flex:0 0 auto;object-fit:contain;background:#fff;padding:1px}
-.lgi{width:28px;height:28px;border-radius:8px;flex:0 0 auto;display:flex;align-items:center;
-  justify-content:center;background:var(--pan2);color:var(--mut);font-size:10px;font-weight:var(--w-black)}
+/* Ô logo: cùng một khung cho ảnh và cho chữ tắt, thêm vòng viền mảnh. Không có
+   vòng này thì logo nền trắng nổi thành đốm sáng trên nền tối, cả cột trái lấm tấm. */
+.lg,.lgi{width:30px;height:30px;border-radius:9px;flex:0 0 auto;
+  box-shadow:inset 0 0 0 1px var(--lgring)}
+.lg{object-fit:contain;background:var(--lgbg);padding:2px}
+.lgi{display:flex;align-items:center;justify-content:center;background:var(--pan2);
+  color:var(--mut);font-size:10px;font-weight:var(--w-black);letter-spacing:-.2px}
 .co .id{min-width:0}
 .co .s{font-size:var(--f4);font-weight:var(--w-black);letter-spacing:.2px;line-height:1.2}
 .co .n{font-size:var(--f2);color:var(--mut2);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;max-width:150px;line-height:1.25;margin-top:1px}
+  text-overflow:ellipsis;max-width:150px;line-height:1.25;margin-top:2px}
 .px{text-align:right}
 .px .p{font-size:var(--f4);font-weight:var(--w-bold);line-height:1.2;white-space:nowrap}
-.px .g{font-size:var(--f2);color:var(--mut2);margin-top:1px;white-space:nowrap}
-.pc{text-align:right;font-size:var(--f3);font-weight:var(--w-black);border-radius:8px;
-  padding:5px 0}
+.px .g{font-size:var(--f2);color:var(--mut2);margin-top:2px;white-space:nowrap}
+/* Chip % ôm sát con số chứ không kéo hết bề ngang cột — kéo hết thì nó thành
+   một mảng màu, mà cả bảng toàn mảng màu thì không còn chỗ nào là điểm nhấn. */
+.pc{text-align:right;font-size:var(--f3);font-weight:var(--w-black)}
+.pc i{font-style:normal;display:inline-block;border-radius:6px;padding:4px 6px;
+  min-width:64px;text-align:right}
 .up{color:var(--up)}.dn{color:var(--dn)}.fl{color:var(--ref)}
-.pc.up{background:var(--up-bg)}.pc.dn{background:var(--dn-bg)}
-.pc.fl{background:rgba(234,179,8,.14)}
+.pc.up i{background:var(--up-bg)}.pc.dn i{background:var(--dn-bg)}
+.pc.fl i{background:rgba(234,179,8,.13)}
 
 /* ---- thẻ dùng chung ---- */
-.card{background:var(--pan);border:1px solid var(--line);border-radius:var(--r-lg);
-  margin:12px 13px;overflow:hidden}
-.card>.h{display:flex;align-items:center;gap:8px;padding:12px 13px 0}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:var(--r3);
+  margin:var(--s3);overflow:hidden}
+.card>.h{display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s3) 0}
 .card>.h .t{font-size:var(--f4);font-weight:var(--w-black)}
 .card>.h .s{font-size:var(--f2);color:var(--mut2);margin-left:auto}
-.card>.b{padding:11px 13px 13px}
+.card>.b{padding:var(--s3)}
 .lab{font-size:var(--f1);font-weight:var(--w-black);letter-spacing:.06em;color:var(--mut2);
   text-transform:uppercase}
 .big{font-size:var(--f6);font-weight:var(--w-black);line-height:1.15}
-.hint{padding:10px 15px 2px;font-size:var(--f2);color:var(--mut2);line-height:1.55}
-.h2{padding:14px 13px 6px;font-size:var(--f6);font-weight:var(--w-black);letter-spacing:-.2px}
+/* Ghi chú của bản demo — là lời tao nói với mày, không phải chữ của sản phẩm.
+   Nên tách hẳn ra bằng một vạch dọc thay vì trộn vào nội dung như trước. */
+.hint{margin:var(--s3) var(--s3) var(--s1);padding:2px 0 2px var(--s3);
+  border-left:2px solid var(--line);font-size:var(--f2);color:var(--mut2);line-height:1.6}
+.hint b{color:var(--mut)}
+.h2{padding:var(--s4) var(--s3) var(--s2);font-size:var(--f6);font-weight:var(--w-black);
+  letter-spacing:-.3px}
 .h2 span{display:block;font-size:var(--f2);font-weight:var(--w-med);color:var(--mut2);
-  letter-spacing:0;margin-top:2px}
+  letter-spacing:0;margin-top:var(--s1)}
 
 /* ---- lưới chỉ số 2 cột ---- */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
-.g2>div{background:var(--pan);padding:10px 12px}
+.g2>div{background:var(--pan);padding:10px var(--s3)}
 .g2 .k{font-size:var(--f1);font-weight:var(--w-black);color:var(--mut2);letter-spacing:.05em;
   text-transform:uppercase}
-.g2 .v{font-size:var(--f5);font-weight:var(--w-black);margin-top:2px}
+.g2 .v{font-size:var(--f5);font-weight:var(--w-black);margin-top:var(--s1);white-space:nowrap}
 
 /* ---- tấm trượt lên từ đáy (bộ lọc, lịch cổ tức) ------------------------- */
-.mask{position:absolute;inset:0;background:rgba(5,8,14,.6);z-index:40;opacity:0;
+.mask{position:absolute;inset:0;background:rgba(5,8,14,.62);z-index:40;opacity:0;
   pointer-events:none;transition:opacity .18s}
 .mask.on{opacity:1;pointer-events:auto}
 .sheet{position:absolute;left:0;right:0;bottom:0;z-index:41;background:var(--pan);
-  border-radius:20px 20px 0 0;border-top:1px solid var(--line);max-height:82%;
-  display:flex;flex-direction:column;transform:translateY(102%);transition:transform .22s cubic-bezier(.32,.72,0,1)}
+  border-radius:var(--r4) var(--r4) 0 0;box-shadow:0 -1px 0 var(--line);max-height:82%;
+  display:flex;flex-direction:column;transform:translateY(102%);
+  transition:transform .26s cubic-bezier(.32,.72,0,1)}
 .sheet.on{transform:none}
-.sheet .grab{width:38px;height:4px;border-radius:3px;background:var(--line);margin:9px auto 3px}
-.sheet .sh{display:flex;align-items:center;gap:8px;padding:6px 15px 11px;border-bottom:1px solid var(--line)}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:var(--s2) auto 0}
+.sheet .sh{display:flex;align-items:center;gap:var(--s2);padding:10px var(--s4) var(--s3);
+  box-shadow:0 1px 0 var(--line)}
 .sheet .sh .t{font-size:var(--f5);font-weight:var(--w-black)}
-.sheet .sh .x{margin-left:auto;width:32px;height:32px;border-radius:10px;background:var(--pan2);
-  display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mut)}
+.sheet .sh .x{margin-left:auto;width:32px;height:32px;border-radius:var(--r1);background:var(--pan2);
+  display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.sheet .sh .x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round}
 .sheet .sb{overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)}
 
 /* ---- chip lọc ---- */
-.chips{display:flex;flex-wrap:wrap;gap:7px;padding:11px 15px}
-.chips button{height:34px;padding:0 13px;border-radius:17px;background:var(--pan2);
-  border:1px solid var(--line);font-size:var(--f3);font-weight:var(--w-bold);color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s2);padding:var(--s3) var(--s4)}
+.chips button{height:34px;padding:0 var(--s3);border-radius:var(--r1);background:var(--pan2);
+  border:1px solid var(--line);font-size:var(--f3);font-weight:var(--w-bold);color:var(--mut);
+  transition:background var(--ms),color var(--ms),border-color var(--ms),transform var(--ms)}
+.chips button:active{transform:scale(.97)}
 .chips button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 
 /* ---- hàng cổ tức ---- */
-.ctr{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
-  padding:10px 15px;border-bottom:1px solid var(--line)}
-.ctr .d{font-size:var(--f2);color:var(--mut2);margin-top:2px}
+.ctr{display:grid;grid-template-columns:1fr auto;gap:var(--s3);align-items:center;
+  padding:10px var(--s4);box-shadow:inset 0 -1px 0 var(--rule)}
+.ctr .d{font-size:var(--f2);color:var(--mut2);margin-top:2px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:196px}
 .ctr .r{text-align:right}
 .ctr .r .v{font-size:var(--f4);font-weight:var(--w-black)}
 .ctr .r .k{font-size:var(--f1);font-weight:var(--w-bold);color:var(--mut2);text-transform:uppercase;
-  letter-spacing:.05em}
-.dday{padding:7px 15px;background:var(--bg2);font-size:var(--f2);font-weight:var(--w-black);
-  color:var(--mut);position:sticky;top:0;border-bottom:1px solid var(--line)}
+  letter-spacing:.05em;margin-top:2px}
+.dday{padding:var(--s2) var(--s4);background:var(--bg2);font-size:var(--f2);font-weight:var(--w-black);
+  color:var(--mut);position:sticky;top:0;box-shadow:inset 0 -1px 0 var(--line);
+  display:flex;align-items:baseline;gap:var(--s2)}
+.dday em{font-style:normal;font-weight:var(--w-med);color:var(--mut2);font-size:var(--f1);
+  letter-spacing:.04em;text-transform:uppercase;margin-left:auto}
 
 /* ---- tập đoàn ---- */
-.tdg{border-bottom:1px solid var(--line)}
-.tdh{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px 13px;width:100%;text-align:left}
+.tdg{box-shadow:inset 0 -1px 0 var(--rule)}
+.tdh{display:grid;grid-template-columns:1fr auto;gap:var(--s3);align-items:center;
+  padding:var(--s3);width:100%;text-align:left;transition:background var(--ms)}
+.tdh:active{background:var(--pan2)}
 .tdh .nm{font-size:var(--f4);font-weight:var(--w-black);line-height:1.25}
-.tdh .mt{font-size:var(--f2);color:var(--mut2);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
-.tag{font-size:10px;font-weight:var(--w-black);padding:2px 6px;border-radius:5px;letter-spacing:.03em;
-  background:var(--pan2);color:var(--mut);white-space:nowrap}
+.tdh .mt{font-size:var(--f2);color:var(--mut2);margin-top:6px;display:flex;gap:var(--s1);flex-wrap:wrap}
+.tdh .cv{color:var(--mut2);transition:transform var(--ms)}
+.tdh .cv svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.tdh.mo .cv{transform:rotate(90deg)}
+.tag{font-size:10px;font-weight:var(--w-black);padding:3px 6px;border-radius:5px;letter-spacing:.03em;
+  background:var(--pan2);color:var(--mut);white-space:nowrap;line-height:1.25}
 .tag.nn{background:rgba(91,147,255,.16);color:var(--acc)}
 .tag.cn{background:rgba(234,179,8,.16);color:var(--ref)}
-.tdb{background:var(--bg2);border-top:1px solid var(--line)}
-.tdr{display:grid;grid-template-columns:1fr 74px 66px;gap:8px;align-items:center;
-  padding:9px 13px 9px 26px;border-bottom:1px solid var(--line);position:relative;font-size:var(--f3)}
-.tdr::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1.5px;background:var(--line)}
-.tdr:last-child{border-bottom:0}
+.tdb{background:var(--bg2);box-shadow:inset 0 1px 0 var(--line)}
+.tdr{display:grid;grid-template-columns:1fr 92px 62px;gap:var(--s2);align-items:center;
+  padding:10px var(--s3) 10px 28px;box-shadow:inset 0 -1px 0 var(--rule);position:relative;
+  font-size:var(--f3)}
+.tdr::before{content:"";position:absolute;left:16px;top:0;bottom:0;width:1px;background:var(--line)}
+.tdr:last-child{box-shadow:none}
 .tdr .s{font-weight:var(--w-black);font-size:var(--f4)}
-.tdr .own{font-size:var(--f2);color:var(--mut2)}
+.tdr .own{font-size:var(--f2);color:var(--mut2);margin-top:1px}
 .tdr .n1,.tdr .n2{text-align:right;font-weight:var(--w-bold)}
 
 /* ---- Venn chủ điểm ---- */
 .venn{display:block;margin:0 auto;max-width:100%}
-.src{margin:10px 13px 0;padding:9px 12px;border-radius:10px;background:var(--acc-bg);
-  border:1px solid var(--acc-line);font-size:var(--f2);color:var(--txt);line-height:1.55}
+.src{margin:0 var(--s3) var(--s3);padding:10px var(--s3);border-radius:var(--r2);
+  background:var(--acc-bg);border:1px solid var(--acc-line);font-size:var(--f2);color:var(--txt);
+  line-height:1.6;display:flex;gap:var(--s2)}
+.src svg{width:15px;height:15px;stroke:var(--acc);fill:none;stroke-width:1.8;flex:0 0 auto;
+  margin-top:2px;stroke-linecap:round;stroke-linejoin:round}
 .src b{color:var(--acc)}
 
 /* ---- thanh ngang so sánh ---- */
-.bar{height:7px;border-radius:4px;background:var(--pan2);overflow:hidden;margin-top:6px}
-.bar i{display:block;height:100%;border-radius:4px;background:var(--acc)}
+.bar{height:6px;border-radius:3px;background:var(--pan2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--acc)}
 
 /* ---- trang cổ phiếu ---- */
-.cph{padding:13px 13px 11px;background:var(--pan);border-bottom:1px solid var(--line)}
-.cph .r1{display:flex;align-items:center;gap:10px}
-.cph .r1 .lg,.cph .r1 .lgi{width:38px;height:38px;border-radius:11px;font-size:12px}
-.cph .nm{font-size:var(--f2);color:var(--mut2);margin-top:2px}
-.cph .s{font-size:var(--f5);font-weight:var(--w-black);letter-spacing:.3px}
-.cph .pxb{display:flex;align-items:flex-end;gap:9px;margin-top:11px}
-.cph .pxb .p{font-size:var(--f7);font-weight:var(--w-black);letter-spacing:-.6px;line-height:1}
+.cph{padding:var(--s3);background:var(--pan);box-shadow:0 1px 0 var(--line)}
+.cph .r1{display:flex;align-items:center;gap:var(--s3)}
+.cph .r1 .lg,.cph .r1 .lgi{width:40px;height:40px;border-radius:var(--r2);font-size:12px}
+.cph .nm{font-size:var(--f2);color:var(--mut2);margin-top:3px}
+.cph .s{font-size:var(--f5);font-weight:var(--w-black);letter-spacing:.3px;
+  display:flex;align-items:center;gap:var(--s2)}
+.cph .pxb{display:flex;align-items:flex-end;gap:var(--s2);margin-top:var(--s3)}
+.cph .pxb .p{font-size:var(--f7);font-weight:var(--w-black);letter-spacing:-.8px;line-height:1}
 .cph .pxb .c{font-size:var(--f4);font-weight:var(--w-black);padding-bottom:3px}
-.mini{display:flex;gap:6px;padding:9px 13px;overflow-x:auto;scrollbar-width:none}
+.mini{display:flex;gap:var(--s1);padding:10px var(--s3);overflow-x:auto;scrollbar-width:none}
 .mini::-webkit-scrollbar{display:none}
-.mini button{flex:0 0 auto;height:30px;padding:0 12px;border-radius:8px;background:var(--pan2);
-  border:1px solid var(--line);font-size:var(--f2);font-weight:var(--w-bold);color:var(--mut)}
+.mini button{flex:0 0 auto;height:30px;padding:0 var(--s3);border-radius:var(--r1);
+  background:transparent;border:1px solid transparent;font-size:var(--f2);
+  font-weight:var(--w-bold);color:var(--mut2);transition:background var(--ms),color var(--ms)}
 .mini button.on{background:var(--acc-bg);border-color:var(--acc-line);color:var(--acc)}
-.fin{padding:2px 13px 13px}
-.finr{display:grid;grid-template-columns:52px 1fr 78px;gap:9px;align-items:center;
-  padding:7px 0;font-size:var(--f3)}
+.fin{padding:var(--s1) var(--s3) var(--s3)}
+.finr{display:grid;grid-template-columns:52px 1fr 78px;gap:var(--s3);align-items:center;
+  padding:var(--s2) 0;font-size:var(--f3)}
 .finr .y{color:var(--mut2);font-weight:var(--w-bold)}
 .finr .v{text-align:right;font-weight:var(--w-black)}
+
+/* ---- KHUNG XƯƠNG lúc đang tải -------------------------------------------
+   Chớp một màn trắng rồi đổ chữ vào là cảm giác trang giật. Vẽ sẵn đúng hình
+   dáng của bảng sắp hiện thì mắt đã bám vào bố cục trước khi số về. */
+@keyframes tho{0%,100%{opacity:.55}50%{opacity:1}}
+.sk{animation:tho 1.4s ease-in-out infinite}
+.sk i{display:block;background:var(--skel);border-radius:5px;height:11px}
+.skrow{display:grid;grid-template-columns:1fr 96px 72px;gap:var(--s2);align-items:center;
+  padding:0 var(--s3);min-height:56px;box-shadow:inset 0 -1px 0 var(--rule)}
+.skrow .c1{display:flex;align-items:center;gap:10px}
+.skrow .c1 u{width:30px;height:30px;border-radius:9px;background:var(--skel);flex:0 0 auto}
 
 /* ---- nút đổi mẫu / đổi đèn, nổi trên cùng ---- */
 /* Nút đổi mẫu A/B + đổi đèn — chỉ là đồ nghề của bản demo, không thuộc thiết kế.
@@ -301,13 +387,45 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const nf=(n,d=0)=>n==null?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const pc=x=>x==null?'—':(x>0?'+':'')+x.toFixed(2)+'%';
 const cls=x=>x==null?'':x>0.0001?'up':x<-0.0001?'dn':'fl';
-/* Vốn hoá tập đoàn chạm hàng TRIỆU tỷ (riêng VIC đã ~1,6 triệu tỷ). Cột hẹp thì rút
-   gọn N = nghìn tỷ, Tr = triệu tỷ; chỗ nào rộng thì viết chữ cho khỏi phải đoán. */
-const ty=v=>v==null?'—':Math.abs(v)>=1e6?nf(v/1e6,2)+'Tr':Math.abs(v)>=1000?nf(v/1000,1)+'N':nf(v);
+/* TRONG CỘT thì đơn vị đã nằm ở đầu cột nên chỉ in số thuần; ngoài cột (thẻ, nhãn,
+   câu chữ) mới viết đơn vị ra chữ. Bản cũ tự chế hậu tố "N"/"Tr" rồi rắc khắp nơi —
+   không ai ngoài mình hiểu, mà hai số cùng cột lại khác bậc nên không so được. */
 const tyD=v=>v==null?'—':Math.abs(v)>=1e6?nf(v/1e6,2)+' triệu tỷ'
   :Math.abs(v)>=1000?nf(v/1000,1)+' nghìn tỷ':nf(v)+' tỷ';
 const logo=s=>`<img class="lg" src="assets/logo/${s}.webp" loading="lazy" alt=""
   onerror="this.outerHTML='<span class=lgi>${s.slice(0,3)}</span>'">`;
+
+/* ---- BỘ ICON: một nét, lưới 24, nhận màu từ chữ ---------------------------
+   Emoji thì mỗi hệ điều hành vẽ một kiểu, luôn có màu riêng chửi nhau với bảng
+   màu, và đứng cạnh chữ thì lệch chân. Trong một sản phẩm tài chính nó là thứ
+   lộ ra ngay rằng giao diện được ghép vội. */
+const IC={
+ bang:'<path d="M3 5h18M3 10h18M3 15h11M3 20h7"/>',
+ bong:'<circle cx="8.5" cy="9.5" r="4.5"/><circle cx="17.5" cy="7" r="2.5"/><circle cx="15" cy="16" r="4"/>',
+ radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6.4-4.2"/>',
+ dua:'<path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/>',
+ tap:'<path d="M4 21V7.5L11 3l7 4.5V21M4 21h16M9.5 21v-5h4v5M9 11h.01M14 11h.01"/>',
+ loc:'<path d="M4 6h16M7 12h10M10 18h4"/>',
+ lich:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+ phien:'<path d="M2.5 12.5h4l2.5-6 4 12 2.5-6h6"/>',
+ chudiem:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/>',
+ vebo:'<path d="M4 17.5c1.8 0 1.8 1.4 3.6 1.4s1.8-1.4 3.6-1.4 1.8 1.4 3.6 1.4 1.8-1.4 3.6-1.4"/><path d="M12 14.5V4M12 4l-4 3.6M12 4l4 3.6"/>',
+ duadua:'<path d="M5 21V4M5 4.5h11l-2 3.2 2 3.3H5"/>',
+ dca:'<path d="M12 20.5c0-5.5 2.2-9 7-9.6-.4 5.4-3 8.4-7 9.6zM12 20.5c0-4.6-2-7.6-6-8.2.3 4.5 2.6 7 6 8.2zM12 20.5V9"/>',
+ quy:'<rect x="3" y="7.5" width="18" height="12.5" rx="2.5"/><path d="M8.5 7.5V5.5a2 2 0 012-2h3a2 2 0 012 2v2M3 13h18"/>',
+ back:'<path d="M14.5 5.5L8 12l6.5 6.5"/>',
+ xoa:'<path d="M6 6l12 12M18 6L6 18"/>',
+ phai:'<path d="M9.5 5.5L16 12l-6.5 6.5"/>',
+ len:'<path d="M12 19V6M6 12l6-6 6 6"/>',
+ xuong:'<path d="M12 5v13M6 12l6 6 6-6"/>',
+ nguon:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.02"/>',
+ sao:'<path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z"/>',
+ toi:'<path d="M20 14.2A8.4 8.4 0 019.8 4 8.4 8.4 0 1020 14.2z"/>',
+ sang:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3L4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/>',
+};
+const ic=(k,sz)=>`<svg viewBox="0 0 24 24"${sz?` style="width:${sz}px;height:${sz}px"`:''}
+  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+  stroke-linejoin="round">${IC[k]||''}</svg>`;
 
 function spark(a,w,h,c){
   if(!a||a.length<2) return '';
@@ -321,42 +439,39 @@ function spark(a,w,h,c){
 /* ---- trạng thái ---- */
 const S={m:'bang',t:'',sym:null,sort:'gt',dir:-1,loc:'all',ctLoc:'all',tdOpen:null,cpTab:'nam',
          raceSec:'Ngân hàng'};
-const TAB=[
- ['bang','Bảng giá','<path d="M3 4h18M3 10h18M3 16h12M3 20h8"/>'],
- ['bong','Bong bóng','<circle cx="8" cy="9" r="4.4"/><circle cx="17" cy="7" r="2.6"/><circle cx="15" cy="16" r="4"/>'],
- ['radar','Radar','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l6-4"/>'],
- ['dua','Đường đua','<path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/>'],
- ['tap','Tập đoàn','<path d="M4 21V7l7-4 7 4v14M9 21v-5h6v5M9 11h.01M15 11h.01"/>'],
-];
+const TAB=[['bang','Bảng giá'],['bong','Bong bóng'],['radar','Radar'],
+           ['dua','Đường đua'],['tap','Tập đoàn']];
 const SUB={
- radar:[['phien','📡 Nhịp phiên'],['cd','🎯 Chủ điểm đầu tư'],['vb','🛟 Khi nào về bờ']],
- dua:[['dua','🏁 Đường đua vốn hoá'],['dca','🌱 Đầu tư bền vững']],
- tap:[['td','🏛 Tập đoàn'],['quy','💼 Quỹ đầu tư']],
+ radar:[['phien','Nhịp phiên','phien'],['cd','Chủ điểm đầu tư','chudiem'],
+        ['vb','Khi nào về bờ','vebo']],
+ dua:[['dua','Đường đua vốn hoá','duadua'],['dca','Đầu tư bền vững','dca']],
+ tap:[['td','Tập đoàn','tap'],['quy','Quỹ đầu tư','quy']],
 };
 const TEN={bang:'Bảng giá',bong:'Bản đồ bong bóng',radar:'Radar',dua:'Đường đua',tap:'Danh mục tập đoàn'};
 
 /* ========================= ĐẦU TRANG ====================================== */
 function drawTop(){
-  const idx=D.idx.map(x=>`<div class="chipx"><div class="k">${esc(x.n)}</div>
+  const idx=!D?'':D.idx.map(x=>`<div class="chipx"><div class="k">${esc(x.n)}</div>
     <div class="v">${nf(x.v,2)}</div>
-    <div class="c ${cls(x.chg)}">${pc(x.chg)} · ${ty(x.gt)} tỷ</div></div>`).join('');
+    <div class="c ${cls(x.chg)}">${pc(x.chg)}</div>
+    <div class="g">${nf(x.gt)} tỷ</div></div>`).join('');
   $('#top').innerHTML=`
     <div class="tbar">
-      ${S.m==='cp'?`<button class="ico" data-back style="width:36px;padding:0;font-size:19px;
-        line-height:1">‹</button><span class="brand">${S.sym||''}</span>`
+      ${S.m==='cp'?`<button class="ico" data-back style="padding:0 8px">${ic('back')}</button>
+        <span class="brand">${S.sym||''}</span>`
         :`<span class="brand">CPVN<em>.IO</em></span>`}
       <span class="sp"></span>
-      <button class="ico" data-sheet="loc">⚙︎ Lọc</button>
-      <button class="ico" data-sheet="ct">🗓 Cổ tức</button>
+      <button class="ico" data-sheet="loc">${ic('loc')}Lọc</button>
+      <button class="ico" data-sheet="ct">${ic('lich')}Cổ tức</button>
     </div>
-    ${S.m==='bang'?`<div class="idxrow">${idx}</div>`:''}
-    ${SUB[S.m]?`<div class="subs">${SUB[S.m].map(([k,t])=>
-      `<button data-sub="${k}" class="${S.t===k?'on':''}">${t}</button>`).join('')}</div>`:''}`;
+    ${S.m==='bang'&&D?`<div class="scrx"><div class="idxrow">${idx}</div></div>`:''}
+    ${SUB[S.m]?`<div class="scrx"><div class="subs">${SUB[S.m].map(([k,t,i])=>
+      `<button data-sub="${k}" class="${S.t===k?'on':''}">${ic(i)}${t}</button>`).join('')
+      }</div></div>`:''}`;
 }
 function drawTabs(){
-  $('#tabs').innerHTML=TAB.map(([k,t,p])=>
-    `<button data-tab="${k}" class="${S.m===k?'on':''}">
-      <svg viewBox="0 0 24 24">${p}</svg><span>${t}</span></button>`).join('');
+  $('#tabs').innerHTML=TAB.map(([k,t])=>
+    `<button data-tab="${k}" class="${S.m===k?'on':''}">${ic(k)}<span>${t}</span></button>`).join('');
 }
 
 /* ========================= MÀN 1 · BẢNG GIÁ =============================== */
@@ -379,18 +494,20 @@ function rowHTML(c){
     <span class="co">${logo(c.s)}<span class="id">
       <span class="s">${c.s}</span><span class="n">${esc(c.n)}</span></span></span>
     <span class="px"><span class="p ${cls(c.chg)}">${nf(c.c)}</span>
-      <span class="g">${ty(c.gt)} tỷ</span></span>
-    <span class="pc ${cls(c.chg)}">${pc(c.chg)}</span></button>`;
+      <span class="g">${nf(c.gt)} tỷ</span></span>
+    <span class="pc ${cls(c.chg)}"><i>${pc(c.chg)}</i></span></button>`;
 }
+/* Mũi tên xếp thứ tự vẽ bằng icon chứ không dùng ký tự ↓↑ — ký tự lấy theo font
+   hệ thống nên nét dày mỏng không ăn nhập với chữ bên cạnh, mỗi máy một khác. */
+const th=(k,t)=>`<b data-sort="${k}" class="${S.sort===k?'act':''}">${t}${
+  S.sort===k?ic(S.dir<0?'xuong':'len'):''}</b>`;
 function mBang(){
   const r=locRows();
-  const th=(k,t)=>`<b data-sort="${k}" class="${S.sort===k?'act':''}">${t}${
-    S.sort===k?(S.dir<0?' ↓':' ↑'):''}</b>`;
   return `<div class="thead"><span>Cổ phiếu · ${r.length} mã</span>
-      ${th('c','Giá / GTGD')}${th('chg','1D')}</div>
+      ${th('c','Giá · GTGD')}${th('chg','1D')}</div>
     ${r.map(rowHTML).join('')}
     <div class="hint">Đang xem ${r.length} mã thanh khoản cao nhất phiên ${D.date}.
-      Bản thật liệt kê đủ ${nf(D.nSyms)} mã ba sàn.</div>`;
+      Bản thật liệt kê đủ <b>${nf(D.nSyms)} mã</b> ba sàn.</div>`;
 }
 
 /* ========================= MÀN 2 · BONG BÓNG ============================== */
@@ -445,32 +562,49 @@ function gauge(v,lab){
   </svg>`;
 }
 function movers(list,t){
-  return `<div class="card"><div class="h"><span class="t">${t}</span></div>
-    <div class="b" style="padding:6px 0 4px">${list.map(c=>`
-      <button class="row" data-sym="${c.s}" style="min-height:48px;border:0">
+  return `<div class="card"><div class="h"><span class="t">${t}</span>
+      <span class="s">giá · GTGD</span></div>
+    <div class="b" style="padding:6px 0 2px">${list.map((c,i)=>`
+      <button class="row" data-sym="${c.s}" style="min-height:48px;${
+        i===list.length-1?'box-shadow:none':''}">
         <span class="co">${logo(c.s)}<span class="id"><span class="s">${c.s}</span>
           <span class="n">${esc(c.n)}</span></span></span>
-        <span class="px"><span class="p">${nf(c.c)}</span><span class="g">${ty(c.gt)} tỷ</span></span>
-        <span class="pc ${cls(c.chg)}">${pc(c.chg)}</span></button>`).join('')}</div></div>`;
+        <span class="px"><span class="p">${nf(c.c)}</span><span class="g">${nf(c.gt)} tỷ</span></span>
+        <span class="pc ${cls(c.chg)}"><i>${pc(c.chg)}</i></span></button>`).join('')}</div></div>`;
 }
 function mPhien(){
-  const ud=D.ud||0;
+  const ud=D.ud||0, md=D.mood120||[];
+  /* Đường tâm lý 120 phiên là số THẬT trong kho — có nó thì con số 54 mới có chỗ
+     dựa: đang 54 nhưng đi lên từ 38 khác hẳn đang rơi từ 70 xuống. */
+  const W=310,H=44;
+  const line=md.length>2?(()=>{
+    const mn=Math.min(...md),mx=Math.max(...md),d=(mx-mn)||1;
+    const pts=md.map((v,i)=>`${(i/(md.length-1)*W).toFixed(1)},${(H-(v-mn)/d*(H-6)-3).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;margin-top:10px">
+      <polyline points="${pts}" fill="none" stroke="var(--acc)" stroke-width="1.5"
+        stroke-linejoin="round" opacity=".85"/>
+      <circle cx="${W}" cy="${(H-(md[md.length-1]-mn)/d*(H-6)-3).toFixed(1)}" r="2.6" fill="var(--acc)"/>
+    </svg>`;})():'';
+  const hang=(t,v,co)=>`<div style="font-size:var(--f3);margin-top:10px;display:flex">
+      <span style="color:var(--mut)">${t}</span>
+      <b style="margin-left:auto${co?';color:'+co:''}">${nf(v,1)}%</b></div>
+    <div class="bar"><i style="width:${Math.max(0,Math.min(100,v||0))}%${co?';background:'+co:''}"></i></div>`;
   return `<div class="h2">Nhịp phiên<span>Ảnh chụp lúc thị trường đóng cửa ${D.date}</span></div>
-    <div class="card"><div class="b" style="display:flex;gap:8px;align-items:center">
+    <div class="card"><div class="b" style="display:flex;gap:var(--s3);align-items:center">
       <div style="flex:0 0 auto">${gauge(D.mood||50,'Tâm lý VN')}</div>
       <div style="flex:1;min-width:0">
         <div class="lab">Độ rộng thị trường</div>
-        <div style="font-size:var(--f3);margin-top:6px">Mã tăng <b class="up">${nf(ud,1)}%</b></div>
-        <div class="bar"><i style="width:${ud}%;background:var(--up)"></i></div>
-        <div style="font-size:var(--f3);margin-top:9px">Trên MA50 <b>${nf(D.c50,1)}%</b></div>
-        <div class="bar"><i style="width:${D.c50||0}%"></i></div>
-        <div style="font-size:var(--f3);margin-top:9px">Trên MA200 <b>${nf(D.c200,1)}%</b></div>
-        <div class="bar"><i style="width:${D.c200||0}%"></i></div>
-      </div></div></div>
+        ${hang('Mã tăng giá',ud,'var(--up)')}
+        ${hang('Trên MA50',D.c50)}
+        ${hang('Trên MA200',D.c200)}
+      </div></div>
+      <div class="b" style="padding-top:0">
+        <div class="lab">Tâm lý 120 phiên gần nhất</div>${line}</div></div>
     <div class="card"><div class="g2">
-      <div><div class="k">Đỉnh 52T mới</div><div class="v up">${nf(D.nh)}</div></div>
-      <div><div class="k">Đáy 52T mới</div><div class="v dn">${nf(D.nl)}</div></div>
-      <div><div class="k">Khối ngoại ròng</div><div class="v ${cls(D.nn)}">${ty(Math.round(D.nn||0))} tỷ</div></div>
+      <div><div class="k">Đỉnh 52 tuần mới</div><div class="v up">${nf(D.nh)}</div></div>
+      <div><div class="k">Đáy 52 tuần mới</div><div class="v dn">${nf(D.nl)}</div></div>
+      <div><div class="k">Khối ngoại ròng</div>
+        <div class="v ${cls(D.nn)}">${nf(Math.round(D.nn||0))} tỷ</div></div>
       <div><div class="k">Fear &amp; Greed Mỹ</div><div class="v">${D.fg.v}</div></div>
     </div></div>
     ${movers(D.tang,'Kéo chỉ số lên')}
@@ -506,38 +640,42 @@ function vennSVG(){
 function mCd(){
   const kn=k=>k==='MUA'?'up':k==='KHẢ QUAN'?'up':k==='TRUNG LẬP'?'fl':'dn';
   return `<div class="h2">Chủ điểm đầu tư<span>Sơ đồ ba trục · ${D.cd.ma.length} mã</span></div>
-    <div class="card"><div class="b" style="padding:4px 8px 8px">${vennSVG()}</div></div>
-    <div class="src">Nguồn sơ đồ: <b>${esc(D.cd.nguon)}</b>. Trang này chỉ dẫn lại,
-      không tự đưa ra khuyến nghị mua bán.</div>
-    ${D.cd.ma.filter(m=>m.ssi).slice(0,7).map(m=>`
-      <div class="card"><div class="b" style="display:flex;gap:10px;align-items:flex-start">
+    <div class="card"><div class="b" style="padding:var(--s1) var(--s2) var(--s2)">${vennSVG()}</div></div>
+    <div class="src">${ic('nguon')}<span>Nguồn sơ đồ: <b>${esc(D.cd.nguon)}</b>.
+      Trang này chỉ dẫn lại, không tự đưa ra khuyến nghị mua bán.</span></div>
+    ${D.cd.ma.filter(m=>m.ssi).slice(0,7).map(m=>{
+      const up=(m.ssi.tp&&D.board.find(b=>b.s===m.s))
+        ? m.ssi.tp/D.board.find(b=>b.s===m.s).c*100-100 : null;
+      return `<div class="card"><div class="b" style="display:flex;gap:var(--s3);align-items:flex-start">
         ${logo(m.s)}
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:7px">
+          <div style="display:flex;align-items:center;gap:var(--s2)">
             <b style="font-size:var(--f4);font-weight:800">${m.s}</b>
             <span class="tag ${kn(m.ssi.kn)}" style="background:var(--pan2)">${esc(m.ssi.kn)}</span>
             <span style="margin-left:auto;font-size:var(--f2);color:var(--mut2)">${esc(m.ssi.d)}</span>
           </div>
-          <div style="font-size:var(--f3);color:var(--mut);margin-top:4px;line-height:1.45">${esc(m.ssi.td)}</div>
-          <div style="font-size:var(--f2);margin-top:5px">Giá mục tiêu SSI
-            <b style="font-size:var(--f4)">${nf(m.ssi.tp)}</b> đ</div>
-        </div></div></div>`).join('')}`;
+          <div style="font-size:var(--f3);color:var(--mut);margin-top:6px;line-height:1.5">${esc(m.ssi.td)}</div>
+          <div style="font-size:var(--f2);margin-top:8px;color:var(--mut2)">Giá mục tiêu SSI
+            <b style="font-size:var(--f4);color:var(--txt)">${nf(m.ssi.tp)}</b> đ${
+            up==null?'':` · <span class="${cls(up)}">${pc(up)}</span> so với giá hiện tại`}</div>
+        </div></div></div>`;}).join('')}`;
 }
 
 function mVb(){
   const r=D.vb;
   return `<div class="h2">Khi nào về bờ<span>${nf(D.nVb)} mã đang rơi hơn 30% khỏi đỉnh lịch sử</span></div>
-    <div class="thead"><span>Cổ phiếu</span><b>Giá / Đỉnh</b><b class="act">Rơi ↓</b></div>
+    <div class="thead"><span>Cổ phiếu</span><b>Giá · đỉnh</b>
+      <b class="act">Rơi${ic('xuong')}</b></div>
     ${r.map(c=>{
       const lan=(c.athP&&c.c)?(c.athP/c.c):null;
       return `<button class="row" data-sym="${c.s}">
         <span class="co">${logo(c.s)}<span class="id"><span class="s">${c.s}</span>
           <span class="n">${lan?'×'+lan.toFixed(1)+' để về bờ':esc(c.n)}</span></span></span>
         <span class="px"><span class="p">${nf(c.c)}</span>
-          <span class="g">đỉnh ${nf(c.athP)}</span></span>
-        <span class="pc dn">${c.dath.toFixed(0)}%</span></button>`;}).join('')}
+          <span class="g">${nf(c.athP)}</span></span>
+        <span class="pc dn"><i>${c.dath.toFixed(0)}%</i></span></button>`;}).join('')}
     <div class="hint">Mục này cố ý không lọc vốn hoá — mã nhỏ rơi sâu nhất mới là thứ cần nhìn.
-      Đang hiện ${r.length} mã sâu nhất trong ${nf(D.nVb)} mã.</div>`;
+      Đang hiện ${r.length} mã sâu nhất trong <b>${nf(D.nVb)} mã</b>.</div>`;
 }
 
 /* ========================= MÀN 4 · ĐƯỜNG ĐUA ============================== */
@@ -577,27 +715,31 @@ function mDca(){
     <div class="card"><div class="b">
       <div class="lab">Mỗi tháng bỏ vào</div>
       <div class="big">5.000.000 <span style="font-size:var(--f3);color:var(--mut2)">đ</span></div>
-      <div style="display:flex;gap:14px;margin-top:10px;padding-top:10px;
-        border-top:1px solid var(--line)">
+      <div style="display:flex;gap:var(--s4);margin-top:var(--s3);padding-top:var(--s3);
+        box-shadow:inset 0 1px 0 var(--line)">
         <div><div class="lab">Rổ này 1 năm</div>
-          <div style="font-size:var(--f5);font-weight:800" class="${cls(tb)}">${tb==null?'—':pc(tb)}</div></div>
+          <div style="font-size:var(--f5);font-weight:800;margin-top:var(--s1)"
+            class="${cls(tb)}">${tb==null?'—':pc(tb)}</div></div>
         <div><div class="lab">Mỗi mã</div>
-          <div style="font-size:var(--f5);font-weight:800">${nf(Math.round(5000000*w/100))} đ</div></div>
+          <div style="font-size:var(--f5);font-weight:800;margin-top:var(--s1)">${
+            nf(Math.round(5000000*w/100))} đ</div></div>
         <div><div class="lab">Cả năm</div>
-          <div style="font-size:var(--f5);font-weight:800">60 tr</div></div>
+          <div style="font-size:var(--f5);font-weight:800;margin-top:var(--s1)">60 tr</div></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:11px">
+      <div style="display:flex;gap:var(--s2);margin-top:var(--s3)">
         ${['1 triệu','3 triệu','5 triệu','10 triệu'].map((t,i)=>
           `<button class="ico ${i===2?'on':''}" style="flex:1;justify-content:center">${t}</button>`).join('')}
       </div></div></div>
-    <div class="chips">${sec.map((s,i)=>`<button class="${i===0?'on':''}">${esc(s.split(' ')[0])}</button>`).join('')}</div>
-    <div class="thead"><span>Rổ ${esc(sec[0])} · ${pick.length} mã</span><b>Tỷ trọng</b><b>1 năm</b></div>
+    <div class="scrx"><div class="subs">${sec.map((s,i)=>
+      `<button class="${i===0?'on':''}">${esc(s.split(' ')[0])}</button>`).join('')}</div></div>
+    <div class="thead"><span>Rổ ${esc(sec[0])} · ${pick.length} mã</span>
+      <b>Tỷ trọng</b><b>1 năm</b></div>
     ${pick.map(c=>`<button class="row" data-sym="${c.s}">
       <span class="co">${logo(c.s)}<span class="id"><span class="s">${c.s}</span>
         <span class="n">${esc(c.n)}</span></span></span>
       <span class="px"><span class="p">${w.toFixed(1)}%</span>
         <span class="g">${nf(5000000*w/100)} đ</span></span>
-      <span class="pc ${cls(c.r250)}">${c.r250==null?'—':pc(c.r250)}</span></button>`).join('')}
+      <span class="pc ${cls(c.r250)}"><i>${c.r250==null?'—':pc(c.r250)}</i></span></button>`).join('')}
     <div class="hint">Rổ tính trên toàn ngành, kể cả mã dưới 1.000 tỷ — chỉ đường vẽ trên biểu đồ
       mới lọc bớt cho đỡ rối.</div>`;
 }
@@ -611,25 +753,26 @@ function mTd(){
                :g.kieu==='cn'?'<span class="tag cn">Cá nhân</span>':'';
       const dau=g.me?logo(g.me):`<span class="lgi">${esc((g.ten||'').replace(/[^\p{L}\p{N}]/gu,'').slice(0,2).toUpperCase())}</span>`;
       return `<div class="tdg">
-        <button class="tdh" data-td="${g.id}">
-          <div style="display:flex;gap:9px;align-items:center;min-width:0">
+        <button class="tdh${mo?' mo':''}" data-td="${g.id}">
+          <div style="display:flex;gap:10px;align-items:center;min-width:0">
             ${dau}
             <div style="min-width:0">
               <div class="nm">${esc(g.ten)}</div>
               <div class="mt">${kie}<span class="tag">${g.n} mã</span>
                 <span class="tag">${tyD(g.mcap)}</span></div>
             </div></div>
-          <div style="font-size:17px;color:var(--mut2)">${mo?'▾':'▸'}</div>
+          <span class="cv">${ic('phai')}</span>
         </button>
         ${mo?`<div class="tdb">
           <div class="tdr" style="font-size:var(--f1);font-weight:800;color:var(--mut2);
             letter-spacing:.05em;text-transform:uppercase">
-            <span>Công ty con</span><span class="n1">Vốn hoá</span><span class="n2">1D</span></div>
+            <span>Công ty con · sở hữu</span><span class="n1">Vốn hoá (tỷ)</span><span class="n2">1D</span></div>
           ${g.syms.map(x=>`<div class="tdr">
-            <span style="display:flex;gap:8px;align-items:center;min-width:0">
+            <span style="min-width:0">
               <span class="s">${x.s}</span>
-              <span class="own">${x.p==null?'mẹ':(x.gt?'gián tiếp ':'')+x.p+'%'}</span></span>
-            <span class="n1">${ty(x.mc)}</span>
+              <span class="own" style="display:block">${
+                x.p==null?'công ty mẹ':(x.gt?'gián tiếp ':'trực tiếp ')+x.p+'%'}</span></span>
+            <span class="n1">${nf(x.mc)}</span>
             <span class="n2 ${cls(x.chg)}">${pc(x.chg)}</span></div>`).join('')}
         </div>`:''}
       </div>`;}).join('')}
@@ -638,14 +781,15 @@ function mTd(){
 }
 function mQuy(){
   return `<div class="h2">Quỹ đầu tư<span>${D.quy.length} quỹ quy mô từ 500 tỷ trở lên</span></div>
-    <div class="thead"><span>Quỹ · nắm nhiều nhất</span><b>Quy mô</b><b>Số mã</b></div>
+    <div class="thead"><span>Quỹ · nắm nhiều nhất</span><b>Quy mô · kỳ</b><b>Số mã</b></div>
     ${D.quy.map(q=>`<div class="row">
       <span class="co"><span class="lgi">${esc(q.ma.slice(0,2))}</span><span class="id">
-        <span class="s">${esc(q.ma)} ${q.cu?'<span class="tag cn">số cũ</span>':''}</span>
+        <span class="s" style="display:flex;align-items:center;gap:6px">${esc(q.ma)}${
+          q.cu?'<span class="tag cn">số cũ</span>':''}</span>
         <span class="n" style="max-width:168px">${q.syms.map(x=>x.s).join(' · ')}</span></span></span>
-      <span class="px"><span class="p">${ty(q.tong)} tỷ</span>
-        <span class="g">kỳ ${esc(q.ky||'—')}</span></span>
-      <span class="pc">${q.n}</span></div>`).join('')}
+      <span class="px"><span class="p">${nf(q.tong)} tỷ</span>
+        <span class="g">${esc(q.ky||'—')}</span></span>
+      <span class="pc"><i style="background:var(--pan2);min-width:44px;text-align:center">${q.n}</i></span></div>`).join('')}
     <div class="hint"><b>Kỳ công bố lệch nhau hơn hai năm</b> — quỹ nội báo cáo tới giữa 2026,
       Dragon Capital và PYN thì nguồn chỉ tới 2024. Gộp chung rồi gọi “đang nắm giữ” là dựng
       nên một danh mục không còn tồn tại, nên quỹ có số cũ bị dán nhãn và đẩy xuống dưới.</div>`;
@@ -656,7 +800,10 @@ function mCp(){
   const K=D.cp[S.sym]||D.cp.FPT, c=K.row;
   const px=K.px, mn=Math.min(...px), mx=Math.max(...px);
   const W=352,H=150;
-  const pts=px.map((v,i)=>`${(i/(px.length-1)*W).toFixed(1)},${(H-(v-mn)/(mx-mn)*(H-10)-5).toFixed(1)}`).join(' ');
+  /* Một hàm đổi giá -> toạ độ dùng chung cho đường giá, mốc đầu kỳ và chấm cuối —
+     ba thứ đó mà tính riêng thì chỉ cần lệch 1px là nhìn ra ngay. */
+  const yv=v=>(H-(v-mn)/((mx-mn)||1)*(H-10)-5).toFixed(1);
+  const pts=px.map((v,i)=>`${(i/(px.length-1)*W).toFixed(1)},${yv(v)}`).join(' ');
   const co=c.chg>=0?'var(--up)':'var(--dn)';
   const Y=K.Y, mxr=Math.max(...Y.map(y=>Math.abs(y.np)));
   const g=(k,v,t)=>`<div><div class="k">${k}</div><div class="v ${t||''}">${v}</div></div>`;
@@ -669,12 +816,17 @@ function mCp(){
     </div>
     <div class="mini">${['1T','1Th','3Th','6Th','1N','5N','Tất cả'].map((t,i)=>
       `<button class="${i===4?'on':''}">${t}</button>`).join('')}</div>
-    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;padding:0 0 6px">
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;padding-bottom:var(--s2)">
       <defs><linearGradient id="fg1" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${co}" stop-opacity=".28"/>
+        <stop offset="0%" stop-color="${co}" stop-opacity=".26"/>
         <stop offset="100%" stop-color="${co}" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" x2="${W}" y1="${yv(px[0])}" y2="${yv(px[0])}" stroke="var(--mut2)"
+        stroke-width="1" stroke-dasharray="3 4" opacity=".5"/>
       <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#fg1)"/>
       <polyline points="${pts}" fill="none" stroke="${co}" stroke-width="1.8" stroke-linejoin="round"/>
+      <circle cx="${W-1}" cy="${yv(px[px.length-1])}" r="3" fill="${co}"/>
+      <text x="4" y="12" font-size="10" font-weight="700" fill="var(--mut2)">${nf(mx)}</text>
+      <text x="4" y="${H-4}" font-size="10" font-weight="700" fill="var(--mut2)">${nf(mn)}</text>
     </svg>
     <div class="card"><div class="g2">
       ${g('Vốn hoá',tyD(c.mc))}
@@ -685,8 +837,8 @@ function mCp(){
       ${g('RSI',c.rsi==null?'—':c.rsi.toFixed(0),c.rsi>70?'dn':c.rsi<30?'up':'')}
       ${g('Cao nhất phiên',nf(c.hi))}
       ${g('Thấp nhất phiên',nf(c.lo))}
-      ${g('Trần',nf(c.ceil),'')}
-      ${g('Sàn',nf(c.fl),'')}
+      ${g('Giá trần',nf(c.ceil),'')}
+      ${g('Giá sàn',nf(c.fl),'')}
       ${g('NN mua',nf(c.fb,1)+' tỷ','up')}
       ${g('NN bán',nf(c.fs,1)+' tỷ','dn')}
     </div></div>
@@ -709,47 +861,63 @@ function mCp(){
 }
 
 /* ========================= TẤM TRƯỢT ====================================== */
-const KTEN={tien:'Tiền mặt',cp:'Cổ phiếu',thuong:'Thưởng',quyen:'Quyền mua'};
+/* Nguồn có BỐN loại sự kiện chứ không phải ba: ngoài cổ tức tiền/cổ phiếu/thưởng
+   còn PHÁT HÀNH THÊM cho cổ đông hiện hữu — loại này không có tỷ lệ `tl` mà có giá
+   phát hành `gia`. Bỏ sót nó thì bảng hiện "undefined%" và nhãn "PHATHANH". */
+const KTEN={tien:'Tiền mặt',cp:'Cổ phiếu',thuong:'Thưởng',quyen:'Quyền mua',
+            phathanh:'Phát hành thêm'};
+const ctGia=x=>x.k==='tien'?nf(x.tien)+' đ'
+  :x.k==='phathanh'?(x.gia?nf(x.gia)+' đ':'—')
+  :(x.tl!=null?x.tl+'%':'—');
 function sheetLoc(){
   return {t:'Bộ lọc',b:`
-    <div style="padding:13px 15px 0" class="lab">Sàn &amp; rổ</div>
+    <div style="padding:var(--s4) var(--s4) var(--s2)" class="lab">Sàn &amp; rổ</div>
     <div class="chips">${LOC.map(([k,t])=>
       `<button data-loc="${k}" class="${S.loc===k?'on':''}">${t}</button>`).join('')}</div>
-    <div style="padding:6px 15px 0" class="lab">Sắp theo</div>
+    <div style="padding:var(--s2) var(--s4)" class="lab">Sắp theo</div>
     <div class="chips">${SORT.map(([k,t])=>
-      `<button data-so="${k}" class="${S.sort===k?'on':''}">${t}${S.sort===k?(S.dir<0?' ↓':' ↑'):''}</button>`).join('')}</div>
-    <div style="padding:6px 15px 0" class="lab">Ngành</div>
+      `<button data-so="${k}" class="${S.sort===k?'on':''}" style="${
+        S.sort===k?'display:flex;align-items:center;gap:4px':''}">${t}${
+        S.sort===k?ic(S.dir<0?'xuong':'len'):''}</button>`).join('')}</div>
+    <div style="padding:var(--s2) var(--s4)" class="lab">Ngành</div>
     <div class="chips">${D.secs.slice(0,12).map(s=>
       `<button>${esc(s.length>18?s.slice(0,17)+'…':s)}</button>`).join('')}</div>
-    <div style="padding:11px 15px 18px;display:flex;gap:9px">
-      <button class="ico" style="flex:1;justify-content:center;height:44px" data-reset>Xoá lọc</button>
-      <button class="ico on" style="flex:2;justify-content:center;height:44px" data-close>Xem kết quả</button>
+    <div style="padding:var(--s3) var(--s4) var(--s5);display:flex;gap:var(--s2)">
+      <button class="ico" style="flex:1;justify-content:center;height:46px" data-reset>Xoá lọc</button>
+      <button class="ico on" style="flex:2;justify-content:center;height:46px" data-close>Xem kết quả</button>
     </div>`};
 }
 function sheetCt(){
-  const F=[['all','Tất cả'],['tien','Tiền mặt'],['cp','Cổ phiếu'],['thuong','Thưởng']];
+  const F=[['all','Tất cả'],['tien','Tiền mặt'],['cp','Cổ phiếu'],['thuong','Thưởng'],
+           ['phathanh','Phát hành']];
   const list=D.ct.filter(x=>S.ctLoc==='all'||x.k===S.ctLoc);
+  /* "Ngày giao dịch không hưởng quyền" nói MỘT LẦN ở đầu mỗi nhóm ngày, đừng lặp
+     xuống từng dòng: 26 dòng thì câu đó xuất hiện 26 lần, chiếm nửa bảng mà không
+     thêm được một chữ thông tin nào — mắt học xong ở dòng đầu là thôi đọc. */
   let cur='',out='';
   list.forEach(x=>{
-    if(x.d!==cur){cur=x.d;out+=`<div class="dday">${new Date(x.d).toLocaleDateString('vi-VN',
-      {weekday:'long',day:'2-digit',month:'2-digit'})}</div>`;}
+    if(x.d!==cur){cur=x.d;
+      const dt=new Date(x.d);
+      out+=`<div class="dday">${dt.toLocaleDateString('vi-VN',
+        {weekday:'long',day:'2-digit',month:'2-digit'})}<em>ngày GDKHQ</em></div>`;}
     out+=`<div class="ctr">
-      <span style="display:flex;gap:9px;align-items:center">${logo(x.s)}
+      <span style="display:flex;gap:10px;align-items:center">${logo(x.s)}
         <span><b style="font-size:var(--f4);font-weight:800">${x.s}</b>
-          <div class="d">ngày giao dịch không hưởng quyền</div></span></span>
-      <span class="r"><div class="v">${x.k==='tien'?nf(x.tien)+' đ':x.tl+'%'}</div>
+          <div class="d">${esc(x.gc||'')}</div></span></span>
+      <span class="r"><div class="v">${ctGia(x)}</div>
         <div class="k">${KTEN[x.k]||x.k}</div></span></div>`;
   });
   return {t:'Lịch chia cổ tức',b:`
-    <div class="chips">${F.map(([k,t])=>
+    <div class="chips" style="padding-top:var(--s1)">${F.map(([k,t])=>
       `<button data-ct="${k}" class="${S.ctLoc===k?'on':''}">${t}</button>`).join('')}</div>
     ${out||'<div class="hint">Không có sự kiện nào.</div>'}
-    <div class="hint" style="padding-bottom:18px">Bản thật đang theo dõi ${nf(D.nCt)} sự kiện
-      từ ${D.ct[0]?.d} trở đi.</div>`};
+    <div class="hint" style="margin-bottom:var(--s5)">Bản thật đang theo dõi
+      <b>${nf(D.nCt)} sự kiện</b> từ ${D.ct[0]?.d} trở đi.</div>`};
 }
 function openSheet(k){
   const o=k==='loc'?sheetLoc():sheetCt();
-  $('#sheet .sh').innerHTML=`<span class="t">${o.t}</span><button class="x" data-close>✕</button>`;
+  $('#sheet .sh').innerHTML=`<span class="t">${o.t}</span>
+    <button class="x" data-close>${ic('xoa')}</button>`;
   $('#sheet .sb').innerHTML=o.b;
   $('#sheet').classList.add('on'); $('#mask').classList.add('on');
   $('#sheet').dataset.k=k;
@@ -757,10 +925,18 @@ function openSheet(k){
 const closeSheet=()=>{$('#sheet').classList.remove('on');$('#mask').classList.remove('on');};
 
 /* ========================= VẼ ============================================= */
+const skeleton=()=>`<div class="thead"><span>Cổ phiếu</span><b>Giá · GTGD (tỷ)</b><b>1D</b></div>
+  <div class="sk">${Array.from({length:9},()=>`<div class="skrow">
+    <span class="c1"><u></u><span style="flex:1"><i style="width:44px"></i>
+      <i style="width:96px;height:9px;margin-top:6px"></i></span></span>
+    <span><i style="width:100%;height:12px"></i><i style="width:60%;height:9px;margin:6px 0 0 auto"></i></span>
+    <span><i style="width:100%;height:22px;border-radius:6px"></i></span></div>`).join('')}</div>`;
+
 function draw(){
   drawTop(); drawTabs();
   const B=$('#body');
-  B.innerHTML = S.m==='cp'  ? mCp()
+  B.innerHTML = !D       ? skeleton()
+    : S.m==='cp'  ? mCp()
     : S.m==='bang' ? mBang()
     : S.m==='bong' ? mBong()
     : S.m==='tap'  ? (S.t==='quy'?mQuy():mTd())
@@ -790,7 +966,7 @@ document.addEventListener('click',e=>{
 function den(k){
   const p=$('#ph');
   p.classList.toggle('dark',k==='dark'); p.classList.toggle('light',k!=='dark');
-  $('#lamp').textContent=k==='dark'?'🌙':'☀️';
+  $('#lamp').innerHTML=ic(k==='dark'?'toi':'sang',14);
 }
 $('#lamp').onclick=()=>den($('#ph').classList.contains('dark')?'light':'dark');
 
@@ -812,7 +988,9 @@ addEventListener('message',e=>{
   if(d.m){ S.m=d.m; S.t=d.t||''; if(d.sym) S.sym=d.sym; if(D) draw(); }
 });
 
-fetch('assets/demo-mobi.json?v=3').then(r=>r.json()).then(j=>{D=j;draw();})
+den($('#ph').classList.contains('dark')?'dark':'light');
+draw();   /* vẽ khung xương trước, số về sau — mắt bám được bố cục ngay */
+fetch('assets/demo-mobi.json?v=4').then(r=>r.json()).then(j=>{D=j;draw();})
   .catch(()=>{$('#body').innerHTML='<div class="hint">Không nạp được assets/demo-mobi.json — '
     +'trang này phải mở qua web chứ không mở thẳng từ file.</div>';});
 </script>
