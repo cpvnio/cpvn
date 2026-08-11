@@ -435,26 +435,22 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #stats .st>span:last-child{font-size:12.5px}
     #stats .stsep{display:none}
 
-    /* CỤM TỔNG QUAN KHÔNG CUỘN NGANG NỮA. Trước đây nó nối đuôi bốn thẻ chỉ số
-       trong cùng một dải kéo ngang, nên muốn xem vốn hoá toàn thị trường hay biên
-       độ là phải kéo gần hết một màn — kéo tới nơi thì bốn thẻ chỉ số đã trôi mất,
-       không còn gì để đối chiếu. Nay nó thành một khối riêng ngay dưới, chữ nhỏ,
-       tự xuống dòng: thấy hết trong một cái liếc, không phải kéo. */
+    /* CỤM TỔNG QUAN BỎ HẲN Ở KHỔ HẸP (user chốt 11/08/2026).
+       Đã thử hai kiểu: nối đuôi dải chỉ số (phải kéo gần hết một màn mới tới) rồi
+       tách thành khối riêng bên dưới (gọn hơn nhưng vẫn ăn 78px). Cuối cùng bỏ
+       luôn — trên điện thoại người ta mở bảng giá để soi MÃ, mấy con số toàn thị
+       trường là thứ đọc một lần rồi thôi, không đáng nằm thường trực trên đầu.
+       Thanh khoản từng sàn KHÔNG mất: nó đã in sẵn trong chính thẻ chỉ số của sàn
+       đó (dòng --stgt). Máy bàn giữ nguyên đủ cả cụm.
+       Vẫn dựng DOM rồi mới giấu, chứ không chặn ở renderStats: giấu bằng CSS thì
+       chỉ có một chỗ quyết định, khỏi phải nhớ đồng bộ hai nhánh JS/CSS. */
+    #stats>.stsum{display:none}
     #stats>.stidx{display:flex;gap:8px;padding:8px 12px;overflow-x:auto;
       scrollbar-width:none;white-space:nowrap;
       -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);
       mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
     #stats>.stidx::-webkit-scrollbar{display:none}
-    #stats>.stsum{display:flex;flex-wrap:wrap;align-items:center;gap:5px 14px;
-      padding:8px 12px 9px;box-shadow:inset 0 1px 0 var(--line)}
-    #stats>.stsum .st{flex-direction:row;align-items:baseline;gap:5px;background:none;
-      border:0;border-radius:0;padding:0;min-width:0}
-    #stats>.stsum .st .nm{font-size:11px;letter-spacing:0;text-transform:none}
-    #stats>.stsum .st .val{font-size:12.5px;line-height:1.3}
-    /* Biên độ ăn trọn một dòng riêng: năm con chip màu mà chen chung dòng với mấy
-       số tiền thì dòng nào cũng dở dang, mà chip lại là thứ BẤM ĐƯỢC nên càng cần
-       đứng rõ ràng. */
-    #stats>.stsum .breadth{flex:1 0 100%;gap:5px;padding:0}
+
 
     #stats .stgt{display:block;font-size:11px;color:var(--muted);font-weight:600}
 
