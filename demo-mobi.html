@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>CPVN — So hai mẫu giao diện điện thoại</title>
+<link rel="icon" type="image/png" href="assets/logo-64.png?v=3"/>
+<style>
+/* ============================================================================
+   TRANG SO HAI MẪU — hai bản demo chạy THẬT trong hai iframe cạnh nhau.
+   Bấm một nút màn hình là gửi postMessage cho CẢ HAI, nên lúc nào cũng đang so
+   đúng một màn với nhau. So kiểu mở hai tab rồi bấm qua bấm lại thì không bao
+   giờ chắc hai bên đang ở cùng chỗ, mà trí nhớ thị giác thì chỉ giữ được vài giây.
+   ========================================================================== */
+*{box-sizing:border-box}
+/* ĐỪNG đặt overflow-x:hidden ở đây: nó biến body thành vùng cuộn riêng, và
+   position:sticky của thanh điều khiển lập tức hết dính (đo được barTop = −20).
+   Phần thừa ngang ở màn hẹp đã do .col{overflow:hidden} cắt rồi. */
+html,body{margin:0}
+body{background:#0c1017;color:#e8edf7;min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1100px 620px at 50% -8%,#1c2740,#0c1017)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+
+.wrap{max-width:1080px;margin:0 auto;padding:22px 16px 40px}
+h1{margin:0;font-size:23px;letter-spacing:-.4px;font-weight:800}
+.sub{margin:6px 0 0;color:#95a3bd;font-size:13.5px;line-height:1.65;max-width:660px}
+.sub b{color:#e8edf7}
+
+/* ---- thanh điều khiển: dính trên đỉnh vì nó là thứ dùng liên tục ---- */
+.bar{position:sticky;top:0;z-index:20;margin:16px -16px 0;padding:11px 16px 12px;
+  background:rgba(12,16,23,.86);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.09)}
+.lab{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:#7c8aa5;margin-bottom:7px}
+.mans{display:flex;flex-wrap:wrap;gap:6px}
+.mans button{height:34px;padding:0 13px;border-radius:9px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);font-size:13px;font-weight:700;color:#c3cee2;
+  white-space:nowrap}
+.mans button:hover{background:rgba(255,255,255,.11)}
+.mans button.on{background:#3b82f6;border-color:#3b82f6;color:#fff}
+.row2{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:11px}
+.seg{display:flex;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:9px;overflow:hidden}
+.seg button{height:32px;padding:0 12px;font-size:12.5px;font-weight:700;color:#a9b6cd}
+.seg button.on{background:#e8edf7;color:#0c1017}
+.row2 .note{font-size:12.5px;color:#7c8aa5}
+
+/* ---- hai máy ---- */
+.duo{display:flex;justify-content:center;gap:34px;margin-top:22px}
+.col{width:412px;flex:0 0 auto}
+.cap{display:flex;align-items:baseline;gap:9px;margin-bottom:10px;padding:0 4px}
+.cap .k{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:800;color:#fff;flex:0 0 auto}
+.cap .k.a{background:#5b93ff}.cap .k.b{background:#2563eb}
+.cap .t{font-size:15.5px;font-weight:800}
+.cap .d{font-size:12.5px;color:#8b99b3;margin-left:auto;text-align:right;line-height:1.4}
+.slot{position:relative;width:412px;margin:0 auto;transform-origin:top center}
+/* box-sizing:border-box nên phải cộng thêm 2×11px viền, bằng không iframe 390px
+   rộng hơn ruột khung và bị overflow:hidden xén mất một dải bên phải. */
+.fr{width:412px;height:842px;border:11px solid #0e1118;border-radius:46px;overflow:hidden;
+  box-shadow:0 26px 60px rgba(0,0,0,.55),0 0 0 2px #29314a}
+.fr iframe{width:390px;height:820px;border:0;display:block;background:#1b2130}
+.open{display:block;text-align:center;margin-top:12px;font-size:12.5px;font-weight:700;
+  color:#8ab0ff;text-decoration:none}
+.open:hover{text-decoration:underline}
+
+/* ---- màn hẹp: chỉ đủ chỗ cho MỘT máy, nên thêm công tắc A/B ngay trên thanh ---- */
+#abx{display:none}
+@media(max-width:900px){
+  .wrap{padding-top:16px}
+  h1{font-size:20px}
+  .sub{font-size:13px}
+  /* 12 nút mà cho xuống dòng thì thanh cao hơn nửa màn, không còn chỗ cho máy —
+     cuộn ngang một hàng gọn hơn hẳn. */
+  .mans{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+  .mans::-webkit-scrollbar{display:none}
+  .row2{gap:10px}
+  #den button{padding:0 9px;font-size:12px}
+  #abx{display:flex}
+  .duo{gap:0}
+  .col{width:100%;overflow:hidden}
+  .col.off{display:none}
+  .cap{justify-content:center}
+  .cap .d{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Hai mẫu giao diện điện thoại</h1>
+  <p class="sub">Cả hai chạy <b>dữ liệu thật</b> phiên 10/08 và có đủ mọi mục. Bấm một màn hình
+  bên dưới là <b>cả hai máy cùng nhảy tới đúng chỗ đó</b> — so cạnh nhau mới thấy được khác biệt,
+  chứ mở hai tab bấm qua bấm lại thì mắt không giữ nổi.
+  <br/>Trang này để so trên máy tính. Muốn xem thật thì mở
+  <a href="demo-mobi-a">mẫu A</a> hoặc <a href="demo-mobi-b">mẫu B</a> thẳng trên điện thoại,
+  lúc đó nó phủ kín màn đúng như app.</p>
+
+  <div class="bar">
+    <div class="lab">Màn hình</div>
+    <div class="mans" id="mans"></div>
+    <div class="row2">
+      <div class="seg" id="den">
+        <button data-den="auto" class="on">Tông riêng từng mẫu</button>
+        <button data-den="light">Cả hai sáng</button>
+        <button data-den="dark">Cả hai tối</button>
+      </div>
+      <div class="seg" id="abx">
+        <button data-ab="A" class="on">Xem mẫu A</button><button data-ab="B">Xem mẫu B</button>
+      </div>
+      <span class="note" id="note"></span>
+    </div>
+  </div>
+
+  <div class="duo">
+    <div class="col" id="colA">
+      <div class="cap"><span class="k a">A</span><span class="t">Bảng điện</span>
+        <span class="d">đậm đặc · nền tối<br/>cho người đã biết mình tìm gì</span></div>
+      <div class="slot"><div class="fr"><iframe id="fA" title="Mẫu A"
+        src="demo-mobi-a.html?embed=1&amp;theme=dark"></iframe></div>
+        <a class="open" href="demo-mobi-a" target="_blank">Mở riêng mẫu A ↗</a></div>
+    </div>
+    <div class="col off" id="colB">
+      <div class="cap"><span class="k b">B</span><span class="t">Thẻ</span>
+        <span class="d">thoáng · chữ to hơn một bậc<br/>cho người mở app để xem có gì</span></div>
+      <div class="slot"><div class="fr"><iframe id="fB" title="Mẫu B"
+        src="demo-mobi-b.html?embed=1&amp;theme=light"></iframe></div>
+        <a class="open" href="demo-mobi-b" target="_blank">Mở riêng mẫu B ↗</a></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+/* Danh sách màn: đúng bằng mọi mục của bản thật, kể cả hai tấm trượt. */
+const MAN=[
+ ['Bảng giá',            {m:'bang',t:'tt'}],
+ ['Bản đồ bong bóng',    {m:'bong',t:''}],
+ ['Danh mục tập đoàn',   {m:'tap',t:'td'}],
+ ['Quỹ đầu tư',          {m:'tap',t:'quy'}],
+ ['Nhịp phiên',          {m:'radar',t:'phien'}],
+ ['Chủ điểm đầu tư',     {m:'radar',t:'cd'}],
+ ['Khi nào về bờ',       {m:'radar',t:'vb'}],
+ ['Đường đua vốn hoá',   {m:'dua',t:'dua'}],
+ ['Đầu tư bền vững',     {m:'dua',t:'dca'}],
+ ['Trang cổ phiếu',      {m:'cp',t:'',sym:'FPT'}],
+ ['Bộ lọc',              {sheet:'loc'}],
+ ['Lịch chia cổ tức',    {sheet:'ct'}],
+];
+const GHI={
+ 'Bảng giá':'A vào thẳng bảng · B kể chuyện phiên trước rồi mới tới bảng',
+ 'Danh mục tập đoàn':'nhãn Nhà nước / Cá nhân nay hiện đủ ở cả hai',
+ 'Quỹ đầu tư':'quỹ nào còn số 2024 đều bị dán nhãn “số cũ” và đẩy xuống',
+ 'Khi nào về bờ':'1.065 mã rơi quá 30% khỏi đỉnh — không lọc vốn hoá',
+ 'Chủ điểm đầu tư':'sơ đồ SSI, ghi nguồn là ràng buộc chứ không phải trang trí',
+ 'Trang cổ phiếu':'ba mã có số tài chính thật: FPT · TCB · HPG',
+ 'Lịch chia cổ tức':'A đẩy tấm trượt kín hơn, B để lọt nền phía sau',
+};
+let man=0, den='auto', ab='A';
+
+const goi=(f,d)=>{try{f.contentWindow.postMessage({cpvn:'go',...d},'*')}catch(e){}};
+function phat(){
+  const [ten,d]=MAN[man];
+  for(const f of [$('#fA'),$('#fB')]) goi(f,d);
+  $('#note').textContent=GHI[ten]||'';
+}
+function veMan(){
+  $('#mans').innerHTML=MAN.map(([t],i)=>
+    `<button data-man="${i}" class="${i===man?'on':''}">${t}</button>`).join('');
+}
+function veDen(){
+  $('#den').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.den===den));
+  goi($('#fA'),{theme:den==='auto'?'dark':den});
+  goi($('#fB'),{theme:den==='auto'?'light':den});
+}
+/* Hai khung máy cộng lại rộng 858×880. Chật thì THU NHỎ chứ đừng cho cuộn ngang —
+   cuộn ngang là mất luôn lý do tồn tại của trang này. Phải kẹp theo CẢ CHIỀU CAO:
+   máy cao 842px mà màn laptop 900px thì cuộn tới đáy máy là mất thanh điều khiển,
+   bấm đổi màn xong lại phải cuộn ngược lên xem. */
+function co(){
+  const w=innerWidth, mot=w<=900;
+  /* Chiều cao còn dùng được = màn − thanh điều khiển dính − dòng tên máy − link.
+     Đo thanh thật chứ đừng đoán: nó cao thấp khác nhau tuỳ số nút xuống dòng. */
+  const barH=$('.bar').offsetHeight||130;
+  const sc=Math.max(.5,Math.min(1,(mot?(w-28):(w-32-34)/2)/412,(innerHeight-barH-92)/880));
+  document.querySelectorAll('.slot').forEach(s=>{
+    s.style.transform=`scale(${sc.toFixed(3)})`;
+    s.style.height=(880*sc)+'px';
+  });
+  $('#colA').classList.toggle('off',mot&&ab!=='A');
+  $('#colB').classList.toggle('off',mot&&ab!=='B');
+  if(!mot) $('#colB').classList.remove('off');
+}
+document.addEventListener('click',e=>{
+  const m=e.target.closest('[data-man]');
+  /* Kéo máy vào tầm mắt luôn — hai tấm trượt (bộ lọc, cổ tức) trồi lên từ ĐÁY máy,
+     đứng ở đầu trang bấm xong thì không thấy gì, tưởng nút hỏng. */
+  if(m){man=+m.dataset.man;veMan();phat();
+    const y=document.querySelector('.duo').getBoundingClientRect().top+scrollY-$('.bar').offsetHeight-6;
+    if(scrollY<y-4) scrollTo({top:y,behavior:'smooth'});
+    return;}
+  const d=e.target.closest('[data-den]');
+  if(d){den=d.dataset.den;veDen();return;}
+  const a=e.target.closest('[data-ab]');
+  if(a){ab=a.dataset.ab;
+    $('#abx').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.ab===ab));
+    co();return;}
+});
+addEventListener('resize',co);
+/* iframe nạp xong mới nhận được lệnh — bắn lại một lượt cho chắc. */
+let xong=0;
+for(const f of [$('#fA'),$('#fB')]) f.onload=()=>{if(++xong>=2) setTimeout(()=>{veDen();phat();},60);};
+veMan(); co();
+</script>
+</body>
+</html>

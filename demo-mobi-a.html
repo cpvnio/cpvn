@@ -787,10 +787,30 @@ document.addEventListener('click',e=>{
   const ct=t.closest('[data-ct]');  if(ct){S.ctLoc=ct.dataset.ct;openSheet('ct');return;}
   if(t.closest('[data-reset]')){S.loc='all';S.sort='gt';S.dir=-1;openSheet('loc');draw();return;}
 });
-$('#lamp').onclick=()=>{
-  const p=$('#ph'), d=p.classList.toggle('dark'); p.classList.toggle('light',!d);
-  $('#lamp').textContent=d?'🌙':'☀️';
-};
+function den(k){
+  const p=$('#ph');
+  p.classList.toggle('dark',k==='dark'); p.classList.toggle('light',k!=='dark');
+  $('#lamp').textContent=k==='dark'?'🌙':'☀️';
+}
+$('#lamp').onclick=()=>den($('#ph').classList.contains('dark')?'light':'dark');
+
+/* ---- ĐIỀU KHIỂN TỪ NGOÀI -------------------------------------------------
+   Trang so sánh nhúng cả hai mẫu trong hai iframe rồi lái bằng postMessage,
+   nhờ vậy bấm một nút là hai máy cùng nhảy tới ĐÚNG một màn — so mới ra chuyện.
+   ?embed=1 giấu bộ nút riêng của bản demo đi vì khung ngoài đã có rồi. */
+const QS=new URLSearchParams(location.search);
+if(QS.get('embed')) document.querySelector('.ab').style.display='none';
+if(QS.get('m')) S.m=QS.get('m');
+if(QS.get('t')!==null) S.t=QS.get('t');
+if(QS.get('sym')) S.sym=QS.get('sym');
+if(QS.get('theme')) den(QS.get('theme'));
+addEventListener('message',e=>{
+  const d=e.data||{}; if(d.cpvn!=='go') return;
+  if(d.theme) den(d.theme);
+  if(d.sheet){ if(D) openSheet(d.sheet); return; }
+  closeSheet();
+  if(d.m){ S.m=d.m; S.t=d.t||''; if(d.sym) S.sym=d.sym; if(D) draw(); }
+});
 
 fetch('assets/demo-mobi.json?v=3').then(r=>r.json()).then(j=>{D=j;draw();})
   .catch(()=>{$('#body').innerHTML='<div class="hint">Không nạp được assets/demo-mobi.json — '
