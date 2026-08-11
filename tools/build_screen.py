@@ -31,7 +31,21 @@ FIELDS = [
     # CHỈ THÊM VÀO CUỐI (client đọc theo f.indexOf nên nối đuôi là an toàn):
     'ma150','m200s',                      # MA150 + độ dốc MA200 21 phiên (%) — Trend Template
     'nn60','nnr20','nnr60',               # NN ròng 60 phiên (đồng) + chuẩn hoá theo GTGD (%)
+    'vol60','flat60',                     # ĐỘ LỆCH CHUẨN lợi suất ngày 60 phiên (%/phiên)
+                                          # + tỉ lệ phiên ĐỨNG GIÁ trong 60 phiên (%)
 ]
+# `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
+# được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
+# nhưng đứng giá 21/59 phiên nên độ lệch chuẩn chỉ 0,28% — thấp nhất bảng, và lọt vào
+# top 30 vì lý do sai. Đo thử ba ngưỡng chặn trên danh mục thử nghiệm:
+#   không chặn 20,3%/năm · chặn >40% phiên 20,2% · chặn >30% phiên 20,6% · chặn >20% 19,0%
+# Chọn 30%: lợi nhuận ngang bằng (chênh lệch nằm trong nhiễu) mà loại được bệnh; xuống 20%
+# là bắt đầu cắt nhầm mã ổn định thật.
+# Vì sao thêm `vol60` trong khi đã có `atrp`: nghiên cứu chu kỳ 11/08/2026 đo trên
+# 97.794 dòng mã-tháng thấy đây là chỉ báo MẠNH NHẤT trong toàn bộ 30 chỉ báo thử
+# (IC 12 tháng −19,8%, ổn định cả 2020-22 lẫn 2023-26, sống sót khi trung hoà ngành).
+# atrp đo biên độ trong phiên, không đo độ dao động của chuỗi lợi suất — hai thứ khác
+# nhau; dùng thay thế là đo một đại lượng khác với đại lượng đã kiểm chứng.
 
 
 # ------------------------------------------------------------ hàm cửa sổ trượt
@@ -175,6 +189,13 @@ def analyse(d, acc):
                 if S['ma20'][i] < S['ma50'][i] and a >= b2: cross = -1; break
     v20 = S['v20'][i]
     avgval20 = sum(c[j] * (v[j] or 0) for j in range(n - 20, n)) / 20 if n >= 20 else None
+    vol60 = flat60 = None
+    if n >= 61:
+        rr = [c[j] / c[j - 1] - 1 for j in range(n - 60, n) if c[j - 1]]
+        if len(rr) >= 50:
+            mu = sum(rr) / len(rr)
+            vol60 = round((sum((x - mu) ** 2 for x in rr) / (len(rr) - 1)) ** 0.5 * 100, 3)
+            flat60 = round(sum(1 for x in rr if abs(x) < 1e-9) / len(rr) * 100, 1)
 
     r = {
         'c': c[i], 'ma20': S['ma20'][i], 'ma50': S['ma50'][i], 'ma200': S['ma200'][i],
@@ -184,7 +205,7 @@ def analyse(d, acc):
         'hi52': S['hi52'][i], 'lo52': S['lo52'][i],
         'dhi': (c[i] / S['hi52'][i] - 1) * 100 if S['hi52'][i] else None,
         'dlo': (c[i] / S['lo52'][i] - 1) * 100 if S['lo52'][i] else None,
-        'tight': S['tight'][i],
+        'tight': S['tight'][i], 'vol60': vol60, 'flat60': flat60,
         'r5': ret(5), 'r20': ret(20), 'r60': ret(60), 'r120': ret(120), 'r250': ret(250),
         'rs': None, 'nn20': nn20, 'streak': streak, 'cross': cross,
         'ath': 1 if c[i] >= max(c) * 0.999 else 0, 'nsess': n,
@@ -270,7 +291,12 @@ FUND_FIELDS = [
     # CHỈ ĐƯỢC NỐI THÊM VÀO CUỐI — client đọc theo THỨ TỰ của pk.f, chèn giữa là lệch hết
     'npQ2',                                       # %LNST quý liền trước so cùng kỳ
     'lossQs',                                     # số quý LỖ LIÊN TIẾP tính từ quý gần nhất
+    'recRevL',                                    # MỨC phải thu ngắn hạn / doanh thu 4 quý (lần)
 ]
+# `recRev` đã có là ĐỘ LỆCH TĂNG TRƯỞNG (phải thu tăng nhanh hơn doanh thu bao nhiêu %),
+# còn `recRevL` là MỨC. Nghiên cứu 11/08/2026 đo cả hai: mức mạnh hơn hẳn (IC 12 tháng
+# −14,3% so với −6,8%), bền ở cả hai giai đoạn và giữ nguyên khi trung hoà ngành
+# (−14,4%) — tức là tín hiệu của từng doanh nghiệp chứ không phải đoán ngành.
 _CYC_RE = ('kim loại','khai khoáng','hóa chất','dầu','khí đốt','vận chuyển','vận tải',
            'chứng khoán','vật liệu xây dựng','cao su','nông','thủy sản','phân bón')
 
@@ -446,6 +472,7 @@ def build_fund(meta):
         r1, r0 = g(rq, 'bsa8', -1), g(rq, 'bsa8', -5)
         if r1 and r0 and r0 > 0 and revT and revT0 and revT0 > 0:
             F['recRev'] = round((r1 / r0 - 1) * 100 - (revT / revT0 - 1) * 100, 1)
+        if r1 is not None and revT and revT > 0: F['recRevL'] = round(r1 / revT, 3)
         i1, i0 = g(rq, 'bsa15', -1), g(rq, 'bsa15', -5)
         if i1 and i0 and i0 > 0 and revT and revT0 and revT0 > 0:
             F['invRev'] = round((i1 / i0 - 1) * 100 - (revT / revT0 - 1) * 100, 1)
