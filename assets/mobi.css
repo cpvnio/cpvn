@@ -60,6 +60,27 @@ html[data-theme="light"] .mobibar{--mb-bg:#ffffff; --mb-line:#dde1e8; --mb-mut:#
    nơi, người dùng phải học hai lần mà màn thì mất thêm một hàng. */
 header .tabs{display:none !important}
 
+/* ------------------------------------------------------- DẢI MỤC CON
+   Bảng giá · Bản đồ bong bóng · Danh mục tập đoàn — ba cách nhìn cùng một rổ mã,
+   nằm ở ba TRANG khác nhau nên dải này do mobi.js dựng chung. Cũng tự mang màu,
+   vì lý do y hệt thanh đáy: bốn trang đặt tên biến khác nhau. */
+.mobisub{--ms-bg:#1b2130; --ms-pan:#232b3d; --ms-line:#38425a; --ms-mut:#9aa6bd;
+  --ms-acc:#e11d48;
+  background:var(--ms-bg);box-shadow:inset 0 -1px 0 var(--ms-line);position:relative}
+html[data-theme="light"] .mobisub{--ms-bg:#f4f5f7; --ms-pan:#fff; --ms-line:#dde1e8;
+  --ms-mut:#66707f}
+.mobisub::after{content:"";position:absolute;right:0;top:0;bottom:1px;width:24px;
+  pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,0),var(--ms-bg))}
+.mobisub-in{display:flex;gap:var(--m2);padding:10px var(--m3);overflow-x:auto;
+  scrollbar-width:none}
+.mobisub-in::-webkit-scrollbar{display:none}
+.mobisub a{flex:0 0 auto;height:34px;padding:0 var(--m3);border-radius:var(--mr1);
+  display:flex;align-items:center;text-decoration:none;background:var(--ms-pan);
+  border:1px solid var(--ms-line);color:var(--ms-mut);font-size:14px;font-weight:700;
+  white-space:nowrap;transition:background var(--mms),color var(--mms)}
+.mobisub a.on{background:var(--ms-acc);border-color:var(--ms-acc);color:#fff}
+.mobisub a:active{transform:scale(.97)}
+
 /* ------------------------------------------------------- MÉP VÙNG CUỘN NGANG
    Cắt phẳng giữa chữ trông như lỗi tràn; có dải mờ thì mắt hiểu ngay là "còn nữa". */
 .mfade{position:relative}
@@ -74,6 +95,6 @@ html[data-theme="light"] .co img,
 html[data-theme="light"] .co .noimg{box-shadow:inset 0 0 0 1px rgba(19,26,38,.09)}
 }
 
-/* Máy bàn: thanh đáy không tồn tại. Khai ngoài media query để khỏi phụ thuộc
-   thứ tự nạp CSS của từng trang. */
-@media(min-width:761px){ .mobibar{display:none} }
+/* Máy bàn: thanh đáy và dải mục con không tồn tại — trên đó đã có menu thả xuống
+   ở đầu trang. Khai ngoài media query để khỏi phụ thuộc thứ tự nạp CSS từng trang. */
+@media(min-width:761px){ .mobibar,.mobisub{display:none} }

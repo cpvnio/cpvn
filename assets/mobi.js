@@ -16,31 +16,60 @@
     dua:'<path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/>',
     tap:'<path d="M4 21V7.5L11 3l7 4.5V21M4 21h16M9.5 21v-5h4v5M9 11h.01M14 11h.01"/>'
   };
+  /* BA MỤC CHÍNH, đúng như cây điều hướng đã chốt ở máy bàn. Bong bóng và Danh
+     mục tập đoàn KHÔNG được leo lên hàng mục chính: chúng là ba cách nhìn CÙNG
+     một rổ mã — bảng số, bản đồ bong bóng, gom theo nhà — nên phải nằm chung
+     dưới Bảng giá. Tách ra thành tab riêng là thanh đáy có 5 mục ngang hàng
+     trong khi thật ra chỉ có 3 nhánh, người dùng đọc ra một cấu trúc sai. */
   var MUC=[
-    ['bang','Bảng giá',      '/'],
-    ['bong','Bong bóng',     '/bubbles'],
-    ['radar','Radar',        'congcu.html?m=radar'],
-    ['dua','Đường đua',      'congcu.html?m=race'],
-    ['tap','Tập đoàn',       'congcu.html?m=tapdoan']
+    ['bang','Bảng giá',  '/'],
+    ['radar','Radar',    'congcu.html?m=radar'],
+    ['dua','Đường đua',  'congcu.html?m=race']
+  ];
+  /* Mục con của nhóm Bảng giá — ba TRANG khác nhau nên không trang nào tự dựng
+     được dải này, phải dựng ở đây một lần cho cả ba. */
+  /* Nhãn RÚT GỌN, không bê nguyên tên đầy đủ như menu máy bàn: ba chip ngắn thì
+     nằm trọn một hàng 375px, còn "Bản đồ bong bóng" + "Danh mục tập đoàn" là
+     phải cuộn ngang — mà cuộn để thấy mục thứ ba thì coi như mục đó bị giấu. */
+  var CON=[
+    ['bang','Bảng giá',  '/'],
+    ['bong','Bong bóng', '/bubbles'],
+    ['tap','Tập đoàn',   'congcu.html?m=tapdoan']
   ];
 
-  /* Mục nào đang mở: trang công cụ phải soi thêm ?m= vì ba tab khác nhau cùng
-     chạy trên một file. Thiếu bước này thì vào Radar mà thanh đáy vẫn sáng ở
-     Bảng giá — người dùng mất luôn cảm giác mình đang đứng ở đâu. */
+  /* Đang đứng ở đâu: trang công cụ phải soi thêm ?m= vì ba module khác nhau cùng
+     chạy trên một file. Trả về [mục chính, mục con]. */
   function dangO(){
     var p=location.pathname.replace(/\/index\.html$/,'/');
-    if(/bubbles/.test(p)) return 'bong';
+    if(/bubbles/.test(p)) return ['bang','bong'];
     if(/congcu/.test(p)){
       var m=(new URLSearchParams(location.search)).get('m')||'radar';
-      return m==='race'?'dua':m==='tapdoan'?'tap':'radar';
+      if(m==='race') return ['dua',''];
+      if(m==='tapdoan') return ['bang','tap'];
+      return ['radar',''];
     }
-    if(/cophieu/.test(p)) return 'bang';   /* trang một mã đi ra từ bảng giá */
-    return 'bang';
+    if(/cophieu/.test(p)) return ['bang',''];  /* trang một mã đi ra từ bảng giá */
+    return ['bang','bang'];
   }
 
   function dung(){
     if(document.querySelector('.mobibar')) return;
-    var cur=dangO(), n=document.createElement('nav');
+    var o=dangO(), cur=o[0], con=o[1];
+
+    /* Dải mục con chỉ hiện khi đang Ở TRONG nhóm Bảng giá, và không hiện ở trang
+       một mã — ở đó người ta đang xem một cổ phiếu, không phải đang chọn cách
+       nhìn cả rổ. */
+    if(con){
+      var h=document.querySelector('header'), s=document.createElement('div');
+      s.className='mobisub';
+      s.innerHTML='<div class="mobisub-in">'+CON.map(function(m){
+        return '<a href="'+m[2]+'"'+(m[0]===con?' class="on"':'')+'>'+m[1]+'</a>';
+      }).join('')+'</div>';
+      if(h&&h.parentNode) h.parentNode.insertBefore(s,h.nextSibling);
+      else document.body.insertBefore(s,document.body.firstChild);
+    }
+
+    var n=document.createElement('nav');
     n.className='mobibar';
     n.innerHTML=MUC.map(function(m){
       return '<a href="'+m[2]+'"'+(m[0]===cur?' class="on"':'')+'>'+

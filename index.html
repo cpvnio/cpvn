@@ -355,9 +355,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
        chiếm trọn một hàng -> header ăn 42% màn hình, chưa xem được mã nào. */
     header{gap:6px;padding:7px 10px}
     .brand{order:1;font-size:19px;flex:0 0 auto} .brand .mark{width:26px;height:26px}
-    #divBtn{order:1}
-    #scrBtn{order:1;margin-left:auto;padding:7px 12px}
-    #thm{order:1;padding:7px 10px}
+    /* HÀNG 1 chỉ giữ thứ dùng liên tục: Lọc và Cổ tức. Chụp ảnh đẩy xuống hàng 2
+       cạnh mấy ô chọn — nó là việc thỉnh thoảng mới làm, không đáng một chỗ ở
+       hàng đầu vốn đã chật vì có tên trang. */
+    #scrBtn{order:2;margin-left:auto}
+    #divBtn{order:3}
+    #thm{order:4}
+    #shotBtn{order:7}
     /* TUYỆT ĐỐI KHÔNG cho dải tab cuộn ngang: đặt overflow-x:auto là trình duyệt tính
        luôn overflow-y thành 'auto', menu thả xuống bị XÉN gọn trong dải tab cao 32px —
        trên điện thoại bấm vào mục cha thấy y như không có gì hiện ra. Ba mục ngắn,
@@ -369,10 +373,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     /* H3: NGÀNH · SÀN · TÌM MÃ gom CHUNG MỘT HÀNG — ô tìm mã chiếm trọn một hàng
        riêng là phí gần 40px chiều cao, đẩy bảng giá xuống dưới nếp gấp. Ba ô chia
        nhau theo tỉ lệ: ngành và sàn vừa đủ đọc tên, phần dư dồn hết cho ô tìm. */
-    #secToggle{order:3;flex:0 0 auto;max-width:none;padding:8px 10px;font-size:13px}
-    header select{order:4;flex:0 1 auto;width:auto;min-width:0;max-width:112px;
+    #secToggle{order:5;flex:0 0 auto;max-width:none;padding:8px 10px;font-size:13px}
+    header select{order:6;flex:0 1 auto;width:auto;min-width:0;max-width:104px;
       font-size:13px;padding:8px 6px}
-    input.search{order:5;flex:1 1 92px;width:auto;min-width:0;font-size:13.5px;padding:8px 9px}
+    input.search{order:8;flex:1 1 84px;width:auto;min-width:0;font-size:13.5px;padding:8px 9px}
     input.search::placeholder{opacity:.75}
     /* ép cột Cổ phiếu chỉ ~1/3 màn hình: khoá cứng bề rộng, phần dư dồn về cột số */
     table{min-width:640px}
@@ -403,6 +407,62 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .co .nm{display:none}
 
   /* ══════════════════════════════════════════════════════════════════════════
+     ĐẦU TRANG MOBILE THEO MẪU A — dải chỉ số thành THẺ, hai nút thành viên nén
+     có biểu tượng, hai bảng nổi thành TẤM TRƯỢT thật sự.
+     ══════════════════════════════════════════════════════════════════════════ */
+  @media(max-width:760px){
+    /* DẢI CHỈ SỐ: một dòng chữ chạy dài thì mắt phải đọc tuần tự mới tách được
+       đâu là tên, đâu là số, đâu là %. Thành thẻ thì mỗi chỉ số là một khối đọc
+       trọn vẹn, liếc một cái ra ngay. Mép phải mờ dần để báo "còn nữa" —
+       cắt phẳng giữa chữ trông như lỗi tràn.
+       Dùng mask chứ không dùng ::after: #stats CHÍNH LÀ khung cuộn, đặt ::after
+       bên trong thì dải mờ trôi theo nội dung thay vì đứng yên ở mép. */
+    #stats{gap:8px;padding:8px 12px;
+      -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);
+      mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+    #stats .st{flex-direction:column;align-items:flex-start;gap:1px;
+      background:var(--panel);border:1px solid var(--line);border-radius:12px;
+      padding:7px 10px;min-width:104px}
+    #stats .st .nm{font-size:11px;font-weight:800;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--muted)}
+    #stats .st .val{font-size:15.5px;font-weight:800;line-height:1.15}
+    #stats .st>span:last-child{font-size:12.5px}
+    #stats .stsep{display:none}
+    #stats .breadth{background:var(--panel);border:1px solid var(--line);
+      border-radius:12px;padding:7px 10px;gap:4px}
+
+    /* HAI NÚT THẬT SỰ HAY DÙNG: Lọc và Cổ tức — hiện đủ chữ, viền mảnh, biểu
+       tượng một nét. Chụp ảnh và đổi đèn lùi về nút vuông chỉ có biểu tượng. */
+    #divBtn span{display:inline;font-size:0}
+    #divBtn span::after{content:"Cổ tức";font-size:12.5px}
+    #divBtn,#scrBtn{display:flex;align-items:center;gap:5px;height:36px;padding:0 10px;
+      border-radius:8px;font-size:12.5px;font-weight:700;background:var(--panel2);
+      border:1px solid var(--line);color:var(--txt)}
+    #scrBtn{background:rgba(225,29,72,.1);border-color:rgba(225,29,72,.45);color:var(--accent)}
+    #divBtn .ic,#scrBtn .ic{width:15px;height:15px;flex:0 0 auto}
+    #scrBtn .pro{display:none}
+    #shotBtn,#thm{width:36px;height:36px;padding:0;display:flex;align-items:center;
+      justify-content:center;border-radius:8px}
+    #shotBtn .ic,#thm .ic{width:16px;height:16px}
+
+    /* TẤM TRƯỢT phải nằm TRÊN thanh tab đáy (z-index 200) — bản trước để z-index 60
+       nên mép dưới bảng cổ tức bị thanh tab che mất một khoảng, đọc hụt mấy dòng
+       cuối mà không biết là còn. */
+    #dvBackdrop.on{z-index:205}
+    #divPanel{z-index:210;padding-top:0;border-radius:20px 20px 0 0}
+    #divPanel::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
+      background:var(--line);margin:8px auto 8px}
+    /* Bộ lọc pro cũng vậy: bản cũ chen vào giữa trang, mở ra là bảng giá tụt
+       xuống, đóng lại nhảy ngược lên — mất chỗ đang đọc. */
+    #scrPanel.on{position:fixed;left:0;right:0;bottom:0;z-index:210;
+      max-height:82vh;overflow-y:auto;padding:0 10px 14px;
+      border-radius:20px 20px 0 0;border:0;box-shadow:0 -20px 50px rgba(0,0,0,.35);
+      background:var(--panel)}
+    #scrPanel.on::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
+      background:var(--line);margin:8px auto 10px;position:sticky;top:0}
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
      BẢNG GIÁ TRÊN ĐIỆN THOẠI — mẫu A "Bảng điện" (user chốt 11/08/2026)
      Bản cũ là bảng rộng 1120px CUỘN NGANG với ba cột ghim: muốn xem GTGD phải
      vuốt sang, xem xong vuốt về thì mất chỗ đang đọc. Nay bảng vừa đúng bề
@@ -420,7 +480,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
     thead tr,#tb tr{
       display:grid;
-      grid-template-columns:18px minmax(0,1fr) 92px 66px;
+      grid-template-columns:18px minmax(0,1fr) 86px 62px;
       column-gap:8px;align-items:center;
       padding:0 12px;border:0}
     #tb tr{min-height:58px;box-shadow:inset 0 -1px 0 var(--mrule)}
@@ -465,11 +525,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
        tên dài không chịu cắt, nó đẩy phình cả lưới và đè lên cột GTGD (đo được
        tài liệu rộng 534px trên màn 375px). */
     #tb td:nth-child(3),#tb td:nth-child(3) .co,#tb td:nth-child(3) .co>div{min-width:0}
-    #tb td:nth-child(3) .co{gap:10px;align-items:center}
-    #tb .co img,#tb .co .noimg{width:30px;height:30px;border-radius:9px}
+    #tb td:nth-child(3) .co{gap:9px;align-items:center}
+    #tb .co img,#tb .co .noimg{width:28px;height:28px;border-radius:9px}
     #tb .co .sym{font-size:15.5px;font-weight:800;letter-spacing:.2px;line-height:1.2}
     #tb .co .ex{display:none}
-    #tb .co .nm{display:block;font-size:12.5px;color:var(--muted);line-height:1.25;
+    #tb .co .nm{display:block;font-size:12px;color:var(--muted);line-height:1.25;
       margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
     /* GIÁ to và mang màu hướng; GTGD nhỏ, xám, ngay dưới */
@@ -480,7 +540,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     /* Chip % ôm sát con số chứ không kéo hết bề ngang cột — kéo hết thì nó thành
        một mảng màu, mà cả bảng toàn mảng màu thì hết chỗ nào là điểm nhấn. */
     #tb td:nth-child(6){text-align:right}
-    #tb td:nth-child(6) .badge{display:inline-block;min-width:64px;text-align:right;
+    #tb td:nth-child(6) .badge{display:inline-block;min-width:60px;text-align:right;
       padding:4px 6px;border-radius:6px;font-size:14px;font-weight:800}
 
     #tb td.star{font-size:15px;width:auto;min-width:0;padding:0;text-align:left;
@@ -547,9 +607,9 @@ document.addEventListener(MO,function(e){
   <span id="cnt"></span>
   <input class="search" id="q" placeholder="Tìm mã / tên công ty…" data-mob="Tìm mã…" />
   <button class="thmbtn" id="secToggle" title="Chọn nhóm ngành">☰ Ngành</button>
-  <button class="thmbtn" id="shotBtn" title="Chụp ảnh bảng giá tại đúng vị trí đang xem">📷</button>
-  <button class="thmbtn" id="divBtn" title="Lịch chốt quyền: cổ tức tiền, cổ tức cổ phiếu, cổ phiếu thưởng, phát hành thêm">🗓️ <span>Lịch cổ tức</span></button>
-  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a1 1 0 0 1 .78 1.63L14 13.9v5.3a1 1 0 0 1-1.45.9l-2.4-1.2a1 1 0 0 1-.55-.9V13.9L3.22 5.63A1 1 0 0 1 4 4z"/></svg><span>Bộ Lọc</span></button>
+  <button class="thmbtn" id="shotBtn" title="Chụp ảnh bảng giá tại đúng vị trí đang xem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6.5" width="18" height="13.5" rx="2.5"/><circle cx="12" cy="13.2" r="3.8"/><path d="M8.5 6.5l1.4-2.5h4.2l1.4 2.5"/></svg></button>
+  <button class="thmbtn" id="divBtn" title="Lịch chốt quyền: cổ tức tiền, cổ tức cổ phiếu, cổ phiếu thưởng, phát hành thêm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg><span>Lịch cổ tức</span></button>
+  <button class="thmbtn" id="scrBtn" title="Bộ lọc cổ phiếu: 18 tiêu chí lọc nhanh 1 chạm"><i class="pro">pro</i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Bộ Lọc</span></button>
   <button class="thmbtn" id="thm" title="Đổi giao diện sáng/tối">🌙</button>
 </header>
 
@@ -559,7 +619,7 @@ document.addEventListener(MO,function(e){
 <div id="dvBackdrop"></div>
 <div id="divPanel">
   <div class="dvhead">
-    <b>🗓️ Lịch chốt quyền</b>
+    <b><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:5px"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>Lịch chốt quyền</b>
     <span class="dvseg" id="dvKhi"><button data-dv="sap" class="on">Sắp tới</button><button data-dv="qua">Đã qua</button></span>
     <span class="dvseg" id="dvLoai"><button data-dk="all" class="on">Tất cả</button><button data-dk="tien">Cổ tức tiền</button><button data-dk="cp">Cổ tức CP</button><button data-dk="thuong">CP thưởng</button><button data-dk="phathanh">Phát hành</button></span>
     <span class="dvcnt" id="dvCnt"></span>
@@ -795,17 +855,44 @@ function badge(v,extra){
   else { bg='rgba(234,57,67,.13)'; cl='var(--red)'; }
   return `<span class="badge" style="background:${bg};color:${cl}">${CP.pcTxt(v)}</span>`;
 }
-/* TÊN GỌN — bỏ mọi tiền tố pháp lý, giữ đúng phần người ta thật sự đọc.
-   Chỉ hiện trên điện thoại (dòng dưới mã); máy bàn vẫn để nguyên tên đầy đủ ở
-   thuộc tính title như cũ. */
-const _TIENTO=['Ngân hàng Thương mại Cổ phần','Ngân hàng Thương mại cổ phần','Ngân hàng TMCP',
-  'Tổng Công ty Cổ phần','Tổng công ty cổ phần','Tổng Công ty','Tổng công ty',
-  'Công ty Cổ phần','Công ty cổ phần','Công ty TNHH','Tập đoàn','Công ty'];
+/* TÊN GỌN — dòng phụ dưới mã, chỉ có trên điện thoại (máy bàn giữ tên đầy đủ ở
+   thuộc tính title như cũ).
+
+   PHẢI RÚT THẬT MẠNH TAY. Cắt mỗi tiền tố pháp lý là chưa đủ: "Ngân hàng TMCP Kỹ
+   Thương Việt Nam" còn lại "Kỹ Thương Việt Nam", vẫn dài hơn chỗ trống nên bị cắt
+   cụt thành "Kỹ Thương Việt …" — một dòng vừa dài vừa không đọc trọn thì tốn diện
+   tích mà chẳng nói thêm được gì. Nên bỏ luôn cả đuôi địa danh ("Việt Nam", "Sài
+   Gòn", "Hà Nội") vì mã nào ở sàn Việt Nam thì cũng ở Việt Nam cả.
+
+   Cắt cụt là NƯỚC CUỐI, và phải cắt ở RANH GIỚI TỪ: "Đầu tư và Phát t…" đọc như
+   lỗi hiển thị, "Đầu tư và Phát triển" đọc ra nghĩa. */
+const _TIENTO=['Ngân hàng Thương mại Cổ phần','Ngân hàng Thương mại cổ phần',
+  'Ngân hàng TMCP','Ngân hàng thương mại cổ phần',
+  'Tổng Công ty Cổ phần','Tổng công ty cổ phần','Tổng CTCP','Tổng Công ty','Tổng công ty',
+  'Công ty Cổ phần','Công ty cổ phần','Công ty TNHH MTV','Công ty TNHH','CTCP','Công ty',
+  'Tập đoàn','Ngân hàng'];
+const _DUOI=['Việt Nam','Viet Nam','VietNam','Sài Gòn','Sai Gon','Hà Nội','Ha Noi',
+  'TP. Hồ Chí Minh','TPHCM','Miền Bắc','Miền Nam','Miền Trung'];
+const _TOIDA=20;
 function tenNgan(n){
   n=String(n||'');
   for(const x of _TIENTO) n=n.split(x).join(' ');
-  n=n.split(' - ')[0];
-  return n.replace(/\s+/g,' ').replace(/^[\s\-–]+|[\s\-–]+$/g,'');
+  n=n.split(' - ')[0].replace(/\s+/g,' ').replace(/^[\s\-–,.]+|[\s\-–,.]+$/g,'');
+  /* Cắt đuôi địa danh LUÔN LUÔN, đừng đợi tên dài quá mới cắt: để ngưỡng thì
+     "Kỹ Thương Việt Nam" (18 ký tự) lọt lưới còn "Công Thương Việt Nam" (20) bị
+     cắt — hai hàng cạnh nhau, một hàng có đuôi một hàng không, đọc rất lệch.
+     Mã nào ở sàn Việt Nam thì cũng ở Việt Nam cả, đuôi đó không thêm nghĩa. */
+  for(const x of _DUOI){
+    if(n.toLowerCase().endsWith(x.toLowerCase())){
+      const con=n.slice(0,-x.length).replace(/[\s\-–,.]+$/,'');
+      if(con.length>=4) n=con;
+    }
+  }
+  if(n.length>_TOIDA){
+    const c=n.lastIndexOf(' ',_TOIDA);
+    n=(c>8?n.slice(0,c):n.slice(0,_TOIDA))+'…';
+  }
+  return n;
 }
 
 /* Ô SẮP XẾP CỦA MOBILE — màn hẹp giấu 8 cột nên phải có đường khác chạm tới
@@ -1226,7 +1313,15 @@ $('scrClear').onclick=()=>{
 
 /* giao diện sáng/tối — lưu lựa chọn, dùng chung cho các trang CPVN */
 const thmBtn=$('thm');
-function applyThmIcon(){ thmBtn.textContent=document.documentElement.dataset.theme==='light'?'☀️':'🌙'; }
+/* Biểu tượng một nét, cùng bộ với mấy nút bên cạnh — emoji thì mỗi hệ điều hành
+   vẽ một kiểu và luôn mang màu riêng chửi nhau với bảng màu của trang. */
+const _ICSANG='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3L4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/>';
+const _ICTOI='<path d="M20 14.2A8.4 8.4 0 019.8 4 8.4 8.4 0 1020 14.2z"/>';
+function applyThmIcon(){
+  thmBtn.innerHTML='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    +' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    +(document.documentElement.dataset.theme==='light'?_ICSANG:_ICTOI)+'</svg>';
+}
 thmBtn.onclick=()=>{
   const light=document.documentElement.dataset.theme!=='light';
   document.documentElement.dataset.theme=light?'light':'';
