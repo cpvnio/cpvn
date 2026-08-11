@@ -40,17 +40,26 @@
     ['vb',  'Về bờ',      null]
   ];
 
+  /* ĐỌC CẢ URL SẠCH, đừng chỉ dò "congcu". `_redirects` viết lại /radar, /tapdoan,
+     /duongdua sang congcu.html bằng rewrite 200 — URL trên thanh địa chỉ GIỮ NGUYÊN
+     đường dẫn sạch và KHÔNG có ?m=. Chỉ dò chuỗi "congcu" thì vào cpvn.io/radar là
+     rơi hết xuống nhánh mặc định: mất sạch bốn nút và thanh đáy sáng nhầm ở Bảng
+     giá. Bắt được đúng lúc thử trên bản live — ở localhost tao toàn gõ congcu.html
+     nên nhánh này không bao giờ chạy tới. congcu.js cũng đọc theo path vì lý do y hệt. */
   function dangO(){
-    var p=location.pathname.replace(/\/index\.html$/,'/');
-    if(/bubbles/.test(p)) return ['radar','bong'];
+    var p=location.pathname.replace(/\/index\.html$/,'').replace(/\/+$/,'');
+    if(/bubbles/.test(p))  return ['radar','bong'];
+    if(/cophieu/.test(p))  return ['bang',''];      /* trang một mã đi ra từ bảng giá */
+    if(/duongdua/.test(p)) return ['dua',''];
+    if(/tapdoan/.test(p))  return ['radar','tap'];
+    if(/radar/.test(p))    return ['radar','phien'];
     if(/congcu/.test(p)){
       var q=new URLSearchParams(location.search), m=q.get('m')||'radar';
-      if(m==='race') return ['dua',''];
+      if(m==='race')    return ['dua',''];
       if(m==='tapdoan') return ['radar','tap'];
       return ['radar',q.get('t')||'phien'];   /* phien = mặc định, không nút nào sáng */
     }
-    if(/cophieu/.test(p)) return ['bang',''];  /* trang một mã đi ra từ bảng giá */
-    return ['bang',''];                        /* BẢNG GIÁ: không dải mục con */
+    return ['bang',''];                       /* BẢNG GIÁ: không dải mục con */
   }
 
   function dung(){
