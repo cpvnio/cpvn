@@ -60,37 +60,28 @@ html[data-theme="light"] .mobibar{--mb-bg:#ffffff; --mb-line:#dde1e8; --mb-mut:#
    nơi, người dùng phải học hai lần mà màn thì mất thêm một hàng. */
 header .tabs{display:none !important}
 
-/* -------------------------------------------------- MỤC CON BUNG TỪ THANH ĐÁY
-   Không có dải cố định trên đỉnh: nó ăn đứt 54px của MỌI màn hình, cả ngày chỉ
-   để chờ một cú bấm. Nay bấm mục chính thì mục con mới trồi lên ngay trên thanh
-   đáy — đúng chỗ ngón cái đang đặt, và không tốn pixel nào khi không dùng.
+/* ------------------------------------------------------------ DẢI MỤC CON
+   Nằm ngay dưới đầu trang, bày thẳng ba nút. Đã thử cho bung lên từ thanh đáy:
+   tiết kiệm 54px thật, nhưng đổi cách nhìn phải chạm hai lần và phải NHỚ rằng
+   bấm vào mục đang mở thì mới ra menu — không có gì trên màn gợi ý điều đó.
    Tự mang bảng màu, lý do y hệt thanh đáy: bốn trang đặt tên biến khác nhau. */
-.mobinen{position:fixed;inset:0;z-index:198;background:rgba(6,10,18,.5);
-  opacity:0;pointer-events:none;transition:opacity .18s}
-.mobinen.on{opacity:1;pointer-events:auto}
-.mobipop{--mp-pan:#232b3d; --mp-pan2:#2b3448; --mp-line:#38425a; --mp-txt:#e8ecf5;
-  --mp-mut:#9aa6bd; --mp-acc:#e11d48;
-  position:fixed;left:8px;right:8px;z-index:199;
-  bottom:calc(var(--mbar) + 8px + env(safe-area-inset-bottom));
-  transform:translateY(14px) scale(.98);opacity:0;pointer-events:none;
-  transition:opacity .18s,transform .2s cubic-bezier(.32,.72,0,1)}
-html[data-theme="light"] .mobipop{--mp-pan:#fff; --mp-pan2:#f4f5f7; --mp-line:#dde1e8;
-  --mp-txt:#16181d; --mp-mut:#66707f}
-.mobipop.on{opacity:1;transform:none;pointer-events:auto}
-.mobipop-in{background:var(--mp-pan);border:1px solid var(--mp-line);
-  border-radius:var(--mr3);overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.42)}
-html[data-theme="light"] .mobipop-in{box-shadow:0 18px 44px rgba(15,23,42,.2)}
-.mobipop .grab{width:36px;height:4px;border-radius:2px;background:var(--mp-line);
-  margin:8px auto 4px}
-.mobipop a{display:flex;align-items:center;min-height:50px;padding:0 var(--m4);
-  text-decoration:none;color:var(--mp-txt);font-size:15px;font-weight:700;
-  box-shadow:inset 0 -1px 0 var(--mp-line)}
-.mobipop a:last-child{box-shadow:none}
-.mobipop a:active{background:var(--mp-pan2)}
-.mobipop a i{margin-left:auto;width:8px;height:8px;border-radius:50%;
-  background:transparent}
-.mobipop a.on{color:var(--mp-acc)}
-.mobipop a.on i{background:var(--mp-acc)}
+.mobisub{--ms-bg:#1b2130; --ms-pan:#232b3d; --ms-line:#38425a; --ms-mut:#9aa6bd;
+  --ms-acc:#e11d48;
+  background:var(--ms-bg);box-shadow:inset 0 -1px 0 var(--ms-line);position:relative}
+html[data-theme="light"] .mobisub{--ms-bg:#f4f5f7; --ms-pan:#fff; --ms-line:#dde1e8;
+  --ms-mut:#66707f}
+.mobisub-in{display:flex;gap:var(--m2);padding:9px var(--m3);overflow-x:auto;
+  scrollbar-width:none}
+.mobisub-in::-webkit-scrollbar{display:none}
+.mobisub a,.mobisub button{flex:1 1 0;min-width:0;height:36px;padding:0 6px;
+  border-radius:var(--mr1);display:flex;align-items:center;justify-content:center;
+  text-decoration:none;background:var(--ms-pan);border:1px solid var(--ms-line);
+  color:var(--ms-mut);font:inherit;font-size:13px;font-weight:700;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+  transition:background var(--mms),color var(--mms),border-color var(--mms)}
+.mobisub a.on,.mobisub button.on{background:var(--ms-acc);border-color:var(--ms-acc);
+  color:#fff}
+.mobisub a:active,.mobisub button:active{transform:scale(.97)}
 
 /* ------------------------------------------------------- MÉP VÙNG CUỘN NGANG
    Cắt phẳng giữa chữ trông như lỗi tràn; có dải mờ thì mắt hiểu ngay là "còn nữa". */
@@ -108,4 +99,4 @@ html[data-theme="light"] .co .noimg{box-shadow:inset 0 0 0 1px rgba(19,26,38,.09
 
 /* Máy bàn: thanh đáy và dải mục con không tồn tại — trên đó đã có menu thả xuống
    ở đầu trang. Khai ngoài media query để khỏi phụ thuộc thứ tự nạp CSS từng trang. */
-@media(min-width:761px){ .mobibar,.mobipop,.mobinen{display:none} }
+@media(min-width:761px){ .mobibar,.mobisub{display:none} }
