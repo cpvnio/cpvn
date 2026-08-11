@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>CPVN — Thử thu nhỏ chữ bảng giá</title>
+<link rel="icon" type="image/png" href="assets/logo-64.png?v=3"/>
+<style>
+/* ============================================================================
+   THỬ BA MỨC MẬT ĐỘ CHO BẢNG GIÁ MOBILE
+   Đúng giao diện đang chạy trên cpvn.io, chỉ đổi thang chữ và chiều cao hàng.
+   Bên trái luôn là bản HIỆN TẠI để có mốc so; bên phải là mức đang chọn.
+
+   BA CÁI SÀN KHÔNG ĐƯỢC PHÁ, thu nhỏ tới đâu cũng phải chừa:
+   1. HÀNG BẤM ĐƯỢC ≥ 44px. Cả hàng là một nút (chạm vào mở trang cổ phiếu), mà
+      44px là cạnh nhỏ nhất Apple/Google khuyến nghị cho vùng chạm — nhỏ hơn thì
+      ngón tay trượt sang hàng bên, mở nhầm mã.
+   2. CHỮ PHỤ ≥ 11px. Dưới mức đó thì tên công ty và GTGD thành vệt xám, có cũng
+      như không — thu nhỏ để hiện thêm hàng mà hàng nào cũng không đọc nổi thì lỗ.
+   3. GIÁ VÀ % KHÔNG ĐƯỢC NHỎ HƠN MÃ. Chúng là thứ người ta tới đây để đọc; mã
+      chỉ là nhãn để biết đang đọc của ai.
+   ========================================================================== */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:#0c1017;color:#e8edf7;min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1100px 620px at 50% -8%,#1c2740,#0c1017)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+.wrap{max-width:1000px;margin:0 auto;padding:22px 16px 40px}
+h1{margin:0;font-size:23px;letter-spacing:-.4px;font-weight:800}
+.sub{margin:6px 0 0;color:#95a3bd;font-size:13.5px;line-height:1.65;max-width:640px}
+.sub b{color:#e8edf7}
+
+.bar{position:sticky;top:0;z-index:20;margin:16px -16px 0;padding:11px 16px 12px;
+  background:rgba(12,16,23,.88);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.09)}
+.lab{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:#7c8aa5;margin-bottom:7px}
+.seg{display:flex;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{height:38px;padding:0 15px;font-size:13.5px;font-weight:700;color:#a9b6cd;
+  white-space:nowrap}
+.seg button.on{background:#e11d48;color:#fff}
+.doc{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:12px;font-size:12.5px;color:#95a3bd}
+.doc b{color:#e8edf7;font-weight:800}
+.doc .up{color:#22c98a}
+
+.duo{display:flex;justify-content:center;gap:26px;margin-top:22px}
+.col{width:392px;flex:0 0 auto}
+.cap{display:flex;align-items:baseline;gap:8px;margin-bottom:9px;padding:0 4px}
+.cap .t{font-size:14.5px;font-weight:800}
+.cap .d{font-size:12px;color:#8b99b3;margin-left:auto}
+.fr{width:392px;height:762px;border:11px solid #0e1118;border-radius:42px;overflow:hidden;
+  box-shadow:0 26px 60px rgba(0,0,0,.55),0 0 0 2px #29314a;position:relative}
+/* Màn hẹp: bỏ máy đối chiếu, chỉ giữ mức đang chọn — và giữ Ở CỠ THẬT.
+   Cỡ chữ thì phải nhìn ở cỡ thật mới phán được; nhét hai máy cạnh nhau trên màn
+   375px là phải thu còn 0,46 lần, lúc đó chữ nào cũng bé như nhau, so cái gì nữa.
+   Muốn đối chiếu thì bấm qua lại giữa ba mức, còn số hàng/màn đã có sẵn ở trên. */
+@media(max-width:900px){
+  /* BỎ LUÔN KHUNG MÁY khi đang xem trên máy thật: lồng một cái điện thoại vào
+     trong điện thoại thì phần ruột chỉ còn ~340px, chữ bị bóp so với 375px thật
+     — đo cỡ chữ trên một khung bị bóp là đo sai ngay từ đầu. */
+  .wrap{padding:16px 0 32px}
+  h1,.sub{padding:0 14px}
+  .bar{margin:16px 0 0;padding:11px 14px 12px}
+  .seg{width:auto;overflow-x:auto;scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{flex:0 0 auto}
+  .duo{gap:0}
+  #colA{display:none}
+  .col{width:100%;max-width:none}
+  .cap{padding:0 14px}
+  .fr{width:100%;height:76vh;min-height:520px;border:0;border-radius:0;box-shadow:none}
+  .note{margin:20px 14px 0}
+}
+
+/* ══════════════ RUỘT: bản sao trung thực của bảng giá mobile ══════════════ */
+.ph{--bg:#f4f5f7;--panel:#fff;--panel2:#eceef2;--line:#dde1e8;--txt:#16181d;
+  --muted:#66707f;--accent:#e11d48;--green:#0b9b61;--red:#dc3644;--yellow:#a16207;
+  --thead:#f0f2f5;--hdr2:#f0f2f5;--rule:rgba(19,26,38,.075);
+  /* thang chữ — đây chính là thứ đang đem ra cân */
+  --f-sym:15.5px; --f-nm:12px; --f-px:15.5px; --f-gt:12.5px; --f-pc:14px;
+  --f-th:11px; --f-chip:15.5px; --f-btn:12.5px;
+  --row:58px; --logo:28px; --pad:12px;
+  height:100%;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;
+  font-size:14px;overflow:hidden}
+.ph.toi{--bg:#1b2130;--panel:#232b3d;--panel2:#2c3548;--line:#38425a;--txt:#e8ecf5;
+  --muted:#9aa6bd;--green:#22c98a;--red:#f0505c;--yellow:#eab308;
+  --thead:#212939;--hdr2:#1f2637;--rule:rgba(255,255,255,.07)}
+
+.ph .hd{background:var(--panel);box-shadow:0 1px 0 var(--line);padding:7px 10px;
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ph .brand{font-size:17px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:6px}
+.ph .brand i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#e11d48,#9f1239);
+  display:block}
+.ph .btn{height:34px;padding:0 10px;border-radius:8px;background:var(--panel2);
+  border:1px solid var(--line);font-size:var(--f-btn);font-weight:700;display:flex;
+  align-items:center;gap:5px;color:var(--txt)}
+.ph .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.ph .btn.sq{width:34px;padding:0;justify-content:center}
+.ph .sp{margin-left:auto}
+.ph .inp{flex:1 1 110px;min-width:0;height:34px;border-radius:8px;background:var(--panel);
+  border:1px solid var(--line);font-size:13px;color:var(--muted);display:flex;
+  align-items:center;padding:0 10px}
+
+.ph .chips{display:flex;gap:8px;padding:8px var(--pad);overflow-x:auto;background:var(--hdr2);
+  box-shadow:0 1px 0 var(--line);scrollbar-width:none}
+.ph .chips::-webkit-scrollbar{display:none}
+.ph .ck{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:7px 10px;min-width:100px}
+.ph .ck .k{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted)}
+.ph .ck .v{font-size:var(--f-chip);font-weight:800;line-height:1.15;margin-top:1px}
+.ph .ck .c{font-size:12px;font-weight:700}
+.ph .ck .g{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:1px}
+
+.ph .srt{display:flex;gap:8px;align-items:center;padding:7px var(--pad);background:var(--hdr2);
+  box-shadow:inset 0 -1px 0 var(--line)}
+.ph .srt .l{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted)}
+.ph .srt .s{flex:1;height:32px;border-radius:8px;background:var(--panel);
+  border:1px solid var(--line);display:flex;align-items:center;padding:0 9px;font-size:13px;
+  font-weight:600}
+.ph .srt .d{width:40px;height:32px;border-radius:8px;background:var(--panel);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+
+.ph .th{display:grid;grid-template-columns:18px minmax(0,1fr) 86px 62px;gap:8px;
+  padding:7px var(--pad);background:var(--thead);box-shadow:inset 0 -1px 0 var(--line);
+  font-size:var(--f-th);font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap}
+.ph .th b:nth-child(3),.ph .th b:nth-child(4){text-align:right;font-weight:800}
+
+.ph .body{flex:1;overflow-y:auto;scrollbar-width:none}
+.ph .body::-webkit-scrollbar{display:none}
+.ph .r{display:grid;grid-template-columns:18px minmax(0,1fr) 86px 62px;gap:8px;
+  align-items:center;padding:0 var(--pad);min-height:var(--row);
+  box-shadow:inset 0 -1px 0 var(--rule)}
+.ph .r .st{color:var(--muted);font-size:14px}
+.ph .co{display:flex;align-items:center;gap:9px;min-width:0}
+.ph .co img{width:var(--logo);height:var(--logo);border-radius:8px;object-fit:contain;
+  background:#fff;padding:2px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(19,26,38,.09)}
+.ph.toi .co img{box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.ph .co .id{min-width:0}
+.ph .co .sym{display:block;font-size:var(--f-sym);font-weight:800;letter-spacing:.2px;
+  line-height:1.2}
+.ph .co .nm{display:block;font-size:var(--f-nm);color:var(--muted);line-height:1.25;
+  margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .px{text-align:right}
+.ph .px .p{display:block;font-size:var(--f-px);font-weight:700;line-height:1.2;white-space:nowrap}
+.ph .px .g{display:block;font-size:var(--f-gt);color:var(--muted);line-height:1.25;
+  margin-top:1px;white-space:nowrap}
+.ph .pc{text-align:right;font-size:var(--f-pc);font-weight:800}
+.ph .pc i{font-style:normal;display:inline-block;border-radius:6px;padding:4px 5px;
+  min-width:58px;text-align:right}
+.ph .up{color:var(--green)}.ph .dn{color:var(--red)}.ph .fl{color:var(--yellow)}
+.ph .pc.up i{background:rgba(11,155,97,.1)}.ph .pc.dn i{background:rgba(220,54,68,.1)}
+.ph .pc.fl i{background:rgba(161,98,7,.1)}
+.ph.toi .pc.up i{background:rgba(34,201,138,.13)}
+.ph.toi .pc.dn i{background:rgba(240,80,92,.13)}
+.ph.toi .pc.fl i{background:rgba(234,179,8,.13)}
+
+.ph .tb{display:flex;background:var(--panel);box-shadow:0 -1px 0 var(--line)}
+.ph .tb a{flex:1;min-height:54px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:700;
+  text-decoration:none;position:relative}
+.ph .tb a svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+.ph .tb a.on{color:var(--accent)}
+.ph .tb a.on::before{content:"";position:absolute;top:0;left:26%;right:26%;height:2px;
+  background:var(--accent);border-radius:0 0 2px 2px}
+
+.note{margin-top:20px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.045);
+  border:1px solid rgba(255,255,255,.09);font-size:12.5px;line-height:1.7;color:#a9b6cd}
+.note b{color:#e8edf7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Thu nhỏ chữ bảng giá — thử ba mức</h1>
+  <p class="sub">Đúng giao diện đang chạy, chỉ đổi <b>thang chữ và chiều cao hàng</b>.
+  Bên trái luôn là bản <b>hiện tại</b> để có mốc so, bên phải là mức đang chọn.
+  Con số đáng nhìn nhất là <b>thấy được bao nhiêu mã trên một màn</b>.</p>
+
+  <div class="bar">
+    <div class="lab">Mức chữ</div>
+    <div class="seg" id="mucs"></div>
+    <div class="doc" id="doc"></div>
+  </div>
+
+  <div class="duo">
+    <div class="col" id="colA">
+      <div class="cap"><span class="t">Hiện tại</span><span class="d" id="dA"></span></div>
+      <div class="fr"><div class="ph" id="phA"></div></div>
+    </div>
+    <div class="col" id="colB">
+      <div class="cap"><span class="t" id="tenB">Vừa</span><span class="d" id="dB"></span></div>
+      <div class="fr"><div class="ph" id="phB"></div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Ba cái sàn không phá, thu nhỏ tới đâu cũng phải chừa.</b><br/>
+    ① <b>Hàng bấm được ≥ 44px</b> — cả hàng là một nút mở trang cổ phiếu, mà 44px là cạnh
+    nhỏ nhất Apple và Google cùng khuyến nghị cho vùng chạm. Nhỏ hơn thì ngón tay trượt
+    sang hàng bên, mở nhầm mã.<br/>
+    ② <b>Chữ phụ ≥ 11px</b> — dưới mức đó tên công ty và GTGD thành vệt xám, có cũng như
+    không. Thu nhỏ để hiện thêm hàng mà hàng nào cũng không đọc nổi thì lỗ.<br/>
+    ③ <b>Giá và % không được nhỏ hơn mã</b> — chúng mới là thứ người ta mở trang để đọc,
+    mã chỉ là nhãn để biết đang đọc của ai.
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf=n=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
+const pc=x=>x==null?'—':(x>0?'+':'')+x.toFixed(2)+'%';
+const cls=x=>x==null?'':x>0.0001?'up':x<-0.0001?'dn':'fl';
+
+/* Cùng một hàm rút tên với bản đang chạy — so mật độ mà tên lại dài ngắn khác
+   nhau thì đang so hai thứ cùng lúc, không rút ra được kết luận nào. */
+const _TIENTO=['Ngân hàng Thương mại Cổ phần','Ngân hàng TMCP','Tổng Công ty Cổ phần',
+  'Tổng Công ty','Công ty Cổ phần','Công ty TNHH','CTCP','Công ty','Tập đoàn','Ngân hàng'];
+const _DUOI=['Việt Nam','Viet Nam','Sài Gòn','Hà Nội'];
+function tenNgan(n){
+  n=String(n||'');
+  for(const x of _TIENTO) n=n.split(x).join(' ');
+  n=n.split(' - ')[0].replace(/\s+/g,' ').replace(/^[\s\-–,.]+|[\s\-–,.]+$/g,'');
+  for(const x of _DUOI){
+    if(n.toLowerCase().endsWith(x.toLowerCase())){
+      const c=n.slice(0,-x.length).replace(/[\s\-–,.]+$/,'');
+      if(c.length>=4) n=c;
+    }
+  }
+  if(n.length>20){ const c=n.lastIndexOf(' ',20); n=(c>8?n.slice(0,c):n.slice(0,20))+'…'; }
+  return n;
+}
+
+/* BA MỨC. Mỗi mức chỉ là một bộ biến CSS — không đụng gì tới bố cục, nhờ vậy
+   so ra đúng phần chữ chứ không lẫn thứ khác. */
+const MUC={
+  thua:{ten:'Hiện tại (thưa)',sym:15.5,nm:12,px:15.5,gt:12.5,pcs:14,th:11,chip:15.5,btn:12.5,row:58,logo:28,pad:12},
+  vua: {ten:'Vừa — đề xuất',  sym:14.5,nm:11.5,px:14.5,gt:11.5,pcs:13,th:10.5,chip:15,btn:12,row:50,logo:26,pad:11},
+  day: {ten:'Dày — sát sàn',  sym:13.5,nm:11,px:13.5,gt:11,pcs:12.5,th:10,chip:14,btn:11.5,row:44,logo:24,pad:10}
+};
+let cur='vua';
+
+const IC={
+ loc:'<path d="M4 6h16M7 12h10M10 18h4"/>',
+ lich:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+ sang:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.3 6.3L4.8 4.8M19.2 19.2l-1.5-1.5M17.7 6.3l1.5-1.5M4.8 19.2l1.5-1.5"/>',
+ anh:'<rect x="3" y="6.5" width="18" height="13.5" rx="2.5"/><circle cx="12" cy="13.2" r="3.8"/><path d="M8.5 6.5l1.4-2.5h4.2l1.4 2.5"/>',
+ xuong:'<path d="M12 5v13M6 12l6 6 6-6"/>',
+ bang:'<path d="M3 5h18M3 10h18M3 15h11M3 20h7"/>',
+ radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6.4-4.2"/>',
+ dua:'<path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/>'
+};
+const ic=k=>`<svg viewBox="0 0 24 24">${IC[k]}</svg>`;
+
+let D=null;
+function ruot(m){
+  const s=MUC[m];
+  const idx=D.idx.map(x=>`<div class="ck"><div class="k">${esc(x.n)}</div>
+    <div class="v">${Number(x.v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    <div class="c ${cls(x.chg)}">${pc(x.chg)}</div>
+    <div class="g">${nf(x.gt)} tỷ</div></div>`).join('');
+  const rows=D.board.map(c=>`<div class="r">
+      <span class="st">☆</span>
+      <span class="co"><img src="assets/logo/${c.s}.webp" loading="lazy" alt=""
+        onerror="this.style.visibility='hidden'"/>
+        <span class="id"><span class="sym">${c.s}</span>
+          <span class="nm">${esc(tenNgan(c.n))}</span></span></span>
+      <span class="px"><span class="p ${cls(c.chg)}">${nf(c.c)}</span>
+        <span class="g">${nf(c.gt)} tỷ</span></span>
+      <span class="pc ${cls(c.chg)}"><i>${pc(c.chg)}</i></span></div>`).join('');
+  return `<div class="hd">
+      <span class="brand"><i></i>CPVN.IO</span><span class="sp"></span>
+      <span class="btn">${ic('loc')}Lọc</span>
+      <span class="btn">${ic('lich')}Cổ tức</span>
+      <span class="btn sq">${ic('sang')}</span>
+      <span class="inp">Tìm mã…</span>
+      <span class="btn">☰ Ngành</span>
+      <span class="btn">Tất cả sàn</span>
+      <span class="btn sq">${ic('anh')}</span>
+    </div>
+    <div class="chips">${idx}</div>
+    <div class="srt"><span class="l">Sắp theo</span><span class="s">Vốn hoá</span>
+      <span class="d">${ic('xuong')}</span></div>
+    <div class="th"><span></span><span>Cổ phiếu · ${nf(D.nSyms)} mã</span>
+      <b>Giá · GTGD</b><b>1D %</b></div>
+    <div class="body">${rows}</div>
+    <div class="tb"><a class="on">${ic('bang')}<span>Bảng giá</span></a>
+      <a>${ic('radar')}<span>Radar</span></a>
+      <a>${ic('dua')}<span>Đường đua</span></a></div>`;
+}
+function apMuc(el,m){
+  const s=MUC[m], st=el.style;
+  st.setProperty('--f-sym',s.sym+'px'); st.setProperty('--f-nm',s.nm+'px');
+  st.setProperty('--f-px',s.px+'px');   st.setProperty('--f-gt',s.gt+'px');
+  st.setProperty('--f-pc',s.pcs+'px');  st.setProperty('--f-th',s.th+'px');
+  st.setProperty('--f-chip',s.chip+'px');st.setProperty('--f-btn',s.btn+'px');
+  st.setProperty('--row',s.row+'px');   st.setProperty('--logo',s.logo+'px');
+  st.setProperty('--pad',s.pad+'px');
+  el.innerHTML=ruot(m);
+}
+/* Đếm hàng THẤY ĐƯỢC bằng cách đo thật, không nhân chia trên giấy: chiều cao
+   hàng còn phụ thuộc chữ có xuống dòng hay không, tính tay là ra số đẹp mà sai. */
+function demHang(el){
+  const b=el.querySelector('.body'); if(!b) return 0;
+  const h=b.getBoundingClientRect().height, r=el.querySelector('.r');
+  if(!r) return 0;
+  return Math.floor(h/r.getBoundingClientRect().height);
+}
+function ve(){
+  $('#mucs').innerHTML=Object.entries(MUC).map(([k,v])=>
+    `<button data-m="${k}" class="${k===cur?'on':''}">${v.ten}</button>`).join('');
+  apMuc($('#phA'),'thua'); apMuc($('#phB'),cur);
+  $('#tenB').textContent=MUC[cur].ten;
+  /* Đo NGAY, đừng đợi requestAnimationFrame: khi khung xem bị ẩn (đổi tab, cửa sổ
+     chạy nền) trình duyệt hoãn rAF vô thời hạn, thế là số liệu dưới thanh điều
+     khiển đứng nguyên ở mức cũ trong khi hai máy đã đổi — nhìn vào tưởng thu nhỏ
+     chữ mà chẳng được thêm hàng nào. Đọc getBoundingClientRect là đã ép trình
+     duyệt tính lại bố cục rồi, không cần chờ nhịp vẽ. */
+  (()=>{
+    /* Máy đối chiếu bị ẩn ở màn hẹp thì không có bố cục để đo — đo bừa ra NaN,
+       in lên thành "so với NaN mã". Không có mốc thì thôi đừng so. */
+    const coA=$('#colA').offsetParent!==null;
+    const a=coA?demHang($('#phA')):null, b=demHang($('#phB'));
+    $('#dA').textContent=(a||0)+' mã / màn';
+    $('#dB').textContent=b+' mã / màn';
+    const s=MUC[cur];
+    $('#doc').innerHTML=
+      `<span>Mã: <b>${s.sym}px</b></span><span>Tên công ty: <b>${s.nm}px</b></span>`+
+      `<span>Giá: <b>${s.px}px</b></span><span>GTGD: <b>${s.gt}px</b></span>`+
+      `<span>Cao hàng: <b>${s.row}px</b></span>`+
+      `<span>Thấy được: <b class="${a&&b>a?'up':''}">${b} mã</b>`+
+      (a?` so với ${a} mã`+(b>a?` — <b class="up">thêm ${b-a} hàng</b>`:''):' trên một màn')+
+      `</span>`;
+  })();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-m]'); if(!b) return;
+  cur=b.dataset.m; ve();
+});
+addEventListener('resize',()=>{ clearTimeout(window._rz); window._rz=setTimeout(ve,150); });
+
+fetch('assets/demo-mobi.json?v=4').then(r=>r.json()).then(j=>{D=j;ve();})
+  .catch(()=>{$('#doc').textContent='Không nạp được assets/demo-mobi.json — trang này phải mở qua web.';});
+</script>
+</body>
+</html>
