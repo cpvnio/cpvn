@@ -47,9 +47,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .brand b{color:inherit}
   .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-left:12px}
   @media(max-width:760px){
-    .tabs{order:2;width:100%;margin-left:0;overflow-x:auto;scrollbar-width:none}
-    .tabs::-webkit-scrollbar{display:none}
+    /* không cho cuộn ngang ở đây: overflow-x:auto kéo theo overflow-y thành 'auto'
+       và menu thả xuống bị xén mất trong dải tab */
+    .tabs{order:2;width:100%;margin-left:0;overflow:visible}
     .tabs a{padding:7px 12px;font-size:13px;white-space:nowrap}
+    .tabs .tw:last-child>.dd{left:auto;right:0}
     .brand{order:1} .spacer{display:none} .thmbtn{order:1;margin-left:auto}
   }
   .tabs a{padding:8px 13px;font-size:14px;font-weight:700;color:var(--muted)}
@@ -62,14 +64,20 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      mục cha. Màn cảm ứng không có chuột nên chạm lần đầu mở menu, chạm mục con mới đi. */
   .tabs{overflow:visible}
   .tw{position:relative;display:flex}
-  .tw>a{cursor:pointer}
+  .tw>a{cursor:pointer;touch-action:manipulation}
   .dd{position:absolute;top:100%;left:0;min-width:max(100%,196px);display:none;flex-direction:column;
     gap:2px;padding:6px;margin-top:6px;border-radius:12px;background:var(--panel);
     border:1px solid var(--line);box-shadow:0 18px 44px rgba(0,0,0,.28);z-index:70}
   /* CẦU NỐI VÔ HÌNH bắc qua khe 6px giữa tab và menu — không có nó thì rê chuột xuống
      là chuột rời khỏi vùng hover, menu tắt ngay giữa đường, không cách nào chọn được */
   .dd::before{content:'';position:absolute;left:0;right:0;top:-8px;height:10px}
-  .tw:hover>.dd,.tw.mo>.dd{display:flex}
+  /* CHỈ máy có chuột THẬT mới mở bằng rê. Màn cảm ứng phải để JS mở: khi menu hiện ra
+     nhờ :hover GIẢ LẬP thì trình duyệt nuốt luôn cú chạm đó — click không bao giờ tới nơi,
+     đúng triệu chứng "bấm mãi menu không ra". Đã đo trên máy ảo Android: một cú chạm chỉ
+     đẻ ra pointerdown → touchstart → mouseover, HẾT, không có click. */
+  @media(hover:hover){ .tw:hover>.dd{display:flex} }
+  .tw.mo>.dd{display:flex}
+  .tw.mo>a:not(.on){color:var(--txt)}   /* đang mở thì mục cha phải sáng lên cho biết */
   .dd a{padding:8px 13px;border-radius:8px;font-size:13.5px;font-weight:700;
     color:var(--muted);white-space:nowrap;background:none}
   .dd a:hover{background:var(--panel2);color:var(--txt)}
@@ -399,15 +407,26 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=cd">🎯 Chủ điểm đầu tư</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a href="congcu.html?m=race">Đường đua</a><span class="dd"><a href="congcu.html?m=race&amp;t=dua">🏁 Đường đua vốn hoá</a><a href="congcu.html?m=race&amp;t=dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
-<script>(function(){/* MÀN CẢM ỨNG KHÔNG CÓ CHUỘT: chạm lần đầu vào mục cha thì MỞ menu
-chứ đừng đi luôn, chạm ra ngoài thì đóng. Máy có chuột giữ nguyên lối rê chuột của CSS. */
-var ws=[].slice.call(document.querySelectorAll('.tabs .tw'));
-if(!matchMedia('(hover:hover)').matches) ws.forEach(function(w){
-  var a=w.firstElementChild; a.addEventListener('click',function(e){
-    if(w.classList.contains('mo')) return;
-    e.preventDefault(); ws.forEach(function(x){x.classList.remove('mo')}); w.classList.add('mo');});});
-document.addEventListener('click',function(e){
-  if(!e.target.closest('.tw')) ws.forEach(function(x){x.classList.remove('mo')});});
+<script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
+mục con ĐẦU TIÊN của mỗi nhóm chính là trang của mục cha nên chẳng mất đường nào.
+PHẢI BẮT pointerdown, ĐỪNG ĐỢI click: cú chạm làm hiện nội dung đang ẩn thường bị trình
+duyệt nuốt mất, click không bao giờ tới nơi (đo trên máy ảo Android: một cú chạm chỉ đẻ ra
+pointerdown → touchstart → mouseover, hết) — đó là lý do "bấm mãi menu không ra".
+Máy có chuột giữ nguyên lối rê chuột của CSS, mạch này đứng ngoài. */
+var ws=[].slice.call(document.querySelectorAll('.tabs .tw')),
+    PE=!!window.PointerEvent, MO=PE?'pointerdown':'touchstart';
+function dong(tru){ws.forEach(function(x){if(x!==tru)x.classList.remove('mo')})}
+ws.forEach(function(w){
+  var a=w.firstElementChild,cham=false;
+  a.addEventListener(MO,function(e){
+    cham=PE?e.pointerType!=='mouse':true; if(!cham) return;
+    dong(w); w.classList.toggle('mo');},{passive:true});
+  /* chạm thì mục cha không được đi đâu, và cũng không để chỗ khác nghe ké —
+     trang công cụ gắn onclick đổi module lên đúng thẻ này */
+  a.addEventListener('click',function(e){
+    if(cham){e.preventDefault();e.stopImmediatePropagation();}});});
+document.addEventListener(MO,function(e){
+  if(!e.target.closest('.tw')) dong(null);},true);
 })();</script>
   <!-- ô TÌM MÃ: CÙNG HÀNG với các tab, đặt ngay SAU tab nên rơi đúng mép trái cột
        biểu đồ — tức nằm thẳng trên hàng "Nến ngày" ở dưới -->

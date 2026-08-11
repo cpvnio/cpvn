@@ -272,12 +272,31 @@ giá sai hoặc giá nhảy — đừng đẩy.
   Radar → Nhịp phiên · Chủ điểm đầu tư; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
   Bản trước để mục con thành dải LUÔN HIỆN dưới header + dải tab riêng trong Radar — ăn
   một hàng cố định trên mọi trang chỉ để chờ người ta bấm. Cả hai dải đã gỡ.
-  Bốn thứ phải giữ, thiếu cái nào là menu hỏng:
-  1. **`.tabs{overflow:visible}`** — khung tab vốn `overflow-x:auto`, để nguyên là menu bị cắt cụt.
+  Năm thứ phải giữ, thiếu cái nào là menu hỏng:
+  1. **`.tabs` phải `overflow:visible` ở MỌI khổ màn, kể cả trong media query.** Khung tab
+     vốn `overflow-x:auto`, để nguyên là menu bị cắt cụt. Bẫy 11/08/2026: rule gốc đã sửa
+     thành `visible` nhưng khối `@media(max-width:760px)` NẰM SAU lại đặt lại
+     `overflow-x:auto` cho dải tab — và **đặt một trục khác `visible` là trình duyệt tính
+     luôn trục kia thành `auto`**, nên trên điện thoại menu bị xén gọn trong dải tab cao
+     32px, bấm vào tưởng như không có gì hiện ra. Đừng cho dải tab cuộn ngang: ba mục ngắn,
+     màn 320px vẫn thừa chỗ (đã đo cả bốn trang). Kèm `.tw:last-child>.dd{left:auto;right:0}`
+     ở khổ hẹp để mục cuối không tràn mép màn.
   2. **Cầu nối vô hình `.dd::before`** bắc qua khe 6px giữa tab và menu, không có nó thì rê
      chuột xuống là rời vùng hover, menu tắt giữa đường.
-  3. **Màn cảm ứng không có chuột** — `matchMedia('(hover:hover)')` sai thì chạm lần đầu MỞ
-     menu (chặn `preventDefault`), chạm ra ngoài đóng.
+  3. **MÀN CẢM ỨNG PHẢI MỞ BẰNG `pointerdown`, TUYỆT ĐỐI ĐỪNG ĐỢI `click`.** Đã đo trên máy
+     ảo Android: một cú chạm vào mục cha chỉ đẻ ra `pointerdown → touchstart → mouseover`,
+     **KHÔNG có `click`** — vì cú chạm làm hiện nội dung đang ẩn thì trình duyệt nuốt luôn
+     nó. Bản cũ treo toàn bộ mạch mở menu lên `click` nên `.mo` không bao giờ được gắn; menu
+     chỉ thỉnh thoảng loé lên nhờ `:hover` GIẢ LẬP còn dính lại, đúng triệu chứng user báo
+     là "bấm rất nhiều lần mới hiện". Hai vế đi kèm:
+     · **`.tw:hover>.dd` phải nằm trong `@media(hover:hover)`** — để hover giả lập chạm được
+       vào là lại sinh ra đúng cái cảnh nuốt cú chạm.
+     · **Phân biệt chuột/chạm THEO TỪNG SỰ KIỆN (`e.pointerType`), đừng hỏi `matchMedia` một
+       lần lúc nạp trang** — iPad và laptop cảm ứng khai `hover:hover` mà vẫn chạm bằng tay.
+     Chạm vào mục cha là MỞ/ĐÓNG, không đi đâu cả (mục con đầu tiên của mỗi nhóm chính là
+     trang của mục cha). Cú `click` sinh ra sau cú chạm phải bị chặn bằng `preventDefault` +
+     **`stopImmediatePropagation`** — congcu.js gắn `onclick` đổi module lên đúng thẻ đó, không
+     chặn thì chạm một cái vừa mở menu vừa nhảy module.
   4. **Đổi chế độ Đường đua phải BẤM THẲNG nút `#raMode`**, đừng dựng lại module: nút đó mới
      là chỗ chạy `syncMode` (dừng animation, về vạch xuất phát, đổi khung đồ thị). Dựng lại
      module tưởng gọn mà chế độ không đổi — đã dính đúng vậy.
