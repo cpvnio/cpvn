@@ -181,7 +181,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   /* PHẢI khai báo width/height 100%: canvas là phần tử thay thế, chỉ inset:0 thì nó
      lấy kích thước nội tại (thuộc tính width/height) -> vẽ tràn ra ngoài thẻ */
   canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
-    border-radius:10px;background:rgba(255,255,255,.02);touch-action:pan-y;cursor:crosshair}
+    border-radius:10px;background:rgba(255,255,255,.02);touch-action:none;cursor:crosshair}
   /* nút PTKT: xanh lá, nằm cuối hàng chọn khung nến (chỗ dòng ghi chú cũ) */
   .ptbtn{margin-left:auto;background:var(--green);color:#fff;border:1px solid var(--green);
     border-radius:9px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;
@@ -223,7 +223,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #ptWrap{position:relative;flex:1;min-height:0}
   #ptCv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;
     border-radius:10px;background:var(--canvasfaint,rgba(128,128,128,.05));
-    touch-action:pan-y;cursor:crosshair}
+    touch-action:none;cursor:crosshair}
   @media(max-width:760px){
     /* hàng 1: mã + giá + Đóng · hàng 2: khung thời gian · hàng 3: chỉ báo */
     #ptHead{padding:7px 10px;gap:5px}
@@ -563,7 +563,7 @@ document.addEventListener(MO,function(e){
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
 <script src="assets/core.js?v=20260811p"></script>
-<script src="assets/chart.js?v=20260810a"></script>
+<script src="assets/chart.js?v=20260811a"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);

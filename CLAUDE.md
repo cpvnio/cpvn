@@ -369,7 +369,25 @@ Mã thiếu dữ liệu luôn nằm **cuối** dù sort tăng hay giảm.
 Bốn bảng KQKD/CĐKT/LCTT/cổ tức dùng **chung một lưới cột** — đổi số cột là lệch cả bốn.
 Kỳ mới nhất luôn bên **trái**. Chiều cao canvas không đặt cứng, do cột trái quyết định.
 
-**`assets/chart.js`** — Toạ độ neo theo **(thời gian, giá)** nên kéo/phóng hình vẫn đứng yên.
+**`assets/chart.js`** — **CỬ CHỈ CẢM ỨNG: canvas phải `touch-action:none`.** Ba canvas dùng
+CPChart (`#cv`, `#ptCv` ở cophieu, `#detCandle` ở bubbles) từng để `pan-y` = nhường trục dọc
+cho TRÌNH DUYỆT, nên vuốt dọc trên biểu đồ là cuộn cả trang, khối đồ thị trôi theo ngón tay
+(user báo "rất khó chịu") và `preventDefault` trong `touchmove` bị bỏ qua — phần xử lý trục
+dọc viết sẵn gần như không bao giờ chạy. Luật nay giống các app biểu đồ: **một ngón ngang =
+thời gian, một ngón dọc = giãn/co VÙNG GIÁ, hai ngón chụm ngang = thời gian / chụm dọc = vùng
+giá, chạm hai lần = về khung mặc định**. Bốn thứ đi kèm:
+① **Khoá trục ngay từ đầu cú vuốt** (`drag.truc`) và giữ tới lúc nhấc tay — vuốt ngang mà
+làm nhảy luôn vùng giá thì đọc biểu đồ không nổi. ② **Đồ thị KHÔNG BAO GIỜ tự trượt lên
+xuống** — `yPan` chỉ còn dành cho chuột; cảm ứng chỉ đụng `yZoom`. ③ Độ nhạy chia theo
+**chiều cao khung vẽ**, đừng để số cứng: chart lùn 110px của bảng bong bóng sẽ nhạy tới mức
+chạm hụt là vùng giá nhảy gấp đôi. ④ **Chạm hai lần phải tự bắt** (`touchend` + mốc thời
+gian), `dblclick` trên màn cảm ứng lúc có lúc không — mà từ khi vuốt dọc đổi được vùng giá
+thì luôn phải có đường quay về, kéo lố một cái là mắc kẹt ở khung giá lạ.
+> **Vùng giá phải kẹp `mn>=0` lúc vẽ** — thu hết cỡ là mép dưới lọt xuống dưới 0, trục hiện
+> "-31206", đọc như thị trường trả tiền để người ta cầm cổ phiếu. Kẹp lúc VẼ thôi, `yZoom`
+> giữ nguyên để phóng lại là về đúng chỗ cũ.
+
+Toạ độ neo theo **(thời gian, giá)** nên kéo/phóng hình vẫn đứng yên.
 Bề rộng nến chia theo `span = i1-i0` **kể cả vùng trống tương lai**, không chia theo số nến
 thật. `cx(i)` dùng chỉ số **cục bộ** của `vis`, `xOfT()` dùng chỉ số **toàn cục** trừ `i0` —
 đừng lẫn. Mọi hàm đổi toạ độ ngoài `draw()` chỉ đúng **sau khi `draw()` đã chạy ít nhất một

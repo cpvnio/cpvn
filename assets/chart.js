@@ -231,6 +231,10 @@ let veBut=false;                                   // bút đang được giữ 
     if(yZoom!==1||yPan!==0){                    // người dùng đã kéo/giãn trục giá bằng tay
       const c=(mn+mx)/2, hf=(mx-mn)/2*yZoom, sh=yPan*(mx-mn);
       mn=c-hf+sh; mx=c+hf+sh;
+      /* GIÁ KHÔNG THỂ ÂM. Thu vùng giá hết cỡ là mép dưới lọt xuống dưới 0 và trục hiện
+         "-31206" — đọc như thị trường trả tiền để người ta cầm cổ phiếu. Chỉ kẹp lúc VẼ,
+         yZoom giữ nguyên nên phóng lại là về đúng chỗ cũ. */
+      if(mn<0) mn=0;
     }
     const y=v=>padT+(mx-v)/(mx-mn)*plotH;
     geo.mn=mn; geo.mx=mx; geo.padTv=padT; geo.plotHv=plotH;   // cho lớp vẽ dùng lại
@@ -850,10 +854,29 @@ let veBut=false;                                   // bút đang được giữ 
   /* BẤM ĐÚP có hai việc: đang vẽ hình nhiều điểm thì CHỐT nét, còn lại là xem lại
      toàn bộ. Để hai listener riêng thì chốt nét xong bị listener kia reset khung ngay. */
   cvs.addEventListener('dblclick',e=>{ if(chotMo()){ e.preventDefault(); return; } self.resetView(); });
-  // cảm ứng: 1 ngón trượt/xem, 2 ngón chụm để phóng
+  /* ---- CẢM ỨNG ----------------------------------------------------------------
+     Luật giống các app biểu đồ hiện nay:
+       · một ngón NGANG = kéo thời gian (quá khứ ↔ tương lai)
+       · một ngón DỌC   = giãn/co VÙNG GIÁ — kéo xuống thì nến co lại (vùng giá rộng ra),
+                          vuốt lên thì nến giãn ra (vùng giá hẹp lại)
+       · hai ngón       = chụm ngang đổi thời gian, chụm dọc đổi vùng giá
+       · chạm hai lần   = về khung mặc định
+     BẢN THÂN ĐỒ THỊ KHÔNG BAO GIỜ TRƯỢT LÊN XUỐNG. Thứ chuyển động là vùng giá và
+     khung thời gian, còn khối đồ thị đứng yên.
+     > Gốc lỗi cũ: canvas để `touch-action:pan-y`, nghĩa là nhường trục dọc cho TRÌNH
+     > DUYỆT — vuốt dọc trên biểu đồ là cả trang cuộn, cả khối đồ thị trôi theo ngón tay
+     > (user báo "rất khó chịu"), và `preventDefault` trong touchmove bị bỏ qua nên phần
+     > dời trục giá viết sẵn ở đây gần như không bao giờ chạy. Canvas nay `touch-action:none`
+     > để nhận trọn cử chỉ; đổi giá trị đó về là lỗi quay lại y nguyên.
+     KHOÁ TRỤC ngay từ đầu cú vuốt và giữ tới khi nhấc tay: vuốt ngang không được làm
+     nhảy vùng giá, vuốt dọc không được làm trôi khung thời gian. */
+  const NGUONG=18;             // vuốt rõ ràng mới tính, kẻo chạm xem giá cũng dời khung
+  let chamCuoi=0, chamXY=null; // mốc chạm trước, để bắt chạm-hai-lần
   cvs.addEventListener('touchstart',e=>{
     if(e.touches.length===2){
-      pinch={d:Math.abs(e.touches[0].clientX-e.touches[1].clientX),span:i1-i0,i0}; drag=null;
+      const a=e.touches[0], b=e.touches[1];
+      pinch={dx:Math.abs(a.clientX-b.clientX), dy:Math.abs(a.clientY-b.clientY),
+             span:i1-i0, i0, yZoom}; drag=null;
     }else if(e.touches.length===1){
       const r=cvs.getBoundingClientRect();
       const p0=e.touches[0], px=p0.clientX-r.left, py=p0.clientY-r.top;
@@ -866,8 +889,8 @@ let veBut=false;                                   // bút đang được giữ 
         }
         if(sel>=0){ sel=-1; self.draw(); }
       }
-      drag={x:p0.clientX,y:p0.clientY,i0,yPan,moved:false};
-      hover=idxAt(e.touches[0].clientX-r.left); self.draw();
+      drag={x:p0.clientX,y:p0.clientY,i0,yZoom,truc:null,moved:false};
+      hover=idxAt(px); self.draw();
     }
   },{passive:true});
   cvs.addEventListener('touchmove',e=>{
@@ -888,32 +911,61 @@ let veBut=false;                                   // bút đang được giữ 
     }
     if(pinch&&e.touches.length===2){
       e.preventDefault();
-      const d=Math.abs(e.touches[0].clientX-e.touches[1].clientX)||1;
-      const ns=Math.max(6,Math.min(rows.length,Math.round(pinch.span*pinch.d/d)));
-      const mid=pinch.i0+pinch.span/2;
-      i0=Math.round(mid-ns/2); i1=i0+ns; clampView(); self.draw(); return;
+      const a=e.touches[0], b=e.touches[1];
+      const ndx=Math.abs(a.clientX-b.clientX), ndy=Math.abs(a.clientY-b.clientY);
+      /* Hai trục tính RỜI NHAU: chụm ngang đổi thời gian, chụm dọc đổi vùng giá, chụm
+         chéo đổi cả hai — giống thao tác quen tay ở các app. Trục nào mà hai ngón vốn
+         đã gần sát nhau thì bỏ qua: chia cho một số bé là biên độ nhảy loạn. */
+      if(pinch.dx>24&&ndx>8){
+        const ns=Math.max(6,Math.min(rows.length,Math.round(pinch.span*pinch.dx/ndx)));
+        const mid=pinch.i0+pinch.span/2;
+        i0=Math.round(mid-ns/2); i1=i0+ns; clampView();
+      }
+      if(pinch.dy>24&&ndy>8) yZoom=Math.max(0.15,Math.min(6,pinch.yZoom*pinch.dy/ndy));
+      hover=-1; self.draw(); return;
     }
     if(drag&&e.touches.length===1){
-      const px=e.touches[0].clientX-r.left, dx=drag.x-e.touches[0].clientX;
-      const dy=(drag.y||0)-e.touches[0].clientY;
-      if(Math.abs(dx)>18||Math.abs(dy)>18){      // vuốt rõ ràng -> dời cả ngang lẫn dọc
-        e.preventDefault(); drag.moved=true;
+      const t=e.touches[0], px=t.clientX-r.left;
+      const dx=drag.x-t.clientX;      // >0 = ngón sang TRÁI  -> khung trôi về phía tương lai
+      const dy=t.clientY-drag.y;      // >0 = ngón đi XUỐNG   -> vùng giá rộng ra, nến co lại
+      if(!drag.truc){
+        if(Math.abs(dx)<NGUONG&&Math.abs(dy)<NGUONG){ hover=idxAt(px); self.draw(); return; }
+        drag.truc=Math.abs(dx)>=Math.abs(dy)?'x':'y';    // khoá trục, giữ tới lúc nhấc tay
+      }
+      e.preventDefault(); drag.moved=true; hover=-1;
+      if(drag.truc==='x'){
         const span=i1-i0; i0=drag.i0+Math.round(dx/geo.cw); i1=i0+span; clampView();
-        yPan=(drag.yPan||0)-dy/(geo.plotHv||geo.plotH||1); hover=-1;
-      }else{ hover=idxAt(px); }
+      }else{
+        /* Chia theo CHIỀU CAO KHUNG VẼ chứ không phải một số cứng: vuốt hết chiều cao
+           biểu đồ luôn cho đúng 2×, dù là chart nhỏ trong trang mã hay chart toàn màn
+           hình. Để cứng 260 thì cái chart lùn 110px của bảng bong bóng nhạy tới mức
+           chạm hụt một cái là vùng giá nhảy gấp đôi. */
+        const cao=Math.max(220,geo.plotHv||geo.plotH||260);
+        yZoom=Math.max(0.15,Math.min(6,drag.yZoom*(1+dy/cao)));
+      }
       self.draw();
     }
   },{passive:false});
   cvs.addEventListener('touchend',e=>{
+    const t=e.changedTouches&&e.changedTouches[0];
     // nhấc ngón sau khi kéo -> chốt điểm cuối, giống bấm–kéo–thả bằng chuột
     if(dpen&&pending&&pending.p.length===dpen.n){
-      const t=e.changedTouches&&e.changedTouches[0];
       if(t){ const r=cvs.getBoundingClientRect(), px=t.clientX-r.left, py=t.clientY-r.top;
         if(Math.hypot(px-dpen.x,py-dpen.y)>8) addPoint(Math.min(px,geo.plotW-1),py); }
     }
+    /* CHẠM HAI LẦN = về khung mặc định. Phải tự bắt lấy: `dblclick` trên màn cảm ứng lúc
+       có lúc không, mà từ khi vuốt dọc đổi được vùng giá thì luôn phải có đường quay về,
+       bằng không kéo lố một cái là mắc kẹt ở khung giá lạ. */
+    const chamTron=t&&!tool&&!pending&&!dpen&&!dmove&&drag&&!drag.moved&&e.touches.length===0;
     dpen=null;
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
     drag=null; pinch=null;
+    if(!chamTron) return;
+    const nay=Date.now();
+    if(nay-chamCuoi<320&&chamXY&&Math.hypot(t.clientX-chamXY[0],t.clientY-chamXY[1])<32){
+      chamCuoi=0; chamXY=null; hover=-1; self.resetView(); return;
+    }
+    chamCuoi=nay; chamXY=[t.clientX,t.clientY];
   });
 
   let rt=null;
