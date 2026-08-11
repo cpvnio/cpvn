@@ -60,24 +60,25 @@ html[data-theme="light"] .mobibar{--mb-bg:#ffffff; --mb-line:#dde1e8; --mb-mut:#
    nơi, người dùng phải học hai lần mà màn thì mất thêm một hàng. */
 header .tabs{display:none !important}
 
-/* ------------------------------------------------------------ DẢI MỤC CON
-   Nằm ngay dưới đầu trang, bày thẳng ba nút. Đã thử cho bung lên từ thanh đáy:
-   tiết kiệm 54px thật, nhưng đổi cách nhìn phải chạm hai lần và phải NHỚ rằng
-   bấm vào mục đang mở thì mới ra menu — không có gì trên màn gợi ý điều đó.
+/* --------------------------------------------- BỐN LỐI RẼ, chỉ mọc ở nhóm Radar
+   Bày thẳng ra chứ không bung từ thanh đáy: đã thử kiểu bung, tiết kiệm 54px thật
+   nhưng đổi mục phải chạm hai lần và phải NHỚ rằng bấm vào mục đang mở thì mới ra
+   menu — không có gì trên màn gợi ý điều đó.
    Tự mang bảng màu, lý do y hệt thanh đáy: bốn trang đặt tên biến khác nhau. */
 .mobisub{--ms-bg:#1b2130; --ms-pan:#232b3d; --ms-line:#38425a; --ms-mut:#9aa6bd;
   --ms-acc:#e11d48;
   background:var(--ms-bg);box-shadow:inset 0 -1px 0 var(--ms-line);position:relative}
 html[data-theme="light"] .mobisub{--ms-bg:#f4f5f7; --ms-pan:#fff; --ms-line:#dde1e8;
   --ms-mut:#66707f}
-.mobisub-in{display:flex;gap:var(--m2);padding:9px var(--m3);overflow-x:auto;
-  scrollbar-width:none}
-.mobisub-in::-webkit-scrollbar{display:none}
-.mobisub a,.mobisub button{flex:1 1 0;min-width:0;height:36px;padding:0 6px;
+.mobisub-in{display:flex;gap:6px;padding:8px var(--m3)}
+/* BỐN nút phải nằm trọn một hàng 375px: trừ padding và ba khe còn 327px, mỗi nút
+   chỉ được 81px. Nên chữ xuống 11.5px và đệm ngang co lại còn 4px — đây chính là
+   chỗ user bảo "đưa phông chữ nhỏ lại để dễ xếp cho gọn". */
+.mobisub a,.mobisub button{flex:1 1 0;min-width:0;height:34px;padding:0 4px;
   border-radius:var(--mr1);display:flex;align-items:center;justify-content:center;
   text-decoration:none;background:var(--ms-pan);border:1px solid var(--ms-line);
-  color:var(--ms-mut);font:inherit;font-size:13px;font-weight:700;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+  color:var(--ms-mut);font:inherit;font-size:11.5px;font-weight:700;white-space:nowrap;
+  letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
   transition:background var(--mms),color var(--mms),border-color var(--mms)}
 .mobisub a.on,.mobisub button.on{background:var(--ms-acc);border-color:var(--ms-acc);
   color:#fff}

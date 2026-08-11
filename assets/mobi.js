@@ -16,60 +16,54 @@
     dua:'<path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/>',
     tap:'<path d="M4 21V7.5L11 3l7 4.5V21M4 21h16M9.5 21v-5h4v5M9 11h.01M14 11h.01"/>'
   };
-  /* BA MỤC CHÍNH, đúng như cây điều hướng đã chốt ở máy bàn. Bong bóng và Danh
-     mục tập đoàn KHÔNG được leo lên hàng mục chính: chúng là ba cách nhìn CÙNG
-     một rổ mã — bảng số, bản đồ bong bóng, gom theo nhà — nên phải nằm chung
-     dưới Bảng giá. Tách ra thành tab riêng là thanh đáy có 5 mục ngang hàng
-     trong khi thật ra chỉ có 3 nhánh, người dùng đọc ra một cấu trúc sai. */
+  /* BA MỤC CHÍNH. Bong bóng và Danh mục tập đoàn không leo lên hàng này: năm mục
+     ngang hàng trong khi thật ra chỉ có ba nhánh thì người dùng đọc ra một cấu
+     trúc sai. Chúng nằm trong bốn lối rẽ của Radar (xem CON bên dưới). */
   var MUC=[
     ['bang','Bảng giá',  '/'],
     ['radar','Radar',    'congcu.html?m=radar'],
     ['dua','Đường đua',  'congcu.html?m=race']
   ];
-  /* Mục con của nhóm Bảng giá — ba TRANG khác nhau nên không trang nào tự dựng
-     được dải này, phải dựng ở đây một lần cho cả ba. */
-  /* MỤC CON NẰM NGAY TRÊN ĐẦU TRANG (user chốt 11/08/2026).
-     Đã thử cho nó bung lên từ thanh đáy: tiết kiệm được 54px thật, nhưng muốn
-     đổi cách nhìn là phải chạm hai lần và phải NHỚ rằng bấm vào mục đang mở thì
-     mới ra menu — không có gì trên màn hình gợi ý điều đó. Nay bày thẳng ra, ba
-     nút cạnh nhau, thấy là bấm.
+  /* BỐN LỐI RẼ CỦA RADAR (user chốt 11/08/2026).
+     Bảng giá nay SẠCH HOÀN TOÀN — không dải mục con nào, mở ra là thấy mã ngay.
+     Bong bóng và Danh mục tập đoàn dọn sang đứng chung với hai mục radar, vì cả
+     bốn đều là "soi thị trường theo một góc khác", còn bảng giá là chỗ tra cứu.
+     Bấm Radar ở thanh đáy = về Nhịp phiên (mặc định), bốn nút này là lối rẽ.
 
-     Đường đua KHÔNG có dải này: trong trang đã sẵn nút đổi chế độ. */
-  var CON={
-    bang:[['bang','Bảng giá','/'],
-          ['bong','Bong bóng','/bubbles'],
-          ['tap','Tập đoàn','congcu.html?m=tapdoan']],
-    radar:[['phien','Nhịp phiên'],['cd','Chủ điểm đầu tư'],['vb','Khi nào về bờ']]
-  };
+     Hai mục có TRANG RIÊNG (bong bóng, tập đoàn) đi bằng link thật; hai mục nằm
+     CÙNG trang radar thì bấm thẳng vào mục tương ứng trong menu máy bàn (đã ẩn ở
+     khổ hẹp) để congcu.js đổi tab tại chỗ, khỏi tải lại trang. */
+  var CON=[
+    ['bong','Bong bóng',  '/bubbles'],
+    ['cd',  'Chủ điểm',   null],
+    ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan'],
+    ['vb',  'Về bờ',      null]
+  ];
 
   function dangO(){
     var p=location.pathname.replace(/\/index\.html$/,'/');
-    if(/bubbles/.test(p)) return ['bang','bong'];
+    if(/bubbles/.test(p)) return ['radar','bong'];
     if(/congcu/.test(p)){
       var q=new URLSearchParams(location.search), m=q.get('m')||'radar';
       if(m==='race') return ['dua',''];
-      if(m==='tapdoan') return ['bang','tap'];
-      return ['radar',q.get('t')||'phien'];
+      if(m==='tapdoan') return ['radar','tap'];
+      return ['radar',q.get('t')||'phien'];   /* phien = mặc định, không nút nào sáng */
     }
     if(/cophieu/.test(p)) return ['bang',''];  /* trang một mã đi ra từ bảng giá */
-    return ['bang','bang'];
+    return ['bang',''];                        /* BẢNG GIÁ: không dải mục con */
   }
 
   function dung(){
     if(document.querySelector('.mobibar')) return;
-    var o=dangO(), cur=o[0], con=o[1], ds=CON[cur];
+    var o=dangO(), cur=o[0], con=o[1];
 
-    /* Không dựng dải ở trang một mã: ở đó người ta đang xem MỘT cổ phiếu, không
-       phải đang chọn cách nhìn cả rổ. */
-    if(ds && con){
+    /* Dải chỉ mọc ở nhóm Radar. Bảng giá và Đường đua không có: bảng giá phải
+       sạch, còn đường đua đã sẵn nút đổi chế độ trong trang. */
+    if(cur==='radar'){
       var h=document.querySelector('header'), s=document.createElement('div');
       s.className='mobisub';
-      s.innerHTML='<div class="mobisub-in">'+ds.map(function(m){
+      s.innerHTML='<div class="mobisub-in">'+CON.map(function(m){
         var on=(m[0]===con?' class="on"':'');
-        /* Nhóm Bảng giá là BA TRANG khác nhau nên phải đi bằng link thật.
-           Radar thì ba mục nằm CÙNG một trang — bấm thẳng vào mục tương ứng
-           trong menu máy bàn (đã ẩn) để congcu.js đổi tab tại chỗ, khỏi tải lại
-           trang. Đúng lối đã dùng cho nút đổi chế độ Đường đua. */
         return m[2] ? '<a href="'+m[2]+'"'+on+'>'+m[1]+'</a>'
                     : '<button type="button" data-t="'+m[0]+'"'+on+'>'+m[1]+'</button>';
       }).join('')+'</div>';
