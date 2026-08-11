@@ -373,10 +373,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     /* H3: NGÀNH · SÀN · TÌM MÃ gom CHUNG MỘT HÀNG — ô tìm mã chiếm trọn một hàng
        riêng là phí gần 40px chiều cao, đẩy bảng giá xuống dưới nếp gấp. Ba ô chia
        nhau theo tỉ lệ: ngành và sàn vừa đủ đọc tên, phần dư dồn hết cho ô tìm. */
-    #secToggle{order:5;flex:0 0 auto;max-width:none;padding:8px 10px;font-size:13px}
-    header select{order:6;flex:0 1 auto;width:auto;min-width:0;max-width:104px;
-      font-size:13px;padding:8px 6px}
-    input.search{order:8;flex:1 1 84px;width:auto;min-width:0;font-size:13.5px;padding:8px 9px}
+
     input.search::placeholder{opacity:.75}
     /* ép cột Cổ phiếu chỉ ~1/3 màn hình: khoá cứng bề rộng, phần dư dồn về cột số */
     table{min-width:640px}
@@ -449,17 +446,21 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #scrBtn.on{background:rgba(225,29,72,.1);border-color:rgba(225,29,72,.45);color:var(--accent)}
     #divBtn .ic,#scrBtn .ic{width:15px;height:15px;flex:0 0 auto}
     #scrBtn .pro{display:none}
-    #scrBtn{order:2;margin-left:auto} #divBtn{order:3}
+    #scrBtn{order:2;margin-left:auto} #divBtn{order:3} #thm{order:4}
 
-    /* Cụm công cụ đã dọn vào tấm trượt */
-    #mTools{display:flex;flex-wrap:wrap;gap:8px;padding:2px 6px 10px}
-    #mTools>*{order:0}
-    #mTools input.search{flex:1 1 100%;font-size:14px;padding:10px 11px}
-    #mTools #secToggle{flex:1 1 46%;max-width:none;justify-content:center}
-    #mTools select{flex:1 1 46%;max-width:none}
-    #mTools #mSortRow{flex:1 1 100%;background:transparent;box-shadow:none;padding:0;gap:8px}
-    #mTools #shotBtn,#mTools #thm{flex:0 0 auto;width:44px;height:40px;display:flex;
-      align-items:center;justify-content:center;border-radius:9px}
+    /* HÀNG HAI: ô tìm mã đứng ĐẦU và chiếm phần rộng nhất — nó là thứ hay dùng
+       nhất sau chính bảng giá, phải thấy ngay chứ đừng bắt mở bảng ra mới gõ được. */
+    input.search{order:5;flex:1 1 120px;width:auto;min-width:0;font-size:13.5px;padding:9px 10px}
+    #secToggle{order:6;flex:0 0 auto;max-width:none;padding:8px 10px;font-size:13px}
+    header select{order:7;flex:0 1 auto;width:auto;min-width:0;max-width:100px;
+      font-size:13px;padding:8px 6px}
+    /* Đổi đèn ở CUỐI HÀNG MỘT, chụp ảnh ở cuối hàng hai. Để cả hai cùng cuối hàng
+       hai thì tổng bề ngang vượt 375px và nút đèn rơi xuống thành HÀNG BA — đầu
+       trang phình lên 139px chỉ vì một cái nút 38px. */
+    #shotBtn,#thm{width:38px;height:38px;padding:0;display:flex;
+      align-items:center;justify-content:center;border-radius:8px}
+    #shotBtn{order:8} #thm{order:4}
+    #shotBtn .ic,#thm .ic{width:16px;height:16px}
 
     /* TẤM TRƯỢT phải nằm TRÊN thanh tab đáy (z-index 200) — bản trước để z-index 60
        nên mép dưới bảng cổ tức bị thanh tab che mất một khoảng, đọc hụt mấy dòng
@@ -468,14 +469,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #divPanel{z-index:210;padding-top:0;border-radius:20px 20px 0 0}
     #divPanel::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
       background:var(--line);margin:8px auto 8px}
-    /* Bộ lọc pro cũng vậy: bản cũ chen vào giữa trang, mở ra là bảng giá tụt
-       xuống, đóng lại nhảy ngược lên — mất chỗ đang đọc. */
-    #scrPanel.on{position:fixed;left:0;right:0;bottom:0;z-index:210;
-      max-height:82vh;overflow-y:auto;padding:0 10px 14px;
-      border-radius:20px 20px 0 0;border:0;box-shadow:0 -20px 50px rgba(0,0,0,.35);
-      background:var(--panel)}
-    #scrPanel.on::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
-      background:var(--line);margin:8px auto 10px;position:sticky;top:0}
+    /* BỘ LỌC MỞ TẠI CHỖ, không thành tấm trượt: bấm Lọc là mấy chip bày ra ngay
+       dưới nút, thấy hết một lượt và chạm được luôn. Làm thành tấm trượt thì nó
+       che mất nửa bảng giá — mà lọc xong người ta cần nhìn ngay kết quả. */
+    #scrPanel{padding:8px 10px 10px}
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -1208,30 +1205,13 @@ $('mSort').onchange=e=>{ ST.sort=e.target.value; ST.dir=(ST.sort==='sym')?1:-1;
   ST.page=1; render(); };
 $('mDir').onclick=()=>{ ST.dir*=-1; ST.page=1; render(); };
 
-/* ══════════════════════════════════════════════════════════════════════════
-   MÀN HẸP: DỌN CÔNG CỤ VÀO TẤM TRƯỢT BỘ LỌC
-   Đầu trang phải còn ĐÚNG MỘT HÀNG (tên trang + Lọc + Cổ tức) như bản demo đã
-   chốt. Ô tìm mã, chọn sàn, chọn ngành, sắp theo, chụp ảnh, đổi đèn đều là thứ
-   thỉnh thoảng mới đụng — để chúng nằm thường trực ở đầu trang là ăn mất 152px,
-   chưa xem được mã nào đã hết nửa màn, đúng cái bệnh mà mẫu A sinh ra để chữa.
+/* Ô TÌM MÃ VÀ BỘ LỌC Ở NGUYÊN CHỖ CŨ — luật user chốt 11/08/2026.
+   Đã thử dọn cả hai vào tấm trượt cho đầu trang còn một hàng: gọn thật, nhưng
+   tìm một mã hoá ra phải mở bảng rồi mới gõ được, và bấm Lọc thì bật lên một tấm
+   che nửa màn thay vì bày sẵn mấy chip ngay tại chỗ. Hai thứ dùng nhiều nhất mà
+   đắt thêm một cú chạm thì gọn mấy cũng lỗ. Chỉ giữ lại phần bố cục: ô tìm nằm
+   đầu hàng hai, ngay trên danh sách mã. */
 
-   DI CHUYỂN NÚT CHỨ KHÔNG DỰNG BẢN SAO: nút gốc đã gắn sẵn sự kiện, chép ra bản
-   thứ hai là phải nhớ gắn lại từng cái, và hai bản sẽ lệch nhau ngay lần sửa sau.
-   Nút đi đâu thì mạch xử lý đi theo đó. */
-const MTOOLS=['q','secToggle','floor','mSortRow','shotBtn','thm'];
-let _mNeo=null;
-function donVaoBoLoc(){
-  const sp=$('scrPanel'); if(!sp||$('mTools')) return;
-  _mNeo=MTOOLS.map(id=>{ const el=$(id); return el?[el,el.parentNode,el.nextSibling]:null; });
-  const box=document.createElement('div'); box.id='mTools';
-  for(const id of MTOOLS){ const el=$(id); if(el) box.appendChild(el); }
-  sp.insertBefore(box,sp.firstChild);
-}
-function traVeDauTrang(){
-  const box=$('mTools'); if(!box||!_mNeo) return;
-  for(const g of _mNeo){ if(g&&g[1]) g[1].insertBefore(g[0],g[2]); }
-  box.remove();
-}
 /* Nhãn cột trên màn hẹp: gộp "Giá (đ)" và "GTGD" thành MỘT dòng như bản demo —
    hai dòng chồng nhau làm hàng tiêu đề cao gấp đôi mà chẳng nói thêm gì. Số mã
    nhét luôn vào nhãn cột đầu vì ô đếm riêng (#cnt) đã ẩn ở khổ này. */
@@ -1253,10 +1233,7 @@ function nhanCotMobi(){
    cục mobile chưa kịp áp thì trang tràn thật, thành ra hàm tự đọc sai khổ màn rồi
    không bao giờ áp, kẹt luôn ở bố cục máy bàn. */
 const _hep=()=>document.documentElement.clientWidth<=760;
-function apMobi(){
-  _hep()?donVaoBoLoc():traVeDauTrang();
-  nhanCotMobi();
-}
+function apMobi(){ nhanCotMobi(); }
 let _rzM=0;
 addEventListener('resize',()=>{ clearTimeout(_rzM); _rzM=setTimeout(apMobi,120); });
 apMobi();
