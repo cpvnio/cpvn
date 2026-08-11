@@ -498,8 +498,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #wrap{overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
     /* THANG CHỮ nhỏ hơn một bậc so với máy bàn, SỐ cũng nhỏ theo cho cân — số to
        hơn chữ một bậc thì bảng trông như hai cỡ font đánh nhau. */
-    table{min-width:980px;font-size:13px}
-    #tb td{padding:7px 8px;line-height:1.25}
+    table{min-width:960px;font-size:13px}
+    /* Hàng cao thêm ~20% (46 → 54px) để logo và mã thở ra. Bỏ dòng tên công ty
+       nên chỗ đó dồn hết vào chiều cao chứ không phải thêm chữ. */
+    #tb td{padding:12px 8px;line-height:1.25}
     thead th{padding:7px 8px;font-size:10.5px;letter-spacing:.03em}
     thead th .n{font-size:10.5px}
     #tb td .n{font-size:13px}
@@ -511,35 +513,32 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     thead th:nth-child(1),#tb td:nth-child(1){display:none}
 
     /* HAI CỘT GHIM: sao + mã. Bản cũ ghim ba cột (kể cả "#") ăn 42px trước khi
-       tới tên mã; bỏ một cột là trả lại chừng ấy cho phần cuộn. */
-    th#thStar,td.star{width:26px;min-width:26px;max-width:26px;padding:7px 0;
-      font-size:14px;position:sticky;left:0;background:var(--sticky);z-index:6}
-    td.star.on{color:var(--yellow)}
-    /* 122px là mức cân được: đủ cho "Ngoại Thương", "Công Thương", "Kỹ Thương"
-       hiện trọn, mà khối ghim vẫn chỉ chiếm 39% bề ngang màn — rộng hơn nữa thì
-       phần cuộn không còn đủ chỗ để thấy hai cột số cùng lúc. */
-    th:nth-child(3),td:nth-child(3){width:122px;min-width:122px;max-width:122px;
-      padding-left:4px;padding-right:6px;position:sticky;left:26px;
-      background:var(--sticky);z-index:6}
-    /* Vệt đổ bóng ở mép phải khối ghim — không có nó thì lúc cuộn, cột số trôi
-       vào dưới cột mã mà mắt không nhận ra đâu là ranh giới. */
-    th:nth-child(3)::after,td:nth-child(3)::after{content:"";position:absolute;
-      top:0;bottom:0;right:0;width:10px;transform:translateX(100%);pointer-events:none;
-      background:linear-gradient(90deg,rgba(0,0,0,.16),rgba(0,0,0,0))}
-    html[data-theme="light"] th:nth-child(3)::after,
-    html[data-theme="light"] td:nth-child(3)::after{
-      background:linear-gradient(90deg,rgba(15,23,42,.10),rgba(15,23,42,0))}
+       tới tên mã; bỏ một cột là trả lại chừng ấy cho phần cuộn.
 
-    /* danh tính: mã trên, tên công ty gọn ở dưới.
-       CHUỖI min-width:0 phải liền mạch từ ô xuống tới thẻ chữ — thiếu một mắt là
-       tên dài không chịu cắt, nó đẩy phình cả cột ghim. */
-    #tb td:nth-child(3),#tb td:nth-child(3) .co,#tb td:nth-child(3) .co>div{min-width:0}
-    .co{gap:6px}
-    .co img,.co .noimg{width:24px;height:24px;border-radius:7px}
-    .co .sym{font-size:14px;font-weight:800;letter-spacing:.2px;line-height:1.2}
-    .co .ex{display:none}
-    #tb .co .nm{display:block;font-size:11px;color:var(--muted);line-height:1.2;
-      margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+       NỀN CỘT GHIM PHẢI TRÙNG NỀN TRANG, và KHÔNG đổ bóng ở mép. Trước đây dùng
+       --sticky (lệch một sắc so với --bg) rồi thêm vệt bóng để phân giới — nhìn
+       ra ngay là hai mảng ghép lại, xấu hơn hẳn. Dùng đúng var(--bg) thì cả hàng
+       là một dải liền mạch, mà vẫn ĐỤC nên phần cuộn chui xuống dưới không lộ. */
+    th#thStar,td.star{width:26px;min-width:26px;max-width:26px;padding:12px 0;
+      font-size:14px;position:sticky;left:0;background:var(--bg);z-index:6}
+    thead th#thStar{background:var(--thead)}
+    td.star.on{color:var(--yellow)}
+    /* Bỏ dòng tên công ty nên cột này thu từ 122 còn 96px — 26px trả lại cho
+       phần cuộn, thấy thêm được gần nửa một cột số. */
+    th:nth-child(3),td:nth-child(3){width:96px;min-width:96px;max-width:96px;
+      padding-left:4px;padding-right:6px;position:sticky;left:26px;
+      background:var(--bg);z-index:6}
+    thead th:nth-child(3){background:var(--thead)}
+
+    /* Danh tính chỉ còn LOGO + MÃ, bỏ dòng tên công ty: ở bảng cuộn ngang thì bề
+       ngang mới là thứ khan hiếm, mà tên bị cắt còn tám chữ ("Đầu tư và P…") thì
+       vừa tốn chỗ vừa không đọc ra nghĩa. Chỗ tiết kiệm được đổ vào logo và mã
+       cho to lên. */
+    #tb td:nth-child(3),#tb td:nth-child(3) .co{min-width:0}
+    .co{gap:7px}
+    .co img,.co .noimg{width:30px;height:30px;border-radius:9px}
+    .co .sym{font-size:15.5px;font-weight:800;letter-spacing:.2px;line-height:1.2}
+    .co .ex,#tb .co .nm{display:none}
   }
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
