@@ -30,6 +30,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `assets/core.js` | 522 | **Lõi dữ liệu `CP`** — chỉ index + cophieu dùng. Phần lớn là cơ chế giá |
 | `assets/chart.js` | 798 | **`CPChart`** — bộ vẽ nến canvas tự viết + lớp vẽ PTKT. Không phụ thuộc core.js |
 | `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
+| `assets/mobi.css` + `assets/mobi.js` | 103+101 | **Khung mobile dùng chung cả 4 trang** — thanh tab đáy + bốn lối rẽ của Radar. Chỉ sống trong `@media(max-width:760px)` |
+| `demo-mobi*.html`, `demo-nen.html` | — | Bản demo để CHỌN, không nằm trong luồng chính. `demo-mobi.html` so hai mẫu bằng 2 iframe + postMessage |
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
 
@@ -266,7 +268,10 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > tham chiếu). Đừng rút gọn mấy thứ đó cho gọn mắt.
   > **Giá mục tiêu tính bằng ĐỒNG/cổ phiếu** — nhét vào `ty()` (đơn vị tỷ) thì 105.900 đ hiện
   > thành "0 tỷ", đọc như đang khuyên mua một mã vô giá trị.
-- **ĐIỀU HƯỚNG: MENU THẢ XUỐNG KHI RÊ CHUỘT (10/08/2026).** Thanh trên cùng **3 mục**:
+- **ĐIỀU HƯỚNG: MENU THẢ XUỐNG KHI RÊ CHUỘT (10/08/2026) — nay CHỈ CÒN CHO MÁY BÀN.**
+  Từ 11/08/2026 khổ ≤760px ẩn hẳn dải này (`header .tabs{display:none!important}` trong
+  `mobi.css`) và dùng thanh tab đáy — xem mục **Giao diện mobile** bên dưới. Mọi luật rê
+  chuột/chạm dưới đây vẫn đúng, nhưng chỉ còn chạy ở khổ rộng (kể cả tablet cảm ứng >760px).
   Bảng giá · Radar · Đường đua, mỗi mục có menu con hiện khi rê chuột (`.tw:hover>.dd`).
   Bảng giá → 3 trang (`index.html` · `bubbles.html` · `congcu.html?m=tapdoan`);
   Radar → Nhịp phiên · Chủ điểm đầu tư; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
@@ -334,6 +339,108 @@ giá sai hoặc giá nhảy — đừng đẩy.
   cắt. `data/market.json` vì thế nặng 612KB (nén còn 132KB), chấp nhận được.
   Mã CHƯA có giá ở tháng bắt đầu (niêm yết sau) vẫn bị loại — nhưng phải LIỆT KÊ RA
   (`chuaCo`), không được im lặng.
+
+## Giao diện mobile — mẫu A "Bảng điện" (user chốt 11/08/2026)
+
+Sống trong `@media(max-width:760px)`. **Máy bàn không đổi một pixel** — mọi commit của lượt
+này đều đo lại để chứng minh điều đó, giữ nếp ấy.
+
+**Không đẻ ra bản mobile thứ hai.** Bảng giá vẫn nguyên 13 `<td>` như máy bàn, chỉ đổi CSS —
+nên toàn bộ mạch sort/lọc/sao theo dõi/phân trang/giá sống dùng chung. Dựng HTML riêng cho
+mobile là hai bản trôi dạt khỏi nhau ngay lần sửa sau. Cùng lý do: `mobi.js` **di chuyển**
+nút có sẵn chứ không chép ra bản thứ hai (nút gốc đã gắn sự kiện rồi).
+
+### Khung điều hướng (`assets/mobi.css` + `assets/mobi.js`, dùng chung 4 trang)
+
+**Thanh tab đáy 3 mục**: Bảng giá · Radar · Đường đua. Cầm một tay thì ngón cái với thoải mái
+vùng dưới, hai góc TRÊN là chỗ khó với nhất — mà menu cũ nằm đúng trên đỉnh và xổ ra khi *rê
+chuột*, thao tác không tồn tại trên điện thoại.
+
+**Bảng giá SẠCH HOÀN TOÀN** — không dải mục con nào, mở ra là thấy mã ngay.
+**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Bong
+bóng và Tập đoàn có trang riêng nên đi bằng link thật; Chủ điểm và Về bờ nằm **cùng trang
+radar** nên nút bấm thẳng vào mục tương ứng trong menu máy bàn (`.dd a[data-md][data-t]`, đã
+ẩn) để `congcu.js` đổi tab tại chỗ — đúng lối đã dùng cho nút đổi chế độ Đường đua. Dải hiện
+ở cả ba trang của nhóm và thanh đáy sáng ở Radar trên cả ba, bằng không vào Bong bóng là mất
+đường quay lại.
+
+Bốn cái bẫy, phá cái nào cũng hỏng:
+
+1. **`mobi.js` phải đọc CẢ URL SẠCH, đừng chỉ dò chuỗi `"congcu"`.** `_redirects` viết lại
+   `/radar`, `/tapdoan`, `/duongdua` bằng **rewrite 200** nên thanh địa chỉ giữ nguyên tên
+   sạch và **không hề có `?m=`**. Dò mỗi "congcu" là vào `cpvn.io/radar` mất sạch bốn nút,
+   thanh đáy sáng nhầm ở Bảng giá. Loại lỗi chỉ lộ ra ở đúng đường người dùng thật đi — ở
+   localhost toàn gõ `congcu.html?m=...` nên nhánh đó không bao giờ chạy tới. `congcu.js`
+   đọc theo path (`byPath`) cũng vì lý do y hệt.
+2. **Thanh tab và dải mục con TỰ MANG BẢNG MÀU**, đừng mượn biến của trang. Bốn trang đặt
+   tên biến khác nhau (index `--panel/--muted/--accent`, congcu `--solid/--mut/--rose`) nên
+   mượn nhầm là `var()` không phân giải được, nền thành **trong suốt** — đo trên congcu ra
+   đúng `rgba(0,0,0,0)`, chữ dưới xuyên lên.
+3. **Đo khổ màn bằng `documentElement.clientWidth`, KHÔNG dùng `innerWidth`.** Trang đang
+   tràn ngang thì `innerWidth` phình theo phần tràn (đo được 414 trên màn 375) — mà lúc bố
+   cục mobile chưa kịp áp thì trang tràn thật, thành ra hàm tự đọc sai khổ rồi không bao giờ
+   áp, kẹt luôn ở bố cục máy bàn. Kèm: nghe **cả `resize`** chứ đừng chỉ nghe `matchMedia`,
+   sự kiện `change` có lúc không tới.
+4. **`z-index` tấm trượt phải TRÊN thanh tab đáy (200).** Để 60 thì mép dưới bảng cổ tức bị
+   thanh tab che, đọc hụt mấy dòng cuối mà không biết là còn.
+
+### Bảng giá ở khổ hẹp
+
+**Cuộn ngang ĐỦ 13 cột** — đã thử gập còn ba cột, gọn nhưng mất hẳn vốn hoá, P/E, EPS, tiền
+mặt, LNST, khối ngoại, đúng mấy số người ta mở bảng giá ra để soi. Đổi lại là **thu nhỏ cả
+chữ lẫn số một bậc** (bảng 13px, giá 13.5px, mã 15.5px, nhãn cột 10.5px), hàng 55px.
+**Số phải nhỏ theo chữ**, để số to hơn chữ một bậc thì bảng trông như hai cỡ font đánh nhau.
+
+- **Hai cột ghim** (sao + mã) đứng yên khi vuốt. Nền cột ghim phải **trùng ĐÚNG `--bg`** và
+  **không đổ bóng ở mép**: dùng `--sticky` (lệch một sắc) rồi thêm vệt bóng để phân giới thì
+  nhìn ra ngay là hai mảng ghép lại, xấu hơn cái nó định chữa. Vẫn phải ĐỤC để phần cuộn
+  chui xuống dưới không lộ. Hàng tiêu đề thì cả ba dùng `--thead`.
+- **Bỏ cột `#` và bỏ dòng tên công ty** ở khổ hẹp — bề ngang mới là thứ khan hiếm, tên bị
+  cắt còn tám chữ ("Đầu tư và P…") thì vừa tốn chỗ vừa không đọc ra nghĩa.
+- **Bỏ ô "Sắp theo": bấm thẳng tên cột để xếp**, dùng chung `ST.sort`/`ST.dir` với máy bàn.
+  Tam giác báo chiều vẽ bằng **viền CSS**, không dùng ký tự `▲▼` (lấy nét theo font hệ
+  thống, máy không có glyph là mất dấu) — từ khi bỏ ô sắp xếp thì đây là dấu hiệu DUY NHẤT
+  cho biết đang xếp theo cột nào.
+- **`fitNumCols` phải XOÁ `<style id="numw">` ở khổ hẹp, không được chỉ `return` sớm** —
+  thoát thôi thì mấy dòng `width` đo hồi ở khổ máy bàn vẫn nằm đó, ô 1D% bị ghim 114px trong
+  rãnh 66px và lòi khỏi mép màn 36px khi xoay máy.
+- **`const _hep` phải khai TRƯỚC `fitNumCols`** — `const` không được hoisted, để dưới là ném
+  lỗi ngay lượt vẽ đầu → **trang trắng**.
+- Rule ghim cột **đừng dùng `th:nth-child(n)`** kiểu cũ: hạng đặc hiệu cao hơn `thead th` nên
+  nền xám dính lại thành ba cái hộp lệch ở hàng tiêu đề.
+- **Chuỗi `min-width:0` phải liền mạch** từ ô xuống tới thẻ chữ, thiếu một mắt là tên công ty
+  dài không chịu cắt: tài liệu phình 534px trên màn 375px.
+
+### Những thứ đã THỬ RỒI BỎ — đừng đề xuất lại
+
+| Đã thử | Vì sao bỏ |
+|---|---|
+| Dồn ô tìm mã + Bộ lọc vào tấm trượt cho đầu trang còn 1 hàng | Hai thứ dùng nhiều nhất mà đắt thêm một cú chạm; lọc xong còn bị tấm che nửa màn che mất kết quả |
+| Mục con **bung** từ thanh tab đáy | Tiết kiệm 54px thật, nhưng đổi mục phải chạm HAI lần và phải NHỚ "bấm vào mục đang mở mới ra menu" — không có gì trên màn gợi ý điều đó |
+| Dải mục con **thường trực trên đỉnh** | Ăn đứt 54px của mọi màn, cả ngày chỉ để chờ một cú bấm |
+| Gập bảng giá còn 3 cột, bỏ cuộn ngang | Mất tám cột số mà người ta mở bảng giá ra chính là để soi |
+| Cụm tổng quan (vốn hoá TT, biên độ) nối đuôi dải chỉ số | Phải kéo gần hết một màn mới tới, mà tới nơi thì bốn thẻ chỉ số đã trôi mất |
+| Cụm tổng quan tách thành khối riêng | Vẫn ăn 78px; cuối cùng **bỏ hẳn ở khổ hẹp** — thanh khoản từng sàn đã in sẵn trong thẻ chỉ số của sàn đó (`.stgt`) |
+
+Giấu bằng **CSS** chứ không chặn ở `renderStats`: DOM vẫn dựng đủ, chỉ có MỘT chỗ quyết định
+ẩn/hiện nên khỏi phải nhớ đồng bộ hai nhánh JS/CSS. Máy bàn cho khối bọc `display:contents`
+để con nhảy thẳng lên làm con của `#stats`, hàng ngang giữ y nguyên.
+
+### Ngôn ngữ thị giác (áp cả demo lẫn bản chạy)
+
+**KHÔNG EMOJI** — mỗi hệ điều hành vẽ một kiểu, mang màu riêng chửi nhau với bảng màu, đứng
+cạnh chữ thì lệch chân; trong sản phẩm tài chính lộ ra ngay là ghép vội. Thay bằng **icon SVG
+một nét** (lưới 24, nét 1.7–1.8, ăn `currentColor`). Kể cả mũi tên `↓↑` và tam giác `▸▾`.
+**Thang cách 4px** (`--m1..--m5`) và **thang bo góc 4 bậc** (chip 8 · ô 12 · thẻ 16 · tấm
+trượt 20) — mắt không đọc ra con số nhưng đọc ra được sự không đều.
+**Hai sắc độ đường kẻ**: `--line` chia KHỐI, `--mrule` chia HÀNG trong cùng khối — dùng chung
+một màu thì bảng 60 hàng trông như lưới kẻ ô.
+**Cạnh nhỏ nhất của thứ bấm được: 44px** (`--mtap`). Phản hồi khi nhấn dùng chung 120ms.
+**Bỏ hậu tố tự chế "N"/"Tr"** — "1.1N tỷ" đứng cạnh "938 tỷ" là hai số cùng cột khác bậc,
+mắt không so thẳng được; chỉ câu chữ mới viết "nghìn tỷ".
+Mép vùng cuộn ngang phải có **dải mờ** (`.mfade`) — cắt phẳng giữa chữ trông như lỗi tràn.
+Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó là khung cuộn nên
+`::after` sẽ trôi theo nội dung thay vì đứng yên ở mép.
 
 ## Quy ước toàn site
 
