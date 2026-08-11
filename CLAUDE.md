@@ -41,8 +41,9 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 |---|---|
 | `universe.json` | 1522 mã: tên, sàn, ngành, SLCP, mcap, PE/PB, eps, cash, np, mốc %, vn30/hnx30 |
 | `data/eod/latest.json` | **File client luôn tải** (~100KB): giá đóng cửa phiên gần nhất + 4 chỉ số |
-| `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua |
-| `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức |
+| `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
+| `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
+| `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
@@ -178,6 +179,30 @@ giá sai hoặc giá nhảy — đừng đẩy.
   Ngân hàng KHÔNG dò được mã doanh thu (ứng viên gần nhất lệch 0,8-2,5% và khác nhau giữa
   VCB với BID) nên quý cũ của bank để trống doanh thu/giá vốn — thà trống còn hơn đoán.
   Kiểm chứng độc lập: tổng 4 quý so cột năm lệch 0-0,3% ở mã ngoài ngành ngân hàng.
+- **CÂN ĐỐI KẾ TOÁN / LƯU CHUYỂN TIỀN TỆ: `data/fin` CHỈ GIỮ 8 KỲ, KHO DÀI NẰM Ở `data/finq`.**
+  Bốn khối `bsQ`/`cfQ`/`bsY`/`cfY` **ghi đè** mỗi lượt cào (khác `Y`/`Q` đã gom dồn theo nhãn),
+  mà nguồn 24hMoney chỉ trả 8 kỳ gần nhất → kỳ cũ nhất rơi khỏi kho vĩnh viễn sau mỗi quý.
+  Phát hiện 11/08/2026 khi làm nghiên cứu chu kỳ: chỉ chạy được cân đối kế toán trên 9-15
+  tháng, trong khi đúng nhóm chỉ tiêu đó (phải thu/doanh thu IC −14%, tiền từ KD/tổng tài
+  sản +13,7%, ROE +13,4%) lại là nhóm cơ bản dự báo TỐT NHẤT đo được. `tools/kho_sau.py`
+  bồi từ `api-finfo.vndirect.com.vn/v4/financial_statements` (~79 quý, 22 năm) sang
+  `data/finq`; bước 6c của pipeline gọi nó với `--moi` nên chỉ chạy khi có kỳ mới.
+  > **DẤU CỦA LƯU CHUYỂN TIỀN TỆ TRONG `data/fin` ĐANG SAI — lấy dấu của VNDirect.**
+  > Đẳng thức "CFO + CFI + CFF = lưu chuyển tiền thuần" **sai 10.134/16.761 ô (60%)** trong
+  > kho, và 10.132 ô sai đó khớp lại ngay nếu đổi dấu một thành phần. Gốc ở chính nguồn:
+  > gọi thẳng 24hMoney cho SZL thì `cfa34` trả về toàn số dương trong khi `cfa26` vẫn có dấu
+  > âm đàng hoàng — không phải lỗi `parse_generic`. Cùng phép kiểm trên VNDirect: **1.098/1.098
+  > ô đúng**. `data/finq` vì thế lấy số CÓ DẤU của VNDirect cho mọi kỳ của khối `cf*`, còn khối
+  > `bs*` (toàn số dương) vẫn ưu tiên số kho. **`data/fin` thì chưa sửa** — chạy
+  > `python3 tools/kho_sau.py --va-fin` mới đổi, vì nó đổi thứ trang cổ phiếu đang hiện.
+- **KHỐI NGOẠI `fb`/`fs`: lịch sử lấy ở VNDirect, đừng tin mỗi nguồn hằng ngày.** Pipeline chỉ
+  biết khối ngoại của PHIÊN HÔM ĐÓ (bảng giá VPS) + bù 30 phiên (24hMoney), nên trước 6/2026
+  hai trường này **toàn số 0** — 290/500 mã mẫu không có lấy một số khác 0, mọi phép đo dòng
+  tiền ngoại theo lịch sử đều vô nghĩa. `api-finfo.vndirect.com.vn/v4/foreigns` có
+  `buyVol`/`sellVol` từng phiên **từ 30/08/2018**, đúng đơn vị CỔ PHIẾU (đối chiếu 37/37 phiên
+  chồng nhau của HPG, khớp tuyệt đối). `tools/va_ngoai.py` đã vá **+562.856 phiên trên 1.291 mã**
+  (11/08/2026), chỉ 1 mã bị loại vì lệch. Script chỉ điền vào phiên ĐANG TRỐNG và tự đối chiếu
+  phần chồng nhau trước khi ghi — chạy lại lúc nào cũng an toàn.
 - **BẢN ĐỒ TẬP ĐOÀN dựng TỪ DANH SÁCH CỔ ĐÔNG**, không nhập tay: `data/profile/{MÃ}.json`
   → `sh` có tỉ lệ sở hữu; ai nắm ≥20% của từ 2 mã trở lên là một nhóm. 163 nhóm, 831 lượt mã.
   Sáu cái bẫy đã trả giá, sửa là phải giữ:

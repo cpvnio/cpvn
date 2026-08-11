@@ -597,6 +597,22 @@ except Exception as e:
     print(f"chỉ số cơ bản LỖI (không chặn pipeline): {e}",flush=True)
     HL["basics"]={"err":str(e)[:120]}
 
+# 6c) KHO SÂU data/finq/{MÃ}.json — CÂN ĐỐI KẾ TOÁN + LƯU CHUYỂN TIỀN TỆ ĐỦ LỊCH SỬ.
+#     Bước 6 chỉ giữ được 8 KỲ CUỐN CHIẾU cho bsQ/cfQ/bsY/cfY vì nguồn 24hMoney chỉ trả
+#     chừng ấy — mỗi lượt cào là đẩy kỳ cũ nhất ra khỏi kho VĨNH VIỄN (khác `Y`/`Q` đã
+#     được gom dồn theo nhãn). Bước này bồi từ VNDirect financial_statements, ~79 quý /
+#     22 năm, và LẤY DẤU CỦA VNDIRECT cho lưu chuyển tiền tệ (xem đầu tools/kho_sau.py:
+#     kho 24hMoney sai dấu 60% số ô, VNDirect đúng 1.098/1.098).
+#     `--moi` = chỉ mã nào có kỳ mà kho sâu chưa có, nên ngày thường gần như không tốn
+#     lượt gọi nào; tới mùa báo cáo thì tự bồi, không cần ai nhớ chạy tay.
+try:
+    sys.path.insert(0,os.path.join(BASE,"tools"))
+    import kho_sau as _ks
+    HL["finq"]=_ks.main(moi=True, gioi_han=500)
+except Exception as e:
+    print(f"kho sâu LỖI (không chặn pipeline): {e}",flush=True)
+    HL["finq"]={"err":str(e)[:120]}
+
 # 7) KHO TIN TỨC + BÁO CÁO CTCK data/news/{SYM}.json — web tự rơi về đây khi nguồn sống chết
 #    Hằng ngày: top 200 GTGD (tin đổi nhanh); --full T2: TOÀN BỘ mã.
 os.makedirs(NEWS_DIR,exist_ok=True)
