@@ -86,6 +86,9 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .st .nm{color:var(--muted);font-weight:700}
   .st .val{font-weight:800}
   .stsep{width:1px;height:15px;background:var(--line);flex-shrink:0;align-self:center}
+  /* Máy bàn: hai khối bọc TAN BIẾN, con của chúng nhảy thẳng lên làm con của #stats
+     nên hàng ngang giữ y nguyên như trước khi có khối bọc — không đổi một pixel. */
+  .stidx,.stsum{display:contents}
   /* độ rộng thị trường: chip 3 màu — nét riêng CPVN */
   .breadth{display:flex;gap:5px;align-items:center;flex-shrink:0}
   .breadth b{padding:1px 8px;border-radius:6px;font-size:12px;font-weight:700}
@@ -419,9 +422,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
        cắt phẳng giữa chữ trông như lỗi tràn.
        Dùng mask chứ không dùng ::after: #stats CHÍNH LÀ khung cuộn, đặt ::after
        bên trong thì dải mờ trôi theo nội dung thay vì đứng yên ở mép. */
-    #stats{gap:8px;padding:8px 12px;
-      -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);
-      mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+    /* #stats phải thành KHỐI ĐỨNG: nó vốn là flex một hàng, để nguyên thì hai khối
+       bọc nằm CẠNH nhau và cụm tổng quan lại trôi ra ngoài mép phải y như cũ.
+       Dải mờ chuyển xuống đúng khối cuộn (.stidx) chứ không đặt ở #stats nữa. */
+    #stats{display:block;padding:0;overflow:visible;white-space:normal}
     #stats .st{flex-direction:column;align-items:flex-start;gap:1px;
       background:var(--panel);border:1px solid var(--line);border-radius:12px;
       padding:7px 10px;min-width:104px}
@@ -430,8 +434,27 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #stats .st .val{font-size:15.5px;font-weight:800;line-height:1.15}
     #stats .st>span:last-child{font-size:12.5px}
     #stats .stsep{display:none}
-    #stats .breadth{background:var(--panel);border:1px solid var(--line);
-      border-radius:12px;padding:7px 10px;gap:4px}
+
+    /* CỤM TỔNG QUAN KHÔNG CUỘN NGANG NỮA. Trước đây nó nối đuôi bốn thẻ chỉ số
+       trong cùng một dải kéo ngang, nên muốn xem vốn hoá toàn thị trường hay biên
+       độ là phải kéo gần hết một màn — kéo tới nơi thì bốn thẻ chỉ số đã trôi mất,
+       không còn gì để đối chiếu. Nay nó thành một khối riêng ngay dưới, chữ nhỏ,
+       tự xuống dòng: thấy hết trong một cái liếc, không phải kéo. */
+    #stats>.stidx{display:flex;gap:8px;padding:8px 12px;overflow-x:auto;
+      scrollbar-width:none;white-space:nowrap;
+      -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);
+      mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+    #stats>.stidx::-webkit-scrollbar{display:none}
+    #stats>.stsum{display:flex;flex-wrap:wrap;align-items:center;gap:5px 14px;
+      padding:8px 12px 9px;box-shadow:inset 0 1px 0 var(--line)}
+    #stats>.stsum .st{flex-direction:row;align-items:baseline;gap:5px;background:none;
+      border:0;border-radius:0;padding:0;min-width:0}
+    #stats>.stsum .st .nm{font-size:11px;letter-spacing:0;text-transform:none}
+    #stats>.stsum .st .val{font-size:12.5px;line-height:1.3}
+    /* Biên độ ăn trọn một dòng riêng: năm con chip màu mà chen chung dòng với mấy
+       số tiền thì dòng nào cũng dở dang, mà chip lại là thứ BẤM ĐƯỢC nên càng cần
+       đứng rõ ràng. */
+    #stats>.stsum .breadth{flex:1 0 100%;gap:5px;padding:0}
 
     #stats .stgt{display:block;font-size:11px;color:var(--muted);font-weight:600}
 
@@ -963,9 +986,13 @@ function renderStats(){
      mấy mục "Thanh khoản HOSE" đứng riêng, mà bỏ hẳn thì mất một con số hay dùng.
      Máy bàn giấu dòng này đi vì đã có mục riêng, khỏi lặp hai lần. */
   const tyGt=v=>v?Math.round(v/1e9).toLocaleString('en-US')+' tỷ':'';
-  let html=(CP.indices||[]).map(d=>idx(d.name,d.value.toLocaleString('en-US',{maximumFractionDigits:2}),
-    d.chg,tyGt(d.gtgd))).join('');
-  html+='<span class="stsep"></span>';
+  let html='<div class="stidx">'+(CP.indices||[]).map(d=>idx(d.name,
+    d.value.toLocaleString('en-US',{maximumFractionDigits:2}),d.chg,tyGt(d.gtgd))).join('')+'</div>';
+  /* CỤM TỔNG QUAN gói riêng. Máy bàn cho khối này display:contents nên mọi thứ vẫn
+     nằm chung một hàng ngang y như cũ; màn hẹp mới tách ra xếp lại. Bọc bằng thẻ
+     chứ không đánh dấu bằng class trên từng ô — thêm bớt một mục là khỏi phải nhớ
+     sửa cả CSS lẫn JS. */
+  html+='<span class="stsep"></span><div class="stsum">';
   html+=idx('Vốn hoá TT',CP.fmtVnd(s.mcap),null);
   /* THANH KHOẢN dùng số CHÍNH THỨC cả sàn (VPS trả kèm chỉ số) chứ KHÔNG cộng gtgd từng
      mã — bảng giá chỉ có phần khớp lệnh, thiếu hẳn thoả thuận. Đo phiên 06/08: cộng tay
@@ -978,13 +1005,14 @@ function renderStats(){
   // chip màu: bấm để lọc bảng theo đúng nhóm màu đó (bấm lại = bỏ lọc). Trần/sàn chỉ còn MÀU, không chữ.
   const chip=(k,txt,bg,col,tip)=>`<b data-bd="${k}" title="${tip}"`+
     ` class="bchip${ST.bd===k?' on':''}" style="background:${bg};color:${col}">${txt}</b>`;
-  html+=`<span class="breadth"><span class="nm" style="color:var(--muted);font-weight:700">Độ rộng</span>`+
+  html+=`<span class="breadth"><span class="nm" style="color:var(--muted);font-weight:700">Biên độ</span>`+
     chip('up',`▲ ${s.up}`,'rgba(22,199,132,.15)','var(--green)','Mã tăng — bấm để lọc')+
     chip('flat',`– ${s.flat}`,'rgba(234,179,8,.13)','var(--yellow)','Mã đứng giá — bấm để lọc')+
     chip('down',`▼ ${s.down}`,'rgba(234,57,67,.15)','var(--red)','Mã giảm — bấm để lọc')+
     (s.ceil?chip('ceil',String(s.ceil),'rgba(192,38,211,.16)','var(--purple)','Mã trần — bấm để lọc'):'')+
     (s.floor?chip('floor',String(s.floor),'rgba(56,189,248,.16)','var(--cyan)','Mã sàn — bấm để lọc'):'')+
     (ST.bd?`<b class="bclear" title="Bỏ lọc">✕</b>`:'')+`</span>`;
+  html+='</div>';
   $('stats').innerHTML=html;
   $('stats').querySelectorAll('b[data-bd]').forEach(el=>el.onclick=()=>{
     ST.bd=ST.bd===el.dataset.bd?null:el.dataset.bd; ST.page=1; render(); renderStats();
