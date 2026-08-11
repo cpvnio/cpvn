@@ -72,10 +72,17 @@ CPScreen.proReset=function(){ CPScreen._pro=null; };
 
 CPScreen.proBuild=function(coins){
   const S=new Set();
-  if(!CPScreen.loaded||!coins||!coins.length){ CPScreen._pro=S; return S; }
+  /* `CP.coins` LÀ MỘT Map (mã -> coin), KHÔNG phải mảng. Bản đầu viết `!coins.length`
+     nên với Map luôn ra undefined -> hàm thoát ngay, bộ lọc trả về RỖNG trên bản chạy
+     thật trong khi phép kiểm bằng Node (tự dựng mảng) vẫn xanh. Nhận cả ba dạng cho
+     chắc, và `for...of` trên Map trả CẶP [khoá, giá trị] chứ không trả coin. */
+  const ds = coins instanceof Map ? [...coins.values()]
+           : Array.isArray(coins)  ? coins
+           : coins ? Object.values(coins) : [];
+  if(!CPScreen.loaded||!ds.length){ CPScreen._pro=S; return S; }
   // --- cổng vào
   const pool=[];
-  for(const c of coins){
+  for(const c of ds){
     const t=CPScreen.T[c.sym]||{}, f=CPScreen.F[c.sym]||{}, p=c.price||0;
     if(!p) continue;
     if((t.avgval20||0)<CPScreen.PRO_LIQ) continue;      // thanh khoản
