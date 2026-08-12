@@ -398,6 +398,22 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > thành hai đường hở rồi mới làm mượt.
   > **Singapore và Hồng Kông không có hình ở độ phân giải 110m** — vẽ bằng CHẤM TRÒN đặt tay
   > tại toạ độ trung tâm tài chính (bảng `CHAM` trong script).
+  **THANG MÀU: nội suy MÀU THẬT theo từng giao diện, KHÔNG tô bằng alpha đè lên nền.**
+  Bản đầu dùng `rgba(...,a)`: trên nền TỐI thì rực, nhưng cùng alpha ấy đè lên nền SÁNG ra
+  pastel — cả bản đồ nhợt, chỉ nước gần kịch thang mới nhìn thấy, và nền biển trắng gần
+  bằng nền trang nên lục địa trôi lơ lửng (user báo "loá mắt và không rõ"). Ba thứ chữa cùng
+  lúc, gỡ cái nào cũng nhợt lại:
+  ① **Bảng `TG_THANG`** khai hai đầu màu riêng cho `light`/`dark` rồi nội suy RGB — vẫn cấm
+  `color-mix()` (html2canvas không hiểu). ② **Nền biển phải KHÁC HẲN nền trang** và đất
+  không-có-số phải là xám ĐẶC, bằng không không phân biệt được biển với lục địa.
+  ③ **Mốc đậm nhất ±2%, không phải ±3%, và gamma 0,6 chứ không tuyến tính** — đây là chỉ số
+  cả sàn chứ không phải một cổ phiếu: phần lớn phiên các nước chỉ chạy ±0,3–1%, để thang
+  rộng và tuyến tính thì ngày thường cả bản đồ nằm ở một phần ba dưới của thang.
+  Dải màu ở chú thích **dựng từ chính `tgMau()`**, đừng viết cứng lần nữa trong CSS — hai
+  chỗ sẽ trôi khỏi nhau ngay lần chỉnh thang tiếp theo.
+  Nút đổi đèn của congcu.js dựng lại module (`showMod`) nên màu tự tính lại, không cần
+  listener riêng — nhưng ĐỪNG bỏ bước dựng lại đó, bằng không đổi đèn là bản đồ giữ nguyên
+  màu của giao diện cũ.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

@@ -88,14 +88,16 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 
 /* ---------- BỨC TRANH TOÀN CẦU: bản đồ thế giới ---------- */
 #tgWrap{position:relative}
-#tgSvg{width:100%;height:auto;display:block;border-radius:12px;background:var(--card2)}
-/* nước KHÔNG có chỉ số: xám lặng, đủ thấy hình mà không tranh mắt với nước có số */
-:root{--tgtrong:rgba(154,166,189,.14)}
-html[data-theme="light"]{--tgtrong:rgba(15,23,42,.07)}
-.tgc{stroke:var(--bg);stroke-width:.7;vector-effect:non-scaling-stroke}
+/* NỀN BIỂN phải KHÁC HẲN nền trang, bằng không lục địa trôi lơ lửng và cả tấm chỉ là
+   một mảng trắng chói. Màu nền do JS gán (theo bảng thang trong congcu.js) để hai giao
+   diện dùng chung một nguồn màu duy nhất. */
+#tgSvg{width:100%;height:auto;display:block;border-radius:12px;
+  border:1px solid var(--line)}
+.tgc{stroke-width:.6;vector-effect:non-scaling-stroke}
 .tgc.co,.tgd{cursor:pointer}
-.tgc.co:hover,.tgd:hover{stroke:var(--txt);stroke-width:1.6}
-.tgd{stroke:var(--bg);stroke-width:1.2;vector-effect:non-scaling-stroke}
+/* rê vào thì viền ĐẬM lên chứ đừng đổi màu nền — đổi nền là mất chính con số đang đọc */
+.tgc.co:hover,.tgd:hover{stroke:var(--txt);stroke-width:1.8}
+.tgd{stroke-width:1.4;vector-effect:non-scaling-stroke}
 #tgTip{position:absolute;display:none;pointer-events:none;z-index:5;min-width:132px;
   background:var(--solid);border:1px solid var(--line2);border-radius:10px;padding:8px 11px;
   box-shadow:var(--shadow);font-size:12.5px;line-height:1.5}
@@ -107,9 +109,9 @@ html[data-theme="light"]{--tgtrong:rgba(15,23,42,.07)}
 .tgts{display:block;color:var(--faint);font-size:11px;margin-top:2px}
 /* thang màu: dải chuyển đỏ -> vàng -> xanh, đúng thứ tự người đọc quen từ bảng giá */
 .tgleg{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;color:var(--mut)}
-.tgbar{flex:0 0 150px;height:9px;border-radius:5px;
-  background:linear-gradient(90deg,rgba(240,80,92,1),rgba(240,80,92,.16),rgba(234,179,8,.3),
-    rgba(34,201,138,.16),rgba(34,201,138,1))}
+/* dải màu do JS gán inline, dựng từ CHÍNH hai đầu màu đang tô bản đồ — viết cứng ở đây
+   lần nữa là hai chỗ trôi khỏi nhau ngay lần chỉnh thang tiếp theo */
+.tgbar{flex:0 0 150px;height:9px;border-radius:5px;border:1px solid var(--line)}
 .tgnote{margin-left:auto;color:var(--faint)}
 /* DANH SÁCH CHỈ SỐ — mỗi nước một dòng, bốn thứ phải đọc được: tên · chỉ số · % · giờ.
    Bản đầu để 4 cột 258px cho "gọn", hoá ra là nhồi: tên nước dài bị cắt còn "New Zeal…",
@@ -770,6 +772,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260812d"></script>
+<script src="assets/congcu.js?v=20260812e"></script>
 </body>
 </html>

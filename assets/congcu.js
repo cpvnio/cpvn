@@ -662,16 +662,39 @@ const TG_NUOC=[
 ];
 /* Nguồn không có 4 nước này — nói ra chứ đừng để bản đồ xám mà người xem tự đoán. */
 const TG_THIEU='Indonesia · Ả Rập Xê Út · Nga · Nam Phi (nguồn không có chỉ số)';
-const TG_MOC=3;         // % để đạt màu đậm nhất — quá mốc này thì cùng một sắc
+/* MỐC ĐẬM NHẤT = ±2%, KHÔNG phải ±3%. Đây là CHỈ SỐ cả sàn chứ không phải một cổ phiếu:
+   phần lớn phiên các nước chỉ chạy ±0,3–1%, để thang tới 3% thì ngày thường cả bản đồ
+   nằm ở một phần ba dưới của thang, ra một mảng nhợt đúng như user chê. Với chỉ số thì
+   2% đã là một ngày lớn — đáng cho nó ăn màu đậm nhất. */
+const TG_MOC=2;
 let TG={map:null,rows:null,at:0,loi:null,dang:false};
 
-/* Thang màu: 0% -> gần như trong suốt, |%| >= TG_MOC -> rực. Dùng rgba chứ KHÔNG
-   color-mix() (html2canvas của nút chụp ảnh không hiểu color-mix, ảnh ra trắng bệch). */
+/* ═══ THANG MÀU ═══
+   NỘI SUY MÀU THẬT, KHÔNG tô bằng alpha đè lên nền. Bản đầu dùng rgba(...,a): trên nền
+   TỐI thì rực, nhưng trên nền SÁNG cùng alpha ấy đè lên trắng ra pastel — cả bản đồ nhợt,
+   chỉ mã gần kịch thang mới nhìn thấy (user báo "loá mắt và không rõ"). Nội suy giữa hai
+   đầu màu ĐẶT RIÊNG CHO TỪNG GIAO DIỆN thì hai bên đều no màu.
+   Vẫn cấm color-mix() — html2canvas của nút chụp ảnh không hiểu, ảnh ra trắng bệch.
+
+   GAMMA 0.6 chứ không tuyến tính: phần lớn phiên các nước chỉ nhúc nhích ±0,3%, để tuyến
+   tính thì cả bản đồ một màu nhờ nhờ đúng cái đang bị chê. Gamma <1 kéo khoảng nhỏ ra
+   trước, ±0,3% đã thấy rõ tông mà ±3% vẫn là đậm nhất. */
+const TG_THANG={
+  //            đất không số   nền biển   nét viền   0%(vàng)   xanh nhạt→đậm        đỏ nhạt→đậm
+  light:{nen:[197,206,219], bien:'#e3e9f1', net:'#ffffff', pl:[236,213,148],
+         g0:[188,229,207], g1:[7,124,77],   r0:[250,206,211], r1:[186,32,48]},
+  dark :{nen:[44,53,72],   bien:'#161c29', net:'#1b2130', pl:[128,102,32],
+         g0:[32,74,62],    g1:[46,214,150], r0:[74,38,48],   r1:[247,92,104]},
+};
+const tgPha=(a,b,k)=>'rgb('+Math.round(a[0]+(b[0]-a[0])*k)+','
+  +Math.round(a[1]+(b[1]-a[1])*k)+','+Math.round(a[2]+(b[2]-a[2])*k)+')';
+function tgBang(){ return TG_THANG[isLight()?'light':'dark']; }
 function tgMau(p){
-  if(p==null) return 'var(--tgtrong)';
-  const k=Math.min(1,Math.abs(p)/TG_MOC), a=0.16+k*0.84;
-  if(Math.abs(p)<0.05) return 'rgba(234,179,8,'+(0.30).toFixed(2)+')';
-  return (p>0?'rgba(34,201,138,':'rgba(240,80,92,')+a.toFixed(2)+')';
+  const T=tgBang();
+  if(p==null) return tgPha(T.nen,T.nen,0);
+  if(Math.abs(p)<0.05) return tgPha(T.pl,T.pl,0);
+  const k=Math.pow(Math.min(1,Math.abs(p)/TG_MOC),0.6);
+  return p>0?tgPha(T.g0,T.g1,k):tgPha(T.r0,T.r1,k);
 }
 function tgPct(p){ return p==null?'—':(p>0?'+':'')+p.toFixed(2)+'%'; }
 /* SỐ NÀY CŨ BAO NHIÊU? Đây mới là thứ người xem cần trên một bản đồ trải 24 múi giờ:
@@ -734,13 +757,13 @@ function toanCauPanel(){
   const path=Object.entries(M.c).map(([k,v])=>{
     const r=by[k];
     return '<path d="'+v.d+'" fill="'+tgMau(r?r.p:null)+'" class="tgc'+(r?' co':'')+'"'
-      +(r?' data-iso="'+k+'"':'')+'/>';
+      +' stroke="'+tgBang().net+'"'+(r?' data-iso="'+k+'"':'')+'/>';
   }).join('');
   /* Nước quá nhỏ để nhìn thấy hình -> chấm tròn. Vẽ SAU các path để luôn nằm trên. */
   const cham=Object.entries(M.cham).map(([k,v])=>{
     const r=by[k]; if(!r) return '';
-    return '<circle cx="'+v.cx+'" cy="'+v.cy+'" r="7" fill="'+tgMau(r.p)+'"'
-      +' class="tgd" data-iso="'+k+'"/>';
+    return '<circle cx="'+v.cx+'" cy="'+v.cy+'" r="7.5" fill="'+tgMau(r.p)+'"'
+      +' stroke="'+tgBang().net+'" class="tgd" data-iso="'+k+'"/>';
   }).join('');
   const hang=TG.rows.slice().sort((a,b)=>(b.p==null?-1e9:b.p)-(a.p==null?-1e9:a.p)).map(r=>
     '<div class="tgr" data-iso="'+r.iso+'"><span class="tgn">'+esc(r.ten)
@@ -752,9 +775,12 @@ function toanCauPanel(){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
     +'<span style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
     +tang+' nước tăng · '+giam+' nước giảm</span></div>'
-    +'<div class="pb"><div id="tgWrap"><svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'">'
+    +'<div class="pb"><div id="tgWrap"><svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
+    +' style="background:'+tgBang().bien+'">'
     +path+cham+'</svg><div id="tgTip"></div></div>'
-    +'<div class="tgleg"><span>−'+TG_MOC+'%</span><i class="tgbar"></i><span>+'+TG_MOC+'%</span>'
+    +'<div class="tgleg"><span>−'+TG_MOC+'%</span><i class="tgbar" style="background:linear-gradient(90deg,'
+    +tgMau(-TG_MOC)+','+tgMau(-0.6)+','+tgMau(0)+','+tgMau(0.6)+','+tgMau(TG_MOC)+')"></i>'
+    +'<span>+'+TG_MOC+'%</span>'
     +'<span class="tgnote">xanh = tăng · đỏ = giảm, đậm dần tới ±'+TG_MOC+'%</span></div></div></div>'
     +'<div class="panel"><div class="ph">Chỉ số từng nước</div><div class="pb tglist">'+hang+'</div></div>'
     +'<div class="note"><b>Mỗi nước một múi giờ — đây KHÔNG phải ảnh chụp cùng một lúc.</b> '
