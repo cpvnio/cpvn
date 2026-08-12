@@ -464,6 +464,22 @@ giá sai hoặc giá nhảy — đừng đẩy.
   kéo nhớ theo **tỉ lệ khung** chứ không phải px, để đổi cỡ cửa sổ thẻ không trôi ra ngoài.
   Thanh tiêu đề phải `user-select:none` + `touch-action:none`, bằng không kéo một cái là bôi
   đen chữ. Màn hẹp không kéo (thẻ xếp cột).
+  **NHỊP LÀM MỚI RIÊNG, KHÔNG ĂN THEO PHIÊN VIỆT NAM.** `startLive()` của trang khoá theo
+  `sessionOpenVN()` (9:00–15:00 T2–T6) vì nó sinh ra để bơm giá cổ phiếu trong nước — nhưng
+  thế giới giao dịch đúng lúc VN đã nghỉ: **Mỹ mở 20:30 giờ VN, châu Âu chạy tới nửa đêm**.
+  Ăn theo nhịp đó thì mở bản đồ lúc 9 giờ tối để xem Mỹ là số đứng im. Nên mục này có
+  `tgNhip()` riêng: hỏi mỗi 20s, chỉ GỌI MẠNG khi số cũ quá 2 phút (cùng ngưỡng với lượt vẽ
+  đầu nên hai đường không giẫm chân nhau), tự tắt khi rời tab.
+  Hai thứ bắt buộc đi kèm:
+  1. **Cập nhật TẠI CHỖ (`tgVeLai`), không dựng lại panel.** Dựng lại là mọi thẻ nước đang
+     mở bay sạch mỗi 2 phút. Cùng lý do, `startLive` phải **bỏ qua việc vẽ lại module radar
+     khi đang ở tab toàn cầu** — bằng không mỗi lượt bơm giá trong nước lại giết thẻ.
+     `tgVeLai` cập nhật: màu từng nước, ô đếm tăng/giảm, danh sách chỉ số, và **cả ruột từng
+     thẻ đang mở** (xoá đệm `TGC[iso]` rồi lấy lại) — thẻ để mở cả tiếng mà giá vẫn là lúc
+     mới bấm thì tệ hơn là không cập nhật gì.
+  2. **Tôn trọng cờ `?forcelive`** y như `startLive`: khung xem tự động luôn báo
+     `document.hidden=true` nên không có cờ này thì không thể kiểm thử được nhịp — đã dính,
+     chờ đủ 2 phút 41 giây mà số không đổi, tưởng hỏng.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

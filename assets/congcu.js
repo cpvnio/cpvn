@@ -380,7 +380,10 @@ function startLive(){
     if(Date.now()-liveAt<55000) return;
     if(await pollLive()){
       updateHeadChips();
-      if(cur==='radar') MODULES.find(x=>x.id==='radar').render();   // vẽ lại tại chỗ, KHÔNG cuộn
+      /* Mục TOÀN CẦU tự có nhịp riêng và tự cập nhật TẠI CHỖ. Để nó vẽ lại theo nhịp
+         này là mỗi lần bơm giá trong nước lại dựng lại cả panel -> mọi thẻ nước đang
+         mở bay sạch, cứ ~2 phút một lần. */
+      if(cur==='radar'&&radarTab!=='tg') MODULES.find(x=>x.id==='radar').render();
     }
   };
   tick();
@@ -667,7 +670,7 @@ const TG_THIEU='Indonesia · Ả Rập Xê Út · Nga · Nam Phi (nguồn không
    nằm ở một phần ba dưới của thang, ra một mảng nhợt đúng như user chê. Với chỉ số thì
    2% đã là một ngày lớn — đáng cho nó ăn màu đậm nhất. */
 const TG_MOC=2;
-let TG={map:null,rows:null,at:0,loi:null,dang:false};
+let TG={map:null,rows:null,at:0,loi:null,dang:false,hen:null};
 /* ═══ RỔ CỔ PHIẾU TRỤ CỘT TỪNG NƯỚC — bấm vào bản đồ thì bung ra ═══
    > **KHÔNG phải bảng xếp hạng vốn hoá tự động.** CNBC trả giá và % nhưng KHÔNG trả vốn
    > hoá (đã dò hết 36 trường của bản ghi), mà cũng không có API danh sách thành phần chỉ
@@ -973,6 +976,51 @@ function tgNutDong(){
   b.style.display=o.querySelectorAll('.tgcard').length>1?'':'none';
 }
 
+/* ═══ NHỊP RIÊNG CHO BẢN ĐỒ THẾ GIỚI ═══
+   Nhịp sống của trang bị khoá theo PHIÊN VIỆT NAM (9:00–15:00 T2–T6) vì nó sinh ra để bơm
+   giá cổ phiếu trong nước. Nhưng thế giới giao dịch đúng vào lúc VN đã nghỉ: Mỹ mở 20:30
+   giờ VN, châu Âu chạy tới nửa đêm. Ăn theo nhịp kia thì mở bản đồ lúc 9 giờ tối để xem Mỹ
+   là số đứng im. Nên mục này có nhịp của riêng nó, không hỏi giờ Việt Nam.
+   CẬP NHẬT TẠI CHỖ, không dựng lại panel: dựng lại là mọi thẻ nước đang mở bay sạch. */
+function tgVeLai(){
+  const svg=$('#tgSvg'); if(!svg) return false;
+  const by={}; (TG.rows||[]).forEach(r=>by[r.iso]=r);
+  svg.querySelectorAll('[data-iso]').forEach(el=>{
+    const r=by[el.dataset.iso]; el.setAttribute('fill',tgMau(r?r.p:null)); });
+  const oo=TG.rows.filter(r=>r.p!=null);
+  const dem=$('#tgDem');
+  if(dem) dem.textContent=oo.filter(r=>r.p>0.05).length+' nước tăng · '
+    +oo.filter(r=>r.p<-0.05).length+' nước giảm';
+  const ds=$('#m-radar .tglist'); if(ds) ds.innerHTML=tgHang();
+  /* thẻ đang mở: cập nhật % ở tiêu đề, và lấy lại luôn giá cổ phiếu bên trong — thẻ để
+     mở cả tiếng mà ruột vẫn là giá lúc mới bấm thì tệ hơn là không cập nhật gì. */
+  $$('#tgPops .tgcard').forEach(el=>{
+    const iso=el.dataset.c, n=by[iso]; if(!n) return;
+    const h=el.querySelector('.tgcp');
+    if(h){ h.className='tgcp '+(n.p==null?'':cls(n.p)); h.textContent=tgPct(n.p); }
+    delete TGC[iso];
+    tgLayCo(iso).then(d=>{ if(!el.isConnected||!d.rows||!d.rows.length) return;
+      const l=el.querySelector('.tgheat'); if(!l) return;
+      l.innerHTML=d.rows.map(r=>{ const bg=tgMau(r.p);
+        return '<div class="tgt" style="background:'+bg+';color:'+tgChu(bg)+'"'
+          +' title="'+esc((r.goc&&r.goc!==r.ma?r.goc+' · ':'')+r.ten)+' — '+esc(String(r.gia))+'">'
+          +'<b>'+esc(r.ma)+'</b><i>'+tgPct(r.p)+'</i></div>'; }).join(''); });
+  });
+  return true;
+}
+function tgNhip(){
+  clearInterval(TG.hen);
+  /* Hỏi mỗi 20 giây nhưng chỉ GỌI MẠNG khi số đã cũ quá 2 phút — cùng ngưỡng với lượt vẽ
+     đầu, nên hai đường không giẫm chân nhau. Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích. */
+  TG.hen=setInterval(()=>{
+    if(cur!=='radar'||radarTab!=='tg'){ clearInterval(TG.hen); TG.hen=null; return; }
+    /* Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích — trừ khi có cờ kiểm thử ?forcelive,
+       dùng chung với startLive vì khung xem tự động luôn báo document.hidden=true. */
+    if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<120000) return;
+    tgLoad().then(()=>{ if(cur==='radar'&&radarTab==='tg') tgVeLai(); });
+  },20000);
+}
+
 function toanCauPanel(){
   if(TG.loi) return '<div class="empty">Không lấy được dữ liệu thế giới: '+esc(TG.loi)
     +'<br/><span style="color:var(--faint);font-size:12px">Nguồn CNBC có thể đang chặn hoặc mạng đang hỏng — thử tải lại trang.</span></div>';
@@ -991,15 +1039,22 @@ function toanCauPanel(){
     return '<circle cx="'+v.cx+'" cy="'+v.cy+'" r="7.5" fill="'+tgMau(r.p)+'"'
       +' stroke="'+tgBang().net+'" class="tgd" data-iso="'+k+'"/>';
   }).join('');
-  const hang=TG.rows.slice().sort((a,b)=>(b.p==null?-1e9:b.p)-(a.p==null?-1e9:a.p)).map(r=>
+  const hang=tgHang();
+  return tgKhung(M,path,cham,tang,giam,hang);
+}
+/* dựng lại RIÊNG các hàng chỉ số, để nhịp cập nhật thay đúng phần này */
+function tgHang(){
+  return TG.rows.slice().sort((a,b)=>(b.p==null?-1e9:b.p)-(a.p==null?-1e9:a.p)).map(r=>
     '<div class="tgr" data-iso="'+r.iso+'"><span class="tgn">'+esc(r.ten)
     +'<i>'+esc(r.chiSo)+'</i></span>'
     +'<span class="tgv '+(r.p==null?'':cls(r.p))+'">'+tgPct(r.p)+'</span>'
     +'<span class="tgs">'+(r.p==null?'—':esc(r.gio||''))
     +(r.p!=null&&tgCu(r.tuoi)?' · '+(r.tuoi>=20*60?'<b class="tgo">phiên trước</b>':tgCu(r.tuoi)):'')
     +'</span></div>').join('');
+}
+function tgKhung(M,path,cham,tang,giam,hang){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
-    +'<span style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
+    +'<span id="tgDem" style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
     +tang+' nước tăng · '+giam+' nước giảm</span></div>'
     +'<div class="pb"><div id="tgWrap">'
     +'<svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
@@ -1145,8 +1200,8 @@ function renderRadar(){
        2 phút thì lấy lại — chợ nước ngoài không nhảy nhanh tới mức phải hỏi mỗi phút. */
     if(!TG.rows||Date.now()-TG.at>120000){
       tgLoad().then(()=>{ if(radarTab!=='tg') return;
-        const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); } });
-    } else tgBind();
+        const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } });
+    } else { tgBind(); tgNhip(); }
   }
 }
 /* Rê/chạm vào một nước -> hiện thẻ nhỏ. Gắn theo lối UỶ QUYỀN trên khung ngoài, không
