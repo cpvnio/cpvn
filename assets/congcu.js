@@ -269,9 +269,10 @@ function applyLiveCache(){
     if(n<100) return false;
     for(const sym in j.d){
       const c=ST.map.get(sym); if(!c) continue;
-      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
+      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt]=j.d[sym];
       if(!(last>0)) continue;
-      c.close=last; if(ref>0){ c.ref=ref; c.chg=(last-ref)/ref*100; }
+      c.close=last; c.nt=!!nt;                        // giá của phiên CŨ -> cấm tính %
+      if(ref>0){ c.ref=ref; c.chg=c.nt?null:(last-ref)/ref*100; }
       if(vol>0){ c.vol=vol; c.gtgd=gtgd||c.gtgd;
         if(c.avgv20) c.volr=+(vol/c.avgv20).toFixed(2); }
       if(hi>lo&&last>0) c.rpos=(last-lo)/(hi-lo);
@@ -290,8 +291,9 @@ function saveLiveCache(){
     const d={};
     for(const c of ST.list){
       if(!(c.close>0)) continue;
+      // phần tử 11 = cờ CHƯA KHỚP LỆNH (bản đệm cũ 10 phần tử vẫn đọc được)
       d[c.sym]=[c.close,c.ref||0,c.vol||0,Math.round(c.gtgd||0),
-        c._fb||0,c._fs||0,c._hi||0,c._lo||0,c.ceil||0,c.floor||0];
+        c._fb||0,c._fs||0,c._hi||0,c._lo||0,c.ceil||0,c.floor||0,c.nt?1:0];
     }
     const cur=JSON.parse(localStorage.getItem('cpvn_live')||'null');
     if(cur&&cur.at>=liveAt) return;
@@ -317,7 +319,11 @@ async function pollLive(){
       const last=(+t.lastPrice||0)*1000, ref=(+t.r||0)*1000;
       c.ceil=(+t.c||0)*1000; c.floor=(+t.f||0)*1000; if(ref>0) c.ref=ref;
       const vol=(+t.lot||0)*10;
-      if(last>0){ c.close=last; c.chg=ref>0?(last-ref)/ref*100:c.chg; }
+      /* CHƯA KHỚP LỆNH PHIÊN NÀY: giá đang giữ thuộc phiên CŨ còn c.ref vừa nhận là
+         tham chiếu HÔM NAY. Không chỉ % sai — nhãn trần/sàn, đếm độ rộng và danh sách
+         "kịch trần" của radar đều đọc c.nt, mà vòng này trước giờ không hề đặt nó. */
+      if(last>0){ c.close=last; c.nt=false; c.chg=ref>0?(last-ref)/ref*100:c.chg; }
+      else { c.nt=true; c.chg=null; }
       if(vol>0){ c.vol=vol;
         const ave=(parseFloat(t.avePrice)||0)*1000;
         c.gtgd=(ave||last)*vol;

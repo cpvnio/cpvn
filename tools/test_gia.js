@@ -173,8 +173,32 @@ console.log('\n── 4. F5 GIỮA PHIÊN KHÔNG ĐƯỢC CHỜ MẠNG ───
       kiem('khoá lưu đúng tên cpvn_live', Object.keys(kho), ['cpvn_live']);
       kiem('có đủ 5 trường {at,sess,final,idx,d}',
         ['at', 'sess', 'final', 'idx', 'd'].every(k => k in j), true);
-      kiem('mỗi mã là mảng 10 phần tử ĐÚNG THỨ TỰ', j.d.AAA,
-        [12345, 12000, 10, 5e8, 1, 2, 12500, 11900, 13000, 11000]);
+      kiem('mỗi mã là mảng 11 phần tử ĐÚNG THỨ TỰ', j.d.AAA,
+        [12345, 12000, 10, 5e8, 1, 2, 12500, 11900, 13000, 11000, 0]);
+      // phần tử 11 = cờ CHƯA KHỚP LỆNH. Thiếu nó thì F5 giữa phiên là % bịa quay lại.
+      {
+        const n = dungCP('2026-08-04T16:00');
+        n.CP.liveSess = '2026-08-04';
+        n.CP.coins.set('BBB', { sym: 'BBB', price: 20200, ref: 15900, nt: true, shares: 1 });
+        n.CP.saveLive();
+        kiem('mã chưa khớp lệnh → phần tử 11 = 1',
+          JSON.parse(n.kho.cpvn_live).d.BBB[10], 1);
+
+        /* VÒNG KHỨ HỒI. Đây chính là lỗi 12/08/2026: đệm giữ giá phiên CŨ (20.200) cùng
+           tham chiếu HÔM NAY (15.900), applyLive chia ra được +27,04% trên sàn UPCOM
+           biên độ ±15% — và mã đó nhảy lên đầu bảng khi xếp theo 1D%. */
+        const m = dungCP('2026-08-05T10:00');
+        m.CP.eodDate = '2026-08-04';
+        m.kho.cpvn_live = JSON.stringify({
+          at: m.moc, sess: '2026-08-05', final: false,
+          d: Object.fromEntries(Array.from({ length: 200 }, (_, i) =>
+            [`M${i}`, [20200, 15900, 0, 0, 0, 0, 0, 0, 0, 0, 1]])),
+        });
+        for (let i = 0; i < 200; i++) m.CP.coins.set(`M${i}`, { sym: `M${i}`, shares: 1 });
+        m.CP.applyLive();
+        kiem('đệm nói chưa khớp lệnh → applyLive giữ cờ nt', m.CP.coins.get('M0').nt, true);
+        kiem('đệm nói chưa khớp lệnh → KHÔNG bịa 1D%', m.CP.coins.get('M0').chg1d, null);
+      }
       kiem('ngoài giờ + đã quét đủ → final = true', j.final, true);
 
       const b = dungCP('2026-08-04T15:02');

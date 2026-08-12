@@ -144,9 +144,12 @@ giá sai hoặc giá nhảy — đừng đẩy.
   nguồn hết cái để cho, ngừng hỏi. Không có cờ này thì quét vô tận 60s/lần.
 - **Cộng dòng tiền NN phải theo NGÀY PHIÊN, không theo ngày lịch.** Từng cộng trùng
   phiên mới nhất: VIC 30 phiên hiện 688 tỷ thay vì 3.267 tỷ, im lặng hoàn toàn.
-- **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **10 phần tử đúng
-  thứ tự** `[price, ref, vol, gtgd, fbuy, fsell, high, low, ceil, flr]`. Ba nơi đọc/ghi:
-  `core.js`, `bubbles.html`, `congcu.js`. Đổi thứ tự là hỏng giá cả 4 trang.
+- **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **11 phần tử đúng
+  thứ tự** `[price, ref, vol, gtgd, fbuy, fsell, high, low, ceil, flr, nt]`. Ba nơi đọc/ghi:
+  `core.js`, `bubbles.html`, `congcu.js`. Đổi thứ tự là hỏng giá cả 4 trang. Bản đệm cũ 10
+  phần tử vẫn đọc được (thiếu `nt` -> coi như đã khớp lệnh). **`nt` phải nằm trong đệm**,
+  bằng không F5 giữa phiên là đệm ghép giá phiên CŨ với tham chiếu HÔM NAY rồi tự chia ra
+  phần trăm bịa — xem luật ngay dưới.
 - **Mã CHƯA KHỚP LỆNH phiên này mang cờ `nt`** — giá của nó là giá khớp cuối cùng của một
   phiên CŨ (mã thanh khoản kém đứng im hàng tháng). Tuyệt đối không lấy giá cũ đó trừ tham
   chiếu HÔM NAY ra phần trăm, không tô nhãn trần/sàn, không đếm vào độ rộng. Từng để lọt:
@@ -154,6 +157,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   bị tô trần/sàn giả, hàng Độ rộng đếm 1.422 mã "có giao dịch" trong khi thật sự 883.
   Cờ này do `refresh_daily.py` bước 5 sinh ra và được `core.js`, `bubbles.html`, `congcu.js`,
   `index.html` cùng tôn trọng.
+  **VÒNG POLL SỐNG PHẢI TỰ ĐẶT `nt`, ĐỪNG CHỈ XOÁ NÓ.** Cờ mang từ kho EOD chỉ nói về phiên
+  HÔM QUA; phiên mới vừa mở là mọi mã chưa khớp lệnh đều mang giá phiên cũ bên cạnh tham
+  chiếu hôm nay. Bản cũ chỉ có `if(last>0) c.nt=false` nên sáng 12/08/2026 đo được **22 mã
+  hiện phần trăm bịa**, trong đó TUG **+27,04%** và MGR **+22,45%** trên UPCOM biên độ ±15%
+  — và vì user hay xếp bảng theo 1D% nên chúng nằm đúng ĐẦU BẢNG, chỗ dễ thấy nhất. Luật:
+  `c.nt = last<=0` ở cả ba bản sao (tới được dòng đó thì `boardEmpty` đã false, bảng đang
+  sống). Radar cũng cần: nhãn trần/sàn, đếm độ rộng và danh sách "kịch trần" đều đọc `c.nt`
+  mà vòng poll của `congcu.js` trước giờ không hề đặt nó.
+  > **Vượt biên độ KHÔNG phải lúc nào cũng là lỗi**: UPCOM có mã biên độ **±40%** (ngày giao
+  > dịch đầu tiên, hoặc mở lại sau đình chỉ dài) — 12/08/2026 có BEL +38,66% và NWT −39,68%,
+  > cả hai đều thật. Kiểm bằng `ceil/ref` của chính mã đó, đừng suy từ tên sàn.
 - **Cổ tức xếp theo NGÀY CHỐT QUYỀN — `div` gộp theo NĂM, `divQ` gộp theo QUÝ.** Cổ tức TIỀN lấy từ Simplize
   `dividend/histories` mang năm CHI TRẢ; nếu để cổ tức CỔ PHIẾU theo năm TÀI CHÍNH
   ghi trong mô tả sự kiện là trộn hai quy ước trong cùng một bảng — VCB 27,6% chốt

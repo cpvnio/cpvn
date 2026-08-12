@@ -289,8 +289,16 @@ async function doPoll(only){
       // currentRoom của VNDirect ra đúng hệ số 10,0 ở cả 4 mã thử. Quên nhân 10 là
       // room nhỏ đi 10 lần (HPG 2,7% thay vì 27,3%). Nhận cả số 0 = KỊCH TRẦN.
       const fr=parseFloat(t.fRoom); if(!isNaN(fr)&&fr>=0) c.froom=fr*10;
-      // vừa có lệnh khớp -> mã hết "đứng im", % lại tính được bình thường
-      if(last>0) c.nt=false;
+      /* CHƯA KHỚP LỆNH PHIÊN NÀY -> ĐẶT cờ nt, đừng chỉ xoá nó.
+         lastPrice=0 nghĩa là mã chưa có giao dịch nào trong phiên ĐANG CHẠY, nên giá
+         đang giữ là giá khớp cuối của một phiên CŨ — trong khi c.ref vừa nhận ở trên là
+         THAM CHIẾU HÔM NAY. Chia hai số của hai phiên khác nhau là ra phần trăm bịa.
+         Bản cũ chỉ biết XOÁ cờ (last>0 -> nt=false) mà không bao giờ ĐẶT, còn cờ mang từ
+         kho EOD lại nói về phiên HÔM QUA; nên cứ phiên mới vừa mở là mọi mã chưa khớp
+         đều tính bậy. Sáng 12/08/2026 đo được 22 mã sai, trong đó TUG +27,04% và MGR
+         +22,45% trên UPCOM biên độ ±15% — và chúng đứng ĐẦU BẢNG khi xếp theo 1D%.
+         Tới được dòng này thì boardEmpty đã false, tức bảng đang sống và có số thật. */
+      c.nt=last<=0;
       c.chg1d=(!c.nt&&c.ref>0&&c.price>0)?(c.price-c.ref)/c.ref*100:(c.nt?null:c.chg1d);
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
@@ -339,7 +347,10 @@ CP.saveLive=function(){
     const d={};
     for(const c of CP.coins.values()){
       if(!(c.price>0)) continue;
-      d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr];
+      /* Phần tử thứ 11 = cờ CHƯA KHỚP LỆNH. Thiếu nó thì F5 giữa phiên là lỗi quay lại
+         y nguyên: đệm giữ giá phiên cũ + tham chiếu hôm nay, applyLive chia ra lại đẻ ra
+         phần trăm bịa. Bản đệm cũ 10 phần tử vẫn đọc được (thiếu -> coi như đã khớp). */
+      d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr,c.nt?1:0];
     }
     /* sess = phiên của số này · at = lúc ghi (để biết đệm còn tươi không)
        final = ĐÃ CHỐT CỨNG: ngoài giờ VÀ đã có lượt quét đủ sau khi đóng cửa.
@@ -369,13 +380,14 @@ CP.applyLive=function(){
     if(n<100) return false;
     for(const sym in j.d){
       const c=CP.coins.get(sym); if(!c) continue;
-      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl]=j.d[sym];
+      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt]=j.d[sym];
       if(!(last>0)) continue;
       c.price=last; if(ref>0) c.ref=ref;
       c.vol=vol||0; c.gtgd=gtgd||0; c.fbuy=fb||0; c.fsell=fs||0;
       if(hi) c.high=hi; if(lo) c.low=lo; if(ce) c.ceil=ce; if(fl) c.flr=fl;
       c.traded=last>0&&(vol||0)>0;
-      c.chg1d=c.ref>0?(last-c.ref)/c.ref*100:c.chg1d;
+      c.nt=!!nt;                                       // giá của phiên CŨ -> cấm tính %
+      c.chg1d=(!c.nt&&c.ref>0)?(last-c.ref)/c.ref*100:(c.nt?null:c.chg1d);
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
     }
     if(j.idx&&j.idx.length) CP.indices=j.idx.map(x=>({name:x[0],value:x[1],chg:x[2],gtgd:x[3]||0,vol:x[4]||0}));
