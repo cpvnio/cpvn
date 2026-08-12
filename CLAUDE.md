@@ -426,6 +426,24 @@ giá sai hoặc giá nhảy — đừng đẩy.
   (`VOLV.B-SE`); Anh có mã kết thúc bằng dấu chấm (`BP.-GB`).
   **Nguồn KHÔNG có cổ phiếu đơn lẻ của Hàn Quốc, Mexico, Thổ Nhĩ Kỳ** (đã thử mọi dạng mã) —
   bấm vào ba nước đó thì nói thẳng ra, đừng để bảng trống.
+  **NHIỀU THẺ CÙNG LÚC, MỖI THẺ NEO CẠNH CHÍNH NƯỚC ĐÓ, RUỘT LÀ LƯỚI Ô NHIỆT.** Ba luật:
+  1. **Không có lớp nền mờ phía sau.** Bản đầu là một bảng chắn giữa bản đồ có backdrop —
+     mở xong thẻ đầu là không bấm được nước thứ hai, mà so hai thị trường với nhau mới đúng
+     là việc người ta làm ở đây. Bấm lại vào nước đang mở thì đóng thẻ ấy; bấm vào thẻ thì
+     nó nhảy lên trên (mấy nước sát nhau thì thẻ chồng nhau).
+  2. **Lớp thẻ `#tgPops` phải đứng SAU thẻ `<svg>` trong DOM.** Ở màn hẹp lớp này thôi neo
+     và chảy theo dòng; đứng trước thì cột thẻ mọc NGAY TRÊN ĐẦU bản đồ — đã dính đúng vậy,
+     thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu.
+  3. **Màn hẹp KHÔNG neo được**: bản đồ ở đó chỉ cao ~146px trong khi một thẻ cao ~180px,
+     neo vào là thẻ trùm kín bản đồ. Dưới 640px cho thẻ xếp thành CỘT ngay dưới bản đồ —
+     vẫn mở nhiều thẻ, chỉ bỏ đúng cái không làm được.
+  **Ô nhiệt phải là ô MỘT DÒNG** (mã trái, % phải). Xếp chồng hai dòng thì thẻ cao 280px,
+  cao hơn cả bản danh sách nó thay thế — mất luôn lý do đổi sang ô nhiệt; một dòng còn 179px.
+  **Ô ĐỀU NHAU, không chia theo vốn hoá** — nguồn không trả vốn hoá cho cổ phiếu nước ngoài
+  nên vẽ ô to nhỏ khác nhau là bịa ra một trọng số. **Chữ trên ô tự chọn đen/trắng** theo độ
+  sáng của chính ô (`tgChu`, ngưỡng 0,62): thang chạy từ nhạt tới đậm nên để cứng một màu chữ
+  là nửa số ô không đọc nổi. Mã quá dài (sàn Ấn) rút gọn qua bảng `TG_TEN`, tên đầy đủ vẫn ở
+  `title` — không rút thì ô hẹp cắt thành "BHARTIA…".
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

@@ -707,6 +707,10 @@ const TG_RO={
  IL:["TEVA-IL","LUMI-IL","POLI-IL","NICE-IL","ESLT-IL","ICL-IL","MZTF-IL","DSCT-IL","TSEM-IL","AZRG-IL"],
  NZ:["FPH-NZ","AIA-NZ","MEL-NZ","IFT-NZ","SPK-NZ","MCY-NZ","EBO-NZ","CEN-NZ","POT-NZ","ATM-NZ"],
 };
+/* Vài sàn đặt mã rất dài (Ấn Độ), ô nhiệt hẹp nên cắt thành "BHARTIA…". Rút về đúng cách
+   thị trường đó gọi tắt — tên đầy đủ vẫn nằm ở `title` khi rê chuột vào ô. */
+const TG_TEN={"HDFCBANK-IN":"HDFC","ICICIBANK-IN":"ICICI","BHARTIARTL-IN":"BHARTI",
+  "HINDUNILVR-IN":"HUL","RELIANCE-IN":"RIL"};
 let TGC={};        // đệm theo nước, đỡ gọi lại mỗi lần bấm
 
 /* ═══ THANG MÀU ═══
@@ -726,6 +730,14 @@ const TG_THANG={
   dark :{nen:[44,53,72],   bien:'#161c29', net:'#1b2130', pl:[128,102,32],
          g0:[32,74,62],    g1:[46,214,150], r0:[74,38,48],   r1:[247,92,104]},
 };
+/* CHỮ TRÊN Ô NHIỆT phải tự chọn đen hay trắng theo độ sáng của chính ô đó — thang chạy
+   từ nhạt tới đậm nên để cứng một màu chữ là nửa số ô không đọc nổi. Ngưỡng 0,62 theo
+   độ sáng cảm nhận (hệ số 0.299/0.587/0.114), đo mắt trên cả hai giao diện. */
+function tgChu(rgb){
+  const m=/(\d+),\s*(\d+),\s*(\d+)/.exec(rgb); if(!m) return 'inherit';
+  const L=(0.299*+m[1]+0.587*+m[2]+0.114*+m[3])/255;
+  return L>0.62?'#12161f':'#ffffff';
+}
 const tgPha=(a,b,k)=>'rgb('+Math.round(a[0]+(b[0]-a[0])*k)+','
   +Math.round(a[1]+(b[1]-a[1])*k)+','+Math.round(a[2]+(b[2]-a[2])*k)+')';
 function tgBang(){ return TG_THANG[isLight()?'light':'dark']; }
@@ -810,38 +822,83 @@ async function tgLayCo(iso){
       const x=by[sym]||{}, raw=x.change_pct; let p=null;
       if(raw!=null){ if(/UNCH/i.test(raw)) p=0; else { const v=parseFloat(String(raw).replace(/[+%,]/g,'')); if(!isNaN(v)) p=v; } }
       /* hiện MÃ NGẮN, bỏ đuôi sàn: "7203.T-JP" -> "7203", "BP.-GB" -> "BP" */
-      return {ma:sym.replace(/[.-][A-Z]{2}$/,'').replace(/\.T$/,'').replace(/\.$/,''),
+      return {ma:TG_TEN[sym]||sym.replace(/[.-][A-Z]{2}$/,'').replace(/\.T$/,'').replace(/\.$/,''),
               ten:x.name||x.shortName||'',gia:x.last||null,p};
     }).filter(r=>r.gia!=null);
     return TGC[iso]={rows,at:Date.now()};
   }catch(e){ return TGC[iso]={rows:[],at:Date.now(),loi:String(e&&e.message||e)}; }
 }
+/* NHIỀU THẺ CÙNG LÚC, MỖI THẺ NEO TẠI CHỖ NƯỚC ĐÓ.
+   Bản đầu là MỘT bảng chắn giữa bản đồ: mở nước thứ hai là mất nước thứ nhất, mà so hai
+   thị trường với nhau mới là việc người ta làm ở đây. Nay mỗi nước một thẻ nhỏ đặt cạnh
+   chính nó, mở bao nhiêu cái cũng được, bấm lại vào nước đang mở thì đóng thẻ ấy.
+   KHÔNG có lớp nền mờ phía sau: có nó thì mở xong thẻ đầu là không bấm được nước thứ hai
+   nữa — đúng thứ chặn mất tính năng này. */
+let tgZ=20;
+function tgViTri(el,iso){
+  /* MÀN HẸP: bản đồ chỉ cao ~146px trong khi một thẻ cao ~270px — neo "cạnh nước" là bất
+     khả thi, thẻ sẽ trùm kín bản đồ và hai nước sát nhau thì thẻ chồng gần hết lên nhau.
+     Ở khổ đó cho thẻ XẾP CHỒNG NGAY DƯỚI bản đồ (CSS lo phần bố cục), vẫn mở nhiều thẻ
+     cùng lúc, chỉ bỏ đúng cái không làm được. */
+  if(window.matchMedia('(max-width:640px)').matches){ el.style.left=el.style.top=''; return; }
+  const M=TG.map, wrap=$('#tgWrap'); if(!M||!wrap) return;
+  const p=(M.c[iso]||M.cham[iso]); if(!p) return;
+  const k=wrap.clientWidth/M.w;                 // svg co giãn theo bề ngang khung
+  const w=el.offsetWidth||236, h=el.offsetHeight||240;
+  /* đặt CHÉO XUỐNG PHẢI của nước cho khỏi che chính nó; hết chỗ bên phải thì lật sang
+     trái, hết chỗ dưới thì lật lên trên — rồi kẹp trong khung. */
+  let x=p.cx*k+14, y=p.cy*k+12;
+  if(x+w>wrap.clientWidth-4) x=p.cx*k-w-14;
+  if(y+h>wrap.clientHeight-4) y=p.cy*k-h-12;
+  el.style.left=Math.max(4,Math.min(wrap.clientWidth-w-4,x))+'px';
+  el.style.top =Math.max(4,Math.min(wrap.clientHeight-h-4,y))+'px';
+}
 function tgMoBang(iso){
   const by={}; (TG.rows||[]).forEach(r=>by[r.iso]=r);
   const n=by[iso]; if(!n) return;
-  const pop=$('#tgPop'); if(!pop) return;
-  const ve=(noi)=>{ pop.innerHTML='<div class="tgpin"><div class="tgph">'
-    +'<b>'+esc(n.ten)+'</b><span class="tgpi">'+esc(n.chiSo)+' '+tgPct(n.p)+'</span>'
-    +'<button class="tgpx" id="tgDong" aria-label="Đóng">✕</button></div>'+noi+'</div>';
-    pop.classList.add('on');
-    $('#tgDong').onclick=tgDongBang; };
-  ve('<div class="tgpl"><div class="tgpe">Đang lấy…</div></div>');
+  const oi=$('#tgPops'); if(!oi) return;
+  const cu=oi.querySelector('.tgcard[data-c="'+iso+'"]');
+  if(cu){ cu.remove(); tgNutDong(); return; }        // bấm lại nước đang mở -> đóng
+  const el=document.createElement('div');
+  el.className='tgcard'; el.dataset.c=iso; el.style.zIndex=++tgZ;
+  const dau='<div class="tgch"><b>'+esc(n.ten)+'</b>'
+    +'<span class="tgcp '+(n.p==null?'':cls(n.p))+'">'+tgPct(n.p)+'</span>'
+    +'<button class="tgcx" aria-label="Đóng">✕</button></div>';
+  el.innerHTML=dau+'<div class="tgce">Đang lấy…</div>';
+  oi.appendChild(el); tgViTri(el,iso); tgNutDong();
+  /* thẻ nào bấm vào cũng nhảy lên trên cùng — mấy nước sát nhau thì thẻ chồng nhau */
+  el.onmousedown=()=>{ el.style.zIndex=++tgZ; };
+  el.querySelector('.tgcx').onclick=ev=>{ ev.stopPropagation(); el.remove(); tgNutDong(); };
   tgLayCo(iso).then(d=>{
-    if(!pop.classList.contains('on')) return;
-    if(!d.rows) return ve('<div class="tgpl"><div class="tgpe">Nguồn không có cổ phiếu đơn lẻ '
-      +'của '+esc(n.ten)+' — chỉ có chỉ số chung.</div></div>');
-    if(!d.rows.length) return ve('<div class="tgpl"><div class="tgpe">Không lấy được danh sách.</div></div>');
-    ve('<div class="tgpl">'+d.rows.map(r=>
-        '<div class="tgpr"><span class="tgpm">'+esc(r.ma)+'<i>'+esc(r.ten)+'</i></span>'
-        +'<span class="tgpg">'+esc(String(r.gia))+'</span>'
-        +'<span class="tgpp '+(r.p==null?'':cls(r.p))+'">'+tgPct(r.p)+'</span></div>').join('')
-      +'</div><div class="tgpn">'+(d.xepVon
-        ? '10 mã vốn hoá lớn nhất, xếp theo kho của chính trang này.'
-        : 'Rổ CỔ PHIẾU TRỤ CỘT chọn tay, <b>không phải bảng xếp hạng vốn hoá</b> — nguồn không '
-          +'trả vốn hoá nên không xếp tự động được. Giá theo đơn vị tiền của chính sàn đó.')
-      +'</div>'); });
+    if(!el.isConnected) return;
+    let ruot;
+    if(!d.rows) ruot='<div class="tgce">Nguồn không có cổ phiếu đơn lẻ của nước này — chỉ có chỉ số chung.</div>';
+    else if(!d.rows.length) ruot='<div class="tgce">Không lấy được danh sách.</div>';
+    /* LƯỚI Ô NHIỆT thay cho danh sách dọc: màu đọc nhanh hơn số, liếc một cái là biết
+       sàn đó đang xanh hay đỏ mà không phải quét mắt qua 10 dòng. Giá đưa vào `title`,
+       để trong ô thì chữ chen nhau mà cũng không phải thứ cần biết ngay.
+       Ô ĐỀU NHAU, không chia theo vốn hoá: nguồn không trả vốn hoá cho cổ phiếu nước
+       ngoài (xem chú thích ở TG_RO) nên vẽ ô to nhỏ khác nhau là bịa ra một trọng số. */
+    else ruot='<div class="tgheat">'+d.rows.map(r=>{
+        const bg=tgMau(r.p);
+        return '<div class="tgt" style="background:'+bg+';color:'+tgChu(bg)+'"'
+          +' title="'+esc(r.ten)+' — '+esc(String(r.gia))+'">'
+          +'<b>'+esc(r.ma)+'</b><i>'+tgPct(r.p)+'</i></div>'; }).join('')
+      +'</div><div class="tgcn">'+(d.xepVon?'10 mã vốn hoá lớn nhất'
+        :'10 mã trụ cột — ô đều nhau, không phải trọng số vốn hoá')+'</div>';
+    el.innerHTML=dau+ruot;
+    el.querySelector('.tgcx').onclick=ev=>{ ev.stopPropagation(); el.remove(); tgNutDong(); };
+    tgViTri(el,iso);           // đo lại sau khi có ruột thật, thẻ cao lên thì kẹp lại
+  });
 }
-function tgDongBang(){ const p=$('#tgPop'); if(p){ p.classList.remove('on'); p.innerHTML=''; } }
+function tgDongBang(){ const o=$('#tgPops');
+  if(o) o.querySelectorAll('.tgcard').forEach(x=>x.remove());   // giữ lại nút, chỉ dọn thẻ
+  tgNutDong(); }
+/* nút "đóng tất cả" chỉ mọc khi có từ HAI thẻ trở lên — một thẻ thì cái ✕ của nó là đủ */
+function tgNutDong(){
+  const o=$('#tgPops'), b=$('#tgDongHet'); if(!o||!b) return;
+  b.style.display=o.querySelectorAll('.tgcard').length>1?'':'none';
+}
 
 function toanCauPanel(){
   if(TG.loi) return '<div class="empty">Không lấy được dữ liệu thế giới: '+esc(TG.loi)
@@ -871,9 +928,15 @@ function toanCauPanel(){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
     +'<span style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
     +tang+' nước tăng · '+giam+' nước giảm</span></div>'
-    +'<div class="pb"><div id="tgPop"></div><div id="tgWrap"><svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
+    +'<div class="pb"><div id="tgWrap">'
+    +'<svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
     +' style="background:'+tgBang().bien+'">'
-    +path+cham+'</svg><div id="tgTip"></div></div>'
+    +path+cham+'</svg>'
+    /* LỚP THẺ PHẢI ĐỨNG SAU <svg>: ở màn hẹp lớp này thôi neo và chảy theo dòng, đứng
+       trước thì cột thẻ mọc NGAY TRÊN ĐẦU bản đồ, đẩy bản đồ xuống — đã dính đúng vậy,
+       thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu. */
+    +'<div id="tgPops"><button id="tgDongHet" style="display:none">✕ Đóng tất cả</button></div>'
+    +'<div id="tgTip"></div></div>'
     +'<div class="tgleg"><span>−'+TG_MOC+'%</span><i class="tgbar" style="background:linear-gradient(90deg,'
     +tgMau(-TG_MOC)+','+tgMau(-0.6)+','+tgMau(0)+','+tgMau(0.6)+','+tgMau(TG_MOC)+')"></i>'
     +'<span>+'+TG_MOC+'%</span>'
@@ -1041,8 +1104,14 @@ function tgBind(){
      tin khác nhau: liếc thì rê, muốn soi kỹ thì bấm. */
   wrap.onclick=e=>{ const t=e.target.closest('[data-iso]');
     if(t){ tip.classList.remove('on'); tgMoBang(t.dataset.iso); } };
+  const nut=$('#tgDongHet'); if(nut) nut.onclick=tgDongBang;
   if(!window.__tgEsc){ window.__tgEsc=1;
     document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') tgDongBang(); }); }
+  /* Đổi bề ngang cửa sổ là svg co giãn -> mọi thẻ phải neo lại, bằng không chúng trôi
+     khỏi nước của mình. Một listener dùng chung, gắn một lần. */
+  if(!window.__tgRs){ window.__tgRs=1;
+    window.addEventListener('resize',()=>{ const o=$('#tgPops'); if(!o) return;
+      o.querySelectorAll('.tgcard').forEach(el=>tgViTri(el,el.dataset.c)); }); }
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */

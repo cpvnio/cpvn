@@ -107,36 +107,45 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 .tgtv{font-size:16px;font-weight:800}
 .tgtg{margin-left:7px;color:var(--mut)}
 .tgts{display:block;color:var(--faint);font-size:11px;margin-top:2px}
-/* ---- BẢNG CỔ PHIẾU TRỤ CỘT: bung ra khi bấm vào một nước trên bản đồ ----
-   Nổi ĐÈ LÊN bản đồ chứ không chen vào giữa trang: chen vào là bản đồ tụt xuống, đóng
-   lại nhảy ngược lên — đúng cái đã phải sửa ở bảng lịch cổ tức bên bảng giá. */
-#tgPop{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;
-  background:rgba(8,11,18,.55);border-radius:12px;padding:12px}
-html[data-theme="light"] #tgPop{background:rgba(15,23,42,.32)}
-#tgPop.on{display:flex}
-.tgpin{width:min(420px,100%);max-height:100%;overflow:auto;background:var(--solid);
-  border:1px solid var(--line2);border-radius:14px;box-shadow:var(--shadow)}
-.tgph{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--line);
-  position:sticky;top:0;background:var(--solid);border-radius:14px 14px 0 0}
-.tgph b{font-size:15px}
-.tgpi{font-size:12px;color:var(--mut)}
-.tgpx{margin-left:auto;background:none;border:0;color:var(--mut);font-size:15px;cursor:pointer;
-  padding:2px 6px;border-radius:7px}
-.tgpx:hover{background:var(--card2);color:var(--txt)}
-.tgpl{padding:4px 6px}
-.tgpr{display:grid;grid-template-columns:1fr auto 78px;gap:10px;align-items:center;
-  padding:7px 8px;border-radius:8px}
-.tgpr:nth-child(odd){background:var(--card2)}
-.tgpm{font-weight:800;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* tên công ty là dòng phụ — nhạt và nhỏ, để cột mã vẫn là thứ mắt bắt trước */
-.tgpm i{display:block;font-style:normal;font-weight:500;font-size:10.5px;color:var(--faint);
-  overflow:hidden;text-overflow:ellipsis}
-.tgpg{font-weight:700;font-size:13px;white-space:nowrap}
-.tgpp{text-align:right;font-weight:800;font-size:13px}
-.tgpn{padding:9px 13px 12px;font-size:11px;color:var(--faint);line-height:1.55;
-  border-top:1px solid var(--line)}
-.tgpe{padding:22px 14px;text-align:center;color:var(--mut);font-size:13px}
-@media(max-width:640px){ .tgpin{width:100%} .tgpr{grid-template-columns:1fr auto 66px} }
+/* ---- THẺ CỔ PHIẾU TRỤ CỘT: bấm vào một nước là mọc một thẻ NGAY CẠNH nước đó ----
+   Nhiều thẻ mở cùng lúc được — so hai thị trường với nhau mới là việc người ta làm ở đây.
+   KHÔNG có lớp nền mờ phía sau: có nó thì mở xong thẻ đầu là không bấm được nước thứ hai. */
+#tgPops{position:absolute;inset:0;z-index:6;pointer-events:none}
+.tgcard{position:absolute;width:236px;pointer-events:auto;background:var(--solid);
+  border:1px solid var(--line2);border-radius:11px;box-shadow:var(--shadow);overflow:hidden}
+.tgch{display:flex;align-items:center;gap:7px;padding:7px 8px 7px 10px;
+  border-bottom:1px solid var(--line);cursor:default}
+.tgch b{font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgcp{font-size:12.5px;font-weight:800;margin-left:auto;white-space:nowrap}
+.tgcx{background:none;border:0;color:var(--faint);font-size:12px;cursor:pointer;
+  padding:1px 4px;border-radius:6px;line-height:1}
+.tgcx:hover{background:var(--card2);color:var(--txt)}
+/* LƯỚI Ô NHIỆT: 2 cột × 5 hàng. Màu là thứ đọc trước, mã và % nằm trong ô.
+   Giá để ở title — nhét vào ô thì chữ chen nhau mà cũng không phải thứ cần biết ngay. */
+/* Ô MỘT DÒNG: mã trái, % phải. Xếp chồng hai dòng thì thẻ cao 280px — cao hơn cả bản
+   danh sách nó thay thế, tức là mất luôn cái lý do đổi sang ô nhiệt. Một dòng còn ~185px. */
+.tgheat{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:4px}
+.tgt{display:flex;align-items:baseline;gap:5px;border-radius:5px;padding:3px 6px;
+  min-width:0;cursor:default}
+.tgt b{font-size:11px;font-weight:800;letter-spacing:-.2px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgt i{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:700;
+  opacity:.95;white-space:nowrap}
+.tgcn{padding:5px 10px 7px;font-size:10px;color:var(--faint);border-top:1px solid var(--line)}
+.tgce{padding:16px 12px;text-align:center;color:var(--mut);font-size:12px}
+#tgDongHet{position:absolute;right:8px;top:8px;z-index:9;cursor:pointer;pointer-events:auto;
+  background:var(--solid);color:var(--mut);border:1px solid var(--line2);border-radius:8px;
+  padding:5px 10px;font-size:11.5px;font-weight:700;box-shadow:var(--shadow)}
+#tgDongHet:hover{color:var(--txt)}
+@media(max-width:640px){
+  /* thẻ rời khỏi lớp neo, xếp thành cột ngay dưới bản đồ — xem chú thích trong congcu.js */
+  #tgPops{position:static;pointer-events:auto;display:flex;flex-direction:column;gap:8px;
+    margin-top:10px}
+  .tgcard{position:static;width:100%}
+  .tgt{padding:5px 7px} .tgt b{font-size:12px} .tgt i{font-size:11.5px}
+  /* nút nằm TRONG cột thẻ, không neo vào bản đồ nữa */
+  #tgDongHet{position:static;align-self:flex-end;order:-1}
+}
 
 /* thang màu: dải chuyển đỏ -> vàng -> xanh, đúng thứ tự người đọc quen từ bảng giá */
 .tgleg{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;color:var(--mut)}
@@ -803,6 +812,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260812f"></script>
+<script src="assets/congcu.js?v=20260812j"></script>
 </body>
 </html>
