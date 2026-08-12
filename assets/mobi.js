@@ -33,12 +33,14 @@
      Hai mục có TRANG RIÊNG (bong bóng, tập đoàn) đi bằng link thật; hai mục nằm
      CÙNG trang radar thì bấm thẳng vào mục tương ứng trong menu máy bàn (đã ẩn ở
      khổ hẹp) để congcu.js đổi tab tại chỗ, khỏi tải lại trang. */
+  /* THỨ TỰ do user chốt 12/08/2026: Toàn cầu đứng NGAY SAU Nhịp phiên (Nhịp phiên là
+     mặc định nên không có nút riêng) — soi thế giới trước rồi mới soi trong nước. */
   var CON=[
+    ['tg',  'Toàn cầu',   null],
     ['bong','Bong bóng',  '/bubbles'],
     ['cd',  'Chủ điểm',   null],
     ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan'],
-    ['vb',  'Về bờ',      null],
-    ['tg',  'Toàn cầu',   null]
+    ['vb',  'Về bờ',      null]
   ];
 
   /* ĐỌC CẢ URL SẠCH, đừng chỉ dò "congcu". `_redirects` viết lại /radar, /tapdoan,
