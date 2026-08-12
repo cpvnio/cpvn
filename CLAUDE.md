@@ -414,6 +414,18 @@ giá sai hoặc giá nhảy — đừng đẩy.
   Nút đổi đèn của congcu.js dựng lại module (`showMod`) nên màu tự tính lại, không cần
   listener riêng — nhưng ĐỪNG bỏ bước dựng lại đó, bằng không đổi đèn là bản đồ giữ nguyên
   màu của giao diện cũ.
+  **BẤM VÀO MỘT NƯỚC -> bung bảng CỔ PHIẾU TRỤ CỘT** (rê chuột vẫn chỉ ra thẻ nhỏ — hai mức
+  thông tin, liếc thì rê, soi kỹ thì bấm). Bảng nổi ĐÈ LÊN bản đồ, không chen vào giữa trang.
+  > **KHÔNG được gọi đây là "10 mã vốn hoá lớn nhất" cho nước ngoài.** CNBC trả giá và % nhưng
+  > **không trả vốn hoá** (đã dò hết 36 trường), và không có API danh sách thành phần chỉ số
+  > nào mở CORS — nên `TG_RO` là rổ TRỤ CỘT **chọn tay**, nhãn phải nói đúng như vậy.
+  > **Riêng Việt Nam xếp ĐÚNG theo vốn hoá** vì kho của chính trang có SLCP và giá sống.
+  **Dạng mã của CNBC mỗi sàn một kiểu — đã dò 250 mã mới ra quy luật, đừng đoán:** Mỹ dùng mã
+  trần (`AAPL`); phần lớn còn lại `MÃ-CC` (`SAP-DE`); Nhật `SỐ.T-JP`; **Hồng Kông `SỐ-HK`
+  nhưng phải BỎ SỐ 0 ĐẦU** (`700-HK` chạy, `0700-HK` trả rỗng); Thuỵ Điển `MÃ.HẠNG-SE`
+  (`VOLV.B-SE`); Anh có mã kết thúc bằng dấu chấm (`BP.-GB`).
+  **Nguồn KHÔNG có cổ phiếu đơn lẻ của Hàn Quốc, Mexico, Thổ Nhĩ Kỳ** (đã thử mọi dạng mã) —
+  bấm vào ba nước đó thì nói thẳng ra, đừng để bảng trống.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

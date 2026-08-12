@@ -668,6 +668,46 @@ const TG_THIEU='Indonesia · Ả Rập Xê Út · Nga · Nam Phi (nguồn không
    2% đã là một ngày lớn — đáng cho nó ăn màu đậm nhất. */
 const TG_MOC=2;
 let TG={map:null,rows:null,at:0,loi:null,dang:false};
+/* ═══ RỔ CỔ PHIẾU TRỤ CỘT TỪNG NƯỚC — bấm vào bản đồ thì bung ra ═══
+   > **KHÔNG phải bảng xếp hạng vốn hoá tự động.** CNBC trả giá và % nhưng KHÔNG trả vốn
+   > hoá (đã dò hết 36 trường của bản ghi), mà cũng không có API danh sách thành phần chỉ
+   > số nào mở CORS. Nên đây là rổ TRỤ CỘT chọn tay — mấy mã dẫn dắt của từng sàn, đủ để
+   > liếc qua thị trường nước đó đang ra sao. Nhãn trên giao diện phải nói đúng như vậy,
+   > đừng ghi "10 mã vốn hoá lớn nhất" khi không xếp được theo vốn hoá.
+   > RIÊNG VIỆT NAM xếp ĐÚNG theo vốn hoá vì kho của chính trang có số cổ phiếu và giá.
+
+   DẠNG MÃ CỦA CNBC, mỗi sàn một kiểu — đã dò 250 mã mới ra quy luật, đừng đoán:
+   · Mỹ: mã trần (AAPL) · phần lớn còn lại: `MÃ-CC` (SAP-DE, BHP-AU)
+   · Nhật: `SỐ.T-JP` · Hồng Kông: `SỐ-HK` nhưng phải BỎ SỐ 0 ĐẦU (700-HK, không phải 0700-HK)
+   · Thuỵ Điển: `MÃ.HẠNG-SE` (VOLV.B-SE) · Anh có mã kết thúc bằng dấu chấm (BP.-GB)
+   KHÔNG CÓ: Hàn Quốc, Mexico, Thổ Nhĩ Kỳ — nguồn chỉ có chỉ số, không có cổ phiếu đơn lẻ
+   (đã thử hết mọi dạng mã). Bấm vào ba nước đó thì nói thẳng ra. */
+const TG_RO={
+ US:["AAPL","MSFT","NVDA","GOOGL","AMZN","META","AVGO","TSLA","BRK.B","JPM"],
+ JP:["7203.T-JP","6758.T-JP","8306.T-JP","6861.T-JP","9984.T-JP","6501.T-JP","7974.T-JP","8035.T-JP","9433.T-JP","4063.T-JP"],
+ HK:["700-HK","9988-HK","939-HK","1398-HK","3690-HK","941-HK","1299-HK","388-HK","2318-HK","5-HK"],
+ CN:["600519-CN","601398-CN","601857-CN","600036-CN","601288-CN","600941-CN","601988-CN","600900-CN","601628-CN","600028-CN"],
+ TW:["2330-TW","2317-TW","2454-TW","2308-TW","2881-TW","2882-TW","2412-TW","3711-TW","2891-TW","1216-TW"],
+ IN:["RELIANCE-IN","TCS-IN","HDFCBANK-IN","ICICIBANK-IN","INFY-IN","BHARTIARTL-IN","SBIN-IN","LT-IN","ITC-IN","HINDUNILVR-IN"],
+ GB:["AZN-GB","SHEL-GB","HSBA-GB","ULVR-GB","BP.-GB","RIO-GB","GSK-GB","DGE-GB","BATS-GB","LSEG-GB"],
+ DE:["SAP-DE","SIE-DE","ALV-DE","DTE-DE","MBG-DE","BMW-DE","MUV2-DE","BAS-DE","IFX-DE","DBK-DE"],
+ FR:["MC-FR","OR-FR","TTE-FR","SAN-FR","AIR-FR","SU-FR","RMS-FR","BNP-FR","AI-FR","EL-FR"],
+ CH:["NESN-CH","NOVN-CH","UBSG-CH","ZURN-CH","ABBN-CH","CFR-CH","LONN-CH","SIKA-CH","GIVN-CH","ALC-CH"],
+ NL:["ASML-NL","INGA-NL","HEIA-NL","PRX-NL","AD-NL","PHIA-NL","ADYEN-NL","WKL-NL","KPN-NL","RAND-NL"],
+ IT:["ENEL-IT","ISP-IT","UCG-IT","ENI-IT","STLAM-IT","G-IT","MB-IT","TIT-IT","PST-IT","RACE-IT"],
+ ES:["ITX-ES","IBE-ES","SAN-ES","BBVA-ES","REP-ES","AENA-ES","FER-ES","TEF-ES","AMS-ES","CLNX-ES"],
+ SE:["INVE.B-SE","ATCO.A-SE","VOLV.B-SE","ERIC.B-SE","HM.B-SE","SEB.A-SE","SAND-SE","ASSA.B-SE","SWED.A-SE","EQT-SE"],
+ CA:["RY-CA","TD-CA","SHOP-CA","ENB-CA","CNR-CA","BMO-CA","BNS-CA","CP-CA","SU-CA","TRP-CA"],
+ AU:["BHP-AU","CBA-AU","CSL-AU","NAB-AU","WBC-AU","ANZ-AU","WES-AU","MQG-AU","RIO-AU","FMG-AU"],
+ SG:["D05-SG","O39-SG","U11-SG","Z74-SG","C6L-SG","S63-SG","BN4-SG","F34-SG","A17U-SG","C38U-SG"],
+ TH:["PTT-TH","AOT-TH","CPALL-TH","ADVANC-TH","SCB-TH","KBANK-TH","PTTEP-TH","BDMS-TH","GULF-TH","SCC-TH"],
+ MY:["MAYBANK-MY","PBBANK-MY","TENAGA-MY","CIMB-MY","PCHEM-MY","IHH-MY","MISC-MY","PETGAS-MY","HLBANK-MY","AXIATA-MY"],
+ PH:["SM-PH","BDO-PH","SMPH-PH","ALI-PH","BPI-PH","JFC-PH","ICT-PH","AC-PH","TEL-PH","URC-PH"],
+ BR:["VALE3-BR","PETR4-BR","ITUB4-BR","BBDC4-BR","ABEV-BR","B3SA3-BR","WEGE3-BR","BBAS3-BR","SUZB3-BR","RENT3-BR"],
+ IL:["TEVA-IL","LUMI-IL","POLI-IL","NICE-IL","ESLT-IL","ICL-IL","MZTF-IL","DSCT-IL","TSEM-IL","AZRG-IL"],
+ NZ:["FPH-NZ","AIA-NZ","MEL-NZ","IFT-NZ","SPK-NZ","MCY-NZ","EBO-NZ","CEN-NZ","POT-NZ","ATM-NZ"],
+};
+let TGC={};        // đệm theo nước, đỡ gọi lại mỗi lần bấm
 
 /* ═══ THANG MÀU ═══
    NỘI SUY MÀU THẬT, KHÔNG tô bằng alpha đè lên nền. Bản đầu dùng rgba(...,a): trên nền
@@ -747,6 +787,62 @@ async function tgLoad(){
   TG.dang=false;
 }
 
+/* ═══ BẤM VÀO MỘT NƯỚC -> BUNG BẢNG CỔ PHIẾU TRỤ CỘT ═══ */
+async function tgLayCo(iso){
+  if(TGC[iso]&&Date.now()-TGC[iso].at<120000) return TGC[iso];
+  if(iso==='VN'){
+    /* Việt Nam xếp ĐÚNG theo vốn hoá — kho của chính trang có SLCP và giá sống.
+       Ưu tiên mcapLive (giá trong phiên) rồi mới tới mcap của kho. */
+    const co=ST.list.filter(c=>(c.mcapLive||c.mcap)>0)
+      .sort((a,b)=>(b.mcapLive||b.mcap)-(a.mcapLive||a.mcap)).slice(0,10)
+      .map(c=>({ma:c.sym,ten:c.name||'',gia:c.close?Math.round(c.close).toLocaleString('en-US'):null,
+                p:c.nt?null:c.chg}));
+    return TGC[iso]={rows:co,at:Date.now(),xepVon:true};
+  }
+  const ro=TG_RO[iso]; if(!ro) return TGC[iso]={rows:null,at:Date.now()};
+  try{
+    const j=await fetch('https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol'
+      +'?symbols='+ro.map(x=>encodeURIComponent(x)).join('%7C')
+      +'&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json').then(r=>r.json());
+    let a=(j.FormattedQuoteResult||{}).FormattedQuote||[]; if(!Array.isArray(a)) a=[a];
+    const by={}; a.forEach(x=>{ if(x&&x.symbol) by[x.symbol]=x; });
+    const rows=ro.map(sym=>{
+      const x=by[sym]||{}, raw=x.change_pct; let p=null;
+      if(raw!=null){ if(/UNCH/i.test(raw)) p=0; else { const v=parseFloat(String(raw).replace(/[+%,]/g,'')); if(!isNaN(v)) p=v; } }
+      /* hiện MÃ NGẮN, bỏ đuôi sàn: "7203.T-JP" -> "7203", "BP.-GB" -> "BP" */
+      return {ma:sym.replace(/[.-][A-Z]{2}$/,'').replace(/\.T$/,'').replace(/\.$/,''),
+              ten:x.name||x.shortName||'',gia:x.last||null,p};
+    }).filter(r=>r.gia!=null);
+    return TGC[iso]={rows,at:Date.now()};
+  }catch(e){ return TGC[iso]={rows:[],at:Date.now(),loi:String(e&&e.message||e)}; }
+}
+function tgMoBang(iso){
+  const by={}; (TG.rows||[]).forEach(r=>by[r.iso]=r);
+  const n=by[iso]; if(!n) return;
+  const pop=$('#tgPop'); if(!pop) return;
+  const ve=(noi)=>{ pop.innerHTML='<div class="tgpin"><div class="tgph">'
+    +'<b>'+esc(n.ten)+'</b><span class="tgpi">'+esc(n.chiSo)+' '+tgPct(n.p)+'</span>'
+    +'<button class="tgpx" id="tgDong" aria-label="Đóng">✕</button></div>'+noi+'</div>';
+    pop.classList.add('on');
+    $('#tgDong').onclick=tgDongBang; };
+  ve('<div class="tgpl"><div class="tgpe">Đang lấy…</div></div>');
+  tgLayCo(iso).then(d=>{
+    if(!pop.classList.contains('on')) return;
+    if(!d.rows) return ve('<div class="tgpl"><div class="tgpe">Nguồn không có cổ phiếu đơn lẻ '
+      +'của '+esc(n.ten)+' — chỉ có chỉ số chung.</div></div>');
+    if(!d.rows.length) return ve('<div class="tgpl"><div class="tgpe">Không lấy được danh sách.</div></div>');
+    ve('<div class="tgpl">'+d.rows.map(r=>
+        '<div class="tgpr"><span class="tgpm">'+esc(r.ma)+'<i>'+esc(r.ten)+'</i></span>'
+        +'<span class="tgpg">'+esc(String(r.gia))+'</span>'
+        +'<span class="tgpp '+(r.p==null?'':cls(r.p))+'">'+tgPct(r.p)+'</span></div>').join('')
+      +'</div><div class="tgpn">'+(d.xepVon
+        ? '10 mã vốn hoá lớn nhất, xếp theo kho của chính trang này.'
+        : 'Rổ CỔ PHIẾU TRỤ CỘT chọn tay, <b>không phải bảng xếp hạng vốn hoá</b> — nguồn không '
+          +'trả vốn hoá nên không xếp tự động được. Giá theo đơn vị tiền của chính sàn đó.')
+      +'</div>'); });
+}
+function tgDongBang(){ const p=$('#tgPop'); if(p){ p.classList.remove('on'); p.innerHTML=''; } }
+
 function toanCauPanel(){
   if(TG.loi) return '<div class="empty">Không lấy được dữ liệu thế giới: '+esc(TG.loi)
     +'<br/><span style="color:var(--faint);font-size:12px">Nguồn CNBC có thể đang chặn hoặc mạng đang hỏng — thử tải lại trang.</span></div>';
@@ -775,7 +871,7 @@ function toanCauPanel(){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
     +'<span style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
     +tang+' nước tăng · '+giam+' nước giảm</span></div>'
-    +'<div class="pb"><div id="tgWrap"><svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
+    +'<div class="pb"><div id="tgPop"></div><div id="tgWrap"><svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
     +' style="background:'+tgBang().bien+'">'
     +path+cham+'</svg><div id="tgTip"></div></div>'
     +'<div class="tgleg"><span>−'+TG_MOC+'%</span><i class="tgbar" style="background:linear-gradient(90deg,'
@@ -941,7 +1037,12 @@ function tgBind(){
     else tip.classList.remove('on'); };
   wrap.onmousemove=tim;
   wrap.onmouseleave=()=>tip.classList.remove('on');
-  wrap.onclick=tim;                       // màn cảm ứng: chạm vào nước là hiện thẻ
+  /* BẤM/CHẠM = bung bảng cổ phiếu trụ cột. Rê chuột vẫn chỉ ra thẻ nhỏ — hai mức thông
+     tin khác nhau: liếc thì rê, muốn soi kỹ thì bấm. */
+  wrap.onclick=e=>{ const t=e.target.closest('[data-iso]');
+    if(t){ tip.classList.remove('on'); tgMoBang(t.dataset.iso); } };
+  if(!window.__tgEsc){ window.__tgEsc=1;
+    document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') tgDongBang(); }); }
 }
 
 /* ======================================================== 4. ĐƯỜNG ĐUA VỐN HOÁ */
