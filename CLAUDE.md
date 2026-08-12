@@ -424,8 +424,15 @@ giá sai hoặc giá nhảy — đừng đẩy.
   trần (`AAPL`); phần lớn còn lại `MÃ-CC` (`SAP-DE`); Nhật `SỐ.T-JP`; **Hồng Kông `SỐ-HK`
   nhưng phải BỎ SỐ 0 ĐẦU** (`700-HK` chạy, `0700-HK` trả rỗng); Thuỵ Điển `MÃ.HẠNG-SE`
   (`VOLV.B-SE`); Anh có mã kết thúc bằng dấu chấm (`BP.-GB`).
-  **Nguồn KHÔNG có cổ phiếu đơn lẻ của Hàn Quốc, Mexico, Thổ Nhĩ Kỳ** (đã thử mọi dạng mã) —
-  bấm vào ba nước đó thì nói thẳng ra, đừng để bảng trống.
+  **Nguồn KHÔNG có cổ phiếu đơn lẻ của Hàn Quốc, Mexico, Thổ Nhĩ Kỳ** — bấm vào ba nước đó
+  thì nói thẳng ra, đừng để bảng trống. **Đã kiểm chứng HAI đường** (user hỏi lại "cái này là
+  thật ư", và đó là câu hỏi đúng — Hàn Quốc có Samsung, SK Hynix, không lý gì thiếu):
+  ① API báo giá trả rỗng cho **cả 44 dạng mã** của 005930/000660/005380 (mọi tổ hợp hậu tố
+  `-KR -KS -KQ -KP -SK -KO -KRX .KS .KQ` và biến thể); ② **trang quote của chính cnbc.com trả
+  404** cho `005930.KS-KR` và `005930-KR`, trong khi cùng lúc trả 200 cho `.KS11` (KOSPI),
+  `AAPL`, `7203.T-JP`. Thứ duy nhất dò ra là `SMSN-GB` — chứng chỉ lưu ký Samsung niêm yết ở
+  **London**, `countryCode=GB`, khác sàn khác tiền tệ khác phiên; **đừng gán nó vào thẻ Hàn
+  Quốc** cho đủ mặt, đó là nói sai sàn.
   **NHIỀU THẺ CÙNG LÚC, MỖI THẺ NEO CẠNH CHÍNH NƯỚC ĐÓ, RUỘT LÀ LƯỚI Ô NHIỆT.** Ba luật:
   1. **Không có lớp nền mờ phía sau.** Bản đầu là một bảng chắn giữa bản đồ có backdrop —
      mở xong thẻ đầu là không bấm được nước thứ hai, mà so hai thị trường với nhau mới đúng

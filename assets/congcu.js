@@ -937,7 +937,14 @@ function tgMoBang(iso){
   tgLayCo(iso).then(d=>{
     if(!el.isConnected) return;
     let ruot;
-    if(!d.rows) ruot='<div class="tgce">Nguồn không có cổ phiếu đơn lẻ của nước này — chỉ có chỉ số chung.</div>';
+    /* Nói RÕ nguồn nào và thiếu ở mức nào. Câu cũ ("nguồn không có cổ phiếu đơn lẻ của
+       nước này") nói trống quá nên đọc như chống chế — user hỏi thẳng "cái này là thật ư".
+       Đã kiểm hai đường: API trả rỗng cho cả 44 dạng mã của Samsung/SK Hynix/Hyundai, và
+       trang quote của chính cnbc.com trả 404 cho mã sàn Hàn trong khi vẫn 200 cho KOSPI,
+       Apple, Toyota. Thứ duy nhất có là chứng chỉ lưu ký Samsung niêm yết ở London
+       (SMSN-GB) — khác sàn, khác tiền tệ, khác phiên, nên không gán vào đây. */
+    if(!d.rows) ruot='<div class="tgce">CNBC chỉ cung cấp <b>chỉ số</b> của nước này, '
+      +'không có dữ liệu từng cổ phiếu trên sàn.</div>';
     else if(!d.rows.length) ruot='<div class="tgce">Không lấy được danh sách.</div>';
     /* LƯỚI Ô NHIỆT thay cho danh sách dọc: màu đọc nhanh hơn số, liếc một cái là biết
        sàn đó đang xanh hay đỏ mà không phải quét mắt qua 10 dòng. Giá đưa vào `title`,
