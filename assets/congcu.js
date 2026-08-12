@@ -707,10 +707,34 @@ const TG_RO={
  IL:["TEVA-IL","LUMI-IL","POLI-IL","NICE-IL","ESLT-IL","ICL-IL","MZTF-IL","DSCT-IL","TSEM-IL","AZRG-IL"],
  NZ:["FPH-NZ","AIA-NZ","MEL-NZ","IFT-NZ","SPK-NZ","MCY-NZ","EBO-NZ","CEN-NZ","POT-NZ","ATM-NZ"],
 };
-/* Vài sàn đặt mã rất dài (Ấn Độ), ô nhiệt hẹp nên cắt thành "BHARTIA…". Rút về đúng cách
-   thị trường đó gọi tắt — tên đầy đủ vẫn nằm ở `title` khi rê chuột vào ô. */
-const TG_TEN={"HDFCBANK-IN":"HDFC","ICICIBANK-IN":"ICICI","BHARTIARTL-IN":"BHARTI",
-  "HINDUNILVR-IN":"HUL","RELIANCE-IN":"RIL"};
+/* TÊN HIỆN TRÊN Ô NHIỆT.
+   Hai lý do phải có bảng này:
+   ① **Thượng Hải, Tokyo, Hồng Kông, Đài Bắc đánh mã bằng SỐ** (600519, 7203, 700, 2330).
+      Đó là mã thật của sàn, không phải lỗi — nhưng nhìn dãy số thì không ai đoán ra công ty
+      nào, cả thẻ thành một mớ số vô nghĩa. Nên bốn sàn đó hiện TÊN thay cho mã. Tên rút từ
+      chính tên nguồn trả về, không bịa. Mã số và tên đầy đủ vẫn nằm ở `title`.
+   ② Vài sàn (Ấn Độ) đặt mã chữ rất dài, ô hẹp cắt thành "BHARTIA…" — rút về đúng cách thị
+      trường đó gọi tắt.
+   Sàn dùng mã CHỮ gợi nhớ (AAPL, SAP, BMW, NESN) thì giữ nguyên mã: ngắn và là thứ người ta
+   tra cứu, đổi sang tên chỉ tốn chỗ. */
+const TG_TEN={
+ // Trung Quốc (Thượng Hải)
+ "600519-CN":"Moutai","601398-CN":"ICBC","601857-CN":"PetroChina","600036-CN":"CM Bank",
+ "601288-CN":"AgBank","600941-CN":"ChinaMob","601988-CN":"BoC","600900-CN":"Yangtze",
+ "601628-CN":"China Life","600028-CN":"Sinopec",
+ // Nhật (Tokyo)
+ "7203.T-JP":"Toyota","6758.T-JP":"Sony","8306.T-JP":"MUFG","6861.T-JP":"Keyence",
+ "9984.T-JP":"SoftBank","6501.T-JP":"Hitachi","7974.T-JP":"Nintendo","8035.T-JP":"TokyoElec",
+ "9433.T-JP":"KDDI","4063.T-JP":"Shin-Etsu",
+ // Hồng Kông
+ "700-HK":"Tencent","9988-HK":"Alibaba","939-HK":"CCB","1398-HK":"ICBC","3690-HK":"Meituan",
+ "941-HK":"ChinaMob","1299-HK":"AIA","388-HK":"HKEX","2318-HK":"Ping An","5-HK":"HSBC",
+ // Đài Loan
+ "2330-TW":"TSMC","2317-TW":"Hon Hai","2454-TW":"MediaTek","2308-TW":"Delta","2881-TW":"Fubon",
+ "2882-TW":"Cathay","2412-TW":"Chunghwa","3711-TW":"ASE","2891-TW":"CTBC","1216-TW":"Uni-Pres",
+ // Ấn Độ — mã chữ nhưng quá dài
+ "HDFCBANK-IN":"HDFC","ICICIBANK-IN":"ICICI","BHARTIARTL-IN":"BHARTI",
+ "HINDUNILVR-IN":"HUL","RELIANCE-IN":"RIL"};
 let TGC={};        // đệm theo nước, đỡ gọi lại mỗi lần bấm
 
 /* ═══ THANG MÀU ═══
@@ -822,7 +846,8 @@ async function tgLayCo(iso){
       const x=by[sym]||{}, raw=x.change_pct; let p=null;
       if(raw!=null){ if(/UNCH/i.test(raw)) p=0; else { const v=parseFloat(String(raw).replace(/[+%,]/g,'')); if(!isNaN(v)) p=v; } }
       /* hiện MÃ NGẮN, bỏ đuôi sàn: "7203.T-JP" -> "7203", "BP.-GB" -> "BP" */
-      return {ma:TG_TEN[sym]||sym.replace(/[.-][A-Z]{2}$/,'').replace(/\.T$/,'').replace(/\.$/,''),
+      const goc=sym.replace(/[.-][A-Z]{2}$/,'').replace(/\.T$/,'').replace(/\.$/,'');
+      return {ma:TG_TEN[sym]||goc, goc,
               ten:x.name||x.shortName||'',gia:x.last||null,p};
     }).filter(r=>r.gia!=null);
     return TGC[iso]={rows,at:Date.now()};
@@ -836,22 +861,62 @@ async function tgLayCo(iso){
    nữa — đúng thứ chặn mất tính năng này. */
 let tgZ=20;
 function tgViTri(el,iso){
-  /* MÀN HẸP: bản đồ chỉ cao ~146px trong khi một thẻ cao ~270px — neo "cạnh nước" là bất
-     khả thi, thẻ sẽ trùm kín bản đồ và hai nước sát nhau thì thẻ chồng gần hết lên nhau.
-     Ở khổ đó cho thẻ XẾP CHỒNG NGAY DƯỚI bản đồ (CSS lo phần bố cục), vẫn mở nhiều thẻ
-     cùng lúc, chỉ bỏ đúng cái không làm được. */
+  /* MÀN HẸP: bản đồ chỉ cao ~146px trong khi một thẻ cao ~180px — neo "cạnh nước" là bất
+     khả thi. Ở khổ đó cho thẻ XẾP CHỒNG NGAY DƯỚI bản đồ (CSS lo bố cục). */
   if(window.matchMedia('(max-width:640px)').matches){ el.style.left=el.style.top=''; return; }
   const M=TG.map, wrap=$('#tgWrap'); if(!M||!wrap) return;
+  const W=wrap.clientWidth, H=wrap.clientHeight;
+  const w=el.offsetWidth||236, h=el.offsetHeight||180;
+  /* thẻ người dùng ĐÃ TỰ KÉO thì giữ nguyên chỗ họ đặt — nhớ theo TỈ LỆ khung, để đổi bề
+     ngang cửa sổ thì thẻ vẫn nằm đúng chỗ tương đối chứ không trôi ra ngoài */
+  if(el.dataset.keo){
+    el.style.left=Math.max(4,Math.min(W-w-4,(el._fx||0)*W))+'px';
+    el.style.top =Math.max(4,Math.min(H-h-4,(el._fy||0)*H))+'px';
+    return;
+  }
   const p=(M.c[iso]||M.cham[iso]); if(!p) return;
-  const k=wrap.clientWidth/M.w;                 // svg co giãn theo bề ngang khung
-  const w=el.offsetWidth||236, h=el.offsetHeight||240;
-  /* đặt CHÉO XUỐNG PHẢI của nước cho khỏi che chính nó; hết chỗ bên phải thì lật sang
-     trái, hết chỗ dưới thì lật lên trên — rồi kẹp trong khung. */
-  let x=p.cx*k+14, y=p.cy*k+12;
-  if(x+w>wrap.clientWidth-4) x=p.cx*k-w-14;
-  if(y+h>wrap.clientHeight-4) y=p.cy*k-h-12;
-  el.style.left=Math.max(4,Math.min(wrap.clientWidth-w-4,x))+'px';
-  el.style.top =Math.max(4,Math.min(wrap.clientHeight-h-4,y))+'px';
+  const k=W/M.w, cx=p.cx*k, cy=p.cy*k;
+  /* TÁM CHỖ ĐẶT ỨNG VIÊN quanh nước. Bản đầu chỉ có một chỗ (chéo xuống phải) nên hai
+     nước gần nhau là thẻ chồng gần kín nhau, phải kéo tay ra mới đọc được. Nay chấm điểm
+     từng chỗ: phạt NẶNG phần diện tích chồng lên thẻ đang mở, phạt NHẸ khoảng cách tới
+     nước — nên nó tự tìm chỗ trống gần nhất thay vì đè lên thẻ cũ. */
+  const U=[[cx+14,cy+10],[cx-w-14,cy+10],[cx+14,cy-h-10],[cx-w-14,cy-h-10],
+           [cx-w/2,cy+18],[cx-w/2,cy-h-18],[cx+14,cy-h/2],[cx-w-14,cy-h/2]];
+  const khac=[...wrap.querySelectorAll('.tgcard')].filter(x=>x!==el).map(x=>({
+    l:parseFloat(x.style.left)||0,t:parseFloat(x.style.top)||0,w:x.offsetWidth,h:x.offsetHeight}));
+  const chong=(l,t)=>khac.reduce((a,o)=>a
+    +Math.max(0,Math.min(l+w,o.l+o.w)-Math.max(l,o.l))
+    *Math.max(0,Math.min(t+h,o.t+o.h)-Math.max(t,o.t)),0);
+  let tot=null,diem=Infinity;
+  for(const [x0,y0] of U){
+    const l=Math.max(4,Math.min(W-w-4,x0)), t=Math.max(4,Math.min(H-h-4,y0));
+    const d=Math.hypot(l+w/2-cx,t+h/2-cy);
+    const e=chong(l,t)/60+d;                 // 60 = quy diện tích chồng về cùng thang với px
+    if(e<diem){ diem=e; tot=[l,t]; }
+  }
+  el.style.left=tot[0]+'px'; el.style.top=tot[1]+'px';
+}
+/* KÉO THẺ bằng thanh tiêu đề. Ghi vị trí theo TỈ LỆ khung chứ không phải px tuyệt đối,
+   để đổi cỡ cửa sổ thì thẻ giữ đúng chỗ tương đối. Nút ✕ không được biến thành tay cầm. */
+function tgKeo(el){
+  const th=el.querySelector('.tgch'), wrap=$('#tgWrap'); if(!th||!wrap) return;
+  th.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.tgcx')) return;
+    if(window.matchMedia('(max-width:640px)').matches) return;   // màn hẹp: thẻ xếp cột, không kéo
+    const b=el.getBoundingClientRect(), wb=wrap.getBoundingClientRect();
+    const dx=e.clientX-b.left, dy=e.clientY-b.top;
+    el.style.zIndex=++tgZ; el.dataset.keo='1'; th.classList.add('keo');
+    const mv=ev=>{
+      const l=Math.max(4,Math.min(wrap.clientWidth-el.offsetWidth-4,ev.clientX-wb.left-dx));
+      const t=Math.max(4,Math.min(wrap.clientHeight-el.offsetHeight-4,ev.clientY-wb.top-dy));
+      el.style.left=l+'px'; el.style.top=t+'px';
+      el._fx=l/wrap.clientWidth; el._fy=t/wrap.clientHeight;
+    };
+    const up=()=>{ th.classList.remove('keo');
+      document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); };
+    document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
+    e.preventDefault();
+  });
 }
 function tgMoBang(iso){
   const by={}; (TG.rows||[]).forEach(r=>by[r.iso]=r);
@@ -865,7 +930,7 @@ function tgMoBang(iso){
     +'<span class="tgcp '+(n.p==null?'':cls(n.p))+'">'+tgPct(n.p)+'</span>'
     +'<button class="tgcx" aria-label="Đóng">✕</button></div>';
   el.innerHTML=dau+'<div class="tgce">Đang lấy…</div>';
-  oi.appendChild(el); tgViTri(el,iso); tgNutDong();
+  oi.appendChild(el); tgViTri(el,iso); tgKeo(el); tgNutDong();
   /* thẻ nào bấm vào cũng nhảy lên trên cùng — mấy nước sát nhau thì thẻ chồng nhau */
   el.onmousedown=()=>{ el.style.zIndex=++tgZ; };
   el.querySelector('.tgcx').onclick=ev=>{ ev.stopPropagation(); el.remove(); tgNutDong(); };
@@ -882,13 +947,14 @@ function tgMoBang(iso){
     else ruot='<div class="tgheat">'+d.rows.map(r=>{
         const bg=tgMau(r.p);
         return '<div class="tgt" style="background:'+bg+';color:'+tgChu(bg)+'"'
-          +' title="'+esc(r.ten)+' — '+esc(String(r.gia))+'">'
+          +' title="'+esc((r.goc&&r.goc!==r.ma?r.goc+' · ':'')+r.ten)+' — '+esc(String(r.gia))+'">'
           +'<b>'+esc(r.ma)+'</b><i>'+tgPct(r.p)+'</i></div>'; }).join('')
       +'</div><div class="tgcn">'+(d.xepVon?'10 mã vốn hoá lớn nhất'
         :'10 mã trụ cột — ô đều nhau, không phải trọng số vốn hoá')+'</div>';
     el.innerHTML=dau+ruot;
     el.querySelector('.tgcx').onclick=ev=>{ ev.stopPropagation(); el.remove(); tgNutDong(); };
-    tgViTri(el,iso);           // đo lại sau khi có ruột thật, thẻ cao lên thì kẹp lại
+    tgKeo(el);
+    tgViTri(el,iso);           // đo lại sau khi có ruột thật, thẻ cao lên thì né lại cho đúng
   });
 }
 function tgDongBang(){ const o=$('#tgPops');

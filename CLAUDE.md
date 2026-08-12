@@ -444,6 +444,19 @@ giá sai hoặc giá nhảy — đừng đẩy.
   sáng của chính ô (`tgChu`, ngưỡng 0,62): thang chạy từ nhạt tới đậm nên để cứng một màu chữ
   là nửa số ô không đọc nổi. Mã quá dài (sàn Ấn) rút gọn qua bảng `TG_TEN`, tên đầy đủ vẫn ở
   `title` — không rút thì ô hẹp cắt thành "BHARTIA…".
+  **BỐN SÀN ĐÁNH MÃ BẰNG SỐ — phải hiện TÊN, không hiện mã.** Thượng Hải (600519), Tokyo
+  (7203), Hồng Kông (700), Đài Bắc (2330) đều dùng mã số; đó là mã thật của sàn, không phải
+  lỗi, nhưng một thẻ toàn số thì không ai đoán ra công ty nào — user hỏi ngay "mã chứng
+  khoán Trung Quốc lạ vậy". Bảng `TG_TEN` rút tên từ CHÍNH tên nguồn trả về (Moutai, ICBC,
+  PetroChina, Toyota, Tencent, TSMC…), mã số gốc và tên đầy đủ vẫn nằm ở `title`. Sàn dùng
+  mã CHỮ gợi nhớ (AAPL, SAP, BMW, NESN) thì giữ nguyên mã: ngắn và là thứ đem đi tra cứu.
+  **CHỖ ĐẶT THẺ: chấm điểm tám vị trí quanh nước, đừng chỉ có một.** Bản đầu luôn đặt chéo
+  xuống phải nên hai nước gần nhau là thẻ chồng gần kín nhau — mở cụm châu Á ra là không đọc
+  được gì. Nay phạt NẶNG diện tích chồng lên thẻ đang mở, phạt NHẸ khoảng cách tới nước, nên
+  nó tự tìm chỗ trống GẦN NHẤT. Kèm **kéo thẻ bằng thanh tiêu đề** để tinh chỉnh; vị trí đã
+  kéo nhớ theo **tỉ lệ khung** chứ không phải px, để đổi cỡ cửa sổ thẻ không trôi ra ngoài.
+  Thanh tiêu đề phải `user-select:none` + `touch-action:none`, bằng không kéo một cái là bôi
+  đen chữ. Màn hẹp không kéo (thẻ xếp cột).
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

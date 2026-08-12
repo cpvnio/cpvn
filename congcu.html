@@ -111,10 +111,14 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
    Nhiều thẻ mở cùng lúc được — so hai thị trường với nhau mới là việc người ta làm ở đây.
    KHÔNG có lớp nền mờ phía sau: có nó thì mở xong thẻ đầu là không bấm được nước thứ hai. */
 #tgPops{position:absolute;inset:0;z-index:6;pointer-events:none}
-.tgcard{position:absolute;width:236px;pointer-events:auto;background:var(--solid);
+.tgcard{position:absolute;width:248px;pointer-events:auto;background:var(--solid);
   border:1px solid var(--line2);border-radius:11px;box-shadow:var(--shadow);overflow:hidden}
+/* thanh tiêu đề là TAY CẦM để kéo thẻ — user-select:none kẻo kéo một cái là bôi đen chữ */
 .tgch{display:flex;align-items:center;gap:7px;padding:7px 8px 7px 10px;
-  border-bottom:1px solid var(--line);cursor:default}
+  border-bottom:1px solid var(--line);cursor:grab;user-select:none;-webkit-user-select:none;
+  touch-action:none}
+.tgch.keo{cursor:grabbing}
+@media(max-width:640px){ .tgch{cursor:default} }
 .tgch b{font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tgcp{font-size:12.5px;font-weight:800;margin-left:auto;white-space:nowrap}
 .tgcx{background:none;border:0;color:var(--faint);font-size:12px;cursor:pointer;
@@ -127,7 +131,7 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 .tgheat{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:4px}
 .tgt{display:flex;align-items:baseline;gap:5px;border-radius:5px;padding:3px 6px;
   min-width:0;cursor:default}
-.tgt b{font-size:11px;font-weight:800;letter-spacing:-.2px;min-width:0;
+.tgt b{font-size:10.5px;font-weight:800;letter-spacing:-.25px;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tgt i{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:700;
   opacity:.95;white-space:nowrap}
@@ -812,6 +816,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260812j"></script>
+<script src="assets/congcu.js?v=20260812m"></script>
 </body>
 </html>
