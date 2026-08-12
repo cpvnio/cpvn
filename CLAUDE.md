@@ -795,3 +795,16 @@ dựng lại từ số 0). Tác vụ trỏ thẳng vào file TRONG kho nên sử
   nguồn, kho `charting_library` (bản có công cụ vẽ) là kho riêng trả 404.
   `lightweight-charts` tải được nhưng **không có công cụ vẽ**. → CPVN tự viết `chart.js`.
 - **Trong phiên lưu tạm, hết phiên chốt cứng** — luật do user đặt, xem mục Cơ chế giá.
+- **KHÔNG đi vòng để lấy cổ phiếu Hàn Quốc / Mexico / Thổ Nhĩ Kỳ** — user chốt 12/08/2026.
+  Dữ liệu CÓ tồn tại và tao đã dò ra nguồn: **Naver Finance** (`polling.finance.naver.com`,
+  gọi được nhiều mã một lượt, có tên tiếng Hàn + giá) cho Hàn Quốc, **BigPara** cho BIST Thổ
+  Nhĩ Kỳ; Mexico chưa ra. Cả hai đều **thiếu CORS** nên trình duyệt không gọi thẳng được.
+  Hai đường đi vòng đã cân rồi và user chọn KHÔNG làm:
+  · *Máy chủ cào sẵn vào kho* (như CNN Fear&Greed) — an toàn nhưng số chỉ mới mỗi ngày một
+    lần lúc 15:15; Hàn Quốc thì may (15:15 giờ VN = 17:15 giờ Hàn, sau giờ đóng cửa nên bắt
+    đúng giá chốt cùng ngày), Thổ và Mexico trễ một phiên.
+  · *Thêm một Cloudflare Worker làm cầu* (`wrangler.jsonc` hiện chỉ có `assets.directory`,
+    thêm `main` là có `/api/...`) — cho số sống mọi nước, nhưng **thêm backend**, trái nguyên
+    tắc "không backend" của dự án, và cấu hình sai thì **cả trang sập** chứ không phải hỏng
+    riêng mục này.
+  Giữ nguyên: ba nước đó hiện chỉ số trên bản đồ, bấm vào thì nói rõ CNBC chỉ có chỉ số.
