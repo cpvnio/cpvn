@@ -363,6 +363,41 @@ giá sai hoặc giá nhảy — đừng đẩy.
   tay bật `.on` cho mục cha đầu tiên khi `cur==='tapdoan'`.
   Radar nay chỉ còn **Nhịp phiên · Chủ điểm đầu tư**; tập đoàn và quỹ đã dọn sang module
   riêng vì khác nhịp hẳn: radar soi TRONG PHIÊN, còn cấu trúc sở hữu cả tháng mới nhúc nhích.
+- **BỨC TRANH TOÀN CẦU (radar `?t=tg`) — bản đồ thế giới tô theo chỉ số từng nước.**
+  Màu theo luật CK Việt Nam: **xanh = tăng, đỏ = giảm**, đậm dần tới ±3%. Cố ý khác
+  Trung/Nhật/Hàn (bên đó đỏ là tăng) vì người đọc là nhà đầu tư Việt.
+  **NGUỒN: CNBC** `quote.cnbc.com/quote-html-webservice/...` — nguồn DUY NHẤT dò được vừa
+  miễn phí vừa **mở CORS** nên trình duyệt gọi thẳng, khỏi qua kho. Đã dò và loại:
+  **Yahoo Finance trả 429** (chặn theo IP — *bản dự phòng VIX trong `build_screen.py` cũng
+  đang chết vì lý do này, chưa sửa*), **Stooq** chặn bằng thử-thách JavaScript, **TradingView**
+  thì dự án đã chốt không phụ thuộc. 26 nước lấy được; **Indonesia · Ả Rập Xê Út · Nga ·
+  Nam Phi nguồn không có** — phải ghi ra chứ đừng để bản đồ xám rồi người xem tự đoán.
+  **Việt Nam lấy VN-Index của chính trang**, không lấy lại của CNBC (số họ trễ pha).
+  Bốn cái bẫy:
+  1. **`curmktstatus` của CNBC LÀ HẰNG SỐ, đừng tin.** Nó trả `REG_MKT` cho MỌI mã — kể cả
+     Nikkei lúc 15:45 JST (Tokyo đóng 15:00) và Thái Lan với con số của hôm trước. Bản đầu
+     dán nhãn "đang mở / đã đóng" theo nó là **nói sai một cách trông rất chắc chắn**. Nay
+     tự tính TUỔI của số từ `last_time` (ISO có sẵn lệch múi giờ) và hiện "9 giờ trước" /
+     "phiên trước". Trên bản đồ trải 24 múi giờ thì tuổi mới là thứ người xem cần.
+  2. **KHÔNG được nói đây là ảnh chụp cùng một thời điểm.** Lúc VN giao dịch thì châu Âu
+     chưa mở, Mỹ đã đóng từ đêm qua. Gộp thành "thế giới hôm nay" là nói dối.
+  3. **`change_pct` là CHUỖI** kiểu `"+0.83%"`, và **`"UNCH"` khi đứng giá** — `parseFloat`
+     ra `NaN` nên phải bắt riêng, bằng không New Zealand thành "không có dữ liệu".
+     `last_time` của Thái Lan có khi chỉ là `"2026-08-11"` (không giờ) — vẫn ra "phiên trước".
+  4. **Cột hẹp KHÔNG làm bảng gọn.** Bản đầu để danh sách 4 cột 258px: tên nước bị cắt thành
+     "New Zeal…", cột giờ `nowrap` tràn đè sang thẻ bên cạnh. Nay tối thiểu **430px/cột**
+     (màn 1280 ra 2 cột), dưới 900px về 1 cột.
+  **Hình bản đồ**: `assets/worldmap.json` (74KB, 174 nước) do `tools/build_worldmap.py` dựng
+  từ Natural Earth 110m — **chạy MỘT LẦN, không nằm trong pipeline** (biên giới không đổi
+  theo phiên). Phép chiếu **Equal Earth**, chọn vì đây là bản đồ TÔ MÀU: Mercator phóng
+  Greenland to hơn châu Phi và Nga chiếm nửa bản đồ, mắt đọc thành "cả thế giới đang đỏ"
+  trong khi mấy khối đó không có sàn nào đáng kể.
+  > **Douglas–Peucker trên VÒNG KHÉP KÍN phải cắt vòng trước.** Vòng GeoJSON có điểm cuối
+  > trùng điểm đầu nên đoạn mốc dài 0, mọi khoảng cách ra 0, và **cả 174 nước bị rút còn 2
+  > điểm** — lượt chạy đầu ra đúng "0 nước". Cách chữa: bỏ điểm khép, lấy điểm xa nhất cắt
+  > thành hai đường hở rồi mới làm mượt.
+  > **Singapore và Hồng Kông không có hình ở độ phân giải 110m** — vẽ bằng CHẤM TRÒN đặt tay
+  > tại toạ độ trung tâm tài chính (bảng `CHAM` trong script).
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt

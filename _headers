@@ -14,3 +14,8 @@
 # universe: đổi 1 lần/ngày -> cache 5 phút như data/ (F5 không tải lại 600KB)
 /universe.json
   Cache-Control: public, max-age=300, must-revalidate
+
+# Hình bản đồ thế giới: biên giới quốc gia không đổi theo phiên -> cache 1 NĂM.
+# Muốn đổi thì nâng ?v= trong assets/congcu.js, y như mọi asset khác.
+/assets/worldmap.json
+  Cache-Control: public, max-age=31536000, immutable

@@ -37,7 +37,8 @@
     ['bong','Bong bóng',  '/bubbles'],
     ['cd',  'Chủ điểm',   null],
     ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan'],
-    ['vb',  'Về bờ',      null]
+    ['vb',  'Về bờ',      null],
+    ['tg',  'Toàn cầu',   null]
   ];
 
   /* ĐỌC CẢ URL SẠCH, đừng chỉ dò "congcu". `_redirects` viết lại /radar, /tapdoan,
