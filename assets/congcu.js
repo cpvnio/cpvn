@@ -752,7 +752,10 @@ const tenNganh=k=>(RO_CHISO[k]||{}).ten||k;
 const locNganh=k=>{ const r=RO_CHISO[k];
   return r?r.co:(s=>{ const c=ST.map.get(s); return !!c&&c.sector===k; }); };
 const RA={f:0,playing:false,speed:1,curY:{},imgs:{},data:null,raf:null,last:0,sector:null,
-  settling:false,maxDelta:0,mode:'race',dcaMx:0,top:10};
+  settling:false,maxDelta:0,mode:'race',dcaMx:0,top:10,ma:''};
+/* Tách chuỗi người dùng gõ thành danh sách mã. Dùng chung cho cả hai chế độ để một kiểu
+   gõ chạy được ở cả hai chỗ — "hpg, fpt vnm" hay "HPG FPT VNM" đều ra cùng kết quả. */
+const tachMa=s=>[...new Set((s||'').toUpperCase().match(/[A-Z][A-Z0-9]{2,}/g)||[])];
 const TOP_CHON=[10,15,20,25,30];   // số công ty hiện cùng lúc, dùng chung cho cả hai chế độ
 const NGUONG_VON=1e12;             // 1.000 tỷ — dưới mức này không vào rổ dựng sẵn
 /* BẢNG MÀU KHÔNG GIỚI HẠN: 16 màu chọn tay cho những thứ hạng đầu (đẹp và quen mắt),
@@ -829,9 +832,22 @@ function drawRace(lerp){
     return a+(b-a)*tt; };
   let pool=D.syms.filter(s=>D.lon.has(s));
   if(RA.sector) pool=pool.filter(locNganh(RA.sector));
+  /* MÃ GÕ TAY = THÊM VÀO rổ đang chọn, KHÔNG thay thế nó. Người dùng muốn "cho thêm một
+     mã vào ngành có sẵn" chứ không phải đổi sang đua riêng mấy mã vừa gõ — nên ở đây
+     khác hẳn ô gõ mã bên Đầu tư bền vững (bên đó gõ mã là thay cả rổ).
+     Hai đặc quyền đi kèm, thiếu cái nào thì gõ xong vẫn không thấy mã đâu:
+     · MIỄN ngưỡng 1.000 tỷ — lý do chính người ta gõ tay là để kéo một mã nhỏ vào xem.
+     · GHIM, không bị cắt bởi ô "số công ty": mã nhỏ luôn xếp chót, cứ slice top-N là nó
+       rụng ngay, gõ vào rồi mà màn hình không đổi gì thì đúng là bó tay không hiểu vì sao. */
+  const them=tachMa(RA.ma).filter(s=>D.series[s]);
+  if(them.length){ const co=new Set(pool); for(const s of them) if(!co.has(s)) pool.push(s); }
   const N=RA.top||10;
-  const rows2=pool.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0)
-    .sort((a,b)=>b.v-a.v).slice(0,N);           // số công ty do người xem chọn (10..30)
+  const xong=pool.map(s=>({s,v:val(s)})).filter(r=>r.v!=null&&r.v>0).sort((a,b)=>b.v-a.v);
+  const ghim=new Set(them);
+  const buoc=xong.filter(r=>ghim.has(r.s));                       // mã gõ tay: luôn có mặt
+  const rows2=buoc.concat(xong.filter(r=>!ghim.has(r.s))
+    .slice(0,Math.max(0,N-buoc.length)))                          // phần còn lại lấp cho đủ N
+    .sort((a,b)=>b.v-a.v);
   if(!rows2.length){ x.fillStyle=isLight()?'#5d6272':'#9092a3'; x.font='13px system-ui';
     x.textAlign='center'; x.fillText('Ngành này chưa đủ dữ liệu đua',W/2,H/2); return; }
   for(const r of rows2) if(RA.imgs[r.s]===undefined){ const im=new Image();
@@ -1506,7 +1522,10 @@ function renderRace(){
     +'<button data-v="dca"'+(RA.mode==='dca'?' class="on"':'')+' data-lg="🌱 Đầu tư bền vững" data-sm="🌱 Bền vững"></button></div>'
     /* tham số của ĐƯỜNG ĐUA */
     +'<span class="pgrp" id="pRace"><span class="lb lbNg">Nhóm ngành</span>'
-    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts(RA.sector)+'</select></span>'
+    +'<select id="raSec"><option value="">Toàn thị trường</option>'+secOpts(RA.sector)+'</select>'
+    +'<input type="text" id="raMa" value="'+esc(RA.ma)+'" placeholder="thêm mã: HPG FPT"'
+    +' title="Gõ mã để THÊM vào rổ đang chọn (cách nhau bởi dấu cách/phẩy). Mã thêm tay được'
+    +' miễn ngưỡng 1.000 tỷ và luôn hiện trên biểu đồ, dù vốn hoá xếp chót."/></span>'
     /* tham số của ĐẦU TƯ BỀN VỮNG */
     +'<span class="pgrp" id="pDca">'
     +'<span class="seg" id="dcaKieu">'
@@ -1535,6 +1554,9 @@ function renderRace(){
     /* ---- chế độ ĐƯỜNG ĐUA ---- */
     +'<div id="raView">'
     +'<div class="panel racePanel"><canvas id="cvRace" class="block"></canvas></div>'
+    /* Gõ mã mà kho không có thì PHẢI NÓI RA. Im lặng bỏ qua là người ta ngồi gõ lại
+       mấy lần, tưởng mình gõ sai chính tả — trong khi mã đó niêm yết sau tháng bắt đầu. */
+    +'<div class="note" id="raThieu" style="display:none"></div>'
     +'<div class="note">Những công ty vốn hoá lớn nhất tại từng thời điểm — chọn nhóm ngành để đua riêng ngành đó, '
     +'chọn số công ty ở ô ngay dưới biểu đồ (10 đến 30). Bỏ qua mã vốn hoá dưới 1.000 tỷ — '
     +'thanh khoản mỏng, ngoài đời khó mua đủ lượng. '+esc(D.note||'')+' Quay màn hình lại là có video đăng cộng đồng.</div>'
@@ -1565,6 +1587,7 @@ function renderRace(){
     $$('#raMode button,#dcaKieu button,#dcaGop')
       .forEach(b2=>b2.textContent=hep()?b2.dataset.sm:b2.dataset.lg);
     $('#dcaMa').placeholder=hep()?'gõ mã':'hoặc gõ mã riêng';
+    $('#raMa').placeholder=hep()?'+ mã':'thêm mã: HPG FPT';
     /* màn dọc bỏ chữ "công ty" trong từng dòng chọn — ô hẹp, chỉ con số là đủ hiểu */
     $$('#raTop option').forEach(o=>o.textContent=o.value+(hep()?'':' công ty'));
     nhanPlay($('#raPlay').dataset.t||'start');
@@ -1623,6 +1646,16 @@ function renderRace(){
     RA.f=+e.target.value; curDraw(); };
   $('#raSlide').onchange=()=>settleRace();        // thả tay -> hàng nào bay dở cũng về đúng chỗ
   $('#raSec').onchange=e=>{ RA.sector=e.target.value||null; RA.curY={}; drawRace(); settleRace(); };
+  /* Mã gõ vào mà kho đua không có -> nói thẳng ra mã nào, kèm lý do thường gặp nhất. */
+  const baoThieu=()=>{ const el=$('#raThieu'); if(!el) return;
+    const D2=raceData(), go=tachMa(RA.ma);
+    const thieu=D2?go.filter(s=>!D2.series[s]):[];
+    el.style.display=thieu.length?'':'none';
+    el.innerHTML=thieu.length?('Không đưa vào đua được: <b>'+thieu.map(esc).join(', ')+'</b> — '
+      +'mã không có trong kho đua (niêm yết sau tháng bắt đầu, hoặc gõ sai mã).'):''; };
+  $('#raMa').oninput=e=>{ RA.ma=e.target.value||''; RA.curY={};
+    baoThieu(); drawRace(); settleRace(); };
+  baoThieu();
   /* đổi tham số bền vững: tính lại chuỗi; đổi THÁNG là đổi cả dòng thời gian -> về vạch */
   const veLai=()=>{ DCA.calc=null; RA.dcaMx=0; renderDCA(); drawDCA(1); };
   /* gõ mã thì ô nhóm ngành hết tác dụng — làm mờ đi cho khỏi tưởng đang lọc theo ngành */

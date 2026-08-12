@@ -600,8 +600,19 @@ chế độ đầu tư có thêm hai công tắc độc lập nhau, bốn tổ h
 | **một lần** `kieu='mot'` | `v_k = X·a_k/a_0` | trung bình cộng các đường |
 
 Rổ chia đều **đúng bằng trung bình cộng** các đường đơn lẻ (mỗi mã `X/N`) — đã kiểm chéo
-bằng cách cộng tay từng khoản mua. Ô **gõ mã** có quyền cao hơn ô nhóm ngành (gõ mã thì
-select ngành bị khoá mờ). Ngân hàng 7%/năm ghép lãi THEO THÁNG là đối thủ mặc định:
+bằng cách cộng tay từng khoản mua.
+
+**HAI Ô GÕ MÃ, HAI NGHĨA NGƯỢC NHAU — đừng gộp làm một.**
+`#dcaMa` (Đầu tư bền vững) **THAY THẾ** rổ: gõ mã thì select ngành bị khoá mờ, chỉ đầu tư
+đúng mấy mã đó. `#raMa` (Đường đua) **THÊM VÀO** rổ đang chọn: user muốn kéo một mã vào
+đua chung với ngành có sẵn chứ không phải đổi sang đua riêng nó. Hai nghĩa khác nhau vì
+hai việc khác nhau, nhãn cũng phải nói rõ ("hoặc gõ mã riêng" vs "thêm mã").
+Mã gõ ở `#raMa` có **hai đặc quyền**, thiếu cái nào là gõ xong vẫn không thấy mã đâu:
+① **miễn ngưỡng 1.000 tỷ** — lý do chính người ta gõ tay là để kéo một mã nhỏ vào xem;
+② **được GHIM, không bị cắt bởi ô "số công ty"** — mã nhỏ luôn xếp chót, cứ `slice(0,N)`
+là nó rụng ngay, mà gõ vào rồi màn hình không đổi gì thì không ai đoán ra vì sao.
+Gõ mã kho đua không có thì **phải nói ra mã nào** (`#raThieu`): im lặng bỏ qua là người ta
+ngồi gõ lại mấy lần, tưởng mình gõ sai chính tả. Ngân hàng 7%/năm ghép lãi THEO THÁNG là đối thủ mặc định:
 `mot → X·(1+r)^k`, `deu → X·((1+r)^(k+1)−1)/r`, hai công thức đều cho `k=0` ra đúng `X`
 để tháng đầu hai bên hoà nhau — so nhau mới công bằng. Hai kiểu giữ **số tiền riêng**
 (`amtD` 5 triệu/tháng, `amtM` 100 triệu một lần), đổi qua lại không nhảy số.

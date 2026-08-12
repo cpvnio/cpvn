@@ -555,7 +555,7 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 /* Bảy ô tham số phải nằm gọn MỘT hàng ở màn ngang: cho hai ô rộng nhất co lại (flex 0 1)
    thay vì giữ nguyên bề ngang rồi đẩy ô cuối rớt xuống hàng riêng — một ô lẻ loi ở hàng
    hai vừa xấu vừa tốn nguyên một hàng. Màn hẹp thì mới cho xuống dòng. */
-#raBar #dcaMa{flex:0 1 140px;min-width:92px}
+#raBar #dcaMa,#raBar #raMa{flex:0 1 140px;min-width:92px}
 #raBar #dcaSec{flex:0 1 196px;min-width:112px}
 #raBar #dcaAmt{width:72px;flex:0 0 auto}
 #raBar .seg button{padding:7px 10px}
@@ -594,11 +594,12 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   #raBar #dcaFrom{flex:0 0 82px}
   #raBar #dcaGop{flex:0 0 auto;padding:8px 7px;font-size:11.5px}
   #raBar #raSec{flex:1 1 120px}
+  /* màn hẹp: ô ngành và ô thêm mã chia nhau một hàng, đừng để ô mã rớt xuống hàng riêng */
   /* KHÔNG cho hai ô này NỞ ra (flex 0 1): để chúng nở thì ô nhóm ngành ăn hết chỗ trống
      của hàng, đẩy ô gõ mã xuống chiếm trọn một hàng thứ ba chỉ cho một ô. Chốt bề ngang
      lại thì cả bốn ô nằm vừa hàng hai -> màn dọc còn ĐÚNG 2 hàng tham số. */
   #raBar #dcaSec{flex:0 1 88px;min-width:60px;max-width:none}
-  #raBar #dcaMa{flex:0 1 78px;width:auto;min-width:54px;padding:8px 7px;font-size:12.5px}
+  #raBar #dcaMa,#raBar #raMa{flex:0 1 78px;width:auto;min-width:54px;padding:8px 7px;font-size:12.5px}
   .playbar{gap:7px;margin-top:7px;padding-top:8px}
   .playbar #raPlay{padding:8px 12px;font-size:14px}
   .playbar .seg button{padding:6px 7px;font-size:11.5px}
@@ -719,6 +720,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260812b"></script>
+<script src="assets/congcu.js?v=20260812c"></script>
 </body>
 </html>
