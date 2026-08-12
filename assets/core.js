@@ -299,6 +299,17 @@ async function doPoll(only){
          +22,45% trên UPCOM biên độ ±15% — và chúng đứng ĐẦU BẢNG khi xếp theo 1D%.
          Tới được dòng này thì boardEmpty đã false, tức bảng đang sống và có số thật. */
       c.nt=last<=0;
+      /* LƯỚI CHẶN CUỐI — độc lập với luật nt ngay trên.
+         Trần và sàn đi CÙNG bản ghi với giá và tham chiếu, cùng một nguồn, cùng một
+         phiên. Nên giá lọt ra ngoài [sàn, trần] chỉ có đúng một nghĩa: nó KHÔNG phải
+         giá của phiên này. Không cần biết lỗi đến từ đâu — cứ vậy là cấm tính phần trăm.
+         Để lớp này riêng ra vì mai kia luật nt có thủng theo một kiểu chưa ai nghĩ tới
+         thì con số bất khả thi vẫn không lên nổi màn hình. Nới 0,1% cho sai số bước giá.
+         KHÔNG áp cho nhánh bảng-rỗng (đã `continue` phía trên): buổi tối bảng đã nhảy
+         sang biên độ phiên sau, giá đóng cửa phiên này nằm ngoài là chuyện bình thường. */
+      if(!c.nt&&c.ref>0&&c.ceil>0&&c.flr>0&&(c.price>c.ceil*1.001||c.price<c.flr*0.999)){
+        c.nt=true; CP.ngoaiBien=(CP.ngoaiBien||0)+1;
+      }
       c.chg1d=(!c.nt&&c.ref>0&&c.price>0)?(c.price-c.ref)/c.ref*100:(c.nt?null:c.chg1d);
       c.mcapLive=c.shares?c.shares*c.price:(c.mcap||null);
     }
@@ -387,6 +398,8 @@ CP.applyLive=function(){
       if(hi) c.high=hi; if(lo) c.low=lo; if(ce) c.ceil=ce; if(fl) c.flr=fl;
       c.traded=last>0&&(vol||0)>0;
       c.nt=!!nt;                                       // giá của phiên CŨ -> cấm tính %
+      // lưới chặn biên độ, y như trong doPoll — đệm cũng phải qua cửa này
+      if(!c.nt&&c.ref>0&&c.ceil>0&&c.flr>0&&(last>c.ceil*1.001||last<c.flr*0.999)) c.nt=true;
       c.chg1d=(!c.nt&&c.ref>0)?(last-c.ref)/c.ref*100:(c.nt?null:c.chg1d);
       c.mcapLive=c.shares?c.shares*last:c.mcapLive;
     }

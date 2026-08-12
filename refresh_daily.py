@@ -367,6 +367,25 @@ else:
     print(f"BỎ QUA snapshot: bảng giá đứng yên ({board_live}/{len(snap)} mã có số) "
           f"— nghỉ lễ hoặc VPS rỗng, giữ nguyên latest.json cũ",flush=True)
 HL["snapshot"]=len(snap)
+
+# 5b) CHUÔNG BÁO LỆCH PHIÊN. Cả một họ lỗi của trang này có chung một hình dạng: giá của
+#     phiên A ghép với tham chiếu/biên độ của phiên B rồi đem chia cho nhau, đẻ ra phần
+#     trăm không thể tồn tại (12/08/2026: TUG +27,04%, MGR +22,45% trên UPCOM biên ±15%).
+#     Trần và sàn nằm CÙNG bản ghi với giá, cùng nguồn cùng phiên — nên giá lọt ra ngoài
+#     [sàn, trần] là bằng chứng máy móc rằng hai số đó khác phiên nhau. Đếm ra đây để
+#     health.json tự tố, khỏi phải đợi người dùng nhìn thấy rồi báo.
+#     Nới 0,1% cho sai số làm tròn bước giá; chỉ xét mã KHÔNG mang cờ nt (mã nt vốn đã
+#     được client cấm tính %, nằm ngoài biên là đúng bản chất của nó).
+_ngoai=[]
+for r in snap:
+    if r.get("nt"): continue
+    cl,ce,fl=r.get("close") or 0,r.get("ceil") or 0,r.get("floor") or 0
+    if cl>0 and ce>0 and fl>0 and (cl>ce*1.001 or cl<fl*0.999):
+        _ngoai.append(r["sym"])
+HL["bien"]={"ngoai":len(_ngoai),"ma":_ngoai[:20]}
+if _ngoai:
+    print(f"CẢNH BÁO lệch phiên: {len(_ngoai)} mã có giá NGOÀI biên độ của chính nó "
+          f"-> {', '.join(_ngoai[:12])}",flush=True)
 # spark.json: 30 giá đóng cửa gần nhất mỗi mã — trang bảng giá vẽ sparkline bằng 1 file duy nhất
 if len(sparks)>=100:
     jdump({"date":sess_date,"d":sparks},SPARK)

@@ -198,6 +198,36 @@ console.log('\n── 4. F5 GIỮA PHIÊN KHÔNG ĐƯỢC CHỜ MẠNG ───
         m.CP.applyLive();
         kiem('đệm nói chưa khớp lệnh → applyLive giữ cờ nt', m.CP.coins.get('M0').nt, true);
         kiem('đệm nói chưa khớp lệnh → KHÔNG bịa 1D%', m.CP.coins.get('M0').chg1d, null);
+
+        /* LƯỚI CHẶN BIÊN ĐỘ — lớp độc lập với cờ nt. Đệm nói "đã khớp lệnh" (nt=0) nhưng
+           giá lại nằm NGOÀI [sàn, trần] của chính phiên đó: chỉ có thể là giá phiên khác,
+           dù cờ nt nói gì cũng cấm tính %. Có lớp này thì lỗi 12/08 vẫn bị chặn kể cả khi
+           luật nt thủng theo một kiểu chưa ai nghĩ tới. */
+        const g = dungCP('2026-08-05T10:00');
+        g.CP.eodDate = '2026-08-04';
+        g.kho.cpvn_live = JSON.stringify({
+          at: g.moc, sess: '2026-08-05', final: false,
+          d: Object.fromEntries(Array.from({ length: 200 }, (_, i) =>
+            //           giá     TC    vol gtgd fb fs  hi lo   trần   sàn  nt
+            [`M${i}`, [20200, 15900, 100, 0, 0, 0, 0, 0, 18200, 13600, 0]])),
+        });
+        for (let i = 0; i < 200; i++) g.CP.coins.set(`M${i}`, { sym: `M${i}`, shares: 1 });
+        g.CP.applyLive();
+        kiem('giá ngoài biên độ → bị coi là chưa khớp lệnh', g.CP.coins.get('M0').nt, true);
+        kiem('giá ngoài biên độ → KHÔNG bịa 1D%', g.CP.coins.get('M0').chg1d, null);
+
+        // và mã BIÊN ĐỘ ±40% (UPCOM ngày đầu / mở lại) KHÔNG được vạ lây
+        const h = dungCP('2026-08-05T10:00');
+        h.CP.eodDate = '2026-08-04';
+        h.kho.cpvn_live = JSON.stringify({
+          at: h.moc, sess: '2026-08-05', final: false,
+          d: Object.fromEntries(Array.from({ length: 200 }, (_, i) =>
+            [`M${i}`, [33000, 23800, 100, 0, 0, 0, 0, 0, 33300, 14300, 0]])),
+        });
+        for (let i = 0; i < 200; i++) h.CP.coins.set(`M${i}`, { sym: `M${i}`, shares: 1 });
+        h.CP.applyLive();
+        kiem('mã biên độ ±40% trong biên → vẫn tính % bình thường',
+          Math.round(h.CP.coins.get('M0').chg1d * 100) / 100, 38.66);
       }
       kiem('ngoài giờ + đã quét đủ → final = true', j.final, true);
 

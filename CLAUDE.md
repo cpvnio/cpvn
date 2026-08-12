@@ -168,6 +168,20 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > **Vượt biên độ KHÔNG phải lúc nào cũng là lỗi**: UPCOM có mã biên độ **±40%** (ngày giao
   > dịch đầu tiên, hoặc mở lại sau đình chỉ dài) — 12/08/2026 có BEL +38,66% và NWT −39,68%,
   > cả hai đều thật. Kiểm bằng `ceil/ref` của chính mã đó, đừng suy từ tên sàn.
+- **LƯỚI CHẶN BIÊN ĐỘ — lớp thứ hai, ĐỘC LẬP với cờ `nt`, đừng gỡ vì "thừa".** Trần và sàn
+  nằm CÙNG bản ghi với giá và tham chiếu, cùng nguồn cùng phiên; nên giá lọt ra ngoài
+  `[sàn, trần]` là **bằng chứng máy móc** rằng nó không phải giá của phiên này — cấm tính %
+  luôn, không cần biết lỗi từ đâu. Cả họ lỗi "lệch phiên" của trang này đều có chung hình
+  dạng *giá phiên A ÷ tham chiếu phiên B*, và lớp này chặn được cả họ chứ không riêng một ca.
+  Đặt ở **doPoll và applyLive của cả ba bản sao**. Nới 0,1% cho sai số bước giá.
+  **KHÔNG áp cho nhánh `boardEmpty`**: buổi tối bảng đã nhảy sang biên độ phiên sau, giá đóng
+  cửa phiên này nằm ngoài là đúng bản chất, chặn ở đó là xoá sạch % của cả phiên vừa đóng.
+  Ngày đo 12/08/2026 lưới bắt **0 mã** — đúng như mong đợi, vì lớp `nt` đã dọn trước; nó nằm
+  đó cho lần luật `nt` thủng theo một kiểu chưa ai nghĩ tới.
+- **CHUÔNG BÁO trong pipeline (`refresh_daily` bước 5b) -> `health.json['bien']`.** Cùng phép
+  kiểm ấy chạy trên snapshot EOD vừa dựng, đếm số mã có giá ngoài biên độ của chính nó.
+  `bien.ngoai > 0` nghĩa là kho đang trộn hai phiên — **đừng đọc thành "vẫn ổn"**. Có nó thì
+  lần sau hệ thống tự tố lúc 15:15 thay vì đợi người dùng nhìn thấy rồi báo.
 - **Cổ tức xếp theo NGÀY CHỐT QUYỀN — `div` gộp theo NĂM, `divQ` gộp theo QUÝ.** Cổ tức TIỀN lấy từ Simplize
   `dividend/histories` mang năm CHI TRẢ; nếu để cổ tức CỔ PHIẾU theo năm TÀI CHÍNH
   ghi trong mô tả sự kiện là trộn hai quy ước trong cùng một bảng — VCB 27,6% chốt

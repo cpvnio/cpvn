@@ -272,6 +272,8 @@ function applyLiveCache(){
       const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt]=j.d[sym];
       if(!(last>0)) continue;
       c.close=last; c.nt=!!nt;                        // giá của phiên CŨ -> cấm tính %
+      // lưới chặn biên độ, y như vòng poll — đệm cũng phải qua cửa này
+      if(!c.nt&&ref>0&&ce>0&&fl>0&&(last>ce*1.001||last<fl*0.999)) c.nt=true;
       if(ref>0){ c.ref=ref; c.chg=c.nt?null:(last-ref)/ref*100; }
       if(vol>0){ c.vol=vol; c.gtgd=gtgd||c.gtgd;
         if(c.avgv20) c.volr=+(vol/c.avgv20).toFixed(2); }
@@ -324,6 +326,11 @@ async function pollLive(){
          "kịch trần" của radar đều đọc c.nt, mà vòng này trước giờ không hề đặt nó. */
       if(last>0){ c.close=last; c.nt=false; c.chg=ref>0?(last-ref)/ref*100:c.chg; }
       else { c.nt=true; c.chg=null; }
+      /* LƯỚI CHẶN CUỐI: giá lọt ra ngoài [sàn, trần] của chính phiên này thì nó không
+         phải giá của phiên này -> cấm tính %. Xem chú thích dài trong assets/core.js. */
+      if(!c.nt&&c.ref>0&&c.ceil>0&&c.floor>0&&(c.close>c.ceil*1.001||c.close<c.floor*0.999)){
+        c.nt=true; c.chg=null;
+      }
       if(vol>0){ c.vol=vol;
         const ave=(parseFloat(t.avePrice)||0)*1000;
         c.gtgd=(ave||last)*vol;
