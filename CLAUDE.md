@@ -444,6 +444,8 @@ giá sai hoặc giá nhảy — đừng đẩy.
   **2,9px** — không đọc nổi. Màn hẹp phải khai 25 đơn vị (≈8px thật), và thuật toán phải
   biết mà đo bằng hằng số của khổ đó, bằng không nó tưởng nhãn vẫn bé tí và xếp đủ 38 cái
   chồng lên nhau. Đo bằng hộp bao thật: máy bàn 38 nhãn / màn hẹp 18 nhãn, **chồng lấn 0 px²**.
+  ⓪ **KHÔNG có thanh chú giải xanh–đỏ** (user chốt 13/08/2026): xanh tăng đỏ giảm là quy
+  ước người chơi chứng khoán nào cũng biết, giải thích lại chỉ tốn một hàng.
   ③ **KHÔNG còn bảng "Chỉ số từng nước" ở bất kỳ khổ nào** — user chốt 13/08/2026, kể cả
   màn hẹp: nó ăn hơn 400px chiều cao chỉ để lặp lại thứ bản đồ đã nói. Hệ quả phải chấp
   nhận: màn hẹp chỉ đặt nổi ~18 nhãn nên phần còn lại chỉ có MÀU; muốn biết tên và số thì
@@ -489,9 +491,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   2. **Lớp thẻ `#tgPops` phải đứng SAU thẻ `<svg>` trong DOM.** Ở màn hẹp lớp này thôi neo
      và chảy theo dòng; đứng trước thì cột thẻ mọc NGAY TRÊN ĐẦU bản đồ — đã dính đúng vậy,
      thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu.
-  3. **Màn hẹp KHÔNG neo được**: bản đồ ở đó chỉ cao ~146px trong khi một thẻ cao ~180px,
-     neo vào là thẻ trùm kín bản đồ. Dưới 640px cho thẻ xếp thành CỘT ngay dưới bản đồ —
-     vẫn mở nhiều thẻ, chỉ bỏ đúng cái không làm được.
+  3. **Màn hẹp: thẻ NỔI ĐÈ LÊN bản đồ, đặt GIỮA, MỖI LẦN MỘT NƯỚC** (user chốt 13/08/2026).
+     Bản đồ ở khổ đó chỉ 329×146 nên không neo cạnh nước được — thẻ gần to bằng cả bản đồ,
+     và hai thẻ là chồng kín nhau, không so được gì. Mở nước mới thì thẻ cũ tự đóng.
+     **Thẻ phải VỪA chiều cao bản đồ**: khung ngoài xén, cao hơn là mất hai dòng cuối của
+     lưới ô nhiệt — bỏ dòng chú thích trong thẻ và bóp ô lại là vừa (127px trong 146px).
+  4. **Hộp chỉ số sức mạnh ở màn hẹp cũng NẰM TRONG bản đồ**, một dòng mỗi ô (bỏ chữ
+     "Trung tính"/"Lạc quan" — con số đã tự mang màu). Hai dòng thì hộp chiếm 27% diện tích
+     và đè lên Brazil với Argentina.
+  5. **`#tgMap` bọc riêng thẻ `<svg>`** để hộp chỉ số neo vào đúng khung BẢN ĐỒ. Neo vào
+     `#tgWrap` thì màn hẹp sai chỗ: lúc đó lớp thẻ nước chảy theo dòng làm `#tgWrap` cao hơn
+     bản đồ, `bottom:6px` rơi xuống dưới bản đồ.
   **Ô nhiệt phải là ô MỘT DÒNG** (mã trái, % phải). Xếp chồng hai dòng thì thẻ cao 280px,
   cao hơn cả bản danh sách nó thay thế — mất luôn lý do đổi sang ô nhiệt; một dòng còn 179px.
   **Ô ĐỀU NHAU, không chia theo vốn hoá** — nguồn không trả vốn hoá cho cổ phiếu nước ngoài

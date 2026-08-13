@@ -105,6 +105,7 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
 
 /* ---------- BỨC TRANH TOÀN CẦU: bản đồ thế giới ---------- */
 #tgWrap{position:relative}
+#tgMap{position:relative}
 /* NỀN BIỂN phải KHÁC HẲN nền trang, bằng không lục địa trôi lơ lửng và cả tấm chỉ là
    một mảng trắng chói. Màu nền do JS gán (theo bảng thang trong congcu.js) để hai giao
    diện dùng chung một nguồn màu duy nhất. */
@@ -126,15 +127,20 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
 .tgsmw{grid-column:1;font-size:12.5px;font-weight:800}
 .tgsmp{grid-column:1/-1;font-size:10px;color:var(--faint);white-space:nowrap}
 @media(max-width:900px){
-  /* Màn hẹp: bản đồ chỉ cao ~145px, hộp che mất một góc lớn -> đưa xuống dưới bản đồ,
-     hai ô nằm ngang. Và phải XẾP DỌC trong từng ô: giữ lưới hai cột như máy bàn thì ô
-     chỉ rộng ~160px, con số bị đẩy tràn ra ngoài và cụt mất (đã dính đúng vậy). */
-  #tgSM{position:static;flex-direction:row;gap:6px;margin-top:9px;pointer-events:auto}
-  .tgsm1{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;
-    gap:1px;padding:8px 10px}
-  .tgsmp{display:none}
-  .tgsm1 b{font-size:21px}
-  .tgsmn{font-size:9.5px;letter-spacing:.03em}
+  /* Màn hẹp: hộp VẪN NẰM TRONG bản đồ (user chốt) nhưng phải gọn hết mức vì bản đồ chỉ
+     cao ~145px — bỏ dòng phụ, xếp dọc, chữ nhỏ lại. Vẫn ở góc dưới-trái: Nam Thái Bình
+     Dương là chỗ trống duy nhất đủ rộng ở khổ này. */
+  #tgSM{left:5px;bottom:5px;gap:3px}
+  /* MỘT DÒNG mỗi ô. Hai dòng thì hộp chiếm 27% diện tích bản đồ và đè lên Brazil với
+     Argentina — ở khổ 329×146 không có chỗ trống nào đủ to cho hộp hai dòng. Bỏ chữ
+     "Trung tính"/"Lạc quan": con số đã tự mang màu, chữ đó là phần đọc thêm chứ không
+     phải phần bắt buộc. */
+  .tgsm1{display:flex;flex-direction:row;align-items:baseline;gap:5px;padding:3px 7px;
+    border-radius:8px}
+  .tgsmp,.tgsmw{display:none}
+  .tgsm1 b{font-size:14px}
+  .tgsm1 b i{font-size:8px}
+  .tgsmn{font-size:8px;letter-spacing:.02em}
 }
 
 /* NHÃN TRÊN BẢN ĐỒ: viền cùng màu nền biển vẽ TRƯỚC nét chữ (paint-order) làm quầng,
@@ -198,24 +204,26 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
   padding:5px 10px;font-size:11.5px;font-weight:700;box-shadow:var(--shadow)}
 #tgDongHet:hover{color:var(--txt)}
 @media(max-width:640px){
-  /* thẻ rời khỏi lớp neo, xếp thành cột ngay dưới bản đồ — xem chú thích trong congcu.js */
-  #tgPops{position:static;pointer-events:auto;display:flex;flex-direction:column;gap:8px;
-    margin-top:10px}
-  .tgcard{position:static;width:100%}
+  /* Thẻ NỔI ĐÈ LÊN bản đồ như máy bàn, chỉ khác là mỗi lần một nước và đặt giữa —
+     xem chú thích trong congcu.js. Cho tràn ra ngoài mép bản đồ nếu thẻ cao hơn:
+     bản đồ ở khổ này chỉ cao 146px, ép thẻ vừa khung là chữ bé không đọc nổi. */
+  #tgPops{position:absolute;inset:0;pointer-events:none;display:block;margin:0;overflow:visible}
+  .tgcard{position:absolute;width:min(300px,94%)}
+  #tgDongHet{display:none !important}
+  /* THẺ PHẢI VỪA CHIỀU CAO BẢN ĐỒ (146px), bằng không khung ngoài xén mất hai dòng cuối
+     của lưới ô nhiệt. Bỏ dòng chú thích dưới thẻ và bóp ô lại là đủ vừa. */
+  .tgcard .tgcn{display:none}
+  .tgcard .tgch{padding:5px 6px 5px 9px}
+  .tgcard .tgheat{gap:2px;padding:3px}
+  .tgcard .tgt{padding:2px 6px}
+  .tgcard .tgt b{font-size:11px}
+  .tgcard .tgt i{font-size:10.5px}
   .tgt{padding:5px 7px} .tgt b{font-size:12px} .tgt i{font-size:11.5px}
   /* nút nằm TRONG cột thẻ, không neo vào bản đồ nữa */
   #tgDongHet{position:static;align-self:flex-end;order:-1}
 }
 
-/* thang màu: dải chuyển đỏ -> vàng -> xanh, đúng thứ tự người đọc quen từ bảng giá */
-.tgleg{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;color:var(--mut)}
-/* dải màu do JS gán inline, dựng từ CHÍNH hai đầu màu đang tô bản đồ — viết cứng ở đây
-   lần nữa là hai chỗ trôi khỏi nhau ngay lần chỉnh thang tiếp theo */
-.tgbar{flex:0 0 150px;height:9px;border-radius:5px;border:1px solid var(--line)}
-.tgnote{margin-left:auto;color:var(--faint)}
 @media(max-width:640px){
-  .tgleg{flex-wrap:wrap}
-  .tgnote{margin-left:0;flex:1 1 100%}
   /* màn hẹp: giờ xuống dòng riêng thay vì bóp còn một mẩu không đọc nổi */
 }
 
@@ -853,6 +861,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260813e"></script>
+<script src="assets/congcu.js?v=20260813g"></script>
 </body>
 </html>

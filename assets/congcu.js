@@ -907,7 +907,15 @@ function veLaiTrongNuoc(){
 function tgViTri(el,iso){
   /* MÀN HẸP: bản đồ chỉ cao ~146px trong khi một thẻ cao ~180px — neo "cạnh nước" là bất
      khả thi. Ở khổ đó cho thẻ XẾP CHỒNG NGAY DƯỚI bản đồ (CSS lo bố cục). */
-  if(window.matchMedia('(max-width:640px)').matches){ el.style.left=el.style.top=''; return; }
+  /* MÀN HẸP: thẻ NỔI ĐÈ LÊN bản đồ (user chốt), và vì bản đồ chỉ 329×146 nên không neo
+     cạnh nước được — thẻ gần to bằng cả bản đồ. Đặt GIỮA, coi như một tấm che. */
+  if(window.matchMedia('(max-width:640px)').matches){
+    const w0=$('#tgMap')||$('#tgWrap'); if(!w0) return;
+    const w=el.offsetWidth||248, h=el.offsetHeight||180;
+    el.style.left=Math.max(2,(w0.clientWidth-w)/2)+'px';
+    el.style.top =Math.max(2,(w0.clientHeight-h)/2)+'px';
+    return;
+  }
   const M=TG.map, wrap=$('#tgWrap'); if(!M||!wrap) return;
   const W=wrap.clientWidth, H=wrap.clientHeight;
   const w=el.offsetWidth||236, h=el.offsetHeight||180;
@@ -968,6 +976,10 @@ function tgMoBang(iso){
   const oi=$('#tgPops'); if(!oi) return;
   const cu=oi.querySelector('.tgcard[data-c="'+iso+'"]');
   if(cu){ cu.remove(); tgNutDong(); return; }        // bấm lại nước đang mở -> đóng
+  /* MÀN HẸP: MỖI LẦN MỘT NƯỚC. Máy bàn mở nhiều thẻ để so hai thị trường, nhưng ở khổ
+     329px thẻ gần to bằng bản đồ nên hai thẻ là chồng kín nhau, không so được gì. */
+  if(window.matchMedia('(max-width:640px)').matches)
+    oi.querySelectorAll('.tgcard').forEach(x=>x.remove());
   const el=document.createElement('div');
   el.className='tgcard'; el.dataset.c=iso; el.style.zIndex=++tgZ;
   const dau='<div class="tgch"><b>'+esc(n.ten)+'</b>'
@@ -1053,7 +1065,9 @@ function tgNhan(M,by){
      thấy chúng (hộp là HTML phủ lên, không nằm trong SVG) nên phải khai tay, bằng không
      có ngày một nước Nam Mỹ được đặt nhãn ngay dưới hộp và biến mất. Ở màn hẹp hộp đã dời
      ra ngoài bản đồ nên không cần giữ chỗ. */
-  const oc=hep?[]:[{l:0,t:M.h-90,w:140,h:90}], ra=[];
+  /* Giữ chỗ cho hai hộp chỉ số sức mạnh ở góc dưới-trái. Màn hẹp bản đồ co lại nên hộp
+     chiếm phần lớn hơn hẳn theo tỉ lệ, phải khai ô rộng hơn. */
+  const oc=[hep?{l:0,t:M.h-155,w:350,h:155}:{l:0,t:M.h-90,w:140,h:90}], ra=[];
   for(const d of ds){
     const t1=d.r.ten, t2=tgPct(d.r.p);
     const w=Math.max(t1.length,t2.length)*RC+4, h=CH*2+2;
@@ -1155,7 +1169,10 @@ function tgKhung(M,path,cham,tang,giam,nhan){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
     +'<span id="tgDem" style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
     +tang+' nước tăng · '+giam+' nước giảm</span></div>'
-    +'<div class="pb"><div id="tgWrap">'
+    /* #tgMap bọc RIÊNG thẻ svg để hộp chỉ số neo vào đúng khung BẢN ĐỒ. Neo vào #tgWrap
+       thì ở màn hẹp sai chỗ: lúc đó lớp thẻ nước (#tgPops) thôi neo và chảy theo dòng,
+       làm #tgWrap cao hơn bản đồ, nên `bottom:6px` rơi xuống dưới bản đồ. */
+    +'<div class="pb"><div id="tgWrap"><div id="tgMap">'
     +'<svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
     +' style="background:'+tgBang().bien+'">'
     +path+cham+'<g id="tgNhanG">'+nhan+'</g></svg>'
@@ -1164,13 +1181,12 @@ function tgKhung(M,path,cham,tang,giam,nhan){
        thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu. */
     /* Hộp chỉ số phải đứng SAU <svg>: màn hẹp nó thôi neo và chảy theo dòng, đứng
        trước thì nhảy lên TRÊN bản đồ. Máy bàn neo tuyệt đối nên thứ tự không đổi gì. */
-    +tgSucManh()
+    +tgSucManh()+'</div>'
     +'<div id="tgPops"><button id="tgDongHet" style="display:none">✕ Đóng tất cả</button></div>'
     +'<div id="tgTip"></div></div>'
-    +'<div class="tgleg"><span>−'+TG_MOC+'%</span><i class="tgbar" style="background:linear-gradient(90deg,'
-    +tgMau(-TG_MOC)+','+tgMau(-0.6)+','+tgMau(0)+','+tgMau(0.6)+','+tgMau(TG_MOC)+')"></i>'
-    +'<span>+'+TG_MOC+'%</span>'
-    +'<span class="tgnote">xanh = tăng · đỏ = giảm, đậm dần tới ±'+TG_MOC+'%</span></div></div></div>'
+    /* THANH CHÚ GIẢI xanh–đỏ đã bỏ (user chốt 13/08/2026): xanh tăng đỏ giảm là quy ước
+       người chơi chứng khoán nào cũng biết, giải thích lại chỉ tốn một hàng. */
+    +'</div></div>'
 }
 
 let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'cd' | 'vb' | 'tg'
