@@ -130,17 +130,16 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
   /* Màn hẹp: hộp VẪN NẰM TRONG bản đồ (user chốt) nhưng phải gọn hết mức vì bản đồ chỉ
      cao ~145px — bỏ dòng phụ, xếp dọc, chữ nhỏ lại. Vẫn ở góc dưới-trái: Nam Thái Bình
      Dương là chỗ trống duy nhất đủ rộng ở khổ này. */
-  #tgSM{left:5px;bottom:5px;gap:3px}
-  /* MỘT DÒNG mỗi ô. Hai dòng thì hộp chiếm 27% diện tích bản đồ và đè lên Brazil với
-     Argentina — ở khổ 329×146 không có chỗ trống nào đủ to cho hộp hai dòng. Bỏ chữ
-     "Trung tính"/"Lạc quan": con số đã tự mang màu, chữ đó là phần đọc thêm chứ không
-     phải phần bắt buộc. */
-  .tgsm1{display:flex;flex-direction:row;align-items:baseline;gap:5px;padding:3px 7px;
-    border-radius:8px}
+  #tgSM{left:4px;bottom:4px;gap:3px}
+  /* HỘP PHẢI HẸP HƠN ARGENTINA. Ở khổ 329×146, Argentina nằm quanh x=82..95px — hộp một
+     dòng rộng 128px trùm kín nó. Nên cho NHÃN XUỐNG DÒNG và hạ cỡ chữ để hộp chỉ còn
+     ~60px: nhãn hai dòng ở trên, con số ở dưới. Bỏ chữ "Trung tính"/"Lạc quan" — con số
+     đã tự mang màu, chữ đó là phần đọc thêm chứ không phải phần bắt buộc. */
+  .tgsm1{display:block;max-width:62px;padding:3px 6px;border-radius:7px}
   .tgsmp,.tgsmw{display:none}
-  .tgsm1 b{font-size:14px}
-  .tgsm1 b i{font-size:8px}
-  .tgsmn{font-size:8px;letter-spacing:.02em}
+  .tgsmn{display:block;font-size:7px;line-height:1.15;letter-spacing:0;white-space:normal}
+  .tgsm1 b{display:block;font-size:13px;line-height:1.1}
+  .tgsm1 b i{font-size:7.5px}
 }
 
 /* NHÃN TRÊN BẢN ĐỒ: viền cùng màu nền biển vẽ TRƯỚC nét chữ (paint-order) làm quầng,
@@ -861,6 +860,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260813g"></script>
+<script src="assets/congcu.js?v=20260813h"></script>
 </body>
 </html>

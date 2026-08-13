@@ -496,9 +496,11 @@ giá sai hoặc giá nhảy — đừng đẩy.
      và hai thẻ là chồng kín nhau, không so được gì. Mở nước mới thì thẻ cũ tự đóng.
      **Thẻ phải VỪA chiều cao bản đồ**: khung ngoài xén, cao hơn là mất hai dòng cuối của
      lưới ô nhiệt — bỏ dòng chú thích trong thẻ và bóp ô lại là vừa (127px trong 146px).
-  4. **Hộp chỉ số sức mạnh ở màn hẹp cũng NẰM TRONG bản đồ**, một dòng mỗi ô (bỏ chữ
-     "Trung tính"/"Lạc quan" — con số đã tự mang màu). Hai dòng thì hộp chiếm 27% diện tích
-     và đè lên Brazil với Argentina.
+  4. **Hộp chỉ số sức mạnh ở màn hẹp cũng NẰM TRONG bản đồ, và phải HẸP HƠN ARGENTINA.**
+     Ở khổ 329×146, Argentina nằm quanh x=104..117px — hộp một dòng rộng 128px trùm kín nó.
+     Nên NHÃN XUỐNG DÒNG (2–3 dòng) + hạ cỡ chữ để hộp chỉ còn **62px**, và bỏ chữ
+     "Trung tính"/"Lạc quan" (con số đã tự mang màu). Đo bằng hộp bao thật: hộp kết thúc ở
+     x=66, không chạm Argentina. Ô giữ chỗ trong `tgNhan` phải khai theo cỡ hộp này.
   5. **`#tgMap` bọc riêng thẻ `<svg>`** để hộp chỉ số neo vào đúng khung BẢN ĐỒ. Neo vào
      `#tgWrap` thì màn hẹp sai chỗ: lúc đó lớp thẻ nước chảy theo dòng làm `#tgWrap` cao hơn
      bản đồ, `bottom:6px` rơi xuống dưới bản đồ.

@@ -1067,7 +1067,7 @@ function tgNhan(M,by){
      ra ngoài bản đồ nên không cần giữ chỗ. */
   /* Giữ chỗ cho hai hộp chỉ số sức mạnh ở góc dưới-trái. Màn hẹp bản đồ co lại nên hộp
      chiếm phần lớn hơn hẳn theo tỉ lệ, phải khai ô rộng hơn. */
-  const oc=[hep?{l:0,t:M.h-155,w:350,h:155}:{l:0,t:M.h-90,w:140,h:90}], ra=[];
+  const oc=[hep?{l:0,t:M.h-215,w:205,h:215}:{l:0,t:M.h-90,w:140,h:90}], ra=[];
   for(const d of ds){
     const t1=d.r.ten, t2=tgPct(d.r.p);
     const w=Math.max(t1.length,t2.length)*RC+4, h=CH*2+2;
