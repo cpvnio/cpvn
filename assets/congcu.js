@@ -662,9 +662,22 @@ const TG_NUOC=[
   ['.STI','SG','Singapore','STI'],         ['.KLSE','MY','Malaysia','KLCI'],
   ['.SETI','TH','Thái Lan','SET'],         ['.PSI','PH','Philippines','PSEi'],
   ['.AXJO','AU','Úc','ASX 200'],           ['.NZ50','NZ','New Zealand','NZX 50'],
+  /* Đợt mở rộng 13/08/2026 — dò 90 mã trên 63 nước, đây là những mã CNBC thật sự có.
+     Loại `.IDX` (nguồn trả "S&P 400 MidCap" của MỸ, không phải Indonesia) và `.IBRX`
+     (trùng Brazil đã có `.BVSP`). Không có: Nga, Nam Phi, Ả Rập Xê Út, Ba Lan, Ấn Độ
+     (BSE — đang dùng Nifty), Pakistan, Chile, Peru, Romania và ~30 nước nhỏ khác. */
+  ['.BFX','BE','Bỉ','BEL 20'],             ['.ISEQ','IE','Ireland','ISEQ'],
+  ['.PSI20','PT','Bồ Đào Nha','PSI'],      ['.ATG','GR','Hy Lạp','ATHEX'],
+  ['.BUX','HU','Hungary','BUX'],           ['.PX','CZ','Séc','PX'],
+  ['.SBITOP','SI','Slovenia','SBITOP'],    ['.OMXC20','DK','Đan Mạch','OMXC 20'],
+  ['.OMXH25','FI','Phần Lan','OMXH 25'],   ['.OSEAX','NO','Na Uy','OSEAX'],
+  ['.OMXIPI','IS','Iceland','OMXI'],       ['.EGX30','EG','Ai Cập','EGX 30'],
+  ['.DFMGI','AE','UAE','DFM General'],     ['.BAX','BH','Bahrain','All Share'],
+  ['.AMGNRLX','JO','Jordan','ASE General'],['.MERV','AR','Argentina','S&P Merval'],
+  ['.COLCAP','CO','Colombia','MSCI COLCAP'],
 ];
 /* Nguồn không có 4 nước này — nói ra chứ đừng để bản đồ xám mà người xem tự đoán. */
-const TG_THIEU='Indonesia · Ả Rập Xê Út · Nga · Nam Phi (nguồn không có chỉ số)';
+const TG_THIEU='Nga · Nam Phi · Ả Rập Xê Út · Indonesia · Ba Lan · Pakistan · Chile và ~30 nước nhỏ khác (nguồn không có chỉ số)';
 /* MỐC ĐẬM NHẤT = ±2%, KHÔNG phải ±3%. Đây là CHỈ SỐ cả sàn chứ không phải một cổ phiếu:
    phần lớn phiên các nước chỉ chạy ±0,3–1%, để thang tới 3% thì ngày thường cả bản đồ
    nằm ở một phần ba dưới của thang, ra một mảng nhợt đúng như user chê. Với chỉ số thì
@@ -797,7 +810,7 @@ function tgCu(ph){
 async function tgLoad(){
   if(TG.dang) return; TG.dang=true;
   try{
-    if(!TG.map) TG.map=await fetch('assets/worldmap.json?v=1').then(r=>r.json());
+    if(!TG.map) TG.map=await fetch('assets/worldmap.json?v=2').then(r=>r.json());
     const q=TG_NUOC.map(r=>r[0].replace('.','%2E')).join('%7C');
     const j=await fetch('https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol'
       +'?symbols='+q+'&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json')
@@ -811,9 +824,22 @@ async function tgLoad(){
       /* change_pct là CHUỖI kiểu "+0.83%", và "UNCH" khi đứng giá — parseFloat("UNCH")
          ra NaN nên phải bắt riêng, bằng không New Zealand thành "không có dữ liệu". */
       const raw=x.change_pct;
-      let p=null;
-      if(raw!=null){ if(/UNCH/i.test(raw)) p=0; else { const v=parseFloat(String(raw).replace(/[+%,]/g,'')); if(!isNaN(v)) p=v; } }
-      rows.push({iso,ten,chiSo,p,gia:x.last||null,tuoi:tgTuoi(x.last_time),
+      let p=null, moi=false;
+      if(raw!=null){
+        if(/UNCH/i.test(raw)){
+          /* "UNCH" có HAI nghĩa khác hẳn nhau, phải tách ra:
+             · last ≠ previous_close  -> phiên đó đóng cửa ĐÚNG BẰNG tham chiếu, 0% là thật.
+             · last = previous_close TỚI TỪNG CHỮ SỐ -> nguồn đã lật sang PHIÊN MỚI và mã
+               chưa khớp lệnh nào; 0% ở đây là bịa. Đo 03:00 giờ VN: 8 nước trong rổ đang
+               ở trạng thái này (Đức, Pháp, Thuỵ Sĩ, Tây Ban Nha, Hà Lan, Thuỵ Điển, Thổ,
+               Israel) — tô vàng "tham chiếu" hết cho cả châu Âu trong khi họ vừa đóng cửa
+               với mức tăng giảm thật. Đúng con bệnh cờ `nt` của cổ phiếu Việt, chỉ khác
+               nguồn. Không biết thì để TRỐNG, đừng vẽ 0. */
+          const L=String(x.last||''), P=String(x.previous_day_closing||'');
+          if(L&&L===P){ p=null; moi=true; } else p=0;
+        } else { const v=parseFloat(String(raw).replace(/[+%,]/g,'')); if(!isNaN(v)) p=v; }
+      }
+      rows.push({iso,ten,chiSo,p,moi,gia:x.last||null,tuoi:tgTuoi(x.last_time),
                  gio:x.last_timedate||'',tz:x.timeZone||'',rt:x.realTime===true||x.realTime==='true'});
     }
     /* VIỆT NAM lấy số của chính mình — xem chú thích đầu khối. */
@@ -1048,7 +1074,7 @@ function tgHang(){
     '<div class="tgr" data-iso="'+r.iso+'"><span class="tgn">'+esc(r.ten)
     +'<i>'+esc(r.chiSo)+'</i></span>'
     +'<span class="tgv '+(r.p==null?'':cls(r.p))+'">'+tgPct(r.p)+'</span>'
-    +'<span class="tgs">'+(r.p==null?'—':esc(r.gio||''))
+    +'<span class="tgs">'+(r.p==null?(r.moi?'chưa khớp phiên mới':'—'):esc(r.gio||''))
     +(r.p!=null&&tgCu(r.tuoi)?' · '+(r.tuoi>=20*60?'<b class="tgo">phiên trước</b>':tgCu(r.tuoi)):'')
     +'</span></div>').join('');
 }
@@ -1215,7 +1241,7 @@ function tgBind(){
     tip.innerHTML='<b>'+esc(r.ten)+'</b><span class="tgti">'+esc(r.chiSo)+'</span>'
       +'<span class="tgtv '+(r.p==null?'':cls(r.p))+'">'+tgPct(r.p)+'</span>'
       +(r.gia?'<span class="tgtg">'+esc(r.gia)+'</span>':'')
-      +'<span class="tgts">'+(r.p==null?'nguồn không có'
+      +'<span class="tgts">'+(r.p==null?(r.moi?'đã sang phiên mới, chưa khớp lệnh':'nguồn không có')
         :esc(r.gio||'')+(tgCu(r.tuoi)?' · '+tgCu(r.tuoi):''))+'</span>';
     const b=wrap.getBoundingClientRect();
     /* kẹp trong khung để thẻ không tràn ra ngoài mép phải/đáy khi trỏ vào nước ở rìa */

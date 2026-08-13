@@ -373,6 +373,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   thì dự án đã chốt không phụ thuộc. 26 nước lấy được; **Indonesia · Ả Rập Xê Út · Nga ·
   Nam Phi nguồn không có** — phải ghi ra chứ đừng để bản đồ xám rồi người xem tự đoán.
   **Việt Nam lấy VN-Index của chính trang**, không lấy lại của CNBC (số họ trễ pha).
+  **44 nước** sau đợt mở rộng 13/08/2026 (dò 90 mã trên 63 nước). **`UNCH` CÓ HAI NGHĨA,
+  phải tách ra — đây là bản sao của con bệnh cờ `nt`, chỉ khác nguồn:**
+  · `last` ≠ `previous_day_closing` → phiên đóng đúng bằng tham chiếu, **0% là thật**;
+  · `last` = `previous_day_closing` **tới từng chữ số** → nguồn đã lật sang PHIÊN MỚI và
+    chưa có lệnh khớp nào, **0% ở đây là bịa**. Đo lúc 03:00 giờ VN: **8 nước trong rổ cũ**
+    (Đức, Pháp, Thuỵ Sĩ, Tây Ban Nha, Hà Lan, Thuỵ Điển, Thổ, Israel) đang ở trạng thái này
+    — bản trước tô vàng "tham chiếu" cho gần hết châu Âu trong khi họ vừa đóng cửa với mức
+    tăng giảm thật. Không biết thì để TRỐNG (`p=null`, cờ `moi`, hiện "chưa khớp phiên mới"),
+    đừng vẽ 0.
+  **Loại `.IDX`** — nguồn trả "S&P 400 MidCap" của MỸ chứ không phải Indonesia; tên và
+  `countryCode` phải khớp nước trước khi nhận, đừng tin mỗi cái mã.
   Bốn cái bẫy:
   1. **`curmktstatus` của CNBC LÀ HẰNG SỐ, đừng tin.** Nó trả `REG_MKT` cho MỌI mã — kể cả
      Nikkei lúc 15:45 JST (Tokyo đóng 15:00) và Thái Lan với con số của hôm trước. Bản đầu

@@ -31,7 +31,7 @@ BO = {"AQ"}         # bỏ Nam Cực: ăn 1/4 chiều cao mà không có sàn gi
 
 # Nước quá nhỏ để 110m vẽ ra được -> client chấm một chấm tròn tại đây.
 # Toạ độ đặt tay ở trung tâm tài chính, không phải trọng tâm lãnh thổ.
-CHAM = {"HK": (114.17, 22.32), "SG": (103.82, 1.35)}
+CHAM = {"HK": (114.17, 22.32), "SG": (103.82, 1.35), "BH": (50.58, 26.23)}
 
 A1, A2, A3, A4 = 1.340264, -0.081106, 0.000893, 0.003796
 M = math.sqrt(3) / 2
