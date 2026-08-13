@@ -607,7 +607,7 @@ radar** nên nút bấm thẳng vào mục tương ứng trong menu máy bàn (`
 ở cả ba trang của nhóm và thanh đáy sáng ở Radar trên cả ba, bằng không vào Bong bóng là mất
 đường quay lại.
 
-Bốn cái bẫy, phá cái nào cũng hỏng:
+Năm cái bẫy, phá cái nào cũng hỏng:
 
 1. **`mobi.js` phải đọc CẢ URL SẠCH, đừng chỉ dò chuỗi `"congcu"`.** `_redirects` viết lại
    `/radar`, `/tapdoan`, `/duongdua` bằng **rewrite 200** nên thanh địa chỉ giữ nguyên tên
@@ -624,8 +624,19 @@ Bốn cái bẫy, phá cái nào cũng hỏng:
    cục mobile chưa kịp áp thì trang tràn thật, thành ra hàm tự đọc sai khổ rồi không bao giờ
    áp, kẹt luôn ở bố cục máy bàn. Kèm: nghe **cả `resize`** chứ đừng chỉ nghe `matchMedia`,
    sự kiện `change` có lúc không tới.
-4. **`z-index` tấm trượt phải TRÊN thanh tab đáy (200).** Để 60 thì mép dưới bảng cổ tức bị
-   thanh tab che, đọc hụt mấy dòng cuối mà không biết là còn.
+4. **`z-index` của MỌI lớp phủ phải TRÊN thanh tab đáy (200).** Dính hai lần: tấm trượt để
+   60 thì mép dưới bảng cổ tức bị che, đọc hụt mấy dòng cuối mà không biết là còn; cửa sổ
+   PTKT toàn màn hình `#ptkt` để 90 thì mất đúng 58px đáy — tức cả dải khối lượng lẫn trục
+   thời gian. Máy bàn không có thanh này nên cả hai lỗi **chỉ lộ ở khổ hẹp**; đặt số xong
+   phải bấm thử điểm cách đáy 20px xem `elementFromPoint` trả về lớp nào.
+5. **Đừng viết luật bố cục cho một class TRẦN trong khối `@media` của mobile.** Khối
+   `max-width:760px` của `cophieu.html` có `.ptseg{flex:1 0 100%;order:1}` viết cho thanh
+   nút của cửa sổ PTKT. Sau này chart nhỏ mọc thêm hàng nút chỉ báo `#cvInd` cũng mang class
+   `ptseg` — mà cha nó `#chartCard` xếp theo **CỘT**, nên `flex-basis:100%` hoá ra là CHIỀU
+   CAO: hàng nút nuốt trọn thẻ (đo được 550px), `shrink:0` nên không co, `order:1` lại hất
+   nó xuống dưới, biểu đồ nát hẳn trên điện thoại. Đã khoá thành `#ptHead .ptseg`. Luật
+   chung: trong `@media` mobile, luật **bố cục** phải neo vào id hoặc tổ tiên cụ thể, chỉ
+   luật **hình thức** (cỡ chữ, padding) mới được để class trần.
 
 ### Bảng giá ở khổ hẹp
 

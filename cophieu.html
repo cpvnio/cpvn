@@ -214,7 +214,9 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .clg b{font-weight:800;color:var(--txt)}
 
   /* ── PTKT TOÀN MÀN HÌNH ─────────────────────────────────────────────────── */
-  #ptkt{position:fixed;inset:0;z-index:90;display:none;background:var(--bg);
+  /* z-index PHẢI trên thanh tab dưới cùng của bản mobi (.mobibar dùng 200), nếu không
+     thanh đó đè lên 58px đáy cửa sổ toàn màn hình -> mất dải khối lượng và trục thời gian. */
+  #ptkt{position:fixed;inset:0;z-index:210;display:none;background:var(--bg);
     flex-direction:column}
   #ptkt.on{display:flex}
   #ptHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;
@@ -247,7 +249,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     #ptHead .ptsep{display:none}
     #ptHead .ptbrand b{display:none}      /* màn hẹp: giữ logo, bỏ chữ cho đỡ chật */
     #ptClose{order:0;padding:5px 10px;font-size:13px}
-    .ptseg{flex:1 0 100%;order:1}
+    /* PHẢI khoá trong #ptHead: luật "xuống hàng riêng" này chỉ đúng cho thanh nút của
+       cửa sổ toàn màn hình. Bỏ trống phạm vi thì nó dính luôn hàng nút chỉ báo #cvInd
+       của chart nhỏ — mà cha của #cvInd là #chartCard xếp theo CỘT, nên flex-basis:100%
+       thành CHIỀU CAO: hàng nút nuốt trọn thẻ, shrink:0 nên không co, order:1 lại hất
+       nó xuống dưới biểu đồ. Kết quả trên màn hẹp là chart nát. */
+    #ptHead .ptseg{flex:1 0 100%;order:1}
     .ptseg button{padding:5px 8px;font-size:12px}
     #ptBody{margin:5px 8px 8px;gap:6px}
     .vtool{padding:2px;gap:1px}
