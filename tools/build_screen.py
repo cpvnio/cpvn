@@ -33,7 +33,8 @@ FIELDS = [
     'nn60','nnr20','nnr60',               # NN ròng 60 phiên (đồng) + chuẩn hoá theo GTGD (%)
     'vol60','flat60',                     # ĐỘ LỆCH CHUẨN lợi suất ngày 60 phiên (%/phiên)
                                           # + tỉ lệ phiên ĐỨNG GIÁ trong 60 phiên (%)
-    'r80m',                               # LẦN ĐẦU TRONG THÁNG vượt RSI 80 (1/0) — xem analyse()
+    'rsiPM',                              # RSI cao nhất các phiên TRƯỚC ĐÓ trong tháng
+                                          # (để client hỏi "lần đầu vượt N" với N bất kỳ)
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -104,25 +105,26 @@ def vn_thang(ts):
     return datetime.datetime.utcfromtimestamp(ts + 7 * 3600).strftime('%Y-%m')
 
 
-def lan_dau_vuot_rsi(rsi, t, i, moc=80.0):
-    """LẦN ĐẦU TRONG THÁNG vượt ngưỡng RSI — trả 1/0.
+def rsi_dinh_thang_truoc_do(rsi, t, i):
+    """RSI CAO NHẤT trong các phiên TRƯỚC ĐÓ của cùng tháng dương lịch (None nếu hôm nay
+    là phiên đầu tháng).
 
-    Không phải "RSI > 80" đơn thuần: mã nóng có thể nằm trên 80 cả chục phiên liền, ngày
-    nào cũng lọt bộ lọc thì tín hiệu mất hết ý nghĩa. Ở đây chỉ nhận phiên ĐẦU TIÊN của
-    tháng dương lịch có RSI vượt mốc — tức khoảnh khắc mã bước vào vùng quá mua của
-    tháng đó, mỗi mã nhiều nhất một lần mỗi tháng.
-    Dò NGƯỢC từ hôm nay và DỪNG ngay khi lùi sang tháng trước: đây là "trong tháng", không
-    phải "trong 30 phiên".
+    Ghi MỘT con số thay vì một cờ 1/0 cho ngưỡng 80: có số này thì client tự hỏi được
+    "lần đầu trong tháng vượt N" với N BẤT KỲ — `rsi_hôm_nay > N và đỉnh_trước_đó <= N` —
+    thay vì kho phải đẻ thêm một trường cho mỗi ngưỡng người dùng nghĩ ra.
+    Dò NGƯỢC từ hôm nay và DỪNG ngay khi lùi sang tháng trước: đây là "trong tháng dương
+    lịch", không phải "trong 30 phiên".
     """
-    if not t or i >= len(t) or rsi[i] is None or rsi[i] <= moc:
-        return 0
+    if not t or i >= len(t):
+        return None
     thang = vn_thang(t[i])
+    dinh = None
     for j in range(i - 1, -1, -1):
         if j >= len(t) or vn_thang(t[j]) != thang:
             break
-        if rsi[j] is not None and rsi[j] > moc:
-            return 0
-    return 1
+        if rsi[j] is not None and (dinh is None or rsi[j] > dinh):
+            dinh = rsi[j]
+    return round(dinh, 2) if dinh is not None else None
 
 
 def atr_series(h, l, c, n=14):
@@ -233,7 +235,7 @@ def analyse(d, acc):
         'dhi': (c[i] / S['hi52'][i] - 1) * 100 if S['hi52'][i] else None,
         'dlo': (c[i] / S['lo52'][i] - 1) * 100 if S['lo52'][i] else None,
         'tight': S['tight'][i], 'vol60': vol60, 'flat60': flat60,
-        'r80m': lan_dau_vuot_rsi(S['rsi'], t, i),
+        'rsiPM': rsi_dinh_thang_truoc_do(S['rsi'], t, i),
         'r5': ret(5), 'r20': ret(20), 'r60': ret(60), 'r120': ret(120), 'r250': ret(250),
         'rs': None, 'nn20': nn20, 'streak': streak, 'cross': cross,
         'ath': 1 if c[i] >= max(c) * 0.999 else 0, 'nsess': n,

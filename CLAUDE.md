@@ -481,13 +481,19 @@ giá sai hoặc giá nhảy — đừng đẩy.
      `document.hidden=true` nên không có cờ này thì không thể kiểm thử được nhịp — đã dính,
      chờ đủ 2 phút 41 giây mà số không đổi, tưởng hỏng.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
-- **CHIP LỌC "LẦN ĐẦU TRONG THÁNG RSI > 80" (`r80m`) — cờ do KHO dựng, client không tự
-  tính được.** Kho chỉ báo chỉ giữ giá trị của PHIÊN GẦN NHẤT, mà điều kiện này cần LỊCH SỬ
-  RSI cả tháng. Nên `build_screen.analyse()` tính sẵn 1/0 và nối `r80m` vào **cuối** `FIELDS`.
-  Khác hẳn "RSI > 80" đơn thuần: đo trên phiên 12/08/2026 có **137 mã đang trên 80** nhưng
-  chỉ **4 mã** là lần đầu trong tháng — mã nóng nằm trên 80 cả chục phiên liền, ngày nào
-  cũng lọt thì tín hiệu mất hết ý nghĩa. Dò NGƯỢC từ hôm nay và **dừng ngay khi lùi sang
-  tháng trước**: đây là "trong tháng dương lịch", không phải "trong 30 phiên".
+- **CHIP LỌC "LẦN ĐẦU TRONG THÁNG RSI > n" (n chọn 70/75/80) — kho ghi MỘT CON SỐ, không
+  ghi cờ.** `build_screen.analyse()` tính `rsiPM` = **RSI cao nhất các phiên TRƯỚC ĐÓ trong
+  cùng tháng dương lịch** (rỗng = hôm nay là phiên đầu tháng), nối vào **cuối** `FIELDS`.
+  Client hỏi: `rsi > n && (rsiPM == null || rsiPM <= n)`.
+  > **Đừng quay lại kiểu cờ 1/0 cho từng ngưỡng.** Bản đầu ghi `r80m` cho riêng mốc 80; user
+  > hỏi thêm 70 và 75 là kho phải đẻ ba trường và mỗi ngưỡng mới lại phải dựng lại toàn bộ
+  > `screen.json`. Một con số thì ngưỡng NÀO cũng hỏi được, không chỉ ba mức đang bày ra.
+  Client KHÔNG tự tính được phần lịch sử: kho chỉ báo chỉ giữ giá trị của PHIÊN GẦN NHẤT.
+  Dò NGƯỢC từ hôm nay và **dừng ngay khi lùi sang tháng trước** — "trong tháng dương lịch",
+  không phải "trong 30 phiên". Vì sao phải là "lần đầu" chứ không phải "đang trên ngưỡng":
+  đo phiên 12/08/2026 — ngưỡng 80 có **137 mã đang trên** nhưng chỉ **4** là lần đầu; ngưỡng
+  75: 155 → 10; ngưỡng 70: 194 → 14. Mã nóng nằm trên ngưỡng cả chục phiên liền, ngày nào
+  cũng lọt thì tín hiệu mất hết ý nghĩa.
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt
   tiền tố này), **KHÔNG phải một ngành** — xếp thành ngành thì cột ngành có hai loại mục
