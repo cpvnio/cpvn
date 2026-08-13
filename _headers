@@ -19,3 +19,7 @@
 # Muốn đổi thì nâng ?v= trong assets/congcu.js, y như mọi asset khác.
 /assets/worldmap.json
   Cache-Control: public, max-age=31536000, immutable
+
+# Ảnh thẻ chia sẻ: đổi thì nâng ?v= trong các thẻ og:image, nên cache 1 năm.
+/assets/og.jpg
+  Cache-Control: public, max-age=31536000, immutable

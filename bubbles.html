@@ -7,15 +7,26 @@
 <script>(function(){/* MẶC ĐỊNH GIAO DIỆN SÁNG; chỉ theo lựa chọn đã lưu nếu người dùng từng đổi */
 var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=(t===null?'light':t);})();</script>
 <meta name="description" content="Toàn cảnh chứng khoán Việt Nam dạng bong bóng: HOSE + HNX real-time, biến động theo ngày/tuần/tháng/năm, vốn hoá, KQKD, báo cáo phân tích CTCK và tin tức theo mã." />
+<!-- THẺ CHIA SẺ (Open Graph + Twitter). Thiếu og:image thì nền tảng tự quét được
+     mỗi cái favicon 128px rồi phóng to — ra tấm mờ nhoè, đúng cái user báo. -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="CPVN.io"/>
+<meta property="og:locale" content="vi_VN"/>
+<meta property="og:url" content="https://cpvn.io/bubbles"/>
+<meta property="og:title" content="CPVN — Bong bóng & bản đồ nhiệt thị trường"/>
+<meta property="og:description" content="Toàn cảnh HOSE + HNX dạng bong bóng, real-time. Kích thước theo biến động/vốn hoá, màu theo trần/sàn/tham chiếu."/>
+<meta property="og:image" content="https://cpvn.io/assets/og.jpg?v=1"/>
+<meta property="og:image:type" content="image/jpeg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="CPVN.IO — bảng giá và thông tin chứng khoán Việt Nam"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="CPVN — Bong bóng & bản đồ nhiệt thị trường"/>
+<meta name="twitter:description" content="Toàn cảnh HOSE + HNX dạng bong bóng, real-time. Kích thước theo biến động/vốn hoá, màu theo trần/sàn/tham chiếu."/>
+<meta name="twitter:image" content="https://cpvn.io/assets/og.jpg?v=1"/>
 <meta name="theme-color" content="#f4f5f7" />
 <meta name="author" content="CPVN.io" />
 <link rel="canonical" href="https://cpvn.io/" />
-<meta property="og:type" content="website" />
-<meta property="og:title" content="CPVN — Bong bóng & bản đồ nhiệt thị trường" />
-<meta property="og:description" content="Toàn cảnh HOSE + HNX dạng bong bóng, real-time. Kích thước theo biến động/vốn hoá, màu theo trần/sàn/tham chiếu." />
-<meta property="og:url" content="https://cpvn.io/bubbles" />
-<meta property="og:site_name" content="CPVN.io" />
-<meta name="twitter:card" content="summary_large_image" />
 <!-- favicon: bông 5 bong bóng — xanh lá(tăng) giữa, 4 góc vàng(TC)/đỏ(giảm)/xanh dương(sàn)/tím(trần) -->
 <link rel="icon" type="image/png" href="assets/logo-64.png?v=3" />
 <style>
