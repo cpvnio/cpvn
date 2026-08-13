@@ -1087,7 +1087,6 @@ function tgVeLai(){
   if(dem) dem.textContent=oo.filter(r=>r.p>0.05).length+' nước tăng · '
     +oo.filter(r=>r.p<-0.05).length+' nước giảm';
   const nh=$('#tgNhanG'); if(nh) nh.innerHTML=tgNhan(TG.map,by);
-  const ds=$('#m-radar .tglist'); if(ds) ds.innerHTML=tgHang();
   /* thẻ đang mở: cập nhật % ở tiêu đề, và lấy lại luôn giá cổ phiếu bên trong — thẻ để
      mở cả tiếng mà ruột vẫn là giá lúc mới bấm thì tệ hơn là không cập nhật gì. */
   $$('#tgPops .tgcard').forEach(el=>{
@@ -1137,21 +1136,9 @@ function toanCauPanel(){
   }).join('');
   return tgKhung(M,path,cham,tang,giam,tgNhan(M,by));
 }
-/* dựng lại RIÊNG các hàng chỉ số, để nhịp cập nhật thay đúng phần này */
-function tgHang(){
-  return TG.rows.slice().sort((a,b)=>(b.p==null?-1e9:b.p)-(a.p==null?-1e9:a.p)).map(r=>
-    '<div class="tgr" data-iso="'+r.iso+'"><span class="tgn">'+esc(r.ten)
-    +'<i>'+esc(r.chiSo)+'</i></span>'
-    +'<span class="tgv '+(r.p==null?'':cls(r.p))+'">'+tgPct(r.p)+'</span>'
-    +'<span class="tgs">'+(r.p==null?(r.moi?'chưa khớp phiên mới':'—'):esc(r.gio||''))
-    +(r.p!=null&&tgCu(r.tuoi)?' · '+(r.tuoi>=20*60?'<b class="tgo">phiên trước</b>':tgCu(r.tuoi)):'')
-    +'</span></div>').join('');
-}
 /* HAI CHỈ SỐ SỨC MẠNH đặt vào GÓC DƯỚI-TRÁI bản đồ — chỗ đó là Nam Thái Bình Dương,
-   trống trơn ở mọi phép chiếu và không nước nào có sàn. Trước đây hai số này nằm ở cụm ba
-   thẻ đầu trang, cụm ấy đã bỏ; nhét vào chỗ trống sẵn có thì không tốn thêm dòng nào.
-   Dựng bằng HTML phủ lên chứ không phải <text> trong SVG: chữ trong SVG co theo viewBox
-   nên màn hẹp là teo còn 3px, đúng cái bẫy vừa dính với nhãn tên nước. */
+   trống trơn ở mọi phép chiếu và không nước nào có sàn. Dựng bằng HTML phủ lên chứ không
+   phải <text> trong SVG: chữ trong SVG co theo viewBox nên màn hẹp là teo còn 3px. */
 function tgSucManh(){
   const md=moodLive(), st=marketStats(), tot=Math.max(1,st.up+st.dn+st.fl);
   const G=ST.market&&ST.market.global;
@@ -1184,12 +1171,6 @@ function tgKhung(M,path,cham,tang,giam,nhan){
     +tgMau(-TG_MOC)+','+tgMau(-0.6)+','+tgMau(0)+','+tgMau(0.6)+','+tgMau(TG_MOC)+')"></i>'
     +'<span>+'+TG_MOC+'%</span>'
     +'<span class="tgnote">xanh = tăng · đỏ = giảm, đậm dần tới ±'+TG_MOC+'%</span></div></div></div>'
-    /* BẢNG GỌN CHỈ HIỆN Ở MÀN HẸP. Ở đó bản đồ chỉ rộng 327px nên nhãn in trên bản đồ
-       co còn ~3px — không đọc nổi bằng mắt thường. Máy bàn thì nhãn nằm ngay trên nước,
-       bảng này thừa nên CSS ẩn đi. Không phải "để cho có": không có nó thì trên điện
-       thoại mục này chỉ còn mấy mảng màu không tra cứu được gì. */
-    +'<div class="panel tgds"><div class="ph">Chỉ số từng nước</div>'
-    +'<div class="pb tglist">'+tgHang()+'</div></div>'
 }
 
 let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'cd' | 'vb' | 'tg'

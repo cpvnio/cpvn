@@ -444,9 +444,10 @@ giá sai hoặc giá nhảy — đừng đẩy.
   **2,9px** — không đọc nổi. Màn hẹp phải khai 25 đơn vị (≈8px thật), và thuật toán phải
   biết mà đo bằng hằng số của khổ đó, bằng không nó tưởng nhãn vẫn bé tí và xếp đủ 38 cái
   chồng lên nhau. Đo bằng hộp bao thật: máy bàn 38 nhãn / màn hẹp 18 nhãn, **chồng lấn 0 px²**.
-  ③ **Bảng "Chỉ số từng nước" chỉ hiện ở khổ ≤900px** (`.tgds`). Máy bàn có nhãn trên bản đồ
-  rồi nên bảng thừa; nhưng màn hẹp chỉ đặt nổi 18 nhãn, không có bảng thì 26 nước còn lại
-  không tra cứu được gì.
+  ③ **KHÔNG còn bảng "Chỉ số từng nước" ở bất kỳ khổ nào** — user chốt 13/08/2026, kể cả
+  màn hẹp: nó ăn hơn 400px chiều cao chỉ để lặp lại thứ bản đồ đã nói. Hệ quả phải chấp
+  nhận: màn hẹp chỉ đặt nổi ~18 nhãn nên phần còn lại chỉ có MÀU; muốn biết tên và số thì
+  **chạm vào nước đó** để bung thẻ. Đừng đề xuất dựng lại bảng.
   **HAI CHỈ SỐ SỨC MẠNH nằm trong GÓC DƯỚI-TRÁI bản đồ** (Nam Thái Bình Dương — trống ở
   mọi phép chiếu, không nước nào có sàn). Trước ở cụm ba thẻ đầu trang, cụm đó đã bỏ.
   Dựng bằng **HTML phủ lên**, không phải `<text>` trong SVG: chữ trong SVG co theo viewBox

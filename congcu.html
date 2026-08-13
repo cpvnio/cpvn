@@ -149,8 +149,6 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
    theo ĐƠN VỊ SVG lớn hơn hẳn mới ra được ~8px thật. Cỡ này thì thuật toán xếp nhãn tự
    bỏ bớt, chỉ còn mấy nước lớn — phần còn lại đọc ở bảng bên dưới. */
 @media(max-width:640px){ .tgl1{font-size:25px;stroke-width:7px} .tgl2{font-size:24px;stroke-width:7px} }
-.tgds{display:none}
-@media(max-width:900px){ .tgds{display:block} }
 .tgc{stroke-width:.6;vector-effect:non-scaling-stroke}
 .tgc.co,.tgd{cursor:pointer}
 /* rê vào thì viền ĐẬM lên chứ đừng đổi màu nền — đổi nền là mất chính con số đang đọc */
@@ -215,29 +213,10 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
    lần nữa là hai chỗ trôi khỏi nhau ngay lần chỉnh thang tiếp theo */
 .tgbar{flex:0 0 150px;height:9px;border-radius:5px;border:1px solid var(--line)}
 .tgnote{margin-left:auto;color:var(--faint)}
-/* DANH SÁCH CHỈ SỐ — mỗi nước một dòng, bốn thứ phải đọc được: tên · chỉ số · % · giờ.
-   Bản đầu để 4 cột 258px cho "gọn", hoá ra là nhồi: tên nước dài bị cắt còn "New Zeal…",
-   "Tây Ban N…", và cột giờ (nowrap, kiểu "6:05 PM JST · 7 giờ trước") tràn đè sang thẻ
-   bên cạnh. Cột hẹp không làm bảng gọn, chỉ làm chữ chồng lên nhau.
-   Nay cột RỘNG TỐI THIỂU 430px: màn 1280 ra 2 cột thoáng, màn rộng mới lên 3. */
-.tglist{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:0 26px}
-.tgr{display:grid;grid-template-columns:1fr 92px 152px;gap:12px;align-items:center;
-  padding:9px 10px;border-bottom:1px solid var(--line)}
-.tgr:hover{background:var(--card2);border-radius:9px}
-.tgn{font-weight:700;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tgn i{display:block;font-style:normal;font-weight:600;font-size:11px;color:var(--faint);
-  overflow:hidden;text-overflow:ellipsis}
-.tgv{text-align:right;font-weight:800;font-size:14.5px}
-.tgs{text-align:right;font-size:11px;color:var(--faint);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-.tgo{color:var(--gold);font-weight:700}
-@media(max-width:900px){ .tglist{grid-template-columns:1fr} }
 @media(max-width:640px){
   .tgleg{flex-wrap:wrap}
   .tgnote{margin-left:0;flex:1 1 100%}
   /* màn hẹp: giờ xuống dòng riêng thay vì bóp còn một mẩu không đọc nổi */
-  .tgr{grid-template-columns:1fr 88px;row-gap:1px;padding:8px 4px}
-  .tgs{grid-column:1/-1;text-align:left;font-size:10.5px}
 }
 
 /* ---------- khung tổng ---------- */
@@ -874,6 +853,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260813d"></script>
+<script src="assets/congcu.js?v=20260813e"></script>
 </body>
 </html>
