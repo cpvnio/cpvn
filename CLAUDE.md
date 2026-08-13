@@ -425,6 +425,28 @@ giá sai hoặc giá nhảy — đừng đẩy.
   Nút đổi đèn của congcu.js dựng lại module (`showMod`) nên màu tự tính lại, không cần
   listener riêng — nhưng ĐỪNG bỏ bước dựng lại đó, bằng không đổi đèn là bản đồ giữ nguyên
   màu của giao diện cũ.
+  **GỘP VÀO RADAR PHIÊN (13/08/2026), KHÔNG còn tab riêng.** Bản đồ đứng ngay đầu Radar
+  phiên, thay cho cụm ba thẻ cũ (nhịp sợ hãi trong nước / toàn cầu / tóm tắt chỉ số) — cụm
+  đó lặp lại thứ đã có ở thanh đầu trang và ăn nguyên một màn trước khi thấy nội dung thật.
+  `?t=tg` vẫn mở được (rơi về `phien`) cho link cũ.
+  > **`startLive` phải gọi `veLaiTrongNuoc()` chứ không `render()` cả module.** Radar phiên
+  > nay CHỨA bản đồ, mà bản đồ tự cập nhật tại chỗ theo nhịp riêng — dựng lại cả module là
+  > giết mọi thẻ nước đang mở, cứ ~1 phút một lần. `veLaiTrongNuoc` NHẤC node `#rdTg` ra rồi
+  > cắm lại (không clone — clone là mất sạch listener kéo thẻ).
+  **NHÃN IN THẲNG LÊN BẢN ĐỒ**, không còn bảng dài ở máy bàn. 44 nhãn không nhét hết vào
+  1000×439 nên xếp THAM LAM: ưu tiên nước biến động mạnh nhất, thử 9 chỗ quanh nước, hết
+  chỗ thì bỏ nhãn (nước vẫn còn màu và vẫn rê/bấm được). Ba thứ phải giữ:
+  ① **VIỆT NAM ưu tiên tuyệt đối** (`uu=1e9`), không xếp theo biên độ như nước khác — đây là
+  trang chứng khoán Việt, để nó tranh chỗ bằng biên độ thì một phiên đi ngang (+0,13%) là
+  mất nhãn, nhường chỗ cho Thái Lan. Đã dính đúng vậy ở lượt đầu.
+  ② **Phép đo chỗ trống phải theo ĐÚNG cỡ chữ của từng khổ màn.** Cỡ chữ khai bằng đơn vị
+  viewBox nên co theo bản đồ: màn 327px thì 1 đơn vị chỉ còn 0,33px, chữ 7,4 đơn vị ra
+  **2,9px** — không đọc nổi. Màn hẹp phải khai 25 đơn vị (≈8px thật), và thuật toán phải
+  biết mà đo bằng hằng số của khổ đó, bằng không nó tưởng nhãn vẫn bé tí và xếp đủ 38 cái
+  chồng lên nhau. Đo bằng hộp bao thật: máy bàn 38 nhãn / màn hẹp 18 nhãn, **chồng lấn 0 px²**.
+  ③ **Bảng "Chỉ số từng nước" chỉ hiện ở khổ ≤900px** (`.tgds`). Máy bàn có nhãn trên bản đồ
+  rồi nên bảng thừa; nhưng màn hẹp chỉ đặt nổi 18 nhãn, không có bảng thì 26 nước còn lại
+  không tra cứu được gì.
   **BẤM VÀO MỘT NƯỚC -> bung bảng CỔ PHIẾU TRỤ CỘT** (rê chuột vẫn chỉ ra thẻ nhỏ — hai mức
   thông tin, liếc thì rê, soi kỹ thì bấm). Bảng nổi ĐÈ LÊN bản đồ, không chen vào giữa trang.
   > **KHÔNG được gọi đây là "10 mã vốn hoá lớn nhất" cho nước ngoài.** CNBC trả giá và % nhưng

@@ -383,7 +383,10 @@ function startLive(){
       /* Mục TOÀN CẦU tự có nhịp riêng và tự cập nhật TẠI CHỖ. Để nó vẽ lại theo nhịp
          này là mỗi lần bơm giá trong nước lại dựng lại cả panel -> mọi thẻ nước đang
          mở bay sạch, cứ ~2 phút một lần. */
-      if(cur==='radar'&&radarTab!=='tg') MODULES.find(x=>x.id==='radar').render();
+      /* Radar phiên nay CHỨA bản đồ thế giới, mà bản đồ tự cập nhật tại chỗ theo nhịp
+         riêng. Vẽ lại cả module ở đây là giết mọi thẻ nước đang mở, cứ ~1 phút một lần.
+         Nên chỉ vẽ lại phần trong nước bằng cách dựng lại khối #radarAll. */
+      if(cur==='radar'&&radarTab==='phien') veLaiTrongNuoc(); else if(cur==='radar') MODULES.find(x=>x.id==='radar').render();
     }
   };
   tick();
@@ -479,7 +482,8 @@ function head(m){
 }
 /* chọn tab bên trong của một module từ menu thả xuống */
 function moTab(m,t){
-  if(m==='radar'){ radarTab=(t==='cd'||t==='vb'||t==='tg')?t:'phien'; if(cur==='radar') renderRadar(); else done.radar=0; }
+  /* 'tg' gộp vào 'phien' từ 13/08/2026 — giữ nhánh này để link cũ ?t=tg còn mở được */
+  if(m==='radar'){ radarTab=(t==='cd'||t==='vb')?t:'phien'; if(cur==='radar') renderRadar(); else done.radar=0; }
   /* ĐANG Ở TRANG ĐUA thì BẤM THẲNG nút chuyển chế độ có sẵn, đừng dựng lại module:
      nút đó mới là chỗ chạy syncMode (dừng animation, về vạch xuất phát, đổi khung đồ thị).
      Dựng lại module tưởng gọn mà chế độ không đổi — đã dính đúng vậy. */
@@ -888,7 +892,18 @@ async function tgLayCo(iso){
    chính nó, mở bao nhiêu cái cũng được, bấm lại vào nước đang mở thì đóng thẻ ấy.
    KHÔNG có lớp nền mờ phía sau: có nó thì mở xong thẻ đầu là không bấm được nước thứ hai
    nữa — đúng thứ chặn mất tính năng này. */
-let tgZ=20;
+let tgZ=20, tgGiu=false;
+/* Vẽ lại RIÊNG phần trong nước của Radar phiên, giữ nguyên node bản đồ.
+   Nhấc node thật ra rồi cắm lại (không clone): clone là mất sạch listener kéo thẻ và
+   mọi thẻ nước đang mở. Cờ tgGiu bảo renderRadar đừng dựng lại ruột bản đồ. */
+function veLaiTrongNuoc(){
+  const el=$('#rdTg'); const R=MODULES.find(x=>x.id==='radar');
+  if(!el){ R.render(); return; }
+  el.parentNode.removeChild(el);
+  tgGiu=true; R.render(); tgGiu=false;
+  const moi=$('#rdTg'); if(moi&&moi.parentNode) moi.parentNode.replaceChild(el,moi);
+}
+
 function tgViTri(el,iso){
   /* MÀN HẸP: bản đồ chỉ cao ~146px trong khi một thẻ cao ~180px — neo "cạnh nước" là bất
      khả thi. Ở khổ đó cho thẻ XẾP CHỒNG NGAY DƯỚI bản đồ (CSS lo bố cục). */
@@ -1008,6 +1023,56 @@ function tgNutDong(){
    giờ VN, châu Âu chạy tới nửa đêm. Ăn theo nhịp kia thì mở bản đồ lúc 9 giờ tối để xem Mỹ
    là số đứng im. Nên mục này có nhịp của riêng nó, không hỏi giờ Việt Nam.
    CẬP NHẬT TẠI CHỖ, không dựng lại panel: dựng lại là mọi thẻ nước đang mở bay sạch. */
+/* ═══ NHÃN NGAY TRÊN BẢN ĐỒ ═══
+   Bản trước để tên nước và % ở một BẢNG DÀI phía dưới: muốn biết mảng màu kia là nước nào
+   phải rê chuột hoặc dò xuống bảng. Nay in thẳng lên bản đồ — tên trên, % dưới.
+   44 nhãn không thể nhét hết vào một tấm 1000×439, riêng châu Âu đã hơn chục nước chen
+   nhau, nên phải XẾP THAM LAM: ưu tiên nước biến động mạnh nhất (đó là thứ người ta muốn
+   thấy trước), thử 5 chỗ quanh nước, chỗ nào chưa bị chiếm thì đặt; hết chỗ thì BỎ nhãn
+   đó — nước vẫn còn màu và vẫn rê/bấm ra được, chứ chồng chữ lên nhau thì không đọc nổi
+   cái nào. Ước lượng bề rộng bằng 4,3 đơn vị/ký tự: đo bằng canvas thì chính xác hơn
+   nhưng phải dựng context riêng mỗi lượt vẽ, không đáng cho vài chục nhãn. */
+function tgNhan(M,by){
+  const ds=[];
+  for(const iso in by){
+    const g=M.c[iso]||M.cham[iso]; if(!g) continue;
+    const r=by[iso];
+    /* VIỆT NAM luôn đứng đầu hàng ưu tiên, không xếp theo biên độ như các nước khác.
+       Đây là trang chứng khoán Việt — để nó tranh chỗ bằng biên độ thì một phiên đi
+       ngang (+0,13%) là mất nhãn, nhường chỗ cho Thái Lan hay Philippines. Đã dính đúng
+       vậy ở lượt đầu. */
+    ds.push({iso,r,cx:g.cx,cy:g.cy,uu:iso==='VN'?1e9:(r.p==null?-1:Math.abs(r.p))});
+  }
+  ds.sort((a,b)=>b.uu-a.uu);
+  /* CỠ CHỮ ĐỔI THEO KHỔ MÀN nên phép đo chỗ trống cũng phải đổi theo. Bản đầu tính bằng
+     hằng số của máy bàn, chạy trên điện thoại thì CSS phóng chữ lên gấp ba mà thuật toán
+     vẫn tưởng nhãn bé tí — xếp đủ 38 cái chồng lên nhau thành một mảng chữ. */
+  const hep=window.matchMedia('(max-width:640px)').matches;
+  const CH=hep?26:7.6, RC=hep?14.5:4.3;
+  const oc=[], ra=[];
+  for(const d of ds){
+    const t1=d.r.ten, t2=tgPct(d.r.p);
+    const w=Math.max(t1.length,t2.length)*RC+4, h=CH*2+2;
+    /* TÁM chỗ thử thay vì năm: cụm châu Âu chen nhau nên năm chỗ là rớt gần hết mấy
+       nước nhỏ. Thứ tự từ gần ra xa, để nhãn vẫn bám sát nước của nó. */
+    const U=[[d.cx,d.cy],[d.cx,d.cy-h],[d.cx,d.cy+h],[d.cx-w*0.7,d.cy],[d.cx+w*0.7,d.cy],
+             [d.cx-w*0.7,d.cy-h],[d.cx+w*0.7,d.cy-h],[d.cx,d.cy-h*2],[d.cx,d.cy+h*2]];
+    let ok=null;
+    for(const [x,y] of U){
+      const l=Math.max(1,Math.min(M.w-w-1,x-w/2)), t=Math.max(1,Math.min(M.h-h-1,y-h/2));
+      if(!oc.some(o=>l<o.l+o.w&&l+w>o.l&&t<o.t+o.h&&t+h>o.t)){ ok={l,t,w,h}; break; }
+    }
+    if(!ok) continue;
+    oc.push(ok); ra.push({d,ok,t1,t2});
+  }
+  const vien=tgBang().bien;
+  return ra.map(({d,ok,t1,t2})=>{
+    const x=(ok.l+ok.w/2).toFixed(1);
+    return '<text class="tgl1" x="'+x+'" y="'+(ok.t+CH-CH*0.16).toFixed(1)+'" style="stroke:'+vien+'">'+esc(t1)+'</text>'
+      +'<text class="tgl2 '+(d.r.p==null?'tglx':cls(d.r.p))+'" x="'+x+'" y="'+(ok.t+CH*2-1).toFixed(1)+'" style="stroke:'+vien+'">'+t2+'</text>';
+  }).join('');
+}
+
 function tgVeLai(){
   const svg=$('#tgSvg'); if(!svg) return false;
   const by={}; (TG.rows||[]).forEach(r=>by[r.iso]=r);
@@ -1017,6 +1082,7 @@ function tgVeLai(){
   const dem=$('#tgDem');
   if(dem) dem.textContent=oo.filter(r=>r.p>0.05).length+' nước tăng · '
     +oo.filter(r=>r.p<-0.05).length+' nước giảm';
+  const nh=$('#tgNhanG'); if(nh) nh.innerHTML=tgNhan(TG.map,by);
   const ds=$('#m-radar .tglist'); if(ds) ds.innerHTML=tgHang();
   /* thẻ đang mở: cập nhật % ở tiêu đề, và lấy lại luôn giá cổ phiếu bên trong — thẻ để
      mở cả tiếng mà ruột vẫn là giá lúc mới bấm thì tệ hơn là không cập nhật gì. */
@@ -1039,7 +1105,7 @@ function tgNhip(){
   /* Hỏi mỗi 20 giây nhưng chỉ GỌI MẠNG khi số đã cũ quá 2 phút — cùng ngưỡng với lượt vẽ
      đầu, nên hai đường không giẫm chân nhau. Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích. */
   TG.hen=setInterval(()=>{
-    if(cur!=='radar'||radarTab!=='tg'){ clearInterval(TG.hen); TG.hen=null; return; }
+    if(cur!=='radar'||radarTab!=='phien'){ clearInterval(TG.hen); TG.hen=null; return; }
     /* Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích — trừ khi có cờ kiểm thử ?forcelive,
        dùng chung với startLive vì khung xem tự động luôn báo document.hidden=true. */
     if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<120000) return;
@@ -1065,8 +1131,7 @@ function toanCauPanel(){
     return '<circle cx="'+v.cx+'" cy="'+v.cy+'" r="7.5" fill="'+tgMau(r.p)+'"'
       +' stroke="'+tgBang().net+'" class="tgd" data-iso="'+k+'"/>';
   }).join('');
-  const hang=tgHang();
-  return tgKhung(M,path,cham,tang,giam,hang);
+  return tgKhung(M,path,cham,tang,giam,tgNhan(M,by));
 }
 /* dựng lại RIÊNG các hàng chỉ số, để nhịp cập nhật thay đúng phần này */
 function tgHang(){
@@ -1078,14 +1143,14 @@ function tgHang(){
     +(r.p!=null&&tgCu(r.tuoi)?' · '+(r.tuoi>=20*60?'<b class="tgo">phiên trước</b>':tgCu(r.tuoi)):'')
     +'</span></div>').join('');
 }
-function tgKhung(M,path,cham,tang,giam,hang){
+function tgKhung(M,path,cham,tang,giam,nhan){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
     +'<span id="tgDem" style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
     +tang+' nước tăng · '+giam+' nước giảm</span></div>'
     +'<div class="pb"><div id="tgWrap">'
     +'<svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
     +' style="background:'+tgBang().bien+'">'
-    +path+cham+'</svg>'
+    +path+cham+'<g id="tgNhanG">'+nhan+'</g></svg>'
     /* LỚP THẺ PHẢI ĐỨNG SAU <svg>: ở màn hẹp lớp này thôi neo và chảy theo dòng, đứng
        trước thì cột thẻ mọc NGAY TRÊN ĐẦU bản đồ, đẩy bản đồ xuống — đã dính đúng vậy,
        thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu. */
@@ -1095,7 +1160,12 @@ function tgKhung(M,path,cham,tang,giam,hang){
     +tgMau(-TG_MOC)+','+tgMau(-0.6)+','+tgMau(0)+','+tgMau(0.6)+','+tgMau(TG_MOC)+')"></i>'
     +'<span>+'+TG_MOC+'%</span>'
     +'<span class="tgnote">xanh = tăng · đỏ = giảm, đậm dần tới ±'+TG_MOC+'%</span></div></div></div>'
-    +'<div class="panel"><div class="ph">Chỉ số từng nước</div><div class="pb tglist">'+hang+'</div></div>'
+    /* BẢNG GỌN CHỈ HIỆN Ở MÀN HẸP. Ở đó bản đồ chỉ rộng 327px nên nhãn in trên bản đồ
+       co còn ~3px — không đọc nổi bằng mắt thường. Máy bàn thì nhãn nằm ngay trên nước,
+       bảng này thừa nên CSS ẩn đi. Không phải "để cho có": không có nó thì trên điện
+       thoại mục này chỉ còn mấy mảng màu không tra cứu được gì. */
+    +'<div class="panel tgds"><div class="ph">Chỉ số từng nước</div>'
+    +'<div class="pb tglist">'+tgHang()+'</div></div>'
     +'<div class="note"><b>Mỗi nước một múi giờ — đây KHÔNG phải ảnh chụp cùng một lúc.</b> '
     +'Số của mỗi nước là lần khớp gần nhất của chính nước đó: lúc Việt Nam đang giao dịch thì '
     +'châu Âu chưa mở cửa còn Mỹ đã đóng từ đêm qua. Cột bên phải ghi GIỜ BẢN ĐỊA của con số '
@@ -1184,31 +1254,11 @@ function renderRadar(){
     +(radarTab==='cd'?chuDiemPanel():'')+'</div>'
     +'<div id="rdVb"'+(radarTab==='vb'?'':' style="display:none"')+'>'
     +(radarTab==='vb'?veBoPanel():'')+'</div>'
-    +'<div id="rdTg"'+(radarTab==='tg'?'':' style="display:none"')+'>'
-    +(radarTab==='tg'?toanCauPanel():'')+'</div>'
     +'<div id="rdPhien"'+(radarTab!=='phien'?' style="display:none"':'')+'>'
-    +'<div class="hero h3c">'
-    +'<div class="panel mood"><div class="big" style="color:'+moodCol(md)+'">'+(md==null?'—':Math.round(md))+'<small>/100</small></div>'
-    +'<div class="word" style="color:'+moodCol(md)+'">'+moodWord(md)+'</div>'
-    +'<div class="sub">nhịp sợ hãi thị trường TRONG NƯỚC</div>'
-    +'<div class="bbar"><i style="width:'+(s.up/tot*100)+'%;background:var(--green)"></i>'
-    +'<i style="width:'+(s.fl/tot*100)+'%;background:var(--yellow)"></i>'
-    +'<i style="width:'+(s.dn/tot*100)+'%;background:var(--red)"></i></div>'
-    +'<div class="sub">▲'+s.up+' · –'+s.fl+' · ▼'+s.dn+' trên '+ST.list.length.toLocaleString('en-US')+' mã</div></div>'
-    +'<div class="panel mood">'+(G
-      ?'<div class="big" style="color:'+moodCol(G.v)+'">'+G.v+'<small>/100</small></div>'
-      +'<div class="word" style="color:'+moodCol(G.v)+'">'+moodWord(G.v)+'</div>'
-      +'<div class="sub">nhịp sợ hãi thị trường TOÀN CẦU</div>'
-      +'<div class="sub" style="margin-top:5px;opacity:.75">'+esc(G.src||'')+'</div>'
-      :'<div class="sub">Chưa có số liệu toàn cầu</div>')+'</div>'
-    +'<div class="panel mood rrInfo">'
-    +(vni?infoRow('VNINDEX',(+vni.value).toLocaleString('en-US',{maximumFractionDigits:2})
-        +' · '+pct(vni.chg), vni.chg>0.005?'bUp':vni.chg<-0.005?'bDn':'bFl'):'')
-    +infoRow('Thanh khoản HOSE',ty(gHose||s.gtgd),'bGold')
-    +(gPhu?infoRow('HNX + UPCOM',ty(gPhu),''):'')
-    +infoRow('Khối ngoại mua ròng',(nnNet>=0?'+':'−')+ty(Math.abs(nnNet)),nnNet>=0?'bUp':'bDn')
-    +'</div>'
-    +'</div>'
+    /* BẢN ĐỒ THẾ GIỚI đứng ngay đầu Radar phiên, thay cho cụm ba thẻ cũ (nhịp sợ hãi
+       trong nước / toàn cầu / tóm tắt chỉ số). Cụm đó lặp lại thứ đã có ở thanh đầu trang
+       và ăn nguyên một màn trước khi thấy nội dung thật. */
+    +'<div id="rdTg"></div>'
     +'<div id="radarAll">'
     +sectionHead('r-flow','💰 Dòng tiền trong phiên')+'<div class="grid g3">'+flow.join('')+'</div>'
     +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
@@ -1220,14 +1270,15 @@ function renderRadar(){
     if(vbSort.k===k) vbSort.d=-vbSort.d; else { vbSort.k=k; vbSort.d=(k==='roi'?1:-1); }
     vbTop=100; renderRadar(); });
   if(radarTab==='phien') drawSparks($('#m-radar'));
-  if(radarTab==='tg'){
-    /* Bản đồ + chỉ số thế giới nạp qua mạng nên KHÔNG chặn lượt vẽ: hiện "đang lấy…"
-       trước, có số rồi mới thay ruột. Nạp một lần cho cả phiên xem trang; số cũ quá
-       2 phút thì lấy lại — chợ nước ngoài không nhảy nhanh tới mức phải hỏi mỗi phút. */
+  if(radarTab==='phien'&&!tgGiu){
+    /* Bản đồ nạp qua mạng nên KHÔNG chặn lượt vẽ: hiện "đang lấy…" trước, có số rồi mới
+       thay ruột. Số cũ quá 2 phút thì lấy lại — chợ nước ngoài không nhảy nhanh tới mức
+       phải hỏi mỗi phút. */
+    const ve=()=>{ const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } };
     if(!TG.rows||Date.now()-TG.at>120000){
-      tgLoad().then(()=>{ if(radarTab!=='tg') return;
-        const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } });
-    } else { tgBind(); tgNhip(); }
+      tgLoad().then(()=>{ if(radarTab==='phien') ve(); });
+      const el=$('#rdTg'); if(el) el.innerHTML='<div class="panel"><div class="pb tgce">Đang lấy bản đồ thế giới…</div></div>';
+    } else ve();
   }
 }
 /* Rê/chạm vào một nước -> hiện thẻ nhỏ. Gắn theo lối UỶ QUYỀN trên khung ngoài, không
@@ -2263,7 +2314,7 @@ async function init(){
   const start=q||byPath||(location.hash||'').replace('#','');
   /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
   const t0=new URLSearchParams(location.search).get('t');
-  if(t0==='cd'||t0==='phien'||t0==='vb'||t0==='tg') radarTab=t0;
+  if(t0==='cd'||t0==='phien'||t0==='vb') radarTab=t0;
   if(t0==='dca'||t0==='dua') RA.mode=(t0==='dca'?'dca':'race');
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)

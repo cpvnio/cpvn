@@ -35,8 +35,8 @@
      khổ hẹp) để congcu.js đổi tab tại chỗ, khỏi tải lại trang. */
   /* THỨ TỰ do user chốt 12/08/2026: Toàn cầu đứng NGAY SAU Nhịp phiên (Nhịp phiên là
      mặc định nên không có nút riêng) — soi thế giới trước rồi mới soi trong nước. */
+  /* "Toàn cầu" đã GỘP vào Nhịp phiên (13/08/2026) nên không còn là một lối rẽ riêng. */
   var CON=[
-    ['tg',  'Toàn cầu',   null],
     ['bong','Bong bóng',  '/bubbles'],
     ['cd',  'Chủ điểm',   null],
     ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan'],
@@ -60,7 +60,8 @@
       var q=new URLSearchParams(location.search), m=q.get('m')||'radar';
       if(m==='race')    return ['dua',''];
       if(m==='tapdoan') return ['radar','tap'];
-      return ['radar',q.get('t')||'phien'];   /* phien = mặc định, không nút nào sáng */
+      var tt=q.get('t')||'phien'; if(tt==='tg') tt='phien';   // link cũ ?t=tg
+      return ['radar',tt];   /* phien = mặc định, không nút nào sáng */
     }
     return ['bang',''];                       /* BẢNG GIÁ: không dải mục con */
   }

@@ -93,6 +93,20 @@ button,input,select,textarea{font-family:inherit;font-variant-numeric:tabular-nu
    diện dùng chung một nguồn màu duy nhất. */
 #tgSvg{width:100%;height:auto;display:block;border-radius:12px;
   border:1px solid var(--line)}
+/* NHÃN TRÊN BẢN ĐỒ: viền cùng màu nền biển vẽ TRƯỚC nét chữ (paint-order) làm quầng,
+   để chữ đọc được cả trên ô xanh đậm lẫn ô đỏ đậm mà không cần hộp nền. */
+.tgl1,.tgl2{text-anchor:middle;pointer-events:none;paint-order:stroke;
+  stroke-width:2.4px;stroke-linejoin:round}
+.tgl1{font-size:7.4px;font-weight:700;fill:var(--txt)}
+.tgl2{font-size:7.2px;font-weight:800}
+.tgl2.up{fill:var(--green)} .tgl2.dn{fill:var(--red)} .tgl2.fl{fill:var(--yellow)}
+.tgl2.tglx{fill:var(--faint)}
+/* MÀN HẸP: bản đồ rộng 327px nên 1 đơn vị viewBox chỉ còn 0,33px — cỡ chữ phải khai
+   theo ĐƠN VỊ SVG lớn hơn hẳn mới ra được ~8px thật. Cỡ này thì thuật toán xếp nhãn tự
+   bỏ bớt, chỉ còn mấy nước lớn — phần còn lại đọc ở bảng bên dưới. */
+@media(max-width:640px){ .tgl1{font-size:25px;stroke-width:7px} .tgl2{font-size:24px;stroke-width:7px} }
+.tgds{display:none}
+@media(max-width:900px){ .tgds{display:block} }
 .tgc{stroke-width:.6;vector-effect:non-scaling-stroke}
 .tgc.co,.tgd{cursor:pointer}
 /* rê vào thì viền ĐẬM lên chứ đừng đổi màu nền — đổi nền là mất chính con số đang đọc */
@@ -763,7 +777,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260812b"></script>
+<script defer src="assets/mobi.js?v=20260813a"></script>
 </head>
 <body>
 
@@ -773,7 +787,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
   <a class="brand" href="/"><img src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
-    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="tg">🌏 Bức tranh toàn cầu</a><a data-md="radar" data-t="cd">🎯 Chủ điểm đầu tư</a><a data-md="radar" data-t="vb">🛟 Khi nào về bờ</a></span></span>
+    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="cd">🎯 Chủ điểm đầu tư</a><a data-md="radar" data-t="vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a data-m="race">Đường đua</a><span class="dd"><a data-md="race" data-t="dua">🏁 Đường đua vốn hoá</a><a data-md="race" data-t="dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
@@ -816,6 +830,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260813b"></script>
+<script src="assets/congcu.js?v=20260813c"></script>
 </body>
 </html>
