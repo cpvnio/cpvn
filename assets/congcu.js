@@ -1049,7 +1049,11 @@ function tgNhan(M,by){
      vẫn tưởng nhãn bé tí — xếp đủ 38 cái chồng lên nhau thành một mảng chữ. */
   const hep=window.matchMedia('(max-width:640px)').matches;
   const CH=hep?26:7.6, RC=hep?14.5:4.3;
-  const oc=[], ra=[];
+  /* GIỮ CHỖ cho hai hộp chỉ số sức mạnh ở góc dưới-trái: thuật toán xếp nhãn không nhìn
+     thấy chúng (hộp là HTML phủ lên, không nằm trong SVG) nên phải khai tay, bằng không
+     có ngày một nước Nam Mỹ được đặt nhãn ngay dưới hộp và biến mất. Ở màn hẹp hộp đã dời
+     ra ngoài bản đồ nên không cần giữ chỗ. */
+  const oc=hep?[]:[{l:0,t:M.h-90,w:140,h:90}], ra=[];
   for(const d of ds){
     const t1=d.r.ten, t2=tgPct(d.r.p);
     const w=Math.max(t1.length,t2.length)*RC+4, h=CH*2+2;
@@ -1143,6 +1147,23 @@ function tgHang(){
     +(r.p!=null&&tgCu(r.tuoi)?' · '+(r.tuoi>=20*60?'<b class="tgo">phiên trước</b>':tgCu(r.tuoi)):'')
     +'</span></div>').join('');
 }
+/* HAI CHỈ SỐ SỨC MẠNH đặt vào GÓC DƯỚI-TRÁI bản đồ — chỗ đó là Nam Thái Bình Dương,
+   trống trơn ở mọi phép chiếu và không nước nào có sàn. Trước đây hai số này nằm ở cụm ba
+   thẻ đầu trang, cụm ấy đã bỏ; nhét vào chỗ trống sẵn có thì không tốn thêm dòng nào.
+   Dựng bằng HTML phủ lên chứ không phải <text> trong SVG: chữ trong SVG co theo viewBox
+   nên màn hẹp là teo còn 3px, đúng cái bẫy vừa dính với nhãn tên nước. */
+function tgSucManh(){
+  const md=moodLive(), st=marketStats(), tot=Math.max(1,st.up+st.dn+st.fl);
+  const G=ST.market&&ST.market.global;
+  const o=(nhan,v,phu)=>'<div class="tgsm1"><span class="tgsmn">'+nhan+'</span>'
+    +'<b style="color:'+moodCol(v)+'">'+(v==null?'—':Math.round(v))+'<i>/100</i></b>'
+    +'<span class="tgsmw" style="color:'+moodCol(v)+'">'+moodWord(v)+'</span>'
+    +(phu?'<span class="tgsmp">'+phu+'</span>':'')+'</div>';
+  return '<div id="tgSM">'
+    +o('Sức mạnh TRONG NƯỚC',md,'▲'+st.up+' · –'+st.fl+' · ▼'+st.dn)
+    +o('Sức mạnh TOÀN CẦU',G?G.v:null,G?esc(G.src||''):'chưa có số liệu')
+    +'</div>';
+}
 function tgKhung(M,path,cham,tang,giam,nhan){
   return '<div class="panel"><div class="ph">🌏 Bản đồ thế giới'
     +'<span id="tgDem" style="margin-left:auto;font-weight:600;color:var(--mut);font-size:12px">'
@@ -1154,6 +1175,9 @@ function tgKhung(M,path,cham,tang,giam,nhan){
     /* LỚP THẺ PHẢI ĐỨNG SAU <svg>: ở màn hẹp lớp này thôi neo và chảy theo dòng, đứng
        trước thì cột thẻ mọc NGAY TRÊN ĐẦU bản đồ, đẩy bản đồ xuống — đã dính đúng vậy,
        thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu. */
+    /* Hộp chỉ số phải đứng SAU <svg>: màn hẹp nó thôi neo và chảy theo dòng, đứng
+       trước thì nhảy lên TRÊN bản đồ. Máy bàn neo tuyệt đối nên thứ tự không đổi gì. */
+    +tgSucManh()
     +'<div id="tgPops"><button id="tgDongHet" style="display:none">✕ Đóng tất cả</button></div>'
     +'<div id="tgTip"></div></div>'
     +'<div class="tgleg"><span>−'+TG_MOC+'%</span><i class="tgbar" style="background:linear-gradient(90deg,'
@@ -1166,14 +1190,6 @@ function tgKhung(M,path,cham,tang,giam,nhan){
        thoại mục này chỉ còn mấy mảng màu không tra cứu được gì. */
     +'<div class="panel tgds"><div class="ph">Chỉ số từng nước</div>'
     +'<div class="pb tglist">'+tgHang()+'</div></div>'
-    +'<div class="note"><b>Mỗi nước một múi giờ — đây KHÔNG phải ảnh chụp cùng một lúc.</b> '
-    +'Số của mỗi nước là lần khớp gần nhất của chính nước đó: lúc Việt Nam đang giao dịch thì '
-    +'châu Âu chưa mở cửa còn Mỹ đã đóng từ đêm qua. Cột bên phải ghi GIỜ BẢN ĐỊA của con số '
-    +'và nó đã cũ bao lâu — "phiên trước" nghĩa là nước đó chưa mở lại. Ngoài Mỹ, phần lớn là '
-    +'dữ liệu CHẬM theo quy định từng sở, không phải giá tức thời. Việt Nam dùng VN-Index của '
-    +'chính trang này, không lấy lại của nguồn ngoài. Thiếu: '+TG_THIEU+'.<br/>'
-    +'Nguồn chỉ số thế giới: <b>CNBC</b>. Hình bản đồ: Natural Earth (phạm vi công cộng), '
-    +'phép chiếu Equal Earth — bảo toàn diện tích nên không phóng đại Nga và Greenland.</div>';
 }
 
 let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'cd' | 'vb' | 'tg'

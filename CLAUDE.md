@@ -447,6 +447,20 @@ giá sai hoặc giá nhảy — đừng đẩy.
   ③ **Bảng "Chỉ số từng nước" chỉ hiện ở khổ ≤900px** (`.tgds`). Máy bàn có nhãn trên bản đồ
   rồi nên bảng thừa; nhưng màn hẹp chỉ đặt nổi 18 nhãn, không có bảng thì 26 nước còn lại
   không tra cứu được gì.
+  **HAI CHỈ SỐ SỨC MẠNH nằm trong GÓC DƯỚI-TRÁI bản đồ** (Nam Thái Bình Dương — trống ở
+  mọi phép chiếu, không nước nào có sàn). Trước ở cụm ba thẻ đầu trang, cụm đó đã bỏ.
+  Dựng bằng **HTML phủ lên**, không phải `<text>` trong SVG: chữ trong SVG co theo viewBox
+  nên màn hẹp teo còn 3px. Ba thứ đi kèm:
+  ① **Giữ chỗ tay cho hộp trong `tgNhan`** (`oc` khởi tạo sẵn một ô ở góc đó) — thuật toán
+  xếp nhãn không nhìn thấy hộp HTML, không khai thì có ngày một nước Nam Mỹ được đặt nhãn
+  ngay dưới hộp rồi biến mất.
+  ② **Hộp phải đứng SAU `<svg>` trong DOM** — cùng bài học với `#tgPops`: màn hẹp nó thôi
+  neo và chảy theo dòng, đứng trước thì nhảy lên TRÊN bản đồ.
+  ③ **Màn hẹp phải XẾP DỌC trong từng ô.** Giữ lưới hai cột như máy bàn thì ô chỉ rộng
+  ~160px, con số bị đẩy tràn ra ngoài và cụt mất.
+  **Đã BỎ cụm chú thích dài dưới bản đồ** (múi giờ, dữ liệu chậm, danh sách nước thiếu,
+  ghi nguồn) — user thấy rườm. Phần ghi nguồn CNBC và Natural Earth vì thế **chỉ còn trong
+  tài liệu này**; nếu sau có ai hỏi nguồn thì trả lời từ đây.
   **BẤM VÀO MỘT NƯỚC -> bung bảng CỔ PHIẾU TRỤ CỘT** (rê chuột vẫn chỉ ra thẻ nhỏ — hai mức
   thông tin, liếc thì rê, soi kỹ thì bấm). Bảng nổi ĐÈ LÊN bản đồ, không chen vào giữa trang.
   > **KHÔNG được gọi đây là "10 mã vốn hoá lớn nhất" cho nước ngoài.** CNBC trả giá và % nhưng
