@@ -481,6 +481,13 @@ giá sai hoặc giá nhảy — đừng đẩy.
      `document.hidden=true` nên không có cờ này thì không thể kiểm thử được nhịp — đã dính,
      chờ đủ 2 phút 41 giây mà số không đổi, tưởng hỏng.
 - So sánh ngày là **so chuỗi `'YYYY-MM-DD'`**.
+- **CHIP LỌC "LẦN ĐẦU TRONG THÁNG RSI > 80" (`r80m`) — cờ do KHO dựng, client không tự
+  tính được.** Kho chỉ báo chỉ giữ giá trị của PHIÊN GẦN NHẤT, mà điều kiện này cần LỊCH SỬ
+  RSI cả tháng. Nên `build_screen.analyse()` tính sẵn 1/0 và nối `r80m` vào **cuối** `FIELDS`.
+  Khác hẳn "RSI > 80" đơn thuần: đo trên phiên 12/08/2026 có **137 mã đang trên 80** nhưng
+  chỉ **4 mã** là lần đầu trong tháng — mã nóng nằm trên 80 cả chục phiên liền, ngày nào
+  cũng lọt thì tín hiệu mất hết ý nghĩa. Dò NGƯỢC từ hôm nay và **dừng ngay khi lùi sang
+  tháng trước**: đây là "trong tháng dương lịch", không phải "trong 30 phiên".
 - **NHÓM THEO DÕI — `universe.json` → `"nhom"`.** Rổ mã chọn tay (`{id, ten, mau, syms}`).
   Nó là **một CHIP trong Bộ Lọc PRO của bảng giá** (khoá `'nhom:<id>'`, `CPScreen.chip` bắt
   tiền tố này), **KHÔNG phải một ngành** — xếp thành ngành thì cột ngành có hai loại mục
@@ -668,7 +675,17 @@ hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky
 Bốn bảng KQKD/CĐKT/LCTT/cổ tức dùng **chung một lưới cột** — đổi số cột là lệch cả bốn.
 Kỳ mới nhất luôn bên **trái**. Chiều cao canvas không đặt cứng, do cột trái quyết định.
 
-**`assets/chart.js`** — **CỬ CHỈ CẢM ỨNG: canvas phải `touch-action:none`.** Ba canvas dùng
+**`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
+rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
+quá khứ nên phải chạy một lượt từ đầu chuỗi và **đệm lại** (`emaCache` khoá theo kỳ + độ dài
++ mốc nến cuối) — tính trong vòng vẽ là 200 kỳ × 3.000 nến mỗi khung hình, rê chuột một cái
+là giật. Mồi bằng trung bình cộng `per` kỳ đầu (chuẩn chung), sau đó `e = c·k + e·(1−k)`.
+**EMA phải có màu RIÊNG** (`EMACOL`), đừng mượn `MACOL`: bật cả MA50 lẫn EMA50 mà cùng màu
+thì hai đường chạy sát nhau thành một vệt. Bộ nút chỉ báo có ở CẢ chart nhỏ (`#cvInd`) lẫn
+chart toàn màn hình (`#ptInd`) và dùng CHUNG một hàm `batChiBao()` — trước đây chart nhỏ
+không có nút nào, muốn xem EMA hay RSI phải mở hẳn cửa sổ toàn màn hình.
+
+**CỬ CHỈ CẢM ỨNG: canvas phải `touch-action:none`.** Ba canvas dùng
 CPChart (`#cv`, `#ptCv` ở cophieu, `#detCandle` ở bubbles) từng để `pan-y` = nhường trục dọc
 cho TRÌNH DUYỆT, nên vuốt dọc trên biểu đồ là cuộn cả trang, khối đồ thị trôi theo ngón tay
 (user báo "rất khó chịu") và `preventDefault` trong `touchmove` bị bỏ qua — phần xử lý trục

@@ -196,7 +196,30 @@ let veBut=false;                                   // bút đang được giữ 
   const geo={padR:64,padT:14,plotW:0,plotH:0,cw:0,h:0,w:0,volTop:0};
   /* CHỈ BÁO bật/tắt được — mặc định chỉ MA20 như cũ; chế độ PTKT toàn màn hình bật thêm */
   const MACOL={20:'rgba(234,179,8,.85)',50:'rgba(56,189,248,.85)',200:'rgba(192,38,211,.8)'};
-  const ind={ma:[20], vol:true, rsi:false, bb:false, macd:false};
+  /* EMA màu RIÊNG, không mượn màu MA: bật cả MA50 lẫn EMA50 mà cùng màu thì hai đường
+     chạy sát nhau thành một vệt, không đọc ra đường nào là đường nào. */
+  const EMACOL={20:'rgba(52,211,153,.9)',50:'rgba(251,146,60,.9)',200:'rgba(232,121,249,.85)'};
+  const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false};
+  /* EMA phải tính DỒN từ đầu chuỗi (mỗi giá trị phụ thuộc toàn bộ quá khứ), không cắt cửa
+     sổ như MA được. Nên tính một lần rồi ĐỆM lại, đừng tính trong vòng vẽ: chart vẽ lại
+     mỗi lần rê chuột, tính lại 200 kỳ × 3000 nến mỗi khung hình là giật ngay. */
+  const emaCache=new Map();
+  function emaArr(per){
+    const khoa=per+'|'+rows.length+'|'+(rows.length?rows[rows.length-1].t:0);
+    const co=emaCache.get(per);
+    if(co&&co.k===khoa) return co.v;
+    const k=2/(per+1), out=new Array(rows.length).fill(null);
+    let e=null, sum=0;
+    for(let i=0;i<rows.length;i++){
+      const c=rows[i].c;
+      if(i<per-1){ sum+=c; continue; }
+      if(i===per-1){ sum+=c; e=sum/per; }      // mồi bằng trung bình cộng per kỳ đầu, chuẩn chung
+      else e=c*k+e*(1-k);
+      out[i]=e;
+    }
+    emaCache.set(per,{k:khoa,v:out});
+    return out;
+  }
   self.ind=()=>ind;
   self.setInd=function(o){ Object.assign(ind,o||{}); self.draw(); };
   self.draw=function(){
@@ -313,6 +336,16 @@ let veBut=false;                                   // bút đang được giữ 
       }
       if(st) x.stroke();
     }
+    // ĐƯỜNG TRUNG BÌNH LUỸ THỪA (EMA) — nét mảnh hơn MA một chút cho dễ tách khi trùng vùng
+    for(const per of ind.ema){
+      if(rows.length<per+1) continue;
+      const E=emaArr(per);
+      x.strokeStyle=EMACOL[per]||'rgba(148,163,184,.8)'; x.lineWidth=1.3;
+      x.beginPath(); let st=false;
+      for(let i=0;i<n;i++){ const v=E[i0+i]; if(v==null) continue;
+        const yy=y(v); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true; }
+      if(st) x.stroke();
+    }
     // nến
     for(let i=0;i<n;i++){
       const r=vis[i], up=r.c>=r.o, col=up?UP:DOWN, X=cx(i);
@@ -369,6 +402,8 @@ let veBut=false;                                   // bút đang được giữ 
     x.font='10.5px system-ui'; let lx=8;
     for(const per of ind.ma){ x.fillStyle=MACOL[per]||'rgba(148,163,184,.9)';
       const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
+    for(const per of ind.ema){ x.fillStyle=EMACOL[per]||'rgba(148,163,184,.9)';
+      const t='— EMA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     // RSI 14 phiên (dải riêng dưới cùng)
     if(ind.rsi&&rows.length>15){
       const top=geo.rsiTop, bh=geo.rsiH;

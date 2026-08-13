@@ -136,6 +136,7 @@ CPScreen.chips=[
   {id:'ma200', g:'Kỹ thuật', nm:'Giá > MA200'},
   {id:'trend', g:'Kỹ thuật', nm:'Xu hướng tăng'},
   {id:'rsi30', g:'Kỹ thuật', nm:'RSI < 30 (quá bán)'},
+  {id:'rsi80m',g:'Kỹ thuật', nm:'Lần đầu trong tháng RSI > 80'},
   {id:'hi52',  g:'Kỹ thuật', nm:'Gần đỉnh 52 tuần'},
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
@@ -172,6 +173,11 @@ CPScreen.chip=function(id,c,n){
     case 'ma200': return p>0&&t.ma200!=null&&p>t.ma200;
     case 'trend': return p>0&&t.ma20&&t.ma50&&t.ma200&&p>t.ma20&&t.ma20>t.ma50&&t.ma50>t.ma200;
     case 'rsi30': return t.rsi!=null&&t.rsi<30;
+    /* LẦN ĐẦU TRONG THÁNG vượt RSI 80 (khung ngày). Cờ do build_screen dựng sẵn — client
+       không tự tính được vì cần LỊCH SỬ RSI cả tháng, mà kho chỉ báo chỉ giữ giá trị
+       của phiên gần nhất. Khác hẳn "RSI > 80": mã nóng nằm trên 80 cả chục phiên liền
+       thì ngày nào cũng lọt, tín hiệu mất hết ý nghĩa. */
+    case 'rsi80m':return t.r80m===1;
     case 'hi52':  return t.dhi!=null&&t.dhi>=-15;
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;

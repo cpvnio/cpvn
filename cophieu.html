@@ -473,6 +473,13 @@ document.addEventListener(MO,function(e){
       </div>
       <button class="ptbtn" id="ptktBtn" title="Phân tích kỹ thuật toàn màn hình">⛶ Phân tích kỹ thuật</button>
     </div>
+    <!-- CHART NHỎ trước đây không có nút chỉ báo nào: muốn xem EMA hay RSI phải mở hẳn
+         cửa sổ toàn màn hình, trong khi đây mới là chart người ta nhìn đầu tiên. -->
+    <div class="ptseg" id="cvInd" style="margin:6px 0 2px">
+      <button data-k="ma20" class="on">MA20</button>
+      <button data-k="ema50">EMA50</button><button data-k="ema200">EMA200</button>
+      <button data-k="rsi">RSI</button><button data-k="vol" class="on">Khối lượng</button>
+    </div>
     <div class="clg" id="cvLegend"></div>
     <!-- cột công cụ vẽ nằm BÊN TRÁI biểu đồ, theo đúng bố cục các trang PTKT -->
     <div class="cvrow"><div class="vtool" id="cvTool"></div>
@@ -551,7 +558,9 @@ document.addEventListener(MO,function(e){
     <span class="ptsep"></span>
     <span class="ptseg" id="ptInd">
       <button data-k="ma20" class="on">MA20</button><button data-k="ma50">MA50</button>
-      <button data-k="ma200">MA200</button><button data-k="bb">Bollinger</button>
+      <button data-k="ma200">MA200</button>
+      <button data-k="ema50">EMA50</button><button data-k="ema200">EMA200</button>
+      <button data-k="bb">Bollinger</button>
       <button data-k="vol" class="on">Khối lượng</button>
       <button data-k="rsi">RSI</button><button data-k="macd">MACD</button>
     </span>
@@ -565,7 +574,7 @@ document.addEventListener(MO,function(e){
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
 <script src="assets/core.js?v=20260812b"></script>
-<script src="assets/chart.js?v=20260811a"></script>
+<script src="assets/chart.js?v=20260813a"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -911,12 +920,23 @@ addEventListener('keydown',e=>{
   if($('ptkt').classList.contains('on')) ptClose();
 });
 document.querySelectorAll('#ptTf button').forEach(b=>b.onclick=()=>{ ptTf=b.dataset.v; setSeg('ptTf',ptTf); ptLoad(); });
+/* MỘT MẠCH cho cả hai bộ nút: chart nhỏ và chart toàn màn hình dùng chung luật bật/tắt,
+   khỏi phải nhớ sửa hai chỗ mỗi lần thêm một chỉ báo. */
+function batChiBao(c,k,on){
+  const cur=c.ind();
+  if(k==='vol'||k==='rsi'||k==='bb'||k==='macd') c.setInd({[k]:on});
+  else if(k.startsWith('ema')){ const per=+k.slice(3);
+    c.setInd({ema:on?[...new Set([...cur.ema,per])].sort((x,y)=>x-y):cur.ema.filter(z=>z!==per)}); }
+  else{ const per=+k.slice(2);
+    c.setInd({ma:on?[...new Set([...cur.ma,per])].sort((x,y)=>x-y):cur.ma.filter(z=>z!==per)}); }
+}
+document.querySelectorAll('#cvInd button').forEach(b=>b.onclick=()=>{
+  const on=!b.classList.contains('on'); b.classList.toggle('on',on);
+  batChiBao(chart,b.dataset.k,on);
+});
 document.querySelectorAll('#ptInd button').forEach(b=>b.onclick=()=>{
   const on=!b.classList.contains('on'); b.classList.toggle('on',on);
-  const k=b.dataset.k, cur=ptChart.ind();
-  if(k==='vol'||k==='rsi'||k==='bb'||k==='macd') ptChart.setInd({[k]:on});
-  else{ const per=+k.slice(2);
-    ptChart.setInd({ma:on?[...new Set([...cur.ma,per])].sort((x,y)=>x-y):cur.ma.filter(z=>z!==per)}); }
+  batChiBao(ptChart,b.dataset.k,on);
 });
 if(window.ResizeObserver){ let t2=0;
   new ResizeObserver(()=>{ clearTimeout(t2); t2=setTimeout(()=>{ if(ptChart&&$('ptkt').classList.contains('on')) ptChart.draw(); },60); }).observe($('ptWrap'));

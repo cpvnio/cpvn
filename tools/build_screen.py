@@ -12,7 +12,7 @@ mọi chỉ báo (RSI/MA/RS Rating/điểm cơ bản/nhịp thị trường) t�
 Toàn bộ là thống kê mô tả quá khứ — không sinh khuyến nghị.
 Chạy tay khi cần: python3 tools/build_screen.py
 """
-import json, math, os, time
+import datetime, json, math, os, time
 from collections import deque, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +33,7 @@ FIELDS = [
     'nn60','nnr20','nnr60',               # NN ròng 60 phiên (đồng) + chuẩn hoá theo GTGD (%)
     'vol60','flat60',                     # ĐỘ LỆCH CHUẨN lợi suất ngày 60 phiên (%/phiên)
                                           # + tỉ lệ phiên ĐỨNG GIÁ trong 60 phiên (%)
+    'r80m',                               # LẦN ĐẦU TRONG THÁNG vượt RSI 80 (1/0) — xem analyse()
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -97,6 +98,32 @@ def rsi_series(c, n=14):
         l = (l * (n - 1) + max(-d, 0.0)) / n
         out[i] = 100.0 if l == 0 else 100 - 100 / (1 + g / l)
     return out
+
+def vn_thang(ts):
+    """Nhãn 'YYYY-MM' theo GIỜ VIỆT NAM của một mốc nến."""
+    return datetime.datetime.utcfromtimestamp(ts + 7 * 3600).strftime('%Y-%m')
+
+
+def lan_dau_vuot_rsi(rsi, t, i, moc=80.0):
+    """LẦN ĐẦU TRONG THÁNG vượt ngưỡng RSI — trả 1/0.
+
+    Không phải "RSI > 80" đơn thuần: mã nóng có thể nằm trên 80 cả chục phiên liền, ngày
+    nào cũng lọt bộ lọc thì tín hiệu mất hết ý nghĩa. Ở đây chỉ nhận phiên ĐẦU TIÊN của
+    tháng dương lịch có RSI vượt mốc — tức khoảnh khắc mã bước vào vùng quá mua của
+    tháng đó, mỗi mã nhiều nhất một lần mỗi tháng.
+    Dò NGƯỢC từ hôm nay và DỪNG ngay khi lùi sang tháng trước: đây là "trong tháng", không
+    phải "trong 30 phiên".
+    """
+    if not t or i >= len(t) or rsi[i] is None or rsi[i] <= moc:
+        return 0
+    thang = vn_thang(t[i])
+    for j in range(i - 1, -1, -1):
+        if j >= len(t) or vn_thang(t[j]) != thang:
+            break
+        if rsi[j] is not None and rsi[j] > moc:
+            return 0
+    return 1
+
 
 def atr_series(h, l, c, n=14):
     out = [None] * len(c)
@@ -206,6 +233,7 @@ def analyse(d, acc):
         'dhi': (c[i] / S['hi52'][i] - 1) * 100 if S['hi52'][i] else None,
         'dlo': (c[i] / S['lo52'][i] - 1) * 100 if S['lo52'][i] else None,
         'tight': S['tight'][i], 'vol60': vol60, 'flat60': flat60,
+        'r80m': lan_dau_vuot_rsi(S['rsi'], t, i),
         'r5': ret(5), 'r20': ret(20), 'r60': ret(60), 'r120': ret(120), 'r250': ret(250),
         'rs': None, 'nn20': nn20, 'streak': streak, 'cross': cross,
         'ath': 1 if c[i] >= max(c) * 0.999 else 0, 'nsess': n,
