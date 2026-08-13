@@ -142,6 +142,33 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
   .tgsm1 b i{font-size:7.5px}
 }
 
+/* ---------- PHÓNG TO / KÉO BẢN ĐỒ (CHỈ KHỔ HẸP) ----------
+   Máy bàn không có mục này: bản đồ ở đó rộng gấp ba nên đọc thẳng được, và mọi thao tác
+   chuột hiện có phải giữ nguyên. Nút để ngoài media query ở trạng thái ẩn để chắc chắn
+   nó không bao giờ ló ra trên máy bàn. */
+#tgVe{display:none}
+@media(max-width:640px){
+  /* TOUCH-ACTION ĐỔI THEO MỨC PHÓNG. Chưa phóng: bản đồ vừa khít khung, không có gì để
+     kéo dọc -> nhường trục dọc cho TRANG cuộn, bằng không vuốt trúng dải bản đồ cao
+     146px là trang đứng im. Đã phóng (.tgz): kéo dọc lúc này mới là để xem phần đang
+     khuất -> giành trọn cử chỉ. Hai ngón thì cả hai mức đều về tay JS, vì `pan-y` đã
+     cấm trình duyệt tự phóng trang. */
+  #tgSvg{touch-action:pan-y}
+  #tgMap.tgz #tgSvg{touch-action:none}
+  /* NÚT VỀ KHUNG BAN ĐẦU ở góc 1 giờ, CHỈ MỌC KHI ĐÃ PHÓNG HOẶC ĐÃ KÉO: một cái nút
+     không làm gì ở trạng thái mặc định chỉ tổ chiếm chỗ trên tấm 329×146.
+     32px là dưới ngưỡng chạm 44px của khung mobile — cố ý: trên bản đồ cao 146px thì một
+     nút 44px ăn gần một phần ba chiều cao, che mất chính thứ nó phục vụ. */
+  #tgMap.tgz #tgVe{display:flex}
+  #tgVe{position:absolute;right:6px;top:6px;z-index:7;width:32px;height:32px;padding:0;
+    align-items:center;justify-content:center;cursor:pointer;
+    background:var(--solid);color:var(--mut);border:1px solid var(--line2);
+    border-radius:9px;box-shadow:var(--shadow)}
+  #tgVe svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  #tgVe:active{color:var(--txt);transform:scale(.94)}
+}
+
 /* NHÃN TRÊN BẢN ĐỒ: viền cùng màu nền biển vẽ TRƯỚC nét chữ (paint-order) làm quầng,
    để chữ đọc được cả trên ô xanh đậm lẫn ô đỏ đậm mà không cần hộp nền. */
 .tgl1,.tgl2{text-anchor:middle;pointer-events:none;paint-order:stroke;
@@ -860,6 +887,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260813h"></script>
+<script src="assets/congcu.js?v=20260813i"></script>
 </body>
 </html>

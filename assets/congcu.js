@@ -687,7 +687,12 @@ const TG_THIEU='Nga · Nam Phi · Ả Rập Xê Út · Indonesia · Ba Lan · Pa
    nằm ở một phần ba dưới của thang, ra một mảng nhợt đúng như user chê. Với chỉ số thì
    2% đã là một ngày lớn — đáng cho nó ăn màu đậm nhất. */
 const TG_MOC=2;
-let TG={map:null,rows:null,at:0,loi:null,dang:false,hen:null};
+/* `view` = KHUNG NHÌN hiện tại của bản đồ (chính là viewBox của thẻ svg). Giữ trong TG
+   chứ không đọc ngược từ DOM: panel bị dựng lại mỗi lần đổi giao diện sáng/tối, đọc từ
+   DOM là mất mức phóng người dùng vừa đặt. */
+let TG={map:null,rows:null,at:0,loi:null,dang:false,hen:null,view:null,keoLuc:0};
+const TG_ZMAX=8;                                        // phóng tối đa 8 lần
+const tgHep=()=>window.matchMedia('(max-width:640px)').matches;
 /* ═══ RỔ CỔ PHIẾU TRỤ CỘT TỪNG NƯỚC — bấm vào bản đồ thì bung ra ═══
    > **KHÔNG phải bảng xếp hạng vốn hoá tự động.** CNBC trả giá và % nhưng KHÔNG trả vốn
    > hoá (đã dò hết 36 trường của bản ghi), mà cũng không có API danh sách thành phần chỉ
@@ -1044,10 +1049,18 @@ function tgNutDong(){
    đó — nước vẫn còn màu và vẫn rê/bấm ra được, chứ chồng chữ lên nhau thì không đọc nổi
    cái nào. Ước lượng bề rộng bằng 4,3 đơn vị/ký tự: đo bằng canvas thì chính xác hơn
    nhưng phải dựng context riêng mỗi lượt vẽ, không đáng cho vài chục nhãn. */
-function tgNhan(M,by){
+function tgNhan(M,by,view){
+  /* KHUNG NHÌN quyết định hai thứ, và cả hai đều bắt buộc khi có phóng to:
+     ① đặt nhãn cho NƯỚC NÀO — chỉ nước đang nhìn thấy, nên phóng vào châu Âu là mấy
+        nhãn bị bỏ ở mức 1× nay hiện đủ, đúng thứ người ta phóng vào để đọc;
+     ② nhãn to bao nhiêu ĐƠN VỊ viewBox — phóng 3 lần mà giữ nguyên cỡ khai trong CSS
+        thì chữ cũng to gấp 3 trên màn, trùm kín chính mấy nước vừa phóng vào để xem.
+     Ở mức 1× mọi phép tính dưới đây ra đúng con số cũ, nên máy bàn không đổi gì. */
+  const V=view||{x:0,y:0,w:M.w,h:M.h}, z=M.w/V.w;
   const ds=[];
   for(const iso in by){
     const g=M.c[iso]||M.cham[iso]; if(!g) continue;
+    if(g.cx<V.x||g.cx>V.x+V.w||g.cy<V.y||g.cy>V.y+V.h) continue;   // ngoài khung nhìn
     const r=by[iso];
     /* VIỆT NAM luôn đứng đầu hàng ưu tiên, không xếp theo biên độ như các nước khác.
        Đây là trang chứng khoán Việt — để nó tranh chỗ bằng biên độ thì một phiên đi
@@ -1059,36 +1072,146 @@ function tgNhan(M,by){
   /* CỠ CHỮ ĐỔI THEO KHỔ MÀN nên phép đo chỗ trống cũng phải đổi theo. Bản đầu tính bằng
      hằng số của máy bàn, chạy trên điện thoại thì CSS phóng chữ lên gấp ba mà thuật toán
      vẫn tưởng nhãn bé tí — xếp đủ 38 cái chồng lên nhau thành một mảng chữ. */
-  const hep=window.matchMedia('(max-width:640px)').matches;
-  const CH=hep?26:7.6, RC=hep?14.5:4.3;
+  const hep=tgHep();
+  const CH=(hep?26:7.6)/z, RC=(hep?14.5:4.3)/z;
+  /* Cỡ chữ và bề dày quầng viền phải chia theo mức phóng, mà cỡ khai trong CSS thì cố
+     định — nên khai THẲNG vào từng thẻ. Inline style thắng class nên khỏi cần !important. */
+  const F1=(hep?25:7.4)/z, F2=(hep?24:7.2)/z, SW=(hep?7:2.4)/z;
   /* GIỮ CHỖ cho hai hộp chỉ số sức mạnh ở góc dưới-trái: thuật toán xếp nhãn không nhìn
      thấy chúng (hộp là HTML phủ lên, không nằm trong SVG) nên phải khai tay, bằng không
      có ngày một nước Nam Mỹ được đặt nhãn ngay dưới hộp và biến mất. Ở màn hẹp hộp đã dời
      ra ngoài bản đồ nên không cần giữ chỗ. */
   /* Giữ chỗ cho hai hộp chỉ số sức mạnh ở góc dưới-trái. Màn hẹp bản đồ co lại nên hộp
      chiếm phần lớn hơn hẳn theo tỉ lệ, phải khai ô rộng hơn. */
-  const oc=[hep?{l:0,t:M.h-215,w:205,h:215}:{l:0,t:M.h-90,w:140,h:90}], ra=[];
+  /* Hộp là HTML phủ lên, neo vào GÓC MÀN của bản đồ — nên trong hệ toạ độ viewBox nó
+     TRÔI THEO khung nhìn và co lại theo mức phóng, chứ không đứng yên ở góc bản đồ. */
+  const bw=(hep?205:140)/z, bh=(hep?215:90)/z;
+  const oc=[{l:V.x,t:V.y+V.h-bh,w:bw,h:bh}], ra=[];
+  /* Nút "về khung ban đầu" ở góc 1 giờ CHỈ MỌC KHI ĐÃ PHÓNG — giữ chỗ cho nó đúng lúc
+     đó. Cùng bài học với hộp chỉ số: thuật toán không nhìn thấy thứ dựng bằng HTML, không
+     khai tay thì có ngày một nhãn nằm lọt dưới nút rồi biến mất. 116 đơn vị viewBox ở mức
+     1× ≈ 38px thật trên khổ hẹp, đúng cỡ nút cộng lề. */
+  if(hep&&z>1.02){ const s=116/z; oc.push({l:V.x+V.w-s,t:V.y,w:s,h:s}); }
   for(const d of ds){
     const t1=d.r.ten, t2=tgPct(d.r.p);
-    const w=Math.max(t1.length,t2.length)*RC+4, h=CH*2+2;
+    const w=Math.max(t1.length,t2.length)*RC+4/z, h=CH*2+2/z;
     /* TÁM chỗ thử thay vì năm: cụm châu Âu chen nhau nên năm chỗ là rớt gần hết mấy
        nước nhỏ. Thứ tự từ gần ra xa, để nhãn vẫn bám sát nước của nó. */
     const U=[[d.cx,d.cy],[d.cx,d.cy-h],[d.cx,d.cy+h],[d.cx-w*0.7,d.cy],[d.cx+w*0.7,d.cy],
              [d.cx-w*0.7,d.cy-h],[d.cx+w*0.7,d.cy-h],[d.cx,d.cy-h*2],[d.cx,d.cy+h*2]];
     let ok=null;
+    const m=1/z;                                  // mép chừa 1px thật, bất kể mức phóng
     for(const [x,y] of U){
-      const l=Math.max(1,Math.min(M.w-w-1,x-w/2)), t=Math.max(1,Math.min(M.h-h-1,y-h/2));
+      const l=clamp(x-w/2,V.x+m,Math.max(V.x+m,V.x+V.w-w-m));
+      const t=clamp(y-h/2,V.y+m,Math.max(V.y+m,V.y+V.h-h-m));
       if(!oc.some(o=>l<o.l+o.w&&l+w>o.l&&t<o.t+o.h&&t+h>o.t)){ ok={l,t,w,h}; break; }
     }
     if(!ok) continue;
     oc.push(ok); ra.push({d,ok,t1,t2});
   }
   const vien=tgBang().bien;
+  const st=f=>'stroke:'+vien+';stroke-width:'+SW.toFixed(2)+'px;font-size:'+f.toFixed(2)+'px';
   return ra.map(({d,ok,t1,t2})=>{
     const x=(ok.l+ok.w/2).toFixed(1);
-    return '<text class="tgl1" x="'+x+'" y="'+(ok.t+CH-CH*0.16).toFixed(1)+'" style="stroke:'+vien+'">'+esc(t1)+'</text>'
-      +'<text class="tgl2 '+(d.r.p==null?'tglx':cls(d.r.p))+'" x="'+x+'" y="'+(ok.t+CH*2-1).toFixed(1)+'" style="stroke:'+vien+'">'+t2+'</text>';
+    return '<text class="tgl1" x="'+x+'" y="'+(ok.t+CH-CH*0.16).toFixed(1)+'" style="'+st(F1)+'">'+esc(t1)+'</text>'
+      +'<text class="tgl2 '+(d.r.p==null?'tglx':cls(d.r.p))+'" x="'+x+'" y="'+(ok.t+CH*2-1/z).toFixed(1)+'" style="'+st(F2)+'">'+t2+'</text>';
   }).join('');
+}
+
+/* ═══ PHÓNG TO · KÉO BẢN ĐỒ (CHỈ KHỔ HẸP) ═══════════════════════════════════════════
+   Làm bằng viewBox của thẻ svg chứ không phải transform: cả hình nước, chấm tròn lẫn
+   nhãn cùng đi theo một khung toạ độ, và `vector-effect:non-scaling-stroke` của .tgc
+   giữ nét biên giới đúng một bề dày ở mọi mức phóng.
+   MÁY BÀN KHÔNG ĐỤNG TỚI: ở đó bản đồ rộng gấp ba, đọc thẳng được, mà mọi thao tác
+   chuột hiện có (rê ra thẻ nhỏ, bấm mở thẻ nước, kéo thẻ) phải giữ nguyên. */
+const tgViewGoc=()=>TG.map?{x:0,y:0,w:TG.map.w,h:TG.map.h}:null;
+const tgVBox=()=>{ const v=TG.view||tgViewGoc();
+  return v?[v.x,v.y,v.w,v.h].map(n=>+n.toFixed(2)).join(' '):'0 0 1000 500'; };
+/* GIỮ ĐÚNG TỈ LỆ KHUNG và không cho kéo ra ngoài mép bản đồ. Tỉ lệ mà lệch thì phép đổi
+   toạ độ màn ↔ toạ độ bản đồ không còn đồng nhất hai trục, điểm neo lúc phóng trượt đi. */
+function tgKep(v){
+  const M=TG.map; if(!M) return v;
+  v.w=clamp(v.w,M.w/TG_ZMAX,M.w); v.h=v.w*M.h/M.w;
+  v.x=clamp(v.x,0,M.w-v.w); v.y=clamp(v.y,0,M.h-v.h);
+  return v;
+}
+let tgNhanRaf=0;
+function tgVeNhan(){                       // vẽ lại nhãn, gộp về mỗi khung hình một lượt
+  if(tgNhanRaf) return;
+  tgNhanRaf=requestAnimationFrame(()=>{
+    tgNhanRaf=0;
+    const g=$('#tgNhanG'); if(!g||!TG.map||!TG.rows) return;
+    const by={}; TG.rows.forEach(r=>by[r.iso]=r);
+    g.innerHTML=tgNhan(TG.map,by,TG.view);
+  });
+}
+function tgApDung(veNhan){
+  const svg=$('#tgSvg'), M=TG.map; if(!svg||!M||!TG.view) return;
+  svg.setAttribute('viewBox',tgVBox());
+  const z=M.w/TG.view.w, doi=z>1.02||TG.view.x>0.5||TG.view.y>0.5;
+  /* Lớp `tgz` = "đang không ở khung gốc". Nó điều khiển hai thứ trong CSS: touch-action
+     (nhường hay giành trục dọc) và nút về khung ban đầu (chỉ mọc khi có cái để về). */
+  const map=$('#tgMap'); if(map) map.classList.toggle('tgz',doi);
+  /* Chấm tròn Singapore/Hồng Kông giữ NGUYÊN CỠ TRÊN MÀN: bán kính chia theo mức phóng.
+     Không chia thì phóng 4 lần là hai cái chấm trùm kín Đông Nam Á. */
+  svg.querySelectorAll('.tgd').forEach(el=>el.setAttribute('r',(7.5/z).toFixed(2)));
+  if(veNhan!==false) tgVeNhan();
+}
+function tgVeGoc(){ TG.view=tgViewGoc(); tgApDung(); }
+/* CHẠM: hai ngón xoè ra = phóng TẠI CHỖ ĐANG THAO TÁC · một ngón = kéo bản đồ.
+   TOUCH-ACTION ĐỔI THEO MỨC PHÓNG (khai trong CSS), đây là chỗ dễ sai nhất:
+   · chưa phóng -> `pan-y`: bản đồ vừa khít khung, không có gì để kéo dọc, nên nhường
+     trục dọc cho TRANG cuộn. Trói cứng ở đây thì người ta vuốt xuống đọc tiếp mà trang
+     đứng im mỗi lần ngón tay rơi trúng dải bản đồ cao 146px.
+   · đã phóng  -> `none`: lúc đó kéo dọc mới là để xem phần đang khuất, phải giành trọn
+     cử chỉ (cùng bài học với canvas của chart.js — nhường một trục là preventDefault bị
+     bỏ qua và phần xử lý viết sẵn gần như không bao giờ chạy).
+   Hai ngón thì cả hai mức đều về tay mình: `pan-y` đã cấm trình duyệt tự phóng trang. */
+function tgChamBind(svg){
+  if(!svg||svg._cham) return; svg._cham=1;
+  let hai=null, mot=null;
+  const diem=(cx,cy,r)=>({x:TG.view.x+(cx-r.left)/r.width*TG.view.w,
+                          y:TG.view.y+(cy-r.top)/r.height*TG.view.h});
+  svg.addEventListener('touchstart',e=>{
+    if(!tgHep()||!TG.view) return;
+    if(e.touches.length>=2){
+      const a=e.touches[0], b=e.touches[1], r=svg.getBoundingClientRect();
+      hai={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY), w0:TG.view.w,
+           neo:diem((a.clientX+b.clientX)/2,(a.clientY+b.clientY)/2,r)};
+      mot=null;
+    }else if(e.touches.length===1){
+      mot={x:e.touches[0].clientX,y:e.touches[0].clientY,v:{...TG.view}};
+    }
+  },{passive:true});
+  svg.addEventListener('touchmove',e=>{
+    if(!tgHep()||!TG.view||!TG.map) return;
+    const M=TG.map, v=TG.view, r=svg.getBoundingClientRect();
+    if(hai&&e.touches.length>=2){
+      const a=e.touches[0], b=e.touches[1];
+      const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+      if(!(hai.d>12&&d>12)) return;      // hai ngón sát nhau -> chia cho số bé, biên độ nhảy loạn
+      e.preventDefault();
+      v.w=clamp(hai.w0*hai.d/d,M.w/TG_ZMAX,M.w); v.h=v.w*M.h/M.w;
+      /* ĐIỂM BẢN ĐỒ DƯỚI TÂM HAI NGÓN PHẢI ĐỨNG YÊN suốt cú phóng — đó chính là nghĩa
+         của "phóng tại vị trí thao tác". Tâm hai ngón cũng được phép trôi, nên một cú
+         vừa xoè vừa đẩy là vừa phóng vừa kéo, đúng thói quen dùng bản đồ. */
+      const cx=(a.clientX+b.clientX)/2, cy=(a.clientY+b.clientY)/2;
+      v.x=hai.neo.x-(cx-r.left)/r.width*v.w;
+      v.y=hai.neo.y-(cy-r.top)/r.height*v.h;
+      tgKep(v); TG.keoLuc=Date.now(); tgApDung();
+      return;
+    }
+    if(mot&&e.touches.length===1){
+      if(M.w/v.w<=1.02) return;          // chưa phóng: không có gì để kéo, nhường trang cuộn
+      e.preventDefault();
+      const t=e.touches[0];
+      v.x=mot.v.x-(t.clientX-mot.x)/r.width*v.w;
+      v.y=mot.v.y-(t.clientY-mot.y)/r.height*v.h;
+      tgKep(v); TG.keoLuc=Date.now(); tgApDung();
+    }
+  },{passive:false});
+  const het=e=>{ if(e.touches.length<2) hai=null; if(!e.touches.length) mot=null; };
+  svg.addEventListener('touchend',het); svg.addEventListener('touchcancel',het);
 }
 
 function tgVeLai(){
@@ -1100,7 +1223,7 @@ function tgVeLai(){
   const dem=$('#tgDem');
   if(dem) dem.textContent=oo.filter(r=>r.p>0.05).length+' nước tăng · '
     +oo.filter(r=>r.p<-0.05).length+' nước giảm';
-  const nh=$('#tgNhanG'); if(nh) nh.innerHTML=tgNhan(TG.map,by);
+  const nh=$('#tgNhanG'); if(nh) nh.innerHTML=tgNhan(TG.map,by,TG.view);
   /* thẻ đang mở: cập nhật % ở tiêu đề, và lấy lại luôn giá cổ phiếu bên trong — thẻ để
      mở cả tiếng mà ruột vẫn là giá lúc mới bấm thì tệ hơn là không cập nhật gì. */
   $$('#tgPops .tgcard').forEach(el=>{
@@ -1135,6 +1258,7 @@ function toanCauPanel(){
     +'<br/><span style="color:var(--faint);font-size:12px">Nguồn CNBC có thể đang chặn hoặc mạng đang hỏng — thử tải lại trang.</span></div>';
   if(!TG.rows||!TG.map) return '<div class="empty">Đang lấy dữ liệu thế giới…</div>';
   const M=TG.map, by={}; TG.rows.forEach(r=>by[r.iso]=r);
+  if(!TG.view) TG.view=tgViewGoc();     // giữ mức phóng qua các lượt dựng lại panel
   const oo=TG.rows.filter(r=>r.p!=null);
   const tang=oo.filter(r=>r.p>0.05).length, giam=oo.filter(r=>r.p<-0.05).length;
   const path=Object.entries(M.c).map(([k,v])=>{
@@ -1148,7 +1272,7 @@ function toanCauPanel(){
     return '<circle cx="'+v.cx+'" cy="'+v.cy+'" r="7.5" fill="'+tgMau(r.p)+'"'
       +' stroke="'+tgBang().net+'" class="tgd" data-iso="'+k+'"/>';
   }).join('');
-  return tgKhung(M,path,cham,tang,giam,tgNhan(M,by));
+  return tgKhung(M,path,cham,tang,giam,tgNhan(M,by,TG.view));
 }
 /* HAI CHỈ SỐ SỨC MẠNH đặt vào GÓC DƯỚI-TRÁI bản đồ — chỗ đó là Nam Thái Bình Dương,
    trống trơn ở mọi phép chiếu và không nước nào có sàn. Dựng bằng HTML phủ lên chứ không
@@ -1173,7 +1297,9 @@ function tgKhung(M,path,cham,tang,giam,nhan){
        thì ở màn hẹp sai chỗ: lúc đó lớp thẻ nước (#tgPops) thôi neo và chảy theo dòng,
        làm #tgWrap cao hơn bản đồ, nên `bottom:6px` rơi xuống dưới bản đồ. */
     +'<div class="pb"><div id="tgWrap"><div id="tgMap">'
-    +'<svg id="tgSvg" viewBox="0 0 '+M.w+' '+M.h+'"'
+    /* viewBox lấy theo KHUNG NHÌN đang giữ, không viết cứng 0 0 w h: đổi giao diện
+       sáng/tối là panel dựng lại, viết cứng thì mức phóng người dùng vừa đặt bay mất. */
+    +'<svg id="tgSvg" viewBox="'+tgVBox()+'"'
     +' style="background:'+tgBang().bien+'">'
     +path+cham+'<g id="tgNhanG">'+nhan+'</g></svg>'
     /* LỚP THẺ PHẢI ĐỨNG SAU <svg>: ở màn hẹp lớp này thôi neo và chảy theo dòng, đứng
@@ -1181,7 +1307,15 @@ function tgKhung(M,path,cham,tang,giam,nhan){
        thẻ dựng ra rồi mà cuộn tới bản đồ thì không thấy đâu. */
     /* Hộp chỉ số phải đứng SAU <svg>: màn hẹp nó thôi neo và chảy theo dòng, đứng
        trước thì nhảy lên TRÊN bản đồ. Máy bàn neo tuyệt đối nên thứ tự không đổi gì. */
-    +tgSucManh()+'</div>'
+    +tgSucManh()
+    /* NÚT VỀ KHUNG BAN ĐẦU — góc 1 giờ của CHÍNH BẢN ĐỒ (nằm trong #tgMap nên nó bám
+       mép bản đồ, không bám khung ngoài vốn cao hơn ở màn hẹp). Biểu tượng bốn góc
+       khung, một nét — không dùng emoji: mỗi hệ điều hành vẽ một kiểu và mang màu riêng. */
+    +'<button id="tgVe" type="button" title="Về khung bản đồ ban đầu" aria-label="Về khung bản đồ ban đầu">'
+    +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 4H5.6A1.6 1.6 0 004 5.6v3.9'
+    +'M14.5 4h3.9A1.6 1.6 0 0120 5.6v3.9M9.5 20H5.6A1.6 1.6 0 014 18.4v-3.9'
+    +'M14.5 20h3.9a1.6 1.6 0 001.6-1.6v-3.9"/></svg></button>'
+    +'</div>'
     +'<div id="tgPops"><button id="tgDongHet" style="display:none">✕ Đóng tất cả</button></div>'
     +'<div id="tgTip"></div></div>'
     /* THANH CHÚ GIẢI xanh–đỏ đã bỏ (user chốt 13/08/2026): xanh tăng đỏ giảm là quy ước
@@ -1320,8 +1454,18 @@ function tgBind(){
   wrap.onmouseleave=()=>tip.classList.remove('on');
   /* BẤM/CHẠM = bung bảng cổ phiếu trụ cột. Rê chuột vẫn chỉ ra thẻ nhỏ — hai mức thông
      tin khác nhau: liếc thì rê, muốn soi kỹ thì bấm. */
-  wrap.onclick=e=>{ const t=e.target.closest('[data-iso]');
+  wrap.onclick=e=>{
+    /* VỪA KÉO/PHÓNG XONG thì cú click sinh ra ngay sau đó không phải một cú BẤM CHỌN
+       nước — không chặn thì kéo bản đồ một cái là bung luôn thẻ của nước dưới ngón tay. */
+    if(TG.keoLuc&&Date.now()-TG.keoLuc<400) return;
+    const t=e.target.closest('[data-iso]');
     if(t){ tip.classList.remove('on'); tgMoBang(t.dataset.iso); } };
+  tgChamBind($('#tgSvg'));
+  const nve=$('#tgVe');
+  if(nve) nve.onclick=e=>{ e.stopPropagation(); tgVeGoc(); };
+  /* Panel vừa dựng lại (đổi đèn, đổi tab) mà đang phóng dở: viewBox đã đúng nhờ tgVBox,
+     còn lớp `tgz` và bán kính chấm tròn thì phải áp lại. Nhãn đã dựng sẵn nên bỏ qua. */
+  tgApDung(false);
   const nut=$('#tgDongHet'); if(nut) nut.onclick=tgDongBang;
   if(!window.__tgEsc){ window.__tgEsc=1;
     document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') tgDongBang(); }); }

@@ -504,6 +504,40 @@ giá sai hoặc giá nhảy — đừng đẩy.
   5. **`#tgMap` bọc riêng thẻ `<svg>`** để hộp chỉ số neo vào đúng khung BẢN ĐỒ. Neo vào
      `#tgWrap` thì màn hẹp sai chỗ: lúc đó lớp thẻ nước chảy theo dòng làm `#tgWrap` cao hơn
      bản đồ, `bottom:6px` rơi xuống dưới bản đồ.
+  **PHÓNG TO / KÉO BẢN ĐỒ — CHỈ KHỔ HẸP (user chốt 13/08/2026).** Hai ngón xoè ra = phóng
+  TẠI ĐIỂM ĐANG THAO TÁC · một ngón = kéo bốn hướng · nút góc 1 giờ = về khung ban đầu.
+  Làm bằng **`viewBox` của thẻ `<svg>`**, không phải `transform`: cả hình nước, chấm tròn
+  lẫn nhãn cùng đi theo một khung toạ độ, và `vector-effect:non-scaling-stroke` của `.tgc`
+  giữ nét biên giới đúng một bề dày ở mọi mức phóng. Khung nhìn nằm ở **`TG.view`** chứ
+  không đọc ngược từ DOM — panel bị dựng lại mỗi lần đổi đèn, đọc từ DOM là mất mức phóng
+  người dùng vừa đặt. Máy bàn KHÔNG có mục này (đã đo: chuỗi nhãn sinh ra khớp từng ký tự
+  với bản trước, cỡ chữ inline bằng đúng cỡ CSS cũ 7,4/7,2).
+  Năm thứ phải giữ, thiếu cái nào là hỏng theo một kiểu riêng:
+  1. **`touch-action` ĐỔI THEO MỨC PHÓNG.** Chưa phóng → `pan-y`: bản đồ vừa khít khung,
+     không có gì để kéo dọc, nên nhường trục dọc cho TRANG cuộn — trói cứng ở đây thì vuốt
+     trúng dải bản đồ cao 146px là trang đứng im. Đã phóng (`#tgMap.tgz`) → `none`: lúc đó
+     kéo dọc mới là để xem phần đang khuất, phải giành trọn cử chỉ (cùng bài học với canvas
+     của `chart.js` — nhường một trục là `preventDefault` bị bỏ qua). Hai ngón thì cả hai
+     mức đều về tay JS vì `pan-y` đã cấm trình duyệt tự phóng trang.
+  2. **NHÃN PHẢI CHIA THEO MỨC PHÓNG.** Cỡ chữ khai trong CSS là cố định, phóng 4 lần là
+     chữ cũng to gấp 4 trên màn, trùm kín chính mấy nước vừa phóng vào để xem. `tgNhan` nhận
+     thêm tham số `view`, chia `CH`/`RC`/cỡ chữ/bề dày quầng cho mức phóng rồi ghi **inline**
+     vào từng thẻ (inline thắng class, khỏi `!important`). Kèm theo: chỉ xếp nhãn cho nước
+     ĐANG NHÌN THẤY — nhờ vậy phóng vào Đông Á là mấy nhãn bị bỏ ở mức 1× hiện đủ (đo: 20
+     nhãn ở 1× → 18 nhãn cho riêng vùng đang xem, chồng lấn 0 px²).
+  3. **Chấm tròn Singapore/Hồng Kông cũng chia theo mức phóng** (`r=7,5/z`). Không chia thì
+     phóng 4 lần là hai cái chấm trùm kín Đông Nam Á.
+  4. **GIỮ CHỖ cho cả hộp chỉ số LẪN nút về khung gốc.** Cả hai dựng bằng HTML phủ lên nên
+     thuật toán xếp nhãn không nhìn thấy. Hộp chỉ số neo GÓC MÀN nên trong hệ viewBox nó
+     trôi theo khung nhìn và co theo mức phóng — khai `{l:V.x, t:V.y+V.h-bh}` chứ không phải
+     góc bản đồ. Nút thì chỉ mọc khi đã phóng nên cũng chỉ giữ chỗ lúc đó (116 đơn vị
+     viewBox ở mức 1× ≈ 38px thật).
+  5. **Chặn cú `click` sinh ra sau khi kéo** (`TG.keoLuc`, cửa 400ms). Không chặn thì kéo
+     bản đồ một cái là bung luôn thẻ của nước nằm dưới ngón tay.
+  Nút về khung gốc **chỉ hiện khi đã phóng hoặc đã kéo** — một cái nút không làm gì ở trạng
+  thái mặc định chỉ tổ chiếm chỗ trên tấm 329×146. Cạnh 32px, **cố ý dưới ngưỡng chạm 44px**
+  của khung mobile: trên bản đồ cao 146px thì nút 44px ăn gần một phần ba chiều cao, che mất
+  chính thứ nó phục vụ.
   **Ô nhiệt phải là ô MỘT DÒNG** (mã trái, % phải). Xếp chồng hai dòng thì thẻ cao 280px,
   cao hơn cả bản danh sách nó thay thế — mất luôn lý do đổi sang ô nhiệt; một dòng còn 179px.
   **Ô ĐỀU NHAU, không chia theo vốn hoá** — nguồn không trả vốn hoá cho cổ phiếu nước ngoài
