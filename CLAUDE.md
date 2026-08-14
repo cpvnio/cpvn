@@ -144,6 +144,22 @@ giá sai hoặc giá nhảy — đừng đẩy.
   không phải báo trang vừa tải.
 - `CP.boardIdle` — quét đủ mà không mã nào khớp lệnh (nghỉ lễ / bảng reset đêm) →
   nguồn hết cái để cho, ngừng hỏi. Không có cờ này thì quét vô tận 60s/lần.
+- **GIÁ SỐNG CHỈ ĐƯỢC GỘP VÀO NẾN CỦA CHÍNH PHIÊN NÓ — KIỂM NGÀY TRƯỚC KHI GHI.** Vòng
+  poll của trang cổ phiếu và bảng bong bóng đều "làm mới nến cuối" bằng `l.c=c.price`, mà
+  bản cũ ghi thẳng vào phần tử CUỐI CÙNG **bất kể nến đó thuộc phiên nào**. Ba đường dẫn
+  tới cảnh nến cuối không phải phiên đang chạy: nguồn vẽ chart chưa ra nến ngày hôm nay ·
+  hai nguồn tắt nên rơi về kho `data/hist` (kho chốt 15:15 nên TRONG PHIÊN luôn là phiên
+  TRƯỚC) · mở trang buổi tối khi kho chưa kịp cập nhật phiên vừa đóng. Cả ba cho cùng một
+  hậu quả: **giá phiên mới bị dán đè lên nến của phiên cũ**, rê vào nến cuối thấy một giá
+  đóng cửa không phải giá đóng cửa của ngày đó. Đo 14/08/2026 trên VIC: nến 13/08 đóng
+  207.900 bị ghi thành giá phiên 14/08. Nặng hơn ở khung NGÀY vì `CPChart.aggregate('D')`
+  trả về CHÍNH mảng gốc → số bịa ăn thẳng vào đệm `dailyRows`, đổi sang tuần/tháng vẫn mang
+  theo. Luật: `ngayVN(nến cuối) === CP.lastSessionDate()` **và** `!c.nt` mới được ghi.
+  > **ĐỪNG dựng nến mới cho phiên nguồn chưa có.** Bảng giá VPS không trả GIÁ MỞ CỬA (chỉ
+  > `lastPrice`/`r`/`c`/`f`/`highPrice`/`lowPrice`/`lot`), bịa `o` ra là tự tay tạo một cây
+  > nến không có thật. Thà chart dừng ở phiên gần nhất nguồn có — giá sống đã hiện to ở đầu
+  > trang rồi. Hai bản sao (`cophieu.html` `gopGiaSongVaoNen`, `bubbles.html` vòng 300ms)
+  > phải sửa cùng lúc.
 - **Cộng dòng tiền NN phải theo NGÀY PHIÊN, không theo ngày lịch.** Từng cộng trùng
   phiên mới nhất: VIC 30 phiên hiện 688 tỷ thay vì 3.267 tỷ, im lặng hoàn toàn.
 - **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **11 phần tử đúng

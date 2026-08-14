@@ -849,6 +849,31 @@ async function loadChart(){
 }
 function drawChart(){ if(chart) chart.draw(); }
 
+/* GIÁ SỐNG CHỈ ĐƯỢC GỘP VÀO NẾN CỦA CHÍNH PHIÊN NÓ — KIỂM NGÀY TRƯỚC KHI GHI.
+   Bản cũ ghi thẳng `l.c=C.price` vào nến CUỐI CÙNG bất kể nến đó thuộc phiên nào. Ba
+   đường dẫn tới cảnh nến cuối KHÔNG phải phiên đang chạy: nguồn vẽ chart (VNDirect/VPS)
+   chưa ra nến ngày hôm nay, hai nguồn đó tắt nên rơi về kho `data/hist` (kho chốt lúc
+   15:15 nên trong phiên luôn là phiên TRƯỚC), hoặc mở trang buổi tối khi kho chưa kịp
+   cập nhật phiên vừa đóng. Cả ba đều cho ra cùng một hậu quả: GIÁ PHIÊN MỚI BỊ DÁN ĐÈ
+   LÊN NẾN CỦA PHIÊN CŨ, nên rê vào nến cuối thấy một giá đóng cửa không phải giá đóng
+   cửa của ngày đó. Đo 14/08/2026 trên VIC: nến 13/08 đóng 207.900 bị ghi thành 250.000.
+   Nặng hơn ở khung NGÀY: `CPChart.aggregate` trả về CHÍNH mảng gốc nên số bịa ghi thẳng
+   vào bộ nhớ đệm `dailyRows`, đổi khung tuần/tháng vẫn mang theo.
+   KHÔNG dựng nến mới cho phiên chưa có: bảng giá VPS không trả GIÁ MỞ CỬA (chỉ có
+   lastPrice/ref/cao/thấp/khối lượng), bịa `o` ra là tự tay tạo một cây nến không có
+   thật. Thà chart dừng ở phiên gần nhất mà nguồn có — giá sống đã hiện to ở đầu trang. */
+const ngayVN=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+function gopGiaSongVaoNen(){
+  if(!candles||!candles.length||!C||!(C.price>0)) return false;
+  /* mã CHƯA KHỚP LỆNH phiên này: giá đang giữ là giá khớp cuối của một phiên CŨ
+     (mã thanh khoản kém đứng im hàng tháng) — đừng dán nó lên bất kỳ nến nào */
+  if(C.nt) return false;
+  const l=candles[candles.length-1];
+  if(ngayVN(l.t)!==CP.lastSessionDate()) return false;
+  l.c=C.price; if(C.price>l.h)l.h=C.price; if(C.price<l.l)l.l=C.price;
+  return true;
+}
+
 /* ---------- PTKT TOÀN MÀN HÌNH ----------------------------------------------
    Dùng lại đúng engine biểu đồ, chỉ đổi khung: chiếm trọn màn hình, thêm bật/tắt
    MA20/50/200 · khối lượng · RSI. Nến lấy từ dailyRows đã nạp nên mở ra là có ngay. */
@@ -1629,8 +1654,7 @@ applyThmIcon();
   const h=CP.health;
   $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
   CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();
-      if(candles&&candles.length&&C.price){ const l=candles[candles.length-1];
-        l.c=C.price; if(C.price>l.h)l.h=C.price; if(C.price<l.l)l.l=C.price; drawChart(); }
+      if(gopGiaSongVaoNen()) drawChart();
       if(document.querySelector('#secTabs button[data-t="cn"]').classList.contains('on')) renderPeers();
     },
     // mỗi phút: mã đang xem + các mã cùng ngành đang liệt kê
