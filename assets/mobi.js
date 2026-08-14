@@ -30,17 +30,20 @@
      bốn đều là "soi thị trường theo một góc khác", còn bảng giá là chỗ tra cứu.
      Bấm Radar ở thanh đáy = về Nhịp phiên (mặc định), bốn nút này là lối rẽ.
 
-     Hai mục có TRANG RIÊNG (bong bóng, tập đoàn) đi bằng link thật; hai mục nằm
-     CÙNG trang radar thì bấm thẳng vào mục tương ứng trong menu máy bàn (đã ẩn ở
-     khổ hẹp) để congcu.js đổi tab tại chỗ, khỏi tải lại trang. */
+     CẢ BỐN MỤC PHẢI CÓ HREF THẬT, kể cả hai mục nằm cùng trang radar. Bản cũ để
+     chúng là <button> không href, chỉ chạy nhờ bấm hộ vào menu máy bàn (đã ẩn ở khổ
+     hẹp) — mà menu đó CHỈ CÓ trên congcu.html. Trang bong bóng không có, nên đứng ở
+     /bubbles bấm "Chủ điểm" là NÚT CHẾT: trang đứng im mà nút vẫn sáng lên, dải điều
+     hướng nói dối chỗ mình đang đứng. Có href thì trang nào cũng đi được; riêng
+     congcu.html mới chặn lại để congcu.js đổi tab TẠI CHỖ, khỏi tải lại trang. */
   /* THỨ TỰ do user chốt 12/08/2026: Toàn cầu đứng NGAY SAU Nhịp phiên (Nhịp phiên là
      mặc định nên không có nút riêng) — soi thế giới trước rồi mới soi trong nước. */
   /* "Toàn cầu" đã GỘP vào Nhịp phiên (13/08/2026) nên không còn là một lối rẽ riêng. */
   var CON=[
-    ['bong','Bong bóng',  '/bubbles'],
-    ['cd',  'Chủ điểm',   null],
-    ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan'],
-    ['vb',  'Về bờ',      null]
+    ['bong','Bong bóng',  '/bubbles',                 null],
+    ['cd',  'Chủ điểm',   'congcu.html?m=radar&t=cd', 'cd'],
+    ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan',    null],
+    ['vb',  'Về bờ',      'congcu.html?m=radar&t=vb', 'vb']
   ];
 
   /* ĐỌC CẢ URL SẠCH, đừng chỉ dò "congcu". `_redirects` viết lại /radar, /tapdoan,
@@ -49,21 +52,25 @@
      rơi hết xuống nhánh mặc định: mất sạch bốn nút và thanh đáy sáng nhầm ở Bảng
      giá. Bắt được đúng lúc thử trên bản live — ở localhost tao toàn gõ congcu.html
      nên nhánh này không bao giờ chạy tới. congcu.js cũng đọc theo path vì lý do y hệt. */
+  /* HAI ĐƯỜNG VÀO CÙNG MỘT TRANG PHẢI RA CÙNG MỘT KẾT QUẢ: `/radar?t=vb` và
+     `/congcu.html?m=radar&t=vb` là y hệt nhau. Bản cũ chặn `/radar` lại ở một dòng
+     riêng trả cứng 'phien' rồi mới đọc `?t=` ở nhánh `/congcu` phía dưới — nên mở
+     cpvn.io/radar?t=vb (đúng thứ chính dải này sinh ra khi bấm "Về bờ") thì nội dung
+     là Về bờ mà dải không sáng mục nào. congcu.js đọc `?t=` bất kể đường vào, dải
+     phải đọc y như vậy. */
   function dangO(){
     var p=location.pathname.replace(/\/index\.html$/,'').replace(/\/+$/,'');
+    var q=new URLSearchParams(location.search);
     if(/bubbles/.test(p))  return ['radar','bong'];
     if(/cophieu/.test(p))  return ['bang',''];      /* trang một mã đi ra từ bảng giá */
     if(/duongdua/.test(p)) return ['dua',''];
     if(/tapdoan/.test(p))  return ['radar','tap'];
-    if(/radar/.test(p))    return ['radar','phien'];
-    if(/congcu/.test(p)){
-      var q=new URLSearchParams(location.search), m=q.get('m')||'radar';
-      if(m==='race')    return ['dua',''];
-      if(m==='tapdoan') return ['radar','tap'];
-      var tt=q.get('t')||'phien'; if(tt==='tg') tt='phien';   // link cũ ?t=tg
-      return ['radar',tt];   /* phien = mặc định, không nút nào sáng */
-    }
-    return ['bang',''];                       /* BẢNG GIÁ: không dải mục con */
+    var m=/radar/.test(p) ? 'radar' : /congcu/.test(p) ? (q.get('m')||'radar') : '';
+    if(!m)            return ['bang',''];   /* BẢNG GIÁ: không dải mục con */
+    if(m==='race')    return ['dua',''];
+    if(m==='tapdoan') return ['radar','tap'];
+    var tt=q.get('t')||'phien'; if(tt==='tg') tt='phien';   // link cũ ?t=tg
+    return ['radar',tt];   /* phien = mặc định, không nút nào sáng */
   }
 
   function dung(){
@@ -76,18 +83,24 @@
       var h=document.querySelector('header'), s=document.createElement('div');
       s.className='mobisub';
       s.innerHTML='<div class="mobisub-in">'+CON.map(function(m){
-        var on=(m[0]===con?' class="on"':'');
-        return m[2] ? '<a href="'+m[2]+'"'+on+'>'+m[1]+'</a>'
-                    : '<button type="button" data-t="'+m[0]+'"'+on+'>'+m[1]+'</button>';
+        return '<a href="'+m[2]+'"'+(m[3]?' data-t="'+m[3]+'"':'')+
+          (m[0]===con?' class="on"':'')+'>'+m[1]+'</a>';
       }).join('')+'</div>';
       if(h&&h.parentNode) h.parentNode.insertBefore(s,h.nextSibling);
       else document.body.insertBefore(s,document.body.firstChild);
 
       s.addEventListener('click',function(e){
-        var b=e.target.closest('button[data-t]'); if(!b) return;
+        var b=e.target.closest('a[data-t]'); if(!b) return;
+        /* Chỉ chặn khi TRANG NÀY tự đổi tab được. Không có menu máy bàn (bong bóng)
+           thì để href chạy bình thường, đừng nuốt cú bấm rồi chẳng đi đâu. */
         var dd=document.querySelector('.dd a[data-md="radar"][data-t="'+b.dataset.t+'"]');
-        if(dd) dd.click();
-        s.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b)});
+        if(!dd) return;
+        e.preventDefault(); dd.click();
+        /* PHẢI XOÁ .on TRÊN CẢ DẢI, đừng chỉ quét mấy mục đổi-tại-chỗ. Bản cũ chỉ
+           quét <button> nên vào /tapdoan (mục "Tập đoàn" là <a> đang sáng) rồi bấm
+           "Về bờ" là SÁNG HAI MỤC CÙNG LÚC — trang đã sang Radar phiên mà dải vẫn
+           bảo đang ở Tập đoàn. */
+        s.querySelectorAll('a').forEach(function(x){x.classList.toggle('on',x===b)});
       });
     }
 

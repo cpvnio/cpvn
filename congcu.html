@@ -142,6 +142,33 @@ html[data-theme="light"] .tgsm1{background:rgba(255,255,255,.72)}
   .tgsm1 b i{font-size:7.5px}
 }
 
+/* ---------- PHÓNG TO / KÉO BẢN ĐỒ (CHỈ KHỔ HẸP) ----------
+   Máy bàn không có mục này: bản đồ ở đó rộng gấp ba nên đọc thẳng được, và mọi thao tác
+   chuột hiện có phải giữ nguyên. Nút để ngoài media query ở trạng thái ẩn để chắc chắn
+   nó không bao giờ ló ra trên máy bàn. */
+#tgVe{display:none}
+@media(max-width:640px){
+  /* TOUCH-ACTION ĐỔI THEO MỨC PHÓNG. Chưa phóng: bản đồ vừa khít khung, không có gì để
+     kéo dọc -> nhường trục dọc cho TRANG cuộn, bằng không vuốt trúng dải bản đồ cao
+     146px là trang đứng im. Đã phóng (.tgz): kéo dọc lúc này mới là để xem phần đang
+     khuất -> giành trọn cử chỉ. Hai ngón thì cả hai mức đều về tay JS, vì `pan-y` đã
+     cấm trình duyệt tự phóng trang. */
+  #tgSvg{touch-action:pan-y}
+  #tgMap.tgz #tgSvg{touch-action:none}
+  /* NÚT VỀ KHUNG BAN ĐẦU ở góc 1 giờ, CHỈ MỌC KHI ĐÃ PHÓNG HOẶC ĐÃ KÉO: một cái nút
+     không làm gì ở trạng thái mặc định chỉ tổ chiếm chỗ trên tấm 329×146.
+     32px là dưới ngưỡng chạm 44px của khung mobile — cố ý: trên bản đồ cao 146px thì một
+     nút 44px ăn gần một phần ba chiều cao, che mất chính thứ nó phục vụ. */
+  #tgMap.tgz #tgVe{display:flex}
+  #tgVe{position:absolute;right:6px;top:6px;z-index:7;width:32px;height:32px;padding:0;
+    align-items:center;justify-content:center;cursor:pointer;
+    background:var(--solid);color:var(--mut);border:1px solid var(--line2);
+    border-radius:9px;box-shadow:var(--shadow)}
+  #tgVe svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  #tgVe:active{color:var(--txt);transform:scale(.94)}
+}
+
 /* NHÃN TRÊN BẢN ĐỒ: viền cùng màu nền biển vẽ TRƯỚC nét chữ (paint-order) làm quầng,
    để chữ đọc được cả trên ô xanh đậm lẫn ô đỏ đậm mà không cần hộp nền. */
 .tgl1,.tgl2{text-anchor:middle;pointer-events:none;paint-order:stroke;
@@ -506,6 +533,21 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .tdrow .sn b.nn{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
   color:var(--gold);border:1px solid rgba(245,180,10,.45);border-radius:20px;padding:1px 6px;flex:0 0 auto}
 .tdrow .sn b.nn.cn{color:var(--violet);border-color:rgba(167,139,250,.45)}
+.tdrow .sn b.nn.cq{color:var(--cyan);border-color:rgba(56,189,248,.45)}
+/* nhãn "thuộc <nhà mẹ>" là thông tin PHỤ (nó giải thích chỗ đứng, không phải phân hạng) —
+   để xám và không in hoa, bằng không ba cái nhãn cùng hét lên thì mắt không biết đọc cái nào */
+.tdrow .sn b.nn.thuoc{color:var(--mut);border-color:var(--line);text-transform:none;
+  letter-spacing:0;font-weight:700;max-width:none}
+/* ---------- BỐN KHỐI PHÂN HẠNG trong bảng tập đoàn ---------- */
+.tdhang{display:flex;align-items:center;gap:10px;margin:22px 0 6px;font-size:11px;
+  font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+.tdhang:first-child{margin-top:2px}
+.tdhang em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.03em;
+  text-transform:none;color:var(--faint);border:1px solid var(--line);border-radius:20px;
+  padding:2px 9px;white-space:nowrap;flex:0 0 auto}
+.tdhang::after{content:'';flex:1;height:1px;background:var(--line);order:9}
+.tdghi{font-size:11.5px;color:var(--mut);line-height:1.6;margin:0 0 10px;max-width:820px}
+.tdghi b{color:var(--txt);font-weight:800}
 /* thanh xanh đỏ CỐ Ý NGẮN — nó chỉ để liếc qua thấy nhóm nào đang khoẻ, con số bên phải
    mới là thứ để đọc. Trước đây nó dài bằng cả cột tên, hút hết mắt mà chẳng nói thêm gì. */
 .tdrow .sbr{position:relative;height:7px;background:var(--card2);border-radius:4px;overflow:hidden}
@@ -601,7 +643,14 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
      thụt vào ngang tên — nhãn đọc được đủ chữ mà tên vẫn không bị cụt. */
   .tdrow .sn{flex-wrap:wrap;row-gap:4px}
   .tdrow .sn .nm{flex:1 1 calc(100% - 16px)}
-  .tdrow .sn b.nn{margin-left:16px;font-size:9px;padding:2px 7px}
+  .tdrow .sn b.nn{margin-left:16px;font-size:9px;padding:2px 7px;
+    max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis}
+  /* KHỐI PHÂN HẠNG ở màn hẹp: ô đếm xuống dòng riêng, bằng không tiêu đề dài như
+     "CƠ QUAN NẮM VỐN NHÀ NƯỚC" cộng ô đếm là tràn khỏi 329px rồi vỡ dòng lung tung. */
+  .tdhang{flex-wrap:wrap;gap:6px;margin:18px 0 5px;font-size:10px;letter-spacing:.1em}
+  .tdhang em{font-size:9.5px;padding:1px 7px}
+  .tdhang::after{display:none}
+  .tdghi{font-size:11px;line-height:1.55;margin-bottom:8px}
   /* màn hẹp giấu chữ "xếp theo", giữ nguyên hai nút — chữ đó ăn mất chỗ của tên bảng */
   .panel>.ph .tdsrt{font-size:0;gap:5px}
   .tdcon .rw.hd i{display:none}          /* nhãn cột đầu rút còn "công ty", khỏi xuống dòng */
@@ -807,7 +856,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260813a"></script>
+<script defer src="assets/mobi.js?v=20260814a"></script>
 </head>
 <body>
 
@@ -860,6 +909,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260813h"></script>
+<script src="assets/congcu.js?v=20260814b"></script>
 </body>
 </html>

@@ -34,6 +34,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `demo-mobi*.html`, `demo-nen.html` | — | Bản demo để CHỌN, không nằm trong luồng chính. `demo-mobi.html` so hai mẫu bằng 2 iframe + postMessage |
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
+| `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
+| `tools/soi_nguon.py` | 150 | Soi nguồn vẽ chart: đối chiếu VNDirect · VPS · kho · bảng giá cho từng mã. Chạy tay khi nghi nguồn sai |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -44,6 +46,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
+| `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
 | `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
@@ -75,6 +78,14 @@ gây gãy chart thật (thưởng CP, chia CP, tách) đều đã hồi tố.
 > (cổ tức như thể tái đầu tư) chứ không phải giá thuần — %1D/1Y, đường đua, DCA đều
 > mang tính chất này. Đừng cộng thêm cổ tức tiền vào bất kỳ phép tính lợi nhuận nào
 > kẻo ĐẾM HAI LẦN.
+
+> **CHỌN NGUỒN THEO PHIÊN MỚI NHẤT NÓ CÓ, đừng nhận bừa nguồn đầu tiên trả về dữ liệu.**
+> Bản cũ `return` ngay khi nguồn 1 cho một mảng hợp lệ — KỂ CẢ khi mảng đó thiếu phiên gần
+> nhất. Một mã bị nguồn 1 cập nhật trễ là chart đứng lại ở phiên cũ vĩnh viễn trong khi
+> nguồn 2 hoặc kho có đủ, và vì chỉ rơi vào đúng mã đó nên đọc ra như "chỉ mỗi mã này sai"
+> — rất khó nghi ngờ đúng chỗ. Nay đo NGÀY của nến cuối: nguồn nào đã có phiên gần nhất
+> thì dùng luôn và dừng, chưa có thì giữ làm dự phòng rồi hỏi tiếp, cuối cùng lấy nguồn có
+> nến mới nhất (hoà thì giữ thứ tự ưu tiên cũ vì VNDirect hồi tố quyền đầy đủ nhất).
 
 > **Vì sao phải có nguồn 2**: nguồn 1 tắt là mất sạch chart. **Vì sao kho vẫn ở lại**:
 > nó là CƠ SỞ DỮ LIỆU cho bộ lọc/radar/đường đua, chỉ thôi đóng vai nguồn vẽ.
@@ -142,6 +153,22 @@ giá sai hoặc giá nhảy — đừng đẩy.
   không phải báo trang vừa tải.
 - `CP.boardIdle` — quét đủ mà không mã nào khớp lệnh (nghỉ lễ / bảng reset đêm) →
   nguồn hết cái để cho, ngừng hỏi. Không có cờ này thì quét vô tận 60s/lần.
+- **GIÁ SỐNG CHỈ ĐƯỢC GỘP VÀO NẾN CỦA CHÍNH PHIÊN NÓ — KIỂM NGÀY TRƯỚC KHI GHI.** Vòng
+  poll của trang cổ phiếu và bảng bong bóng đều "làm mới nến cuối" bằng `l.c=c.price`, mà
+  bản cũ ghi thẳng vào phần tử CUỐI CÙNG **bất kể nến đó thuộc phiên nào**. Ba đường dẫn
+  tới cảnh nến cuối không phải phiên đang chạy: nguồn vẽ chart chưa ra nến ngày hôm nay ·
+  hai nguồn tắt nên rơi về kho `data/hist` (kho chốt 15:15 nên TRONG PHIÊN luôn là phiên
+  TRƯỚC) · mở trang buổi tối khi kho chưa kịp cập nhật phiên vừa đóng. Cả ba cho cùng một
+  hậu quả: **giá phiên mới bị dán đè lên nến của phiên cũ**, rê vào nến cuối thấy một giá
+  đóng cửa không phải giá đóng cửa của ngày đó. Đo 14/08/2026 trên VIC: nến 13/08 đóng
+  207.900 bị ghi thành giá phiên 14/08. Nặng hơn ở khung NGÀY vì `CPChart.aggregate('D')`
+  trả về CHÍNH mảng gốc → số bịa ăn thẳng vào đệm `dailyRows`, đổi sang tuần/tháng vẫn mang
+  theo. Luật: `ngayVN(nến cuối) === CP.lastSessionDate()` **và** `!c.nt` mới được ghi.
+  > **ĐỪNG dựng nến mới cho phiên nguồn chưa có.** Bảng giá VPS không trả GIÁ MỞ CỬA (chỉ
+  > `lastPrice`/`r`/`c`/`f`/`highPrice`/`lowPrice`/`lot`), bịa `o` ra là tự tay tạo một cây
+  > nến không có thật. Thà chart dừng ở phiên gần nhất nguồn có — giá sống đã hiện to ở đầu
+  > trang rồi. Hai bản sao (`cophieu.html` `gopGiaSongVaoNen`, `bubbles.html` vòng 300ms)
+  > phải sửa cùng lúc.
 - **Cộng dòng tiền NN phải theo NGÀY PHIÊN, không theo ngày lịch.** Từng cộng trùng
   phiên mới nhất: VIC 30 phiên hiện 688 tỷ thay vì 3.267 tỷ, im lặng hoàn toàn.
 - **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **11 phần tử đúng
@@ -178,6 +205,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   cửa phiên này nằm ngoài là đúng bản chất, chặn ở đó là xoá sạch % của cả phiên vừa đóng.
   Ngày đo 12/08/2026 lưới bắt **0 mã** — đúng như mong đợi, vì lớp `nt` đã dọn trước; nó nằm
   đó cho lần luật `nt` thủng theo một kiểu chưa ai nghĩ tới.
+- **`close` CỦA SNAPSHOT LẤY TỪ KHO NẾN, KHÔNG PHẢI TỪ BẢNG GIÁ — nên đừng bao giờ "kiểm
+  chứng" kho nến bằng `data/eod/latest.json`.** Bước 5 dựng `snap` từ `prices[sym]` mà
+  `prices` sinh ra từ `data/hist` (VNDirect); bảng giá VPS chỉ góp tham chiếu/trần/sàn/khối
+  ngoại/GTGD. Hai vế CÙNG MỘT GỐC nên so nhau bao nhiêu cũng khớp — 14/08/2026 đã dính
+  đúng bẫy này: user báo chart BID sai, đo "latest.json khớp data/hist 1526/1527 mã" rồi
+  kết luận "kho sạch, lỗi ở nơi khác". Phép đo đó **vòng tròn, không chứng minh được gì**.
+  Đường lấy số ĐỘC LẬP duy nhất là `lastPrice` của bảng giá VPS — trước đây pipeline ném
+  luôn đi. Nay giữ lại (`board[sym]['last']`) và **bước 5c** so nó với `close` của snapshot,
+  ghi `health.json['chart']`. Nguồn vẽ chart trả sai cho một mã thì con số sai chảy vào
+  snapshot → bảng giá → mọi trang, mà không có gì phát hiện được nếu thiếu phép so này.
+  Công cụ soi tay: `python3 tools/soi_nguon.py BID` (đối chiếu VNDirect · VPS · kho · EOD).
 - **CHUÔNG BÁO trong pipeline (`refresh_daily` bước 5b) -> `health.json['bien']`.** Cùng phép
   kiểm ấy chạy trên snapshot EOD vừa dựng, đếm số mã có giá ngoài biên độ của chính nó.
   `bien.ngoai > 0` nghĩa là kho đang trộn hai phiên — **đừng đọc thành "vẫn ổn"**. Có nó thì
@@ -223,6 +261,42 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > ô đúng**. `data/finq` vì thế lấy số CÓ DẤU của VNDirect cho mọi kỳ của khối `cf*`, còn khối
   > `bs*` (toàn số dương) vẫn ưu tiên số kho. **`data/fin` thì chưa sửa** — chạy
   > `python3 tools/kho_sau.py --va-fin` mới đổi, vì nó đổi thứ trang cổ phiếu đang hiện.
+- **CHỈ SỐ ĐẶC THÙ NGÀNH (`data/nganh`, bước 6d, 14/08/2026): mỗi loại hình một bộ số.**
+  **TRÌNH BÀY: dòng nối vào CUỐI bảng Cân đối kế toán** (user chốt 14/08/2026 — bản đầu
+  dựng ô nổi bật trên đầu thẻ, user bác: *"đưa vào vị trí cân đối kế toán… trình bày giống
+  bảng, không quá nổi bật, chỉ cần đánh màu sắc là đủ"*). `veNganhRows()` chèn nhóm dòng
+  `tr.ngr` sau `VỐN CHỦ SỞ HỮU`, dùng CHUNG lưới cột với bảng, **màu tô theo TỪNG CỘT**
+  nên đọc ngang một dòng là thấy chỉ số chuyển vàng/đỏ từ kỳ nào; luật màu ghi ở tooltip
+  tên dòng. Vẽ lại mỗi lần `renderFin` chạy (đổi Theo quý/Theo năm là bảng dựng lại).
+  **Chế độ THEO NĂM: nhãn năm -> Q4 của năm đó** (chỉ số thời điểm và chỉ số trượt 4 quý
+  tại Q4 chính là số cả năm), còn dòng THUẦN QUÝ (ngày tồn, ngày thu, biên quý) phải ẨN —
+  đặt biên gộp của riêng quý 4 dưới cột NĂM là nói sai kỳ. Năm mẫu: `nh` LDR/tăng trưởng
+  cho vay/đòn bẩy/đầu tư CK/ROE · `ck` vay÷VCSH/đòn bẩy/biên ròng/ROE + dòng "Dư nợ cho
+  vay ký quỹ — nguồn chưa mở" toàn `—` (xem luật 4) · `bh` · `bds` tồn kho%TTS/NGƯỜI MUA
+  TRẢ TRƯỚC so cùng kỳ/vay÷VCSH/phải thu%TTS/CFO4/ROE · `sx` ngày tồn/ngày thu/vay÷VCSH/
+  biên gộp/CFO4 so LNST4/ROE. Bốn luật, phá là số sai âm thầm:
+  1. **LCTT chỉ lấy `finq`** (dấu `fin` sai 60% — xem ngay trên). Mã chưa có finq thì ô CFO
+     TRỐNG, tuyệt đối không rơi về `fin` cho "đủ ô".
+  2. **Trục kỳ = HỢP fin+finq, kỳ trùng số fin thắng** (fin cập nhật hằng ngày, finq chờ
+     `kho_sau --moi` ≤500 mã/lượt nên có thể trễ). Ô nào lấy kỳ CŨ hơn kỳ chung thì client
+     in nhãn kỳ vàng cạnh con số — nói ra chứ không im lặng trộn hai kỳ.
+  3. **Mẫu chọn theo sector NHƯNG phải có dữ liệu thật**: F88 mang sector ngân hàng mà báo
+     cáo mẫu thường → rơi về `sx`; EVF/TIN có đủ dòng ngân hàng nhưng LDR ~770% vì là CÔNG
+     TY TÀI CHÍNH (vốn từ vay/trái phiếu, tiền gửi không đáng kể) → client thấy LDR>300%
+     là dán nhãn đúng bản chất và để XÁM, đừng tô đỏ như thể ngân hàng vỡ trận.
+  4. **CTCK KHÔNG có dòng "cho vay ký quỹ"** — cả 24hMoney lẫn finq chỉ giữ 20 dòng tóm
+     tắt mẫu THƯỜNG cho CTCK (margin của SSI ~20 nghìn tỷ, còn "phải thu ngắn hạn" chỉ 1,1
+     nghìn tỷ — đừng bịa từ dòng khác). User nhấn lại 14/08/2026: với CTCK thì **số tiền
+     ĐANG CHO VAY (bên tài sản) mới là con số quan trọng**, không phải vốn vay — nên bảng
+     in hẳn một dòng "Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung" toàn `—` kèm
+     tooltip giải thích, thay vì im lặng. Muốn có thật phải mở thêm mã dòng mẫu CTCK ở
+     `kho_sau` (cần mạng để dò + chấm điểm như `va_quy` — session hiện bị chặn egress).
+  **Ngưỡng màu nằm ở CLIENT, tooltip ghi nguồn gốc từng ngưỡng**: cái đo từ phân bố thật
+  ghi rõ mẫu đo (LDR 100/120 và đòn bẩy 10/13 = tam phân vị 29 ngân hàng · CTCK vay/VCSH
+  0,7/1,3 trên 35 mã, đòn bẩy 1,5/2,5 trên 42 · bảo hiểm 3/5 trên 13 — đều đo 14/08/2026);
+  cái là mốc quy ước thì nói là quy ước (ROE 8/15 · D/E 0,5/1,5 · BĐS 0,5/1). Tồn kho và
+  phải thu so với CHÍNH MÃ ĐÓ 12 quý (xếp hạng ngày tồn/ngày thu), không so chéo ngành.
+  Xám = tham khảo, không áp ngưỡng. Mọi câu chữ là mô tả quá khứ, không phải khuyến nghị.
 - **KHỐI NGOẠI `fb`/`fs`: lịch sử lấy ở VNDirect, đừng tin mỗi nguồn hằng ngày.** Pipeline chỉ
   biết khối ngoại của PHIÊN HÔM ĐÓ (bảng giá VPS) + bù 30 phiên (24hMoney), nên trước 6/2026
   hai trường này **toàn số 0** — 290/500 mã mẫu không có lấy một số khác 0, mọi phép đo dòng
@@ -273,8 +347,85 @@ giá sai hoặc giá nhảy — đừng đẩy.
      gian luôn là mã niêm yết nên vốn hoá của nó đã gồm phần nó nắm — vốn hoá GAS đã gồm
      35% PGS. Trước chỉ trừ được ở tầng mẹ (`co_me`), có cháu chắt rồi mà không trừ là đếm
      hai lần. Dùng **% CẠNH** (cha nắm con) chứ không phải % hiệu dụng của cả nhóm.
-  Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` (`nn`/`cn`) để giao diện
-  dán nhãn — Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
+  9. **NHÃN NHÀ NƯỚC: nhận CƠ QUAN thôi là hụt gần hết, phải nhận cả TẬP ĐOÀN nhà nước.**
+     Bảng `NHA_NUOC` chỉ bắt tên cơ quan (Bộ, UBND, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý
+     vốn) nên **64 mã dầu khí của PVN đứng cạnh Vingroup và Masan không một dấu hiệu nào**,
+     trong khi SCIC nắm 10% một mã lẻ thì lại có nhãn. Đo 13/08/2026: 30/164 nhóm bị dán
+     nhầm là tập đoàn tư nhân — PVN, EVN, TKV, Viettel, Vinachem, VIMC, GVR, Vinatex,
+     Sonadezi, BID, CTG, GAS, ACV, HVN, BVH, KSV, DCM, DPM, OIL, PVT, BHN, TVN, LLM…
+     BA lối nhận, thiếu lối nào cũng hụt cả mảng lớn (đo 14/08/2026: **74/164 nhóm** là nhà
+     nước, trước khi vá chỉ nhận ra 12):
+     · **Cơ quan (`NHA_NUOC`)** — Bộ, UBND, Tỉnh uỷ, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý
+       vốn. **Phải khai đủ BIẾN THỂ CHÍNH TẢ của nguồn**: có mã ghi "People's Committee of X",
+       mã khác ghi "People Committee of X" (thiếu dấu sở hữu), lại có mã ghi thẳng "Province
+       of Ha Tinh" hay "…State-owned Company". Khai một kiểu là mất sạch mấy kiểu kia.
+     · **Khai tay `NN_TAY`** — CHỈ cho nhóm mà mẹ **chưa niêm yết** (PVN, EVN, TKV, Viettel,
+       Vinachem) hoặc nguồn không trả nổi một dòng cổ đông nào (VIMC): kho không có
+       `data/profile/{MÃ}.json` của chính mẹ thì không có đường nào suy ra. Tên nhận diện
+       dùng lại luôn từ khoá của nhóm đó trong `TU_KHOA`, khỏi khai hai chỗ.
+     · **Bảng `NN_TEN`** — tổng công ty nhà nước CHƯA NIÊM YẾT mà không tự thành nhóm lớn:
+       Petrolimex, VICEM, Vinataba, Sông Đà, HUD, Agribank, VNPT, Becamex, SAWACO, Tân Cảng
+       Sài Gòn, EVNCPC/EVNSPC, NXB Giáo dục, Saigontourist, SAMCO, SAGRI, Bến Thành, IPC…
+       Ghi kèm CHỦ SỞ HỮU ngay cạnh mỗi dòng để soát lại được. **KHÔNG khai tổng công ty ĐÃ
+       THOÁI VỐN** — Vinaconex (nay Pacific Holdings 50,6%), Viglacera (GELEX), IDICO, DIC
+       Corp, Viconship, VNE đều đã về tay tư nhân, dán nhãn nhà nước là sai hẳn.
+       **CẮT ĐUÔI LOẠI HÌNH khi khai từ khoá**: nguồn ghi Becamex IDC là "Investment and
+       Industrial Development **Joint Stock Company**" chứ không phải "…Corporation" — khai
+       trọn tên pháp lý là trượt, mà trượt thì im lặng.
+     · **Suy từ dữ liệu** — nhóm nào có mẹ NIÊM YẾT thì đọc thẳng cổ đông của chính mẹ và
+       **CỘNG DỒN mọi cổ đông nhà nước**, quá bán là cả nhóm mang nhãn. Cộng dồn chứ đừng đòi
+       một ông nắm quá bán một mình: nhà nước hay chia phần qua nhiều cửa (HVN = Uỷ ban 55,2%
+       + SCIC 31,1%). Nhờ vậy GAS (PVN 95,8%), BID/CTG (NHNN), ACV/HVN (Uỷ ban), GVR 96,8%,
+       VGT 53,5%, SNZ 99,5%, KSV 98%, BVH (Bộ Tài chính 65%) tự có nhãn — **ĐỪNG khai tay mấy
+       nhóm này**, thêm một chỗ phải nhớ cập nhật mà chẳng được gì.
+     **Ngưỡng phải là QUÁ BÁN, đừng hạ** — đó cũng đúng định nghĩa "doanh nghiệp nhà nước"
+     của Luật Doanh nghiệp. SCIC nắm 36% Vinamilk và 36% Sabeco, cổ đông lớn nhất nhưng không
+     cầm quyền; gọi hai nhà đó là doanh nghiệp nhà nước là sai hẳn, Sabeco do ThaiBev nắm
+     53,6%. Hai ca sát ngưỡng cố ý để NGOÀI: Tín Nghĩa (UBND Đồng Nai 48,1%) và CLX (HFIC
+     49,0%). Dòng log phải đếm RIÊNG ba loại: bản cũ ghi "{tt} tập đoàn, {còn lại} nhà
+     nước/cơ quan" nên gộp luôn nhóm cá nhân chi phối vào cột nhà nước.
+     > **`khong_dau` PHẢI ĐỔI đ/Đ THÀNH d TRƯỚC KHI BỎ DẤU.** Chữ Đ (U+0110) và đ (U+0111)
+     > KHÔNG tách được bằng NFD, nên `encode(ascii,"ignore")` **nuốt luôn** chứ không để lại
+     > chữ d: "Điện lực" ra `ien luc`, "Đô Thị" ra `o thi`, "Đầu tư" ra `au tu`. Hệ quả im
+     > lặng: mọi từ khoá viết bằng "d" — `dien luc viet nam` (EVN), `det may viet nam`
+     > (Vinatex) — **không bao giờ khớp**; hai nhóm đó chỉ sống sót nhờ tình cờ có thêm từ
+     > khoá viết tắt "evn"/"vinatex" trong tên. Cùng bài học với hai dạng Unicode của
+     > `data/fin`: so tên tiếng Việt mà không chuẩn hoá là trượt lặng lẽ, không có lỗi nào.
+  10. **BỐN HẠNG + QUAN HỆ CHA–CON, vì danh sách phẳng trộn BA TẦNG của cùng một cây sở hữu.**
+     User bắt đúng chỗ này 14/08/2026: "Ngân hàng Nhà nước đã nắm CTG ở nhóm trên rồi, sao
+     xuống dưới CTG lại có nhãn nhà nước nữa — hơi mâu thuẫn". Đo ra thì không phải lỗi nhãn
+     mà là lỗi CẤU TRÚC: **42/164 nhóm thật ra là NHÁNH CON của một nhóm khác** (CTG/BID ⊂
+     Ngân hàng Nhà nước, GAS ⊂ PVN, TCB ⊂ Masan, MBB ⊂ Viettel, VNM/SAB/Vinatex ⊂ SCIC), và
+     **144/678 mã nằm trong hơn một nhóm** — nhưng tất cả bày phẳng như nhau nên không đọc
+     ra cái nào chứa cái nào.
+     · `kieu` nay có **BỐN** giá trị: `tt` tập đoàn tư nhân · `nn` doanh nghiệp nhà nước ·
+       **`cq` cơ quan nắm vốn** · `cn` cá nhân chi phối. Tách `cq` khỏi `nn` là mấu chốt:
+       PVN/EVN/Viettel là MỘT NHÀ (hợp nhất báo cáo, chung ban điều hành), còn Ngân hàng Nhà
+       nước / SCIC / Bộ / UBND chỉ là **danh mục cổ phần** — VCB, BID, CTG cùng một chủ
+       nhưng là ĐỐI THỦ của nhau. Cơ quan xét TRƯỚC `nn`, bằng không SCIC (vừa là cơ quan
+       vừa được `la_nha_nuoc` gật đầu) lại thành "tập đoàn".
+     · `cha`/`chaTen` = nhóm chứa CÔNG TY MẸ của nhóm này. Mẹ nằm trong nhiều nhóm thì chọn
+       nhà nắm NHIỀU NHẤT (HVN thuộc cả Uỷ ban 55,2% lẫn SCIC 31,1%; PPC thuộc cả EVN lẫn REE).
+     · **KHÔNG gộp hay xoá nhánh con**: 26/49 cặp có mã mà nhóm cha KHÔNG có — SCIC chỉ nắm
+       VGT, còn 19 mã dệt may kia là con của chính Vinatex. Bỏ đi là mất thật.
+     Giao diện: bảng chia **bốn khối có tiêu đề** (`.tdhang`) kèm một câu giải thích ngay
+     dưới tiêu đề khối (`.tdghi`) — chỗ user thắc mắc thì lời giải phải nằm ngay đó, đừng
+     đẩy xuống ghi chú cuối bảng. **Mỗi hàng chỉ MỘT nhãn và nhãn phải nói thêm được điều
+     gì**: nhánh con mang `thuộc <nhà mẹ>` (xám, chữ thường) THAY CHO việc lặp lại "nhà
+     nước" — đó chính là câu trả lời cho thắc mắc trên; nhóm gốc mới giữ nhãn hạng.
+     > **Tên cơ quan phải VIỆT HOÁ trước khi cắt** (`ten_viet` + bảng `DOI_TEN`): nguồn trả
+     > "Commission for the Management of State Capital at Enterprises", "People's Committee
+     > of Binh Duong province" — để nguyên thì bảng của một trang tiếng Việt vừa dài vừa bị
+     > cắt cụt vừa lạc quẻ. Cắt trước rồi mới đổi là không khớp bảng nào nữa.
+     > Nhãn `thuộc …` bỏ đuôi "Việt Nam" **chỉ khi tên quá 30 ký tự** — bỏ vô điều kiện thì
+     > "Cao su Việt Nam" teo thành "Cao su", đọc chẳng ra nhà nào.
+     > **TÊN TỈNH nằm trong chuỗi tiếng Anh nên KHÔNG DẤU** — cắt phần tiếng Anh xong còn
+     > "UBND Binh Duong", "Tỉnh uỷ Ba Ria-Vung Tau" đứng giữa một bảng toàn tiếng Việt có
+     > dấu, trông như dữ liệu hỏng. Bảng `TINH` khai đủ 63 tỉnh cũ + tên sau sáp nhập 2025,
+     > **khoá bằng chính `khong_dau()`** nên gạch nối và khoảng trắng thừa đều khớp; nguồn
+     > viết cả `…province` lẫn `…city` nên regex phải nuốt cả hai đuôi. 9 nhóm được đổi.
+  Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` để giao diện dán nhãn —
+  Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
   Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự
   áp cho cả hàng nhóm lẫn công ty con. **Màn hẹp chỉ đủ một cột tiền nên nó phải là cột
   ĐANG XẾP THEO** (`#tdPanel.xcap` đổi `.sc`↔`.sv`), bằng không xếp theo vốn hoá mà cột hiện
@@ -504,6 +655,40 @@ giá sai hoặc giá nhảy — đừng đẩy.
   5. **`#tgMap` bọc riêng thẻ `<svg>`** để hộp chỉ số neo vào đúng khung BẢN ĐỒ. Neo vào
      `#tgWrap` thì màn hẹp sai chỗ: lúc đó lớp thẻ nước chảy theo dòng làm `#tgWrap` cao hơn
      bản đồ, `bottom:6px` rơi xuống dưới bản đồ.
+  **PHÓNG TO / KÉO BẢN ĐỒ — CHỈ KHỔ HẸP (user chốt 13/08/2026).** Hai ngón xoè ra = phóng
+  TẠI ĐIỂM ĐANG THAO TÁC · một ngón = kéo bốn hướng · nút góc 1 giờ = về khung ban đầu.
+  Làm bằng **`viewBox` của thẻ `<svg>`**, không phải `transform`: cả hình nước, chấm tròn
+  lẫn nhãn cùng đi theo một khung toạ độ, và `vector-effect:non-scaling-stroke` của `.tgc`
+  giữ nét biên giới đúng một bề dày ở mọi mức phóng. Khung nhìn nằm ở **`TG.view`** chứ
+  không đọc ngược từ DOM — panel bị dựng lại mỗi lần đổi đèn, đọc từ DOM là mất mức phóng
+  người dùng vừa đặt. Máy bàn KHÔNG có mục này (đã đo: chuỗi nhãn sinh ra khớp từng ký tự
+  với bản trước, cỡ chữ inline bằng đúng cỡ CSS cũ 7,4/7,2).
+  Năm thứ phải giữ, thiếu cái nào là hỏng theo một kiểu riêng:
+  1. **`touch-action` ĐỔI THEO MỨC PHÓNG.** Chưa phóng → `pan-y`: bản đồ vừa khít khung,
+     không có gì để kéo dọc, nên nhường trục dọc cho TRANG cuộn — trói cứng ở đây thì vuốt
+     trúng dải bản đồ cao 146px là trang đứng im. Đã phóng (`#tgMap.tgz`) → `none`: lúc đó
+     kéo dọc mới là để xem phần đang khuất, phải giành trọn cử chỉ (cùng bài học với canvas
+     của `chart.js` — nhường một trục là `preventDefault` bị bỏ qua). Hai ngón thì cả hai
+     mức đều về tay JS vì `pan-y` đã cấm trình duyệt tự phóng trang.
+  2. **NHÃN PHẢI CHIA THEO MỨC PHÓNG.** Cỡ chữ khai trong CSS là cố định, phóng 4 lần là
+     chữ cũng to gấp 4 trên màn, trùm kín chính mấy nước vừa phóng vào để xem. `tgNhan` nhận
+     thêm tham số `view`, chia `CH`/`RC`/cỡ chữ/bề dày quầng cho mức phóng rồi ghi **inline**
+     vào từng thẻ (inline thắng class, khỏi `!important`). Kèm theo: chỉ xếp nhãn cho nước
+     ĐANG NHÌN THẤY — nhờ vậy phóng vào Đông Á là mấy nhãn bị bỏ ở mức 1× hiện đủ (đo: 20
+     nhãn ở 1× → 18 nhãn cho riêng vùng đang xem, chồng lấn 0 px²).
+  3. **Chấm tròn Singapore/Hồng Kông cũng chia theo mức phóng** (`r=7,5/z`). Không chia thì
+     phóng 4 lần là hai cái chấm trùm kín Đông Nam Á.
+  4. **GIỮ CHỖ cho cả hộp chỉ số LẪN nút về khung gốc.** Cả hai dựng bằng HTML phủ lên nên
+     thuật toán xếp nhãn không nhìn thấy. Hộp chỉ số neo GÓC MÀN nên trong hệ viewBox nó
+     trôi theo khung nhìn và co theo mức phóng — khai `{l:V.x, t:V.y+V.h-bh}` chứ không phải
+     góc bản đồ. Nút thì chỉ mọc khi đã phóng nên cũng chỉ giữ chỗ lúc đó (116 đơn vị
+     viewBox ở mức 1× ≈ 38px thật).
+  5. **Chặn cú `click` sinh ra sau khi kéo** (`TG.keoLuc`, cửa 400ms). Không chặn thì kéo
+     bản đồ một cái là bung luôn thẻ của nước nằm dưới ngón tay.
+  Nút về khung gốc **chỉ hiện khi đã phóng hoặc đã kéo** — một cái nút không làm gì ở trạng
+  thái mặc định chỉ tổ chiếm chỗ trên tấm 329×146. Cạnh 32px, **cố ý dưới ngưỡng chạm 44px**
+  của khung mobile: trên bản đồ cao 146px thì nút 44px ăn gần một phần ba chiều cao, che mất
+  chính thứ nó phục vụ.
   **Ô nhiệt phải là ô MỘT DÒNG** (mã trái, % phải). Xếp chồng hai dòng thì thẻ cao 280px,
   cao hơn cả bản danh sách nó thay thế — mất luôn lý do đổi sang ô nhiệt; một dòng còn 179px.
   **Ô ĐỀU NHAU, không chia theo vốn hoá** — nguồn không trả vốn hoá cho cổ phiếu nước ngoài
@@ -600,14 +785,27 @@ vùng dưới, hai góc TRÊN là chỗ khó với nhất — mà menu cũ nằm
 chuột*, thao tác không tồn tại trên điện thoại.
 
 **Bảng giá SẠCH HOÀN TOÀN** — không dải mục con nào, mở ra là thấy mã ngay.
-**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Bong
-bóng và Tập đoàn có trang riêng nên đi bằng link thật; Chủ điểm và Về bờ nằm **cùng trang
-radar** nên nút bấm thẳng vào mục tương ứng trong menu máy bàn (`.dd a[data-md][data-t]`, đã
-ẩn) để `congcu.js` đổi tab tại chỗ — đúng lối đã dùng cho nút đổi chế độ Đường đua. Dải hiện
+**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Dải hiện
 ở cả ba trang của nhóm và thanh đáy sáng ở Radar trên cả ba, bằng không vào Bong bóng là mất
 đường quay lại.
 
-Năm cái bẫy, phá cái nào cũng hỏng:
+> **CẢ BỐN MỤC ĐỀU LÀ `<a href>` THẬT, kể cả hai mục nằm cùng trang radar** (`congcu.html?m=radar&t=cd|vb`).
+> Bản trước để chúng là `<button>` không href, chỉ chạy nhờ bấm hộ vào menu máy bàn
+> (`.dd a[data-md][data-t]`, đã ẩn ở khổ hẹp) — mà menu đó **CHỈ CÓ trên `congcu.html`**.
+> Đứng ở `/bubbles` bấm "Chủ điểm" là NÚT CHẾT: `dd` trả null, trang đứng im, mà nút vẫn
+> sáng lên. Có href thì trang nào cũng đi được; `congcu.html` mới `preventDefault` để đổi tab
+> TẠI CHỖ (nhanh hơn tải lại), trang khác cứ để link chạy bình thường. **Đừng nuốt cú bấm
+> khi không chắc trang này tự đổi tab được.**
+
+Bảy cái bẫy, phá cái nào cũng hỏng (đánh số từ 0 vì bẫy đầu là bẫy mới nhất, user tự bắt):
+
+0. **XOÁ `.on` TRÊN CẢ DẢI, đừng chỉ quét mấy mục đổi-tại-chỗ.** User chụp ảnh báo
+   14/08/2026: vào `/tapdoan` (mục "Tập đoàn" đang sáng) rồi bấm "Về bờ" thì **SÁNG HAI MỤC
+   CÙNG LÚC** — trang đã sang Radar phiên mà dải vẫn bảo đang ở Tập đoàn. Gốc: vòng dọn cũ
+   viết `s.querySelectorAll('button')`, mà "Tập đoàn"/"Bong bóng" là thẻ `<a>` nên không bao
+   giờ bị dọn. Quét `'a'` (nay cả bốn mục đều là `<a>`) là hết. Luật chung: **hàm dọn trạng
+   thái phải quét ĐÚNG TẬP mà hàm dựng đã sinh ra** — dựng hai loại thẻ mà dọn một loại thì
+   loại kia đóng băng ở trạng thái cũ.
 
 1. **`mobi.js` phải đọc CẢ URL SẠCH, đừng chỉ dò chuỗi `"congcu"`.** `_redirects` viết lại
    `/radar`, `/tapdoan`, `/duongdua` bằng **rewrite 200** nên thanh địa chỉ giữ nguyên tên
@@ -615,6 +813,11 @@ Năm cái bẫy, phá cái nào cũng hỏng:
    thanh đáy sáng nhầm ở Bảng giá. Loại lỗi chỉ lộ ra ở đúng đường người dùng thật đi — ở
    localhost toàn gõ `congcu.html?m=...` nên nhánh đó không bao giờ chạy tới. `congcu.js`
    đọc theo path (`byPath`) cũng vì lý do y hệt.
+   **HAI ĐƯỜNG VÀO CÙNG MỘT TRANG PHẢI RA CÙNG MỘT KẾT QUẢ**: `/radar?t=vb` và
+   `congcu.html?m=radar&t=vb` là y hệt nhau. Bản trước chặn `/radar` ở một dòng riêng trả
+   cứng `'phien'` rồi mới đọc `?t=` ở nhánh `/congcu` phía dưới — nên mở `cpvn.io/radar?t=vb`
+   (đúng thứ chính dải này sinh ra) thì nội dung là Về bờ mà dải không sáng mục nào. Nay hai
+   nhánh nhập một, chỉ khác chỗ lấy `m`.
 2. **Thanh tab và dải mục con TỰ MANG BẢNG MÀU**, đừng mượn biến của trang. Bốn trang đặt
    tên biến khác nhau (index `--panel/--muted/--accent`, congcu `--solid/--mut/--rose`) nên
    mượn nhầm là `var()` không phân giải được, nền thành **trong suốt** — đo trên congcu ra
@@ -637,6 +840,13 @@ Năm cái bẫy, phá cái nào cũng hỏng:
    nó xuống dưới, biểu đồ nát hẳn trên điện thoại. Đã khoá thành `#ptHead .ptseg`. Luật
    chung: trong `@media` mobile, luật **bố cục** phải neo vào id hoặc tổ tiên cụ thể, chỉ
    luật **hình thức** (cỡ chữ, padding) mới được để class trần.
+6. **GỘP HAI GIÁ TRỊ LÀM MỘT THÌ PHẢI ĐI TÌM HẾT CHỖ ĐỌC GIÁ TRỊ CŨ.** Bản đồ toàn cầu gộp
+   vào Nhịp phiên 13/08/2026 (`radarTab` thôi mang giá trị `'tg'`), nhưng `tgNhip` còn sót
+   `if(cur==='radar'&&radarTab==='tg') tgVeLai()` — điều kiện **không bao giờ đúng nữa**.
+   Hậu quả im lặng và đúng thứ nhịp riêng ấy sinh ra để chữa: mỗi 2 phút vẫn gọi mạng, tải
+   số mới về đàng hoàng, rồi **VỨT ĐI** — mở lúc 9 giờ tối xem Mỹ thì số đứng im. Đo bằng
+   nguồn giả trả % đổi theo từng lượt: bản cũ sau 150s vẫn hiện `+1,70%`, bản vá hiện
+   `+3,40%`. Cùng họ với bẫy số 0: **một nhánh chết không báo lỗi, chỉ lặng lẽ không chạy.**
 
 ### Bảng giá ở khổ hẹp
 
@@ -704,6 +914,12 @@ Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó 
 - **Cache-bust**: mọi thẻ `<script src="assets/*.js">` ở cả 4 trang dùng **cùng một token
   `?v=YYYYMMDDx`**. `_headers` không có rule cho `assets/*.js` nên đổi token là cách DUY
   NHẤT ép tải bản mới. Sửa 1 file JS → đổi token ở TẤT CẢ các trang.
+  > **HTML thì KHÔNG có `?v=` nào cả — nên `_headers` phải bắt nó `must-revalidate`.**
+  > Gần hết mạch JS của site nằm INLINE trong bốn trang (riêng `cophieu.html` hơn 1.500
+  > dòng: nến, bảng tài chính, vòng giá sống). Trình duyệt giữ bản HTML cũ là người dùng
+  > chạy code cũ mà **không có cách nào biết** — vá xong, đẩy xong, mở lên vẫn thấy đúng
+  > lỗi ấy, rồi mình đi tìm bug ở chỗ đã sửa rồi. Luật liệt kê đủ cả URL sạch
+  > (`/radar`, `/tapdoan`, `/duongdua`, `/cophieu/*`) chứ không chỉ file `.html`.
 - **`<base href="/">`** bắt buộc ở `cophieu.html` (URL 2 tầng `/cophieu/VIC`).
   `congcu.html` **không có** → chỉ an toàn với URL một đoạn.
 - **`_redirects`**: `200` = rewrite giữ URL đẹp, `301` = chuyển hướng thật.
@@ -751,6 +967,26 @@ hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky
 `dailyRows`, chung kho hình vẽ; chỉ khác palette (`'gon'` 10 nút vs `'full'` 14 nút).
 Bốn bảng KQKD/CĐKT/LCTT/cổ tức dùng **chung một lưới cột** — đổi số cột là lệch cả bốn.
 Kỳ mới nhất luôn bên **trái**. Chiều cao canvas không đặt cứng, do cột trái quyết định.
+**BIỂU ĐỒ KQKD CHỈ ĐƯỢC VẼ LẠI BẰNG `veLaiFinChart()`, đừng tự dựng danh sách cột.**
+Canvas không tự biết cột nào đang nằm dưới nó — nó ĐO `<th>` của bảng KQKD rồi vẽ theo.
+Truyền danh sách khác bảng là ra một hình vô nghĩa **mà không báo lỗi**. Đã dính: `resize`
+và nút đổi sáng/tối cùng gọi `drawFinChart(finData[finPeriod])` — **MẢNG THÔ đủ 70 quý,
+thứ tự cũ→mới** — trong khi bảng hiện 8 quý mới→cũ. Trên VIX: 70 cột nhồi vào bề ngang
+của 8 cột nên bar chồng nhau thành vệt bết ở đáy, quý 2009-2015 doanh thu bé tí nên tàng
+hình, đường biên ròng chạy suốt bề ngang với một chữ V cắm xuống ở quý lỗ nặng năm xưa.
+> **VÌ SAO CHỈ ĐIỆN THOẠI THẤY, LỌT LƯỚI RẤT LÂU**: Safari iOS bắn `resize` NGAY LÚC MỚI
+> VÀO TRANG — thanh địa chỉ co lại theo cú cuộn đầu tiên. Người dùng chưa bấm gì đã hỏng,
+> bấm "Theo quý"/"Theo năm" thì `renderFin` chạy lại và tự lành nên rất khó nghi. Máy bàn
+> chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc đổi giao diện. Cùng lý do phải **hoãn 60ms** cú
+> `resize`: iOS bắn liên tục suốt lúc vuốt.
+Cách chặn: `kqkdTable` ghi lại danh sách cột vừa vẽ vào `finColsVe`, mọi lượt vẽ lại đi
+qua `veLaiFinChart()`. Bất biến nằm ở CẤU TRÚC chứ không phải ở việc nhớ truyền đúng.
+
+Bảng Cân đối kế toán kết thúc bằng nhóm dòng **Chỉ số đặc thù ngành** (`veNganhRows`,
+đọc `data/nganh/{MÃ}.json`, thiếu file thì không chèn gì) — trình bày y hệt dòng bảng,
+chỉ đánh màu con số theo từng cột; luật màu, ánh xạ năm→Q4 và bốn cái bẫy nguồn xem
+mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU `genericTable` trong
+`renderFin` (nó chèn vào tbody của chính bảng đó) và tự vẽ lại khi đổi Theo quý/Theo năm.
 
 **`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
 rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
@@ -834,7 +1070,9 @@ chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thà
 ## Pipeline
 
 11 bước, thứ tự bắt buộc: **bảng giá (bước 2) phải chạy TRƯỚC kho nến (bước 3)** vì
-`fetch_hist` dò hệ số đơn vị bằng cách đối chiếu với `ref` của bảng giá.
+`fetch_hist` dò hệ số đơn vị bằng cách đối chiếu với `ref` của bảng giá. **Bước 6d
+(`build_nganh`) phải đứng SAU 6c (`kho_sau`)** vì nó chỉ tin dấu lưu chuyển tiền tệ
+của `finq`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
 Mọi JSON ghi qua `jdump()` (compact, `ensure_ascii=False`, atomic `.tmp`+`os.replace`).
 Chỉ cập nhật universe bằng giá trị **khác None** — đó là cách giữ số cũ khi API lỗi.
 Song song đã cân theo giới hạn nguồn (Simplize 4 luồng + sleep 0.15, hist 12, fin 5,
@@ -858,6 +1096,15 @@ news 6, profile 5) — tăng lên dễ bị chặn IP.
 > `build_tapdoan` chạy ngay sau đó trong CÙNG lượt — hồ sơ bị khoét là bản đồ tập đoàn dựng
 > lại từ kho rỗng, im lặng. Guard này che sự cố nguồn nên `health.json` có `giu_cu` đếm số
 > mã phải lấy số cũ: **`giu_cu` vọt lên là nguồn đang hỏng**, đừng đọc thành "vẫn ổn".
+
+> **KHO LOGO (bước 9): ĐẾM THEO FILE THIẾU, ĐỪNG ĐẾM THEO MÃ CÓ URL.** Bản cũ lọc
+> `stocks[s].get("img")` ngay dòng đầu nên mã KHÔNG CÓ url biến mất khỏi cả vòng tải lẫn báo
+> cáo — phiên 13/08/2026 thiếu **16** logo mà `health.json` ghi 10; sáu mã còn lại (DTH, TAN,
+> ANI, TAH, ULG, PCB) không ai biết là có tồn tại. Nay tách hai rổ: `missing` = thiếu file mà
+> CÓ url (lượt sau thử lại được) · `khong_url` = nguồn Simplize không có ảnh, **phải tìm nguồn
+> khác chứ thử lại vô ích** · `ma` = danh sách mã để soi thẳng.
+> **`fetched:0` nhiều phiên liền TRONG KHI `missing` không giảm nghĩa là mấy url đó đang 404 ở
+> nguồn** — đừng đọc thành "chưa chạy tới". 10 mã nhóm A hiện đúng trạng thái ấy.
 
 **Lịch chạy**: VPS Windows Scheduled Task 15:15 chạy `server/run_refresh.ps1` (commit
 `EOD <phiên> (server)`) — **đường chính**. GitHub Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN,

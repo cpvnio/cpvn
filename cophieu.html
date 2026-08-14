@@ -313,6 +313,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     background:linear-gradient(var(--qcolbg),var(--qcolbg))}
   table.ft td.qcol.pos{color:var(--green)} table.ft td.qcol.neg{color:var(--red)}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
+
+  /* ------- CHỈ SỐ ĐẶC THÙ NGÀNH = DÒNG CUỐI BẢNG CĐKT (user chốt 14/08/2026) -------
+     Không dựng ô nổi bật riêng — chỉ số nằm NGAY TRONG bảng cân đối kế toán, trình bày
+     y hệt một dòng bảng, chỉ đánh màu con số theo trạng thái. Luật màu ở tooltip tên dòng. */
+  table.ft td.ngl{color:var(--green);font-weight:650}
+  table.ft td.ngv{color:var(--yellow);font-weight:650}
+  table.ft td.ngd{color:var(--red);font-weight:650}
+  table.ft tr.ngcap td{border-top:2px solid var(--line)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   /* VỐN HOÁ theo kỳ: đậm vừa để dò nhanh cạnh dòng LN sau thuế, tách bằng vạch mảnh */
   table.ft tr.mcapRow td{font-weight:700;border-top:1px solid var(--line)}
@@ -418,12 +426,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260813h"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260814b"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260813a"></script>
+<script defer src="assets/mobi.js?v=20260814a"></script>
 </head>
 <body>
 <header>
@@ -538,7 +546,7 @@ document.addEventListener(MO,function(e){
       <div class="twrap" id="bsT"></div>
       <h3 class="t">Lưu chuyển tiền tệ</h3>
       <div class="twrap" id="cfT"></div>
-      <div class="subnote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
+      <div class="subnote" id="finNote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
     </div>
   </div>
 
@@ -551,11 +559,14 @@ document.addEventListener(MO,function(e){
 
   <div class="sect" id="s-tl">
     <div class="card">
-      <h3 class="t" style="margin-top:0">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
-      <div id="reps"></div>
-      <h3 class="t">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
+      <!-- KHO TÀI LIỆU GỐC ĐỨNG TRƯỚC BÁO CÁO CTCK (user chốt 15/08/2026). Vào thẻ này là
+           để đi tải BCTC gốc và hồ sơ doanh nghiệp — mấy cái link đó phải nằm ngay tầm mắt,
+           không phải cuộn qua danh sách báo cáo phân tích dài cả chục mục mới thấy. -->
+      <h3 class="t" style="margin-top:0">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
       <div class="subnote">Số liệu KQKD/CĐKT/LCTT đã có ở thẻ "Báo cáo tài chính". File BCTC gốc (PDF có chữ ký, thuyết minh đầy đủ) tải tại các cổng lưu trữ chính thống:</div>
       <div class="btnrow" id="docLinks"></div>
+      <h3 class="t">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
+      <div id="reps"></div>
     </div>
   </div>
 
@@ -597,7 +608,7 @@ document.addEventListener(MO,function(e){
 
 <footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
 
-<script src="assets/core.js?v=20260812b"></script>
+<script src="assets/core.js?v=20260814a"></script>
 <script src="assets/chart.js?v=20260813a"></script>
 <script>
 'use strict';
@@ -841,6 +852,31 @@ async function loadChart(){
 }
 function drawChart(){ if(chart) chart.draw(); }
 
+/* GIÁ SỐNG CHỈ ĐƯỢC GỘP VÀO NẾN CỦA CHÍNH PHIÊN NÓ — KIỂM NGÀY TRƯỚC KHI GHI.
+   Bản cũ ghi thẳng `l.c=C.price` vào nến CUỐI CÙNG bất kể nến đó thuộc phiên nào. Ba
+   đường dẫn tới cảnh nến cuối KHÔNG phải phiên đang chạy: nguồn vẽ chart (VNDirect/VPS)
+   chưa ra nến ngày hôm nay, hai nguồn đó tắt nên rơi về kho `data/hist` (kho chốt lúc
+   15:15 nên trong phiên luôn là phiên TRƯỚC), hoặc mở trang buổi tối khi kho chưa kịp
+   cập nhật phiên vừa đóng. Cả ba đều cho ra cùng một hậu quả: GIÁ PHIÊN MỚI BỊ DÁN ĐÈ
+   LÊN NẾN CỦA PHIÊN CŨ, nên rê vào nến cuối thấy một giá đóng cửa không phải giá đóng
+   cửa của ngày đó. Đo 14/08/2026 trên VIC: nến 13/08 đóng 207.900 bị ghi thành 250.000.
+   Nặng hơn ở khung NGÀY: `CPChart.aggregate` trả về CHÍNH mảng gốc nên số bịa ghi thẳng
+   vào bộ nhớ đệm `dailyRows`, đổi khung tuần/tháng vẫn mang theo.
+   KHÔNG dựng nến mới cho phiên chưa có: bảng giá VPS không trả GIÁ MỞ CỬA (chỉ có
+   lastPrice/ref/cao/thấp/khối lượng), bịa `o` ra là tự tay tạo một cây nến không có
+   thật. Thà chart dừng ở phiên gần nhất mà nguồn có — giá sống đã hiện to ở đầu trang. */
+const ngayVN=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+function gopGiaSongVaoNen(){
+  if(!candles||!candles.length||!C||!(C.price>0)) return false;
+  /* mã CHƯA KHỚP LỆNH phiên này: giá đang giữ là giá khớp cuối của một phiên CŨ
+     (mã thanh khoản kém đứng im hàng tháng) — đừng dán nó lên bất kỳ nến nào */
+  if(C.nt) return false;
+  const l=candles[candles.length-1];
+  if(ngayVN(l.t)!==CP.lastSessionDate()) return false;
+  l.c=C.price; if(C.price>l.h)l.h=C.price; if(C.price<l.l)l.l=C.price;
+  return true;
+}
+
 /* ---------- PTKT TOÀN MÀN HÌNH ----------------------------------------------
    Dùng lại đúng engine biểu đồ, chỉ đổi khung: chiếm trọn màn hình, thêm bật/tắt
    MA20/50/200 · khối lượng · RSI. Nến lấy từ dailyRows đã nạp nên mở ra là có ngay. */
@@ -992,6 +1028,20 @@ function renderPeers(){
     if(el.dataset.sym!==C.sym) location.href='/cophieu/'+el.dataset.sym; });
 }
 /* ---------- tài chính: KQKD chart + 3 bảng đầy đủ ---------- */
+/* DANH SÁCH CỘT BẢNG KQKD VỪA VẼ — nguồn DUY NHẤT để vẽ lại biểu đồ.
+   Biểu đồ canvas không tự biết cột nào đang nằm dưới nó, nó chỉ đo <th> của bảng; nên
+   ai vẽ lại biểu đồ mà truyền danh sách khác bảng là ra một hình vô nghĩa NHƯNG KHÔNG
+   BÁO LỖI. Đã dính đúng vậy: `resize` và nút đổi sáng/tối cùng truyền `finData[finPeriod]`
+   — MẢNG THÔ đủ 70 quý, thứ tự cũ→mới — trong khi bảng đang hiện 8 quý mới→cũ. Kết quả
+   trên VIX: 70 cột nhồi vào bề ngang của 8 cột nên cột chồng lên nhau thành một vệt bết
+   ở đáy, mấy quý 2009-2015 doanh thu bé tí nên gần như tàng hình, còn đường biên ròng
+   chạy suốt bề ngang với một chữ V cắm xuống ở quý lỗ nặng năm xưa.
+   VÌ SAO CHỈ ĐIỆN THOẠI MỚI THẤY: Safari iOS bắn `resize` NGAY LÚC MỚI VÀO TRANG khi
+   thanh địa chỉ thu lại theo cú cuộn đầu tiên — người dùng chưa bấm gì đã hỏng. Máy bàn
+   chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc bấm đổi giao diện, nên lọt lưới rất lâu.
+   Luật: MỌI lượt vẽ lại phải đi qua biến này, đừng bao giờ tự dựng danh sách cột. */
+let finColsVe=null;
+function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
   const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
@@ -1070,6 +1120,7 @@ async function fillMcap(rows){
 }
 function kqkdTable(rows,div){
   const show=rows;
+  finColsVe=show;          // biểu đồ vẽ lại phải bám đúng cột này — xem chú thích ở finColsVe
   const qc=r=>r._q?' qcol':'';                  // cột quý bung ra từ một năm -> tô nhạt hơn
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
   /* nhãn dòng nào có trong bảng chú giải thì gắn title — rê chuột vào là hiểu nghĩa,
@@ -1230,7 +1281,130 @@ async function renderFin(){
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);
   genericTable($('cfT'),cf,[]);
+  veNganhRows();        // dòng chỉ số ngành nối vào cuối bảng CĐKT — vẽ lại theo kỳ đang chọn
   pickFinHighlights(); if(C) renderHero();
+}
+
+/* ---------- CHỈ SỐ ĐẶC THÙ NGÀNH — DÒNG CUỐI BẢNG CÂN ĐỐI KẾ TOÁN ----------
+   User chốt 14/08/2026: không dựng ô nổi bật trên đầu thẻ — chỉ số phải NẰM Ở VỊ TRÍ
+   cân đối kế toán, trình bày y hệt một dòng bảng, đánh màu con số là đủ. Kho
+   data/nganh (tools/build_nganh.py) giữ CHUỖI quý đủ lịch sử; ở đây ánh xạ chuỗi vào
+   ĐÚNG các cột bảng đang hiện: theo quý thì nhãn trùng nhau, theo năm thì năm -> Q4
+   của năm đó (chỉ số thời điểm và chỉ số trượt 4 quý tại Q4 chính là số cả năm), còn
+   các dòng THUẦN QUÝ (ngày tồn, ngày thu, biên quý) bị ẩn ở chế độ năm — đặt biên gộp
+   của riêng quý 4 dưới cột NĂM là nói sai kỳ. Màu tô theo TỪNG CỘT nên nhìn ngang một
+   dòng là thấy chỉ số chuyển vàng/đỏ từ kỳ nào. Luật màu ghi ở tooltip tên dòng. */
+let NG=null;
+const NG_TEN={nh:'ngân hàng',ck:'chứng khoán',bh:'bảo hiểm',bds:'bất động sản',sx:'sản xuất – dịch vụ'};
+async function loadNganh(){
+  try{ const r=await fetch('data/nganh/'+C.sym+'.json'); if(r.ok) NG=await r.json(); }catch(e){}
+  if(!NG||!NG.ky||!NG.ky.length||!NG.d) { NG=null; return; }
+  veNganhRows();
+}
+function veNganhRows(){
+  if(!NG) return;
+  const wrap=$('bsT'), tb=wrap&&wrap.querySelector('table.ft tbody');
+  const G=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
+  if(!tb||!G||!G.labels) return;
+  tb.querySelectorAll('tr.ngr').forEach(r=>r.remove());
+  const D=NG.d, ky=NG.ky, theoNam=finPeriod==='Y';
+  // cột bảng (mới -> cũ, y như genericTable) -> chỉ số trong trục kỳ của kho nganh
+  const cols=G.labels.map((_,i)=>i).reverse()
+    .map(i=>ky.indexOf(theoNam?('Q4/'+String(G.labels[i]).slice(2)):G.labels[i]));
+  if(!cols.some(j=>j>=0)) return;
+  const F={ty:v=>Math.round(v).toLocaleString('en-US'), lan:v=>v.toFixed(2),
+           pct:v=>v.toFixed(1), ngay:v=>String(Math.round(v))};
+  const lay=k=>j=>D[k]?D[k][j]:null;
+  const yoy=k=>j=>{ const s=D[k]; if(!s) return null; const a=s[j], b=s[j-4];
+    return (a==null||b==null||!b)?null:Math.round((a-b)/Math.abs(b)*1000)/10; };
+  const banThap=(a,b)=>(j,v)=>v<=a?'ngl':v<=b?'ngv':'ngd';
+  const banRoe=(j,v)=>v>=15?'ngl':v>=8?'ngv':'ngd';
+  // kỳ này đứng đâu trong 12 quý gần nhất CỦA CHÍNH MÃ NÀY — cao là đáng để mắt
+  const hang12=k=>(j)=>{ const s=D[k]; if(!s||s[j]==null) return '';
+    const w=[]; for(let t=Math.max(0,j-11);t<=j;t++) if(s[t]!=null) w.push(s[t]);
+    if(w.length<6) return '';
+    const r=w.filter(x=>x<=s[j]).length/w.length;
+    return r>=.92?'ngd':r>=.75?'ngv':'ngl'; };
+  const rows=[];
+  // dong(tên, luật màu ghi ở tooltip, kiểu số, lấy giá trị(j), màu(j,v), chỉ-có-nghĩa-theo-quý?)
+  const dong=(ten,why,fmt,val,mau,chiQ)=>{
+    if(chiQ&&theoNam) return;
+    let co=false;
+    const tds=cols.map(j=>{ const v=j<0?null:val(j);
+      if(v==null) return '<td>—</td>';
+      co=true; const c=mau?mau(j,v):'';
+      return '<td'+(c?' class="'+c+'"':'')+'>'+F[fmt](v)+'</td>'; });
+    if(!co) return;
+    rows.push(`<tr class="ngr"><td title="${CP.esc(why)}"><div class="lb">${ten}</div></td>`+
+      tds.join('')+'<td class="sp"></td></tr>');
+  };
+  if(NG.mau==='nh'){
+    dong('Cho vay / tiền gửi (%)','Xanh ≤100% · vàng 100–120% · đỏ >120% — tam phân vị đo trên 29 ngân hàng trong kho (08/2026). Trên 300% là công ty tài chính (vốn từ vay/trái phiếu, gần như không huy động tiền gửi) — không tô màu vì không so được với ngân hàng.',
+      'pct',lay('ldr'),(j,v)=>v>300?'':banThap(100,120)(j,v));
+    dong('Tăng trưởng cho vay so cùng kỳ (%)','Dư nợ cho vay so với cùng kỳ năm trước — tham khảo, không áp ngưỡng màu.',
+      'pct',yoy('chovay'),null);
+    dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤10 · vàng 10–13 · đỏ >13 lần — tam phân vị 29 ngân hàng (08/2026); càng cao đệm vốn càng mỏng.',
+      'lan',lay('donbay'),banThap(10,13));
+    dong('Đầu tư chứng khoán / tài sản (%)','Tỷ trọng danh mục trái phiếu, giấy tờ có giá trong tổng tài sản — tham khảo.',
+      'pct',lay('dautuck'),null);
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else if(NG.mau==='ck'){
+    // CON SỐ QUAN TRỌNG NHẤT của công ty chứng khoán là TIỀN ĐANG CHO VAY (ký quỹ) —
+    // nguồn đang cào chưa trả dòng này, in hẳn một dòng trống để nói ra chứ không im lặng.
+    rows.push(`<tr class="ngr"><td title="Con số quan trọng nhất của công ty chứng khoán — tiền đang cho khách vay (chủ yếu ký quỹ), nằm bên TÀI SẢN. Nguồn đang cào (24hMoney lẫn VNDirect bản rút gọn) chỉ trả 20 dòng tóm tắt nên chưa có; sẽ bổ sung ngay khi mở được mã dòng mẫu công ty chứng khoán. Tạm soi qua vốn vay và đòn bẩy ở các dòng dưới."><div class="lb">Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung</div></td>`+
+      cols.map(()=>'<td>—</td>').join('')+'<td class="sp"></td></tr>');
+    dong('Vay / vốn chủ (lần)','Vốn vay tài trợ cho vay ký quỹ và tự doanh. Xanh ≤0,7 · vàng 0,7–1,3 · đỏ >1,3 lần — tam phân vị 35 công ty chứng khoán (08/2026).',
+      'lan',lay('vayvc'),banThap(0.7,1.3));
+    dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤1,5 · vàng 1,5–2,5 · đỏ >2,5 lần — tam phân vị 42 công ty chứng khoán (08/2026).',
+      'lan',lay('donbay'),banThap(1.5,2.5));
+    dong('Biên lãi ròng quý (%)','LNST / doanh thu hoạt động từng quý — tham khảo, lên xuống theo thị trường.',
+      'pct',lay('bienrong'),null,true);
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else if(NG.mau==='bh'){
+    dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤3 · vàng 3–5 · đỏ >5 lần — tam phân vị 13 công ty bảo hiểm (08/2026); nhân thọ đặc thù cao hơn phi nhân thọ.',
+      'lan',lay('donbay'),banThap(3,5));
+    dong('Tiền từ kinh doanh 4 quý (tỷ)','Cộng 4 quý dòng tiền thuần từ kinh doanh, dấu chuẩn VNDirect. Xanh ≥0 · đỏ <0.',
+      'ty',lay('cfo4'),(j,v)=>v>=0?'ngl':'ngd');
+    dong('Biên lãi ròng quý (%)','LNST / doanh thu từng quý — tham khảo.','pct',lay('bienrong'),null,true);
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else if(NG.mau==='bds'){
+    dong('Tồn kho / tổng tài sản (%)','Tỷ trọng dự án dở dang trong tổng tài sản. Màu xếp hạng so 12 quý của CHÍNH doanh nghiệp: đỏ = cao nhất vùng 12 quý, vàng = nhóm cao — không so chéo ngành.',
+      'pct',lay('tonkhotts'),hang12('tonkhotts'));
+    dong('Người mua trả trước so cùng kỳ (%)','Tiền khách đặt mua đã thu — doanh thu tương lai, sẽ ghi nhận khi bàn giao. Xanh tăng ≥15% · đỏ giảm ≥15% so cùng kỳ.',
+      'pct',yoy('tratruoc'),(j,v)=>v>=15?'ngl':v<=-15?'ngd':'');
+    dong('Vay / vốn chủ (lần)','Xanh ≤0,5 · vàng 0,5–1 · đỏ >1 lần — mốc quen dùng khi soi bất động sản.',
+      'lan',lay('novayvc'),banThap(0.5,1));
+    dong('Phải thu / tổng tài sản (%)','Phải thu (gồm dài hạn) trên tổng tài sản — phình so lịch sử là bàn giao ghi sổ nhưng tiền chưa về. Màu xếp hạng so 12 quý của chính doanh nghiệp.',
+      'pct',lay('phaithutts'),hang12('phaithutts'));
+    dong('Tiền từ kinh doanh 4 quý (tỷ)','Cộng 4 quý dòng tiền thuần từ kinh doanh, dấu chuẩn VNDirect. Xanh ≥0 (bán hàng mang tiền về thật) · đỏ <0 (đốt tiền, sống bằng vay và huy động).',
+      'ty',lay('cfo4'),(j,v)=>v>=0?'ngl':'ngd');
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else{
+    dong('Ngày tồn kho (ngày)','Tồn kho bình quân / giá vốn quý × 90 — hàng nằm kho bao lâu. Màu xếp hạng so 12 quý của CHÍNH doanh nghiệp: đỏ = cao nhất vùng (ứ hàng), không so chéo ngành vì 100 ngày là thường với thép nhưng bất thường với bán lẻ.',
+      'ngay',lay('ngaytk'),hang12('ngaytk'),true);
+    dong('Ngày thu tiền (ngày)','Phải thu bình quân / doanh thu quý × 90 — bán chịu bao lâu thì tiền về. Cùng luật xếp hạng 12 quý của chính doanh nghiệp.',
+      'ngay',lay('ngaypt'),hang12('ngaypt'),true);
+    dong('Vay / vốn chủ (lần)','Xanh ≤0,5 · vàng 0,5–1,5 · đỏ >1,5 lần — mốc quen dùng cho doanh nghiệp phi tài chính.',
+      'lan',lay('novayvc'),banThap(0.5,1.5));
+    dong('Biên lãi gộp quý (%)','Xanh cải thiện ≥1 điểm so cùng kỳ · đỏ mỏng đi ≥1 điểm · còn lại không tô.',
+      'pct',lay('biengop'),(j,v)=>{ const b=D.biengop&&D.biengop[j-4]; if(b==null) return '';
+        const d=v-b; return d>=1?'ngl':d<=-1?'ngd':''; },true);
+    dong('Tiền từ kinh doanh 4 quý (tỷ)','So với LNST 4 quý: xanh ≥80% (lãi có tiền về theo) · vàng 0–80% (lãi còn nằm ở phải thu/tồn kho) · đỏ âm (có lãi kế toán mà đốt tiền). Dấu lấy chuẩn VNDirect.',
+      'ty',lay('cfo4'),(j,v)=>{ const ln=D.lnst4&&D.lnst4[j];
+        if(ln==null) return v>=0?'ngl':'ngd';
+        if(ln<=0)   return v>=0?'ngv':'ngd';
+        const r=v/ln; return r>=.8?'ngl':r>=0?'ngv':'ngd'; });
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }
+  if(!rows.length) return;
+  tb.insertAdjacentHTML('beforeend',
+    `<tr class="ngr head ngcap"><td title="Các dòng dưới do CPVN tự tính từ chính bảng này và kho quý dài (data/nganh, tới ${CP.esc(ky[0])}) — thống kê mô tả quá khứ, không phải khuyến nghị. Rê chuột vào tên từng dòng để xem luật màu."><div class="lb">CHỈ SỐ ĐẶC THÙ NGÀNH (${NG_TEN[NG.mau]||''})</div></td>`+
+    cols.map(()=>'<td></td>').join('')+'<td class="sp"></td></tr>'+rows.join(''));
 }
 
 /* ---------- tài liệu + tin tức ---------- */
@@ -1244,10 +1418,15 @@ async function renderDocsNews(){
     return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${CP.esc(r.source)}</span><span class="dt">${CP.esc(r.date)}</span></div>`+
       `<a class="rt" ${r.pdf?`href="${CP.esc(r.pdf)}" target="_blank" rel="noopener"`:''}>${CP.esc(r.title)}${dl}</a></div>`;
   }).join(''):'<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>';
+  /* Vietstock rồi CafeF đứng đầu (user chốt 15/08/2026) — Simplize xuống cuối.
+     Đường dẫn CafeF cố ý giữ nhánh `hastc` cho MỌI mã dù mã đó niêm yết ở đâu: nguồn tự
+     chuyển hướng về đúng sàn kèm slug tên công ty đầy đủ (đo 15/08: VIC -> /du-lieu/hose/
+     vic-tap-doan-vingroup-cong-ty-co-phan, SHS -> /du-lieu/hastc/shs-…). Đừng "sửa" thành
+     tên sàn thật rồi tự ghép slug — trang chỉ có mã, không có tên pháp lý để ghép. */
   $('docLinks').innerHTML=[
-    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
-    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
     [`https://finance.vietstock.vn/${C.sym}/tai-tai-lieu.htm`,'📑 Tài liệu & BCTC (Vietstock)'],
+    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
+    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
   ].map(x=>`<a href="${x[0]}" target="_blank" rel="noopener">${x[1]}</a>`).join('');
   const nl=$('newsL');
   nl.innerHTML=(d.news&&d.news.length)?d.news.slice(0,30).map((n,i)=>
@@ -1448,7 +1627,10 @@ document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#finP button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); finPeriod=b.dataset.v; renderFin();
 });
-window.addEventListener('resize',()=>{ drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]); });
+/* Safari iOS bắn resize liên tục khi thanh địa chỉ co giãn theo cú cuộn -> phải hoãn,
+   bằng không mỗi cú vuốt là vẽ lại cả hai canvas. */
+window.addEventListener('resize',(()=>{ let t=0; return ()=>{ clearTimeout(t);
+  t=setTimeout(()=>{ drawChart(); veLaiFinChart(); },60); }; })());
 /* biểu đồ cao bằng cột trái -> cột trái đổi chiều cao (thêm dòng tiền mặt/LNST) thì vẽ lại */
 if(window.ResizeObserver){
   let t=0;
@@ -1459,7 +1641,7 @@ function applyThmIcon(){ thmBtn.textContent=isLight()?'☀️':'🌙'; }
 thmBtn.onclick=()=>{ const l=!isLight();
   document.documentElement.dataset.theme=l?'light':'';
   localStorage.setItem('cpvn_theme',l?'light':'');
-  applyThmIcon(); drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]);
+  applyThmIcon(); drawChart(); veLaiFinChart();   // màu nướng vào lúc vẽ canvas -> phải vẽ lại
 };
 applyThmIcon();
 
@@ -1474,13 +1656,13 @@ applyThmIcon();
   C=CP.coins.get(SYM);
   renderHero(); loadChart(); renderFromHist();
   renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
+  loadNganh();          // chỉ số đặc thù ngành — kho data/nganh, nạp xong tự nối vào bảng CĐKT
   loadNnHist();         // dòng tiền khối ngoại 7D/30D: nạp ngầm, bấm là có ngay
   renderPeers(); renderDocsNews();
   const h=CP.health;
   $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
   CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();
-      if(candles&&candles.length&&C.price){ const l=candles[candles.length-1];
-        l.c=C.price; if(C.price>l.h)l.h=C.price; if(C.price<l.l)l.l=C.price; drawChart(); }
+      if(gopGiaSongVaoNen()) drawChart();
       if(document.querySelector('#secTabs button[data-t="cn"]').classList.contains('on')) renderPeers();
     },
     // mỗi phút: mã đang xem + các mã cùng ngành đang liệt kê

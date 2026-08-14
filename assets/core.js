@@ -508,20 +508,37 @@ function chuanDonVi(sym,j){
     l:Math.round(g(j.l,i)*k), c:Math.round(j.c[i]*k), v:(j.v||[])[i]||0}));
 }
 const dayCache=new Map();
+const ngayNen=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
+/* CHỌN NGUỒN THEO PHIÊN MỚI NHẤT NÓ CÓ, ĐỪNG NHẬN BỪA NGUỒN ĐẦU TIÊN TRẢ VỀ DỮ LIỆU.
+   Bản cũ `return` ngay khi nguồn 1 trả về mảng hợp lệ — kể cả khi mảng đó THIẾU PHIÊN
+   GẦN NHẤT. Một mã bị nguồn 1 cập nhật trễ là chart đứng lại ở phiên cũ VĨNH VIỄN, trong
+   khi nguồn 2 hoặc kho có đủ; mà lỗi chỉ rơi vào đúng mã đó nên rất khó nghi (mã khác vẫn
+   đúng, nhìn như "chỉ mã này sai"). Nay đo NGÀY của nến cuối: nguồn nào đã có phiên gần
+   nhất thì dùng luôn và dừng; chưa có thì giữ lại làm dự phòng rồi hỏi tiếp nguồn sau,
+   cuối cùng lấy nguồn có nến MỚI NHẤT. Thứ tự ưu tiên khi hoà vẫn là VNDirect (hồi tố
+   quyền đầy đủ nhất) -> VPS -> kho. */
 CP.loadDaily=function(sym){
   if(dayCache.has(sym)) return dayCache.get(sym);
   const p=(async()=>{
     const to=Math.floor(Date.now()/1e3), from=to-15*365*86400;
+    const phien=CP.lastSessionDate();
+    let tot=null;
+    const nhan=r=>{                       // -> true nghĩa là đã đủ mới, khỏi hỏi nguồn sau
+      if(!r||!r.rows||!r.rows.length) return false;
+      const d=ngayNen(r.rows[r.rows.length-1].t);
+      if(!tot||d>ngayNen(tot.rows[tot.rows.length-1].t)) tot=r;
+      return d>=phien;
+    };
     if(!CP.OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
       try{
         const j=await fetch(`${url}?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`)
                         .then(r=>r.ok?r.json():null);
-        if(j&&j.s==='ok'&&j.t&&j.t.length>=2) return {rows:chuanDonVi(sym,j),src:ten};
+        if(j&&j.s==='ok'&&j.t&&j.t.length>=2&&nhan({rows:chuanDonVi(sym,j),src:ten})) return tot;
       }catch(e){}
     }
     const f=await CP.loadHistFile(sym);
-    if(!f||!f.t||f.t.length<2) return null;
-    return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+    if(f&&f.t&&f.t.length>=2) nhan({rows:chuanDonVi(sym,f),src:'kho CPVN'});
+    return tot;
   })();
   dayCache.set(sym,p); return p;
 };

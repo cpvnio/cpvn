@@ -1,3 +1,35 @@
+# TRANG HTML: PHẢI LUÔN HỎI LẠI MÁY CHỦ.
+# Bốn trang này KHÔNG chỉ là vỏ — gần hết mạch JS của site nằm INLINE trong chúng
+# (cophieu.html một mình đã hơn 1.500 dòng: nến, bảng tài chính, vòng giá sống). Mà chỉ
+# `assets/*.js` mới có `?v=` để ép tải bản mới; HTML thì không có cơ chế nào tương đương.
+# Nên nếu trình duyệt giữ bản HTML cũ thì người dùng chạy code cũ mà KHÔNG CÓ CÁCH NÀO
+# BIẾT: vá xong, đẩy xong, mở lên vẫn thấy đúng lỗi ấy. ETag lo phần tiết kiệm băng thông,
+# nên "hỏi lại mỗi lần" gần như không tốn gì.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/cophieu
+  Cache-Control: public, max-age=0, must-revalidate
+/cophieu.html
+  Cache-Control: public, max-age=0, must-revalidate
+/cophieu/*
+  Cache-Control: public, max-age=0, must-revalidate
+/bubbles
+  Cache-Control: public, max-age=0, must-revalidate
+/bubbles.html
+  Cache-Control: public, max-age=0, must-revalidate
+/congcu
+  Cache-Control: public, max-age=0, must-revalidate
+/congcu.html
+  Cache-Control: public, max-age=0, must-revalidate
+/radar
+  Cache-Control: public, max-age=0, must-revalidate
+/tapdoan
+  Cache-Control: public, max-age=0, must-revalidate
+/duongdua
+  Cache-Control: public, max-age=0, must-revalidate
+
 # Logo doanh nghiệp: đã kho hoá trong repo, nội dung gắn liền tên mã và gần như không đổi
 # -> cho trình duyệt giữ 1 NĂM. Vào lần sau không tốn byte nào, hiện tức thì.
 /assets/logo/*

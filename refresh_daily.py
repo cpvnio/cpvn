@@ -116,6 +116,11 @@ for i in range(0,len(syms),150):
                 # VNDirect ra đúng hệ số 10,0 ở cả 4 mã thử. Quên nhân 10 là room nhỏ đi
                 # 10 lần (HPG 2,7% thay vì 27,3%).
                 "fRoom":(float(x.get("fRoom") or 0))*10,
+                # GIÁ KHỚP CUỐI của bảng giá — KHÔNG dùng để ghi snapshot (close vẫn lấy
+                # từ kho nến), chỉ để ĐỐI CHIẾU ở bước 5c. Đây là đường lấy số ĐỘC LẬP
+                # duy nhất với nguồn vẽ chart; thiếu nó thì snapshot và kho nến cùng gốc
+                # VNDirect nên so nhau bao nhiêu cũng khớp, không phát hiện được gì.
+                "last":(float(x.get("lastPrice") or 0))*1000,
                 "gtgd":(float(x.get("avePrice") or 0))*1000*(float(x.get("lot") or 0))*10}
     except Exception as e: print("  board lỗi:",e,flush=True)
 print(f"bảng giá: {len(board)} mã",flush=True)
@@ -386,6 +391,31 @@ HL["bien"]={"ngoai":len(_ngoai),"ma":_ngoai[:20]}
 if _ngoai:
     print(f"CẢNH BÁO lệch phiên: {len(_ngoai)} mã có giá NGOÀI biên độ của chính nó "
           f"-> {', '.join(_ngoai[:12])}",flush=True)
+
+# 5c) CHUÔNG BÁO NGUỒN VẼ CHART SAI — so kho nến (VNDirect) với BẢNG GIÁ (VPS).
+#     Sinh ra 14/08/2026: user báo chart BID hiện giá không đúng giá đóng phiên, mà đúng
+#     MỘT MÌNH BID. Soi kho thì thấy latest.json khớp data/hist từng số — nhưng phép so ấy
+#     VÔ GIÁ TRỊ: `close` của snapshot LẤY TỪ CHÍNH kho nến, hai vế cùng một gốc VNDirect
+#     nên khớp là đương nhiên. Bảng giá VPS mới là đường lấy số ĐỘC LẬP, và trước đây
+#     pipeline ném luôn `lastPrice` đi (chỉ giữ tham chiếu/trần/sàn/khối ngoại/GTGD).
+#     Hệ quả: nguồn vẽ chart trả sai cho một mã thì con số sai đó chảy vào snapshot, vào
+#     bảng giá, vào mọi trang — và KHÔNG CÓ GÌ phát hiện được, phải đợi người dùng nhìn ra.
+#     Chỉ xét mã có giá khớp thật trong phiên (bảng giá `last`>0) và nến cuối đúng phiên
+#     này (không mang cờ nt). Nới 0,5% — cùng ngưỡng "hạ nền" của fetch_hist.
+_chart=[]
+for r in snap:
+    if r.get("nt"): continue
+    b=board.get(r["sym"]) or {}
+    bl,cl=b.get("last") or 0,r.get("close") or 0
+    if bl>0 and cl>0 and abs(cl-bl)/bl*100>0.5:
+        _chart.append({"s":r["sym"],"kho":round(cl),"bang":round(bl),
+                       "lech":round((cl-bl)/bl*100,2)})
+_chart.sort(key=lambda x:-abs(x["lech"]))
+HL["chart"]={"lech":len(_chart),"ma":_chart[:20]}
+if _chart:
+    print(f"CẢNH BÁO nguồn chart: {len(_chart)} mã có giá kho nến LỆCH bảng giá -> "
+          +", ".join(f"{x['s']} {x['kho']:,} vs {x['bang']:,} ({x['lech']:+.2f}%)"
+                     for x in _chart[:8]),flush=True)
 # spark.json: 30 giá đóng cửa gần nhất mỗi mã — trang bảng giá vẽ sparkline bằng 1 file duy nhất
 if len(sparks)>=100:
     jdump({"date":sess_date,"d":sparks},SPARK)
@@ -631,6 +661,16 @@ try:
 except Exception as e:
     print(f"kho sâu LỖI (không chặn pipeline): {e}",flush=True)
     HL["finq"]={"err":str(e)[:120]}
+
+# 6d) CHỈ SỐ ĐẶC THÙ NGÀNH data/nganh/{MÃ}.json — tính từ fin + finq, KHÔNG gọi mạng.
+#     Phải đứng SAU 6c: lưu chuyển tiền tệ chỉ tin dấu của finq (kho fin sai dấu 60% số ô).
+#     `--moi` so mtime nên ngày thường chỉ dựng lại mã vừa có báo cáo mới, vài giây là xong.
+try:
+    import build_nganh as _bn
+    HL["nganh"]=_bn.main(moi=True)
+except Exception as e:
+    print(f"chỉ số ngành LỖI (không chặn pipeline): {e}",flush=True)
+    HL["nganh"]={"err":str(e)[:120]}
 
 # 7) KHO TIN TỨC + BÁO CÁO CTCK data/news/{SYM}.json — web tự rơi về đây khi nguồn sống chết
 #    Hằng ngày: top 200 GTGD (tin đổi nhanh); --full T2: TOÀN BỘ mã.
@@ -882,21 +922,34 @@ HL["profile"]={"need":len(ptargets),"ok":pdone[1],"giu_cu":pkeep[0]}
 #    (Kho gốc dựng 1 lần bằng tools/fetch_logos.py; ở đây chỉ vá phần thiếu.)
 LOGO_DIR=os.path.join(BASE,"assets","logo")
 os.makedirs(LOGO_DIR,exist_ok=True)
-lmiss=[s for s in syms if stocks[s].get("img") and not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp"))]
+# ĐẾM THEO FILE THIẾU, ĐỪNG ĐẾM THEO MÃ CÓ URL. Bản cũ lọc `stocks[s].get("img")` ngay từ
+# dòng đầu nên mã KHÔNG CÓ url biến mất khỏi cả vòng tải LẪN báo cáo — phiên 13/08 thực tế
+# thiếu 16 logo mà health.json ghi 10, sáu mã còn lại (DTH, TAN, ANI, TAH, ULG, PCB) không
+# ai biết là có tồn tại. Nay tách hai rổ và ghi cả hai ra:
+#   `missing`  = thiếu file mà CÓ url  -> lượt sau thử lại được
+#   `khong_url`= thiếu file mà KHÔNG có url -> nguồn Simplize không có, phải tìm nguồn khác
+# `fetched` = 0 nhiều phiên liền TRONG KHI `missing` không giảm nghĩa là mấy url đó đang
+# 404 ở nguồn, thử lại bao nhiêu lần cũng vậy — đừng đọc thành "chưa chạy tới".
+lthieu=[s for s in syms if not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp"))]
+lmiss=[s for s in lthieu if stocks[s].get("img")]
+lno=[s for s in lthieu if not stocks[s].get("img")]
+lok=0; lerr=None
 if lmiss:
     try:
         sys.path.insert(0,os.path.join(BASE,"tools"))
         from fetch_logos import fetch_one
-        lok=0
         for s in lmiss[:60]:                      # trần an toàn: mỗi lượt chạy tối đa 60 mã
             if fetch_one(s,stocks[s]["img"],os.path.join(LOGO_DIR,f"{s}.webp")): lok+=1
-        print(f"kho logo: thiếu {len(lmiss)}, tải thêm {lok}",flush=True)
-        HL["logo"]={"missing":len(lmiss),"fetched":lok}
     except ImportError as e:                      # thiếu Pillow -> bỏ qua, web tự rơi về CDN nguồn
+        lerr="no-pillow"
         print(f"kho logo: BỎ QUA ({e}) — cài Pillow để tự tải logo mã mới",flush=True)
-        HL["logo"]={"missing":len(lmiss),"fetched":0,"err":"no-pillow"}
-else:
-    HL["logo"]={"missing":0,"fetched":0}
+if lthieu:
+    print(f"kho logo: thiếu {len(lthieu)} file — {len(lmiss)} mã có url (tải thêm {lok}), "
+          f"{len(lno)} mã NGUỒN KHÔNG CÓ URL"
+          +(f" -> {', '.join(sorted(lno)[:12])}" if lno else ""),flush=True)
+HL["logo"]={"missing":len(lmiss),"fetched":lok,"khong_url":len(lno),
+            "ma":sorted(s for s in lthieu if not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp")))[:24]}
+if lerr: HL["logo"]["err"]=lerr
 
 # 10) DỮ LIỆU PHÂN TÍCH data/screen.json + data/market.json (Radar · Bản đồ nhiệt ·
 #     So găng · Đường đua): RSI/MA/RS Rating/điểm cơ bản/nhịp thị trường — tự tươi mỗi phiên.
