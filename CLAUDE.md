@@ -925,6 +925,21 @@ hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky
 `dailyRows`, chung kho hình vẽ; chỉ khác palette (`'gon'` 10 nút vs `'full'` 14 nút).
 Bốn bảng KQKD/CĐKT/LCTT/cổ tức dùng **chung một lưới cột** — đổi số cột là lệch cả bốn.
 Kỳ mới nhất luôn bên **trái**. Chiều cao canvas không đặt cứng, do cột trái quyết định.
+**BIỂU ĐỒ KQKD CHỈ ĐƯỢC VẼ LẠI BẰNG `veLaiFinChart()`, đừng tự dựng danh sách cột.**
+Canvas không tự biết cột nào đang nằm dưới nó — nó ĐO `<th>` của bảng KQKD rồi vẽ theo.
+Truyền danh sách khác bảng là ra một hình vô nghĩa **mà không báo lỗi**. Đã dính: `resize`
+và nút đổi sáng/tối cùng gọi `drawFinChart(finData[finPeriod])` — **MẢNG THÔ đủ 70 quý,
+thứ tự cũ→mới** — trong khi bảng hiện 8 quý mới→cũ. Trên VIX: 70 cột nhồi vào bề ngang
+của 8 cột nên bar chồng nhau thành vệt bết ở đáy, quý 2009-2015 doanh thu bé tí nên tàng
+hình, đường biên ròng chạy suốt bề ngang với một chữ V cắm xuống ở quý lỗ nặng năm xưa.
+> **VÌ SAO CHỈ ĐIỆN THOẠI THẤY, LỌT LƯỚI RẤT LÂU**: Safari iOS bắn `resize` NGAY LÚC MỚI
+> VÀO TRANG — thanh địa chỉ co lại theo cú cuộn đầu tiên. Người dùng chưa bấm gì đã hỏng,
+> bấm "Theo quý"/"Theo năm" thì `renderFin` chạy lại và tự lành nên rất khó nghi. Máy bàn
+> chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc đổi giao diện. Cùng lý do phải **hoãn 60ms** cú
+> `resize`: iOS bắn liên tục suốt lúc vuốt.
+Cách chặn: `kqkdTable` ghi lại danh sách cột vừa vẽ vào `finColsVe`, mọi lượt vẽ lại đi
+qua `veLaiFinChart()`. Bất biến nằm ở CẤU TRÚC chứ không phải ở việc nhớ truyền đúng.
+
 Bảng Cân đối kế toán kết thúc bằng nhóm dòng **Chỉ số đặc thù ngành** (`veNganhRows`,
 đọc `data/nganh/{MÃ}.json`, thiếu file thì không chèn gì) — trình bày y hệt dòng bảng,
 chỉ đánh màu con số theo từng cột; luật màu, ánh xạ năm→Q4 và bốn cái bẫy nguồn xem

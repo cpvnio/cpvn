@@ -1000,6 +1000,20 @@ function renderPeers(){
     if(el.dataset.sym!==C.sym) location.href='/cophieu/'+el.dataset.sym; });
 }
 /* ---------- tài chính: KQKD chart + 3 bảng đầy đủ ---------- */
+/* DANH SÁCH CỘT BẢNG KQKD VỪA VẼ — nguồn DUY NHẤT để vẽ lại biểu đồ.
+   Biểu đồ canvas không tự biết cột nào đang nằm dưới nó, nó chỉ đo <th> của bảng; nên
+   ai vẽ lại biểu đồ mà truyền danh sách khác bảng là ra một hình vô nghĩa NHƯNG KHÔNG
+   BÁO LỖI. Đã dính đúng vậy: `resize` và nút đổi sáng/tối cùng truyền `finData[finPeriod]`
+   — MẢNG THÔ đủ 70 quý, thứ tự cũ→mới — trong khi bảng đang hiện 8 quý mới→cũ. Kết quả
+   trên VIX: 70 cột nhồi vào bề ngang của 8 cột nên cột chồng lên nhau thành một vệt bết
+   ở đáy, mấy quý 2009-2015 doanh thu bé tí nên gần như tàng hình, còn đường biên ròng
+   chạy suốt bề ngang với một chữ V cắm xuống ở quý lỗ nặng năm xưa.
+   VÌ SAO CHỈ ĐIỆN THOẠI MỚI THẤY: Safari iOS bắn `resize` NGAY LÚC MỚI VÀO TRANG khi
+   thanh địa chỉ thu lại theo cú cuộn đầu tiên — người dùng chưa bấm gì đã hỏng. Máy bàn
+   chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc bấm đổi giao diện, nên lọt lưới rất lâu.
+   Luật: MỌI lượt vẽ lại phải đi qua biến này, đừng bao giờ tự dựng danh sách cột. */
+let finColsVe=null;
+function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
   const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
@@ -1078,6 +1092,7 @@ async function fillMcap(rows){
 }
 function kqkdTable(rows,div){
   const show=rows;
+  finColsVe=show;          // biểu đồ vẽ lại phải bám đúng cột này — xem chú thích ở finColsVe
   const qc=r=>r._q?' qcol':'';                  // cột quý bung ra từ một năm -> tô nhạt hơn
   const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
   /* nhãn dòng nào có trong bảng chú giải thì gắn title — rê chuột vào là hiểu nghĩa,
@@ -1579,7 +1594,10 @@ document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#finP button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); finPeriod=b.dataset.v; renderFin();
 });
-window.addEventListener('resize',()=>{ drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]); });
+/* Safari iOS bắn resize liên tục khi thanh địa chỉ co giãn theo cú cuộn -> phải hoãn,
+   bằng không mỗi cú vuốt là vẽ lại cả hai canvas. */
+window.addEventListener('resize',(()=>{ let t=0; return ()=>{ clearTimeout(t);
+  t=setTimeout(()=>{ drawChart(); veLaiFinChart(); },60); }; })());
 /* biểu đồ cao bằng cột trái -> cột trái đổi chiều cao (thêm dòng tiền mặt/LNST) thì vẽ lại */
 if(window.ResizeObserver){
   let t=0;
@@ -1590,7 +1608,7 @@ function applyThmIcon(){ thmBtn.textContent=isLight()?'☀️':'🌙'; }
 thmBtn.onclick=()=>{ const l=!isLight();
   document.documentElement.dataset.theme=l?'light':'';
   localStorage.setItem('cpvn_theme',l?'light':'');
-  applyThmIcon(); drawChart(); if(finData) drawFinChart(finData[finPeriod]||[]);
+  applyThmIcon(); drawChart(); veLaiFinChart();   // màu nướng vào lúc vẽ canvas -> phải vẽ lại
 };
 applyThmIcon();
 
