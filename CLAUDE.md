@@ -78,6 +78,14 @@ gây gãy chart thật (thưởng CP, chia CP, tách) đều đã hồi tố.
 > mang tính chất này. Đừng cộng thêm cổ tức tiền vào bất kỳ phép tính lợi nhuận nào
 > kẻo ĐẾM HAI LẦN.
 
+> **CHỌN NGUỒN THEO PHIÊN MỚI NHẤT NÓ CÓ, đừng nhận bừa nguồn đầu tiên trả về dữ liệu.**
+> Bản cũ `return` ngay khi nguồn 1 cho một mảng hợp lệ — KỂ CẢ khi mảng đó thiếu phiên gần
+> nhất. Một mã bị nguồn 1 cập nhật trễ là chart đứng lại ở phiên cũ vĩnh viễn trong khi
+> nguồn 2 hoặc kho có đủ, và vì chỉ rơi vào đúng mã đó nên đọc ra như "chỉ mỗi mã này sai"
+> — rất khó nghi ngờ đúng chỗ. Nay đo NGÀY của nến cuối: nguồn nào đã có phiên gần nhất
+> thì dùng luôn và dừng, chưa có thì giữ làm dự phòng rồi hỏi tiếp, cuối cùng lấy nguồn có
+> nến mới nhất (hoà thì giữ thứ tự ưu tiên cũ vì VNDirect hồi tố quyền đầy đủ nhất).
+
 > **Vì sao phải có nguồn 2**: nguồn 1 tắt là mất sạch chart. **Vì sao kho vẫn ở lại**:
 > nó là CƠ SỞ DỮ LIỆU cho bộ lọc/radar/đường đua, chỉ thôi đóng vai nguồn vẽ.
 > **Đơn vị**: cả hai nguồn trả nghìn đồng — phải đối chiếu `ref` bảng giá chọn hệ số,
@@ -894,6 +902,12 @@ Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó 
 - **Cache-bust**: mọi thẻ `<script src="assets/*.js">` ở cả 4 trang dùng **cùng một token
   `?v=YYYYMMDDx`**. `_headers` không có rule cho `assets/*.js` nên đổi token là cách DUY
   NHẤT ép tải bản mới. Sửa 1 file JS → đổi token ở TẤT CẢ các trang.
+  > **HTML thì KHÔNG có `?v=` nào cả — nên `_headers` phải bắt nó `must-revalidate`.**
+  > Gần hết mạch JS của site nằm INLINE trong bốn trang (riêng `cophieu.html` hơn 1.500
+  > dòng: nến, bảng tài chính, vòng giá sống). Trình duyệt giữ bản HTML cũ là người dùng
+  > chạy code cũ mà **không có cách nào biết** — vá xong, đẩy xong, mở lên vẫn thấy đúng
+  > lỗi ấy, rồi mình đi tìm bug ở chỗ đã sửa rồi. Luật liệt kê đủ cả URL sạch
+  > (`/radar`, `/tapdoan`, `/duongdua`, `/cophieu/*`) chứ không chỉ file `.html`.
 - **`<base href="/">`** bắt buộc ở `cophieu.html` (URL 2 tầng `/cophieu/VIC`).
   `congcu.html` **không có** → chỉ an toàn với URL một đoạn.
 - **`_redirects`**: `200` = rewrite giữ URL đẹp, `301` = chuyển hướng thật.
