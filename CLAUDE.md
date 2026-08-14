@@ -35,6 +35,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
 | `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
+| `tools/soi_nguon.py` | 150 | Soi nguồn vẽ chart: đối chiếu VNDirect · VPS · kho · bảng giá cho từng mã. Chạy tay khi nghi nguồn sai |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -204,6 +205,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   cửa phiên này nằm ngoài là đúng bản chất, chặn ở đó là xoá sạch % của cả phiên vừa đóng.
   Ngày đo 12/08/2026 lưới bắt **0 mã** — đúng như mong đợi, vì lớp `nt` đã dọn trước; nó nằm
   đó cho lần luật `nt` thủng theo một kiểu chưa ai nghĩ tới.
+- **`close` CỦA SNAPSHOT LẤY TỪ KHO NẾN, KHÔNG PHẢI TỪ BẢNG GIÁ — nên đừng bao giờ "kiểm
+  chứng" kho nến bằng `data/eod/latest.json`.** Bước 5 dựng `snap` từ `prices[sym]` mà
+  `prices` sinh ra từ `data/hist` (VNDirect); bảng giá VPS chỉ góp tham chiếu/trần/sàn/khối
+  ngoại/GTGD. Hai vế CÙNG MỘT GỐC nên so nhau bao nhiêu cũng khớp — 14/08/2026 đã dính
+  đúng bẫy này: user báo chart BID sai, đo "latest.json khớp data/hist 1526/1527 mã" rồi
+  kết luận "kho sạch, lỗi ở nơi khác". Phép đo đó **vòng tròn, không chứng minh được gì**.
+  Đường lấy số ĐỘC LẬP duy nhất là `lastPrice` của bảng giá VPS — trước đây pipeline ném
+  luôn đi. Nay giữ lại (`board[sym]['last']`) và **bước 5c** so nó với `close` của snapshot,
+  ghi `health.json['chart']`. Nguồn vẽ chart trả sai cho một mã thì con số sai chảy vào
+  snapshot → bảng giá → mọi trang, mà không có gì phát hiện được nếu thiếu phép so này.
+  Công cụ soi tay: `python3 tools/soi_nguon.py BID` (đối chiếu VNDirect · VPS · kho · EOD).
 - **CHUÔNG BÁO trong pipeline (`refresh_daily` bước 5b) -> `health.json['bien']`.** Cùng phép
   kiểm ấy chạy trên snapshot EOD vừa dựng, đếm số mã có giá ngoài biên độ của chính nó.
   `bien.ngoai > 0` nghĩa là kho đang trộn hai phiên — **đừng đọc thành "vẫn ổn"**. Có nó thì
