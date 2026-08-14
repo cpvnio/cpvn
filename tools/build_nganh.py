@@ -192,6 +192,7 @@ def dung_mot_ma(fin, finq, sector):
         d["novay"]    = cong(b("bsa56"), b("bsa71"))
         d["novayvc"]  = chia(d["novay"], vcsh, 1, 2)
         d["phaithu"]  = cong(b("bsa8"), b("bsa24"))
+        d["phaithutts"] = chia(d["phaithu"], tts, 100, 1)
         d["cfo4"]     = lan4(day(ky, cf.get("cfa18")))
         d["roe"]      = roe4(np4, vcsh, ky)
     else:

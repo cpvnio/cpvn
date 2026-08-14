@@ -314,34 +314,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   table.ft td.qcol.pos{color:var(--green)} table.ft td.qcol.neg{color:var(--red)}
   table.ft td.pos{color:var(--green)} table.ft td.neg{color:var(--red)}
 
-  /* ------- CHỈ SỐ ĐẶC THÙ NGÀNH (data/nganh — xem tools/build_nganh.py) -------
-     Ô nào cũng một khuôn: tên + chấm màu · con số to · dòng phụ + spark 12 quý.
-     Chấm màu là TRẠNG THÁI (lục/vàng/đỏ theo ngưỡng ghi ở tooltip, xám = tham khảo),
-     đừng tô cả ô — sáu ô loè loẹt cạnh nhau là không đọc ra ô nào đáng nhìn. */
-  #ngHead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 10px}
-  #ngGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:10px}
-  .ngT{border:1px solid var(--line);border-radius:12px;padding:9px 12px 8px;background:var(--panel2);min-width:0}
-  .ngT .h{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted);
-    font-weight:700;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap}
-  .ngT .h span{overflow:hidden;text-overflow:ellipsis}
-  .ngT .h i{width:8px;height:8px;border-radius:50%;flex:none;margin-left:auto}
-  .ngT.luc .h i{background:var(--green)} .ngT.vang .h i{background:var(--yellow)}
-  .ngT.do .h i{background:var(--red)}    .ngT.xam .h i{background:var(--muted);opacity:.5}
-  .ngT .v{font-size:19px;font-weight:800;margin:3px 0 1px}
-  .ngT .v small{font-size:11.5px;font-weight:600;color:var(--muted);margin-left:2px}
-  .ngT .v .k{font-size:10.5px;font-weight:700;color:var(--yellow);margin-left:6px}
-  .ngT .s{display:flex;align-items:flex-end;gap:8px;font-size:11.5px;color:var(--muted);min-height:18px}
-  .ngT .s>span{min-width:0}   /* cho xuống dòng — cắt cụt "+13.8% so cùng kỳ" là mất chính con số */
-  .ngT .s b.up{color:var(--green)} .ngT .s b.dn{color:var(--red)}
-  .ngT svg{margin-left:auto;flex:none}
-  .ngT svg path{fill:none;stroke:var(--muted);stroke-width:1.4;opacity:.6}
-  .ngT.luc svg path{stroke:var(--green);opacity:.85} .ngT.do svg path{stroke:var(--red);opacity:.85}
-  .ngT.vang svg path{stroke:var(--yellow);opacity:.85}
-  #ngNote{margin-top:9px}
-  #nganhBox{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
-  /* màn hẹp: hạ sàn ô xuống 150px cho ra HAI cột — một cột là sáu ô ăn trọn hai màn cuộn */
-  @media(max-width:760px){ #ngGrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-    .ngT .v{font-size:17px} }
+  /* ------- CHỈ SỐ ĐẶC THÙ NGÀNH = DÒNG CUỐI BẢNG CĐKT (user chốt 14/08/2026) -------
+     Không dựng ô nổi bật riêng — chỉ số nằm NGAY TRONG bảng cân đối kế toán, trình bày
+     y hệt một dòng bảng, chỉ đánh màu con số theo trạng thái. Luật màu ở tooltip tên dòng. */
+  table.ft td.ngl{color:var(--green);font-weight:650}
+  table.ft td.ngv{color:var(--yellow);font-weight:650}
+  table.ft td.ngd{color:var(--red);font-weight:650}
+  table.ft tr.ngcap td{border-top:2px solid var(--line)}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   /* VỐN HOÁ theo kỳ: đậm vừa để dò nhanh cạnh dòng LN sau thuế, tách bằng vạch mảnh */
   table.ft tr.mcapRow td{font-weight:700;border-top:1px solid var(--line)}
@@ -550,12 +529,6 @@ document.addEventListener(MO,function(e){
 
   <div class="sect on" id="s-tc">
     <div class="card">
-      <div id="nganhBox" style="display:none">
-        <div id="ngHead"><h3 class="t" style="margin:0">Chỉ số đặc thù ngành</h3>
-          <span class="subnote" id="ngKy"></span></div>
-        <div id="ngGrid"></div>
-        <div class="subnote" id="ngNote"></div>
-      </div>
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
       </div>
@@ -573,7 +546,7 @@ document.addEventListener(MO,function(e){
       <div class="twrap" id="bsT"></div>
       <h3 class="t">Lưu chuyển tiền tệ</h3>
       <div class="twrap" id="cfT"></div>
-      <div class="subnote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
+      <div class="subnote" id="finNote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
     </div>
   </div>
 
@@ -1265,146 +1238,130 @@ async function renderFin(){
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);
   genericTable($('cfT'),cf,[]);
+  veNganhRows();        // dòng chỉ số ngành nối vào cuối bảng CĐKT — vẽ lại theo kỳ đang chọn
   pickFinHighlights(); if(C) renderHero();
 }
 
-/* ---------- CHỈ SỐ ĐẶC THÙ NGÀNH (data/nganh — tools/build_nganh.py dựng sẵn) ----------
-   Mỗi loại hình doanh nghiệp có "con số sống còn" khác nhau: ngân hàng là cho vay/tiền
-   gửi, BĐS là tồn kho dở dang + tiền người mua trả trước, sản xuất là ngày tồn kho/ngày
-   thu tiền. Kho tính sẵn CHUỖI theo quý (đủ lịch sử, lưu chuyển tiền tệ chỉ lấy dấu
-   VNDirect); client chỉ chọn ô theo mẫu, tô màu theo luật ghi ngay trong tooltip và vẽ
-   spark 12 quý. Ngưỡng nào đo từ phân bố thật thì tooltip nói rõ đo trên bao nhiêu mã. */
-const NG_TEN={nh:'Ngân hàng',ck:'Chứng khoán',bh:'Bảo hiểm',bds:'Bất động sản',sx:'Sản xuất – dịch vụ'};
-function ngCuoi(s){ if(!s) return -1; for(let i=s.length-1;i>=0;i--) if(s[i]!=null) return i; return -1; }
-const ngSo=v=>Math.round(v).toLocaleString('en-US');
-const ngFmt={ ty:v=>ngSo(v)+'<small>tỷ</small>', pct:v=>v.toFixed(1)+'<small>%</small>',
-              lan:v=>v.toFixed(2)+'<small>lần</small>' };
-function ngDelta(s,i,kind,to){        // so CÙNG KỲ (4 quý trước); thiếu kỳ đối chiếu thì thôi
-  const j=i-4; if(j<0||s[j]==null||s[i]==null) return '';
-  let d,t;
-  if(kind==='ty'){ if(!s[j]) return ''; d=(s[i]-s[j])/Math.abs(s[j])*100; t=Math.abs(d).toFixed(1)+'%'; }
-  else if(kind==='pct'){ d=s[i]-s[j]; t=Math.abs(d).toFixed(1)+'đ'; }
-  else { d=s[i]-s[j]; t=Math.abs(d).toFixed(2); }
-  if(Math.abs(d)<.05) return 'đi ngang so cùng kỳ';
-  const du=(d>0?'+':'−')+t;
-  return (to?`<b class="${d>0?'up':'dn'}">${du}</b>`:du)+' so cùng kỳ';
+/* ---------- CHỈ SỐ ĐẶC THÙ NGÀNH — DÒNG CUỐI BẢNG CÂN ĐỐI KẾ TOÁN ----------
+   User chốt 14/08/2026: không dựng ô nổi bật trên đầu thẻ — chỉ số phải NẰM Ở VỊ TRÍ
+   cân đối kế toán, trình bày y hệt một dòng bảng, đánh màu con số là đủ. Kho
+   data/nganh (tools/build_nganh.py) giữ CHUỖI quý đủ lịch sử; ở đây ánh xạ chuỗi vào
+   ĐÚNG các cột bảng đang hiện: theo quý thì nhãn trùng nhau, theo năm thì năm -> Q4
+   của năm đó (chỉ số thời điểm và chỉ số trượt 4 quý tại Q4 chính là số cả năm), còn
+   các dòng THUẦN QUÝ (ngày tồn, ngày thu, biên quý) bị ẩn ở chế độ năm — đặt biên gộp
+   của riêng quý 4 dưới cột NĂM là nói sai kỳ. Màu tô theo TỪNG CỘT nên nhìn ngang một
+   dòng là thấy chỉ số chuyển vàng/đỏ từ kỳ nào. Luật màu ghi ở tooltip tên dòng. */
+let NG=null;
+const NG_TEN={nh:'ngân hàng',ck:'chứng khoán',bh:'bảo hiểm',bds:'bất động sản',sx:'sản xuất – dịch vụ'};
+async function loadNganh(){
+  try{ const r=await fetch('data/nganh/'+C.sym+'.json'); if(r.ok) NG=await r.json(); }catch(e){}
+  if(!NG||!NG.ky||!NG.ky.length||!NG.d) { NG=null; return; }
+  veNganhRows();
 }
-function ngSpark(s,i){
-  const pts=[]; for(let j=Math.max(0,i-11);j<=i;j++) if(s[j]!=null) pts.push(s[j]);
-  if(pts.length<4) return '';
-  const mn=Math.min(...pts),mx=Math.max(...pts),kh=(mx-mn)||1;
-  const p=pts.map((v,k)=>((k/(pts.length-1))*54+1).toFixed(1)+','+(17-(v-mn)/kh*14).toFixed(1));
-  return `<svg width="56" height="18" viewBox="0 0 56 18" aria-hidden="true"><path d="M${p.join(' L')}"/></svg>`;
-}
-/* luật màu — trả {c, why}; why hiện nguyên văn trong tooltip nên viết thành câu */
-const ngThap=(a,b,dv,ghi)=>v=> v<=a?{c:'luc',why:`≤${a}${dv} — ${ghi}`}
-  : v<=b?{c:'vang',why:`trong khoảng ${a}–${b}${dv} — ${ghi}`}:{c:'do',why:`>${b}${dv} — ${ghi}`};
-const ngRoe=v=> v>=15?{c:'luc',why:'ROE ≥15%/năm — sinh lời tốt'}
-  : v>=8?{c:'vang',why:'ROE 8–15%/năm — trung bình'}:{c:'do',why:'ROE <8%/năm — thấp'};
-function ngHang(s,i){                 // kỳ này đứng đâu trong 12 quý gần nhất — CAO là đáng để mắt
-  const w=[]; for(let j=Math.max(0,i-11);j<=i;j++) if(s[j]!=null) w.push(s[j]);
-  if(w.length<6||s[i]==null) return {c:'xam',why:'chưa đủ lịch sử để so với chính doanh nghiệp'};
-  const r=w.filter(v=>v<=s[i]).length/w.length;
-  return r>=.92?{c:'do',why:`cao nhất trong ${w.length} quý gần đây của chính doanh nghiệp`}
-       : r>=.75?{c:'vang',why:`thuộc nhóm cao trong ${w.length} quý gần đây của chính doanh nghiệp`}
-       : {c:'luc',why:`bình thường so với ${w.length} quý gần đây của chính doanh nghiệp`};
-}
-async function renderNganh(){
-  let g; try{ const r=await fetch('data/nganh/'+C.sym+'.json'); if(!r.ok) return; g=await r.json(); }
-  catch(e){ return; }
-  if(!g||!g.ky||!g.ky.length||!g.d) return;
-  const D=g.d, kc=g.ky.length-1, o=[];
-  // mot(khoá, tên, kiểu số, luật màu(v,s,i), dòng phụ(s,i), delta có tô màu không)
-  const mot=(k,ten,kind,mauFn,subFn,to)=>{
-    const s=D[k], i=ngCuoi(s); if(i<0) return;
-    const m=mauFn?mauFn(s[i],s,i):{c:'xam',why:'tham khảo — không áp ngưỡng màu'};
-    const ky=i<kc?`<span class="k">${g.ky[i]}</span>`:'';   // ô lấy kỳ CŨ hơn kỳ chung thì nói ra
-    const sub=[subFn?subFn(s,i):'',ngDelta(s,i,kind,to!==false)].filter(Boolean).join(' · ');
-    o.push(`<div class="ngT ${m.c}" title="${CP.esc(ten)}: ${CP.esc(m.why)}">`+
-      `<div class="h"><span>${ten}</span><i></i></div><div class="v">${ngFmt[kind](s[i])}${ky}</div>`+
-      `<div class="s"><span>${sub||'&nbsp;'}</span>${ngSpark(s,i)}</div></div>`);
+function veNganhRows(){
+  if(!NG) return;
+  const wrap=$('bsT'), tb=wrap&&wrap.querySelector('table.ft tbody');
+  const G=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
+  if(!tb||!G||!G.labels) return;
+  tb.querySelectorAll('tr.ngr').forEach(r=>r.remove());
+  const D=NG.d, ky=NG.ky, theoNam=finPeriod==='Y';
+  // cột bảng (mới -> cũ, y như genericTable) -> chỉ số trong trục kỳ của kho nganh
+  const cols=G.labels.map((_,i)=>i).reverse()
+    .map(i=>ky.indexOf(theoNam?('Q4/'+String(G.labels[i]).slice(2)):G.labels[i]));
+  if(!cols.some(j=>j>=0)) return;
+  const F={ty:v=>Math.round(v).toLocaleString('en-US'), lan:v=>v.toFixed(2),
+           pct:v=>v.toFixed(1), ngay:v=>String(Math.round(v))};
+  const lay=k=>j=>D[k]?D[k][j]:null;
+  const yoy=k=>j=>{ const s=D[k]; if(!s) return null; const a=s[j], b=s[j-4];
+    return (a==null||b==null||!b)?null:Math.round((a-b)/Math.abs(b)*1000)/10; };
+  const banThap=(a,b)=>(j,v)=>v<=a?'ngl':v<=b?'ngv':'ngd';
+  const banRoe=(j,v)=>v>=15?'ngl':v>=8?'ngv':'ngd';
+  // kỳ này đứng đâu trong 12 quý gần nhất CỦA CHÍNH MÃ NÀY — cao là đáng để mắt
+  const hang12=k=>(j)=>{ const s=D[k]; if(!s||s[j]==null) return '';
+    const w=[]; for(let t=Math.max(0,j-11);t<=j;t++) if(s[t]!=null) w.push(s[t]);
+    if(w.length<6) return '';
+    const r=w.filter(x=>x<=s[j]).length/w.length;
+    return r>=.92?'ngd':r>=.75?'ngv':'ngl'; };
+  const rows=[];
+  // dong(tên, luật màu ghi ở tooltip, kiểu số, lấy giá trị(j), màu(j,v), chỉ-có-nghĩa-theo-quý?)
+  const dong=(ten,why,fmt,val,mau,chiQ)=>{
+    if(chiQ&&theoNam) return;
+    let co=false;
+    const tds=cols.map(j=>{ const v=j<0?null:val(j);
+      if(v==null) return '<td>—</td>';
+      co=true; const c=mau?mau(j,v):'';
+      return '<td'+(c?' class="'+c+'"':'')+'>'+F[fmt](v)+'</td>'; });
+    if(!co) return;
+    rows.push(`<tr class="ngr"><td title="${CP.esc(why)}"><div class="lb">${ten}</div></td>`+
+      tds.join('')+'<td class="sp"></td></tr>');
   };
-  let note='';
-  if(g.mau==='nh'){
-    mot('chovay','Dư nợ cho vay','ty');
-    mot('tiengui','Tiền gửi khách hàng','ty');
-    mot('ldr','Cho vay / tiền gửi','pct',v=> v>300
-      ? {c:'xam',why:'công ty tài chính — vốn từ vay và trái phiếu chứ không huy động tiền gửi như ngân hàng, tỷ lệ này không so được'}
-      : ngThap(100,120,'%','tam phân vị đo trên 29 ngân hàng trong kho, 08/2026')(v),null,false);
-    mot('donbay','Đòn bẩy · TTS/VCSH','lan',
-      ngThap(10,13,' lần','tam phân vị 29 ngân hàng, 08/2026 — càng cao đệm vốn càng mỏng'),null,false);
-    mot('dautuck','Đầu tư chứng khoán / TTS','pct',null,null,false);
-    mot('roe','ROE 4 quý','pct',ngRoe);
-    note='LDR và đòn bẩy tô màu theo tam phân vị đo trên 29 ngân hàng trong kho (08/2026).';
-  }else if(g.mau==='ck'){
-    mot('vay','Vốn vay','ty');
-    mot('vayvc','Vay / vốn chủ','lan',
-      ngThap(0.7,1.3,' lần','tam phân vị đo trên 35 công ty chứng khoán trong kho, 08/2026'),null,false);
-    mot('donbay','Đòn bẩy · TTS/VCSH','lan',
-      ngThap(1.5,2.5,' lần','tam phân vị 42 công ty chứng khoán, 08/2026'),null,false);
-    mot('bienrong','Biên lãi ròng quý','pct',null,null,false);
-    mot('roe','ROE 4 quý','pct',ngRoe);
-    note='Nguồn dữ liệu (24hMoney lẫn VNDirect bản đang cào) chỉ trả bảng cân đối RÚT GỌN, '+
-      'chưa có dòng “cho vay ký quỹ” — tạm soi sức khoẻ qua vốn vay và đòn bẩy, sẽ bổ sung ngay khi cào được.';
-  }else if(g.mau==='bh'){
-    mot('donbay','Đòn bẩy · TTS/VCSH','lan',
-      ngThap(3,5,' lần','tam phân vị 13 công ty bảo hiểm, 08/2026 — nhân thọ đặc thù cao hơn phi nhân thọ'),null,false);
-    mot('phaithu','Các khoản phải thu','ty',(v,s,i)=>ngHang(s,i),null,false);
-    mot('cfo4','Tiền từ kinh doanh 4 quý','ty',v=> v>=0
-      ? {c:'luc',why:'4 quý gần nhất hoạt động kinh doanh mang tiền về'}
-      : {c:'do',why:'4 quý gần nhất hoạt động kinh doanh đốt tiền'},null,false);
-    mot('bienrong','Biên lãi ròng quý','pct',null,null,false);
-    mot('roe','ROE 4 quý','pct',ngRoe);
-  }else if(g.mau==='bds'){
-    mot('tonkho','Tồn kho · dự án dở dang','ty',(v,s,i)=>ngHang(D.tonkhotts||s,i),
-      (s,i)=>D.tonkhotts&&D.tonkhotts[i]!=null?D.tonkhotts[i].toFixed(1)+'% tài sản':'',false);
-    mot('tratruoc','Người mua trả tiền trước','ty',(v,s,i)=>{
-      const j=i-4;
-      if(j<0||s[j]==null||!s[j]) return {c:'xam',why:'chưa đủ lịch sử để so cùng kỳ'};
-      const d=(v-s[j])/Math.abs(s[j])*100;
-      return d>=15?{c:'luc',why:'tiền khách đặt mua đã thu tăng ≥15% so cùng kỳ — doanh thu tương lai đang dày lên'}
-           : d<=-15?{c:'do',why:'tiền khách đặt mua đã thu giảm ≥15% so cùng kỳ'}
-           : {c:'xam',why:'tiền khách đặt mua đi ngang so cùng kỳ'};},null,false);
-    mot('novayvc','Vay / vốn chủ','lan',ngThap(0.5,1,' lần','mốc quen dùng khi soi bất động sản'),
-      (s,i)=>D.novay&&D.novay[i]!=null?ngSo(D.novay[i])+' tỷ nợ vay':'',false);
-    mot('phaithu','Các khoản phải thu','ty',(v,s,i)=>ngHang(s,i),null,false);
-    mot('cfo4','Tiền từ kinh doanh 4 quý','ty',v=> v>=0
-      ? {c:'luc',why:'4 quý gần nhất bán hàng mang tiền về thật'}
-      : {c:'do',why:'4 quý gần nhất kinh doanh đốt tiền — sống bằng vay và huy động'},null,false);
-    mot('roe','ROE 4 quý','pct',ngRoe);
-    note='Với bất động sản, “người mua trả tiền trước” là tiền đặt mua đã thu — sẽ thành doanh thu khi bàn giao.';
+  if(NG.mau==='nh'){
+    dong('Cho vay / tiền gửi (%)','Xanh ≤100% · vàng 100–120% · đỏ >120% — tam phân vị đo trên 29 ngân hàng trong kho (08/2026). Trên 300% là công ty tài chính (vốn từ vay/trái phiếu, gần như không huy động tiền gửi) — không tô màu vì không so được với ngân hàng.',
+      'pct',lay('ldr'),(j,v)=>v>300?'':banThap(100,120)(j,v));
+    dong('Tăng trưởng cho vay so cùng kỳ (%)','Dư nợ cho vay so với cùng kỳ năm trước — tham khảo, không áp ngưỡng màu.',
+      'pct',yoy('chovay'),null);
+    dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤10 · vàng 10–13 · đỏ >13 lần — tam phân vị 29 ngân hàng (08/2026); càng cao đệm vốn càng mỏng.',
+      'lan',lay('donbay'),banThap(10,13));
+    dong('Đầu tư chứng khoán / tài sản (%)','Tỷ trọng danh mục trái phiếu, giấy tờ có giá trong tổng tài sản — tham khảo.',
+      'pct',lay('dautuck'),null);
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else if(NG.mau==='ck'){
+    // CON SỐ QUAN TRỌNG NHẤT của công ty chứng khoán là TIỀN ĐANG CHO VAY (ký quỹ) —
+    // nguồn đang cào chưa trả dòng này, in hẳn một dòng trống để nói ra chứ không im lặng.
+    rows.push(`<tr class="ngr"><td title="Con số quan trọng nhất của công ty chứng khoán — tiền đang cho khách vay (chủ yếu ký quỹ), nằm bên TÀI SẢN. Nguồn đang cào (24hMoney lẫn VNDirect bản rút gọn) chỉ trả 20 dòng tóm tắt nên chưa có; sẽ bổ sung ngay khi mở được mã dòng mẫu công ty chứng khoán. Tạm soi qua vốn vay và đòn bẩy ở các dòng dưới."><div class="lb">Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung</div></td>`+
+      cols.map(()=>'<td>—</td>').join('')+'<td class="sp"></td></tr>');
+    dong('Vay / vốn chủ (lần)','Vốn vay tài trợ cho vay ký quỹ và tự doanh. Xanh ≤0,7 · vàng 0,7–1,3 · đỏ >1,3 lần — tam phân vị 35 công ty chứng khoán (08/2026).',
+      'lan',lay('vayvc'),banThap(0.7,1.3));
+    dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤1,5 · vàng 1,5–2,5 · đỏ >2,5 lần — tam phân vị 42 công ty chứng khoán (08/2026).',
+      'lan',lay('donbay'),banThap(1.5,2.5));
+    dong('Biên lãi ròng quý (%)','LNST / doanh thu hoạt động từng quý — tham khảo, lên xuống theo thị trường.',
+      'pct',lay('bienrong'),null,true);
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else if(NG.mau==='bh'){
+    dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤3 · vàng 3–5 · đỏ >5 lần — tam phân vị 13 công ty bảo hiểm (08/2026); nhân thọ đặc thù cao hơn phi nhân thọ.',
+      'lan',lay('donbay'),banThap(3,5));
+    dong('Tiền từ kinh doanh 4 quý (tỷ)','Cộng 4 quý dòng tiền thuần từ kinh doanh, dấu chuẩn VNDirect. Xanh ≥0 · đỏ <0.',
+      'ty',lay('cfo4'),(j,v)=>v>=0?'ngl':'ngd');
+    dong('Biên lãi ròng quý (%)','LNST / doanh thu từng quý — tham khảo.','pct',lay('bienrong'),null,true);
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
+  }else if(NG.mau==='bds'){
+    dong('Tồn kho / tổng tài sản (%)','Tỷ trọng dự án dở dang trong tổng tài sản. Màu xếp hạng so 12 quý của CHÍNH doanh nghiệp: đỏ = cao nhất vùng 12 quý, vàng = nhóm cao — không so chéo ngành.',
+      'pct',lay('tonkhotts'),hang12('tonkhotts'));
+    dong('Người mua trả trước so cùng kỳ (%)','Tiền khách đặt mua đã thu — doanh thu tương lai, sẽ ghi nhận khi bàn giao. Xanh tăng ≥15% · đỏ giảm ≥15% so cùng kỳ.',
+      'pct',yoy('tratruoc'),(j,v)=>v>=15?'ngl':v<=-15?'ngd':'');
+    dong('Vay / vốn chủ (lần)','Xanh ≤0,5 · vàng 0,5–1 · đỏ >1 lần — mốc quen dùng khi soi bất động sản.',
+      'lan',lay('novayvc'),banThap(0.5,1));
+    dong('Phải thu / tổng tài sản (%)','Phải thu (gồm dài hạn) trên tổng tài sản — phình so lịch sử là bàn giao ghi sổ nhưng tiền chưa về. Màu xếp hạng so 12 quý của chính doanh nghiệp.',
+      'pct',lay('phaithutts'),hang12('phaithutts'));
+    dong('Tiền từ kinh doanh 4 quý (tỷ)','Cộng 4 quý dòng tiền thuần từ kinh doanh, dấu chuẩn VNDirect. Xanh ≥0 (bán hàng mang tiền về thật) · đỏ <0 (đốt tiền, sống bằng vay và huy động).',
+      'ty',lay('cfo4'),(j,v)=>v>=0?'ngl':'ngd');
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
   }else{
-    mot('tonkho','Hàng tồn kho','ty',(v,s,i)=>ngHang(D.ngaytk||s,i),
-      (s,i)=>D.ngaytk&&D.ngaytk[i]!=null?Math.round(D.ngaytk[i])+' ngày tồn':'',false);
-    mot('phaithu','Phải thu ngắn hạn','ty',(v,s,i)=>ngHang(D.ngaypt||s,i),
-      (s,i)=>D.ngaypt&&D.ngaypt[i]!=null?Math.round(D.ngaypt[i])+' ngày thu tiền':'',false);
-    mot('novayvc','Vay / vốn chủ','lan',ngThap(0.5,1.5,' lần','mốc quen dùng cho doanh nghiệp phi tài chính'),
-      (s,i)=>D.novay&&D.novay[i]!=null?ngSo(D.novay[i])+' tỷ nợ vay':'',false);
-    mot('biengop','Biên lãi gộp quý','pct',(v,s,i)=>{
-      const j=i-4;
-      if(j<0||s[j]==null) return {c:'xam',why:'chưa đủ lịch sử để so cùng kỳ'};
-      const d=v-s[j];
-      return d>=1?{c:'luc',why:'biên gộp cải thiện từ 1 điểm trở lên so cùng kỳ'}
-           : d<=-1?{c:'do',why:'biên gộp mỏng đi từ 1 điểm trở lên so cùng kỳ'}
-           : {c:'xam',why:'biên gộp đi ngang so cùng kỳ (trong ±1 điểm)'};},null,false);
-    mot('cfo4','Tiền từ kinh doanh 4 quý','ty',(v,s,i)=>{
-      const ln=D.lnst4&&D.lnst4[i];
-      if(ln==null) return v>=0?{c:'luc',why:'kinh doanh mang tiền về'}:{c:'do',why:'kinh doanh đốt tiền'};
-      if(ln<=0) return v>=0?{c:'vang',why:'đang lỗ 4 quý nhưng dòng tiền kinh doanh vẫn dương'}
-                          :{c:'do',why:'lỗ và đốt tiền cùng lúc'};
-      const r=v/ln;
-      return r>=.8?{c:'luc',why:`tiền thật bằng ${Math.round(r*100)}% lãi kế toán — lợi nhuận có tiền về theo`}
-           : r>=0?{c:'vang',why:`tiền thật chỉ bằng ${Math.round(r*100)}% lãi kế toán — phần còn lại nằm ở phải thu/tồn kho`}
-           : {c:'do',why:'có lãi kế toán nhưng hoạt động kinh doanh đốt tiền'};},
-      (s,i)=>{const ln=D.lnst4&&D.lnst4[i]; return ln!=null?('LNST 4 quý '+ngSo(ln)+' tỷ'):'';},false);
-    mot('roe','ROE 4 quý','pct',ngRoe);
+    dong('Ngày tồn kho (ngày)','Tồn kho bình quân / giá vốn quý × 90 — hàng nằm kho bao lâu. Màu xếp hạng so 12 quý của CHÍNH doanh nghiệp: đỏ = cao nhất vùng (ứ hàng), không so chéo ngành vì 100 ngày là thường với thép nhưng bất thường với bán lẻ.',
+      'ngay',lay('ngaytk'),hang12('ngaytk'),true);
+    dong('Ngày thu tiền (ngày)','Phải thu bình quân / doanh thu quý × 90 — bán chịu bao lâu thì tiền về. Cùng luật xếp hạng 12 quý của chính doanh nghiệp.',
+      'ngay',lay('ngaypt'),hang12('ngaypt'),true);
+    dong('Vay / vốn chủ (lần)','Xanh ≤0,5 · vàng 0,5–1,5 · đỏ >1,5 lần — mốc quen dùng cho doanh nghiệp phi tài chính.',
+      'lan',lay('novayvc'),banThap(0.5,1.5));
+    dong('Biên lãi gộp quý (%)','Xanh cải thiện ≥1 điểm so cùng kỳ · đỏ mỏng đi ≥1 điểm · còn lại không tô.',
+      'pct',lay('biengop'),(j,v)=>{ const b=D.biengop&&D.biengop[j-4]; if(b==null) return '';
+        const d=v-b; return d>=1?'ngl':d<=-1?'ngd':''; },true);
+    dong('Tiền từ kinh doanh 4 quý (tỷ)','So với LNST 4 quý: xanh ≥80% (lãi có tiền về theo) · vàng 0–80% (lãi còn nằm ở phải thu/tồn kho) · đỏ âm (có lãi kế toán mà đốt tiền). Dấu lấy chuẩn VNDirect.',
+      'ty',lay('cfo4'),(j,v)=>{ const ln=D.lnst4&&D.lnst4[j];
+        if(ln==null) return v>=0?'ngl':'ngd';
+        if(ln<=0)   return v>=0?'ngv':'ngd';
+        const r=v/ln; return r>=.8?'ngl':r>=0?'ngv':'ngd'; });
+    dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
+      'pct',lay('roe'),banRoe);
   }
-  if(o.length<2) return;
-  $('ngGrid').innerHTML=o.join('');
-  $('ngKy').textContent=`mẫu ${NG_TEN[g.mau]||g.mau} · kỳ ${g.ky[kc]} · dữ liệu từ ${g.ky[0]}`;
-  $('ngNote').innerHTML='Chấm màu theo ngưỡng ghi trong chú giải từng ô (rê chuột / đè giữ để xem) · '+
-    'xám = tham khảo, không áp ngưỡng · thống kê mô tả quá khứ, không phải khuyến nghị.'+(note?' '+note:'');
-  $('nganhBox').style.display='';
+  if(!rows.length) return;
+  tb.insertAdjacentHTML('beforeend',
+    `<tr class="ngr head ngcap"><td title="Các dòng dưới do CPVN tự tính từ chính bảng này và kho quý dài (data/nganh, tới ${CP.esc(ky[0])}) — thống kê mô tả quá khứ, không phải khuyến nghị. Rê chuột vào tên từng dòng để xem luật màu."><div class="lb">CHỈ SỐ ĐẶC THÙ NGÀNH (${NG_TEN[NG.mau]||''})</div></td>`+
+    cols.map(()=>'<td></td>').join('')+'<td class="sp"></td></tr>'+rows.join(''));
 }
 
 /* ---------- tài liệu + tin tức ---------- */
@@ -1648,7 +1605,7 @@ applyThmIcon();
   C=CP.coins.get(SYM);
   renderHero(); loadChart(); renderFromHist();
   renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
-  renderNganh();        // chỉ số đặc thù ngành — kho data/nganh, thiếu file thì tự ẩn
+  loadNganh();          // chỉ số đặc thù ngành — kho data/nganh, nạp xong tự nối vào bảng CĐKT
   loadNnHist();         // dòng tiền khối ngoại 7D/30D: nạp ngầm, bấm là có ngay
   renderPeers(); renderDocsNews();
   const h=CP.health;

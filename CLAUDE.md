@@ -226,11 +226,19 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > `bs*` (toàn số dương) vẫn ưu tiên số kho. **`data/fin` thì chưa sửa** — chạy
   > `python3 tools/kho_sau.py --va-fin` mới đổi, vì nó đổi thứ trang cổ phiếu đang hiện.
 - **CHỈ SỐ ĐẶC THÙ NGÀNH (`data/nganh`, bước 6d, 14/08/2026): mỗi loại hình một bộ số.**
-  Trang cổ phiếu mở thẻ Báo cáo tài chính bằng khối ô màu `#nganhBox`; kho tính sẵn CHUỖI
-  quý đủ lịch sử, client chỉ chọn ô + tô màu + vẽ spark. Năm mẫu: `nh` cho vay/tiền gửi/
-  LDR/đòn bẩy/ROE · `ck` vốn vay/vay÷VCSH/đòn bẩy/biên ròng/ROE · `bh` · `bds` tồn kho
-  (%TTS)/NGƯỜI MUA TRẢ TRƯỚC/vay÷VCSH/phải thu/CFO4/ROE · `sx` tồn kho+ngày tồn/phải thu+
-  ngày thu/vay÷VCSH/biên gộp/CFO4 so LNST4/ROE. Bốn luật, phá là số sai âm thầm:
+  **TRÌNH BÀY: dòng nối vào CUỐI bảng Cân đối kế toán** (user chốt 14/08/2026 — bản đầu
+  dựng ô nổi bật trên đầu thẻ, user bác: *"đưa vào vị trí cân đối kế toán… trình bày giống
+  bảng, không quá nổi bật, chỉ cần đánh màu sắc là đủ"*). `veNganhRows()` chèn nhóm dòng
+  `tr.ngr` sau `VỐN CHỦ SỞ HỮU`, dùng CHUNG lưới cột với bảng, **màu tô theo TỪNG CỘT**
+  nên đọc ngang một dòng là thấy chỉ số chuyển vàng/đỏ từ kỳ nào; luật màu ghi ở tooltip
+  tên dòng. Vẽ lại mỗi lần `renderFin` chạy (đổi Theo quý/Theo năm là bảng dựng lại).
+  **Chế độ THEO NĂM: nhãn năm -> Q4 của năm đó** (chỉ số thời điểm và chỉ số trượt 4 quý
+  tại Q4 chính là số cả năm), còn dòng THUẦN QUÝ (ngày tồn, ngày thu, biên quý) phải ẨN —
+  đặt biên gộp của riêng quý 4 dưới cột NĂM là nói sai kỳ. Năm mẫu: `nh` LDR/tăng trưởng
+  cho vay/đòn bẩy/đầu tư CK/ROE · `ck` vay÷VCSH/đòn bẩy/biên ròng/ROE + dòng "Dư nợ cho
+  vay ký quỹ — nguồn chưa mở" toàn `—` (xem luật 4) · `bh` · `bds` tồn kho%TTS/NGƯỜI MUA
+  TRẢ TRƯỚC so cùng kỳ/vay÷VCSH/phải thu%TTS/CFO4/ROE · `sx` ngày tồn/ngày thu/vay÷VCSH/
+  biên gộp/CFO4 so LNST4/ROE. Bốn luật, phá là số sai âm thầm:
   1. **LCTT chỉ lấy `finq`** (dấu `fin` sai 60% — xem ngay trên). Mã chưa có finq thì ô CFO
      TRỐNG, tuyệt đối không rơi về `fin` cho "đủ ô".
   2. **Trục kỳ = HỢP fin+finq, kỳ trùng số fin thắng** (fin cập nhật hằng ngày, finq chờ
@@ -242,8 +250,11 @@ giá sai hoặc giá nhảy — đừng đẩy.
      là dán nhãn đúng bản chất và để XÁM, đừng tô đỏ như thể ngân hàng vỡ trận.
   4. **CTCK KHÔNG có dòng "cho vay ký quỹ"** — cả 24hMoney lẫn finq chỉ giữ 20 dòng tóm
      tắt mẫu THƯỜNG cho CTCK (margin của SSI ~20 nghìn tỷ, còn "phải thu ngắn hạn" chỉ 1,1
-     nghìn tỷ — đừng bịa từ dòng khác). Muốn có thật phải mở thêm mã dòng mẫu CTCK ở
-     `kho_sau` (cần mạng để dò + chấm điểm như `va_quy`). Thẻ in thẳng ghi chú này.
+     nghìn tỷ — đừng bịa từ dòng khác). User nhấn lại 14/08/2026: với CTCK thì **số tiền
+     ĐANG CHO VAY (bên tài sản) mới là con số quan trọng**, không phải vốn vay — nên bảng
+     in hẳn một dòng "Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung" toàn `—` kèm
+     tooltip giải thích, thay vì im lặng. Muốn có thật phải mở thêm mã dòng mẫu CTCK ở
+     `kho_sau` (cần mạng để dò + chấm điểm như `va_quy` — session hiện bị chặn egress).
   **Ngưỡng màu nằm ở CLIENT, tooltip ghi nguồn gốc từng ngưỡng**: cái đo từ phân bố thật
   ghi rõ mẫu đo (LDR 100/120 và đòn bẩy 10/13 = tam phân vị 29 ngân hàng · CTCK vay/VCSH
   0,7/1,3 trên 35 mã, đòn bẩy 1,5/2,5 trên 42 · bảo hiểm 3/5 trên 13 — đều đo 14/08/2026);
@@ -914,10 +925,11 @@ hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky
 `dailyRows`, chung kho hình vẽ; chỉ khác palette (`'gon'` 10 nút vs `'full'` 14 nút).
 Bốn bảng KQKD/CĐKT/LCTT/cổ tức dùng **chung một lưới cột** — đổi số cột là lệch cả bốn.
 Kỳ mới nhất luôn bên **trái**. Chiều cao canvas không đặt cứng, do cột trái quyết định.
-Thẻ Báo cáo tài chính mở đầu bằng khối **Chỉ số đặc thù ngành** (`#nganhBox`, đọc
-`data/nganh/{MÃ}.json`, thiếu file thì tự ẩn) — luật màu và bốn cái bẫy nguồn xem mục
-CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. Chấm màu đặt ở TÊN ô chứ không tô cả ô: sáu ô loè
-loẹt cạnh nhau là không đọc ra ô nào đáng nhìn.
+Bảng Cân đối kế toán kết thúc bằng nhóm dòng **Chỉ số đặc thù ngành** (`veNganhRows`,
+đọc `data/nganh/{MÃ}.json`, thiếu file thì không chèn gì) — trình bày y hệt dòng bảng,
+chỉ đánh màu con số theo từng cột; luật màu, ánh xạ năm→Q4 và bốn cái bẫy nguồn xem
+mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU `genericTable` trong
+`renderFin` (nó chèn vào tbody của chính bảng đó) và tự vẽ lại khi đổi Theo quý/Theo năm.
 
 **`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
 rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
