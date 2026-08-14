@@ -559,11 +559,14 @@ document.addEventListener(MO,function(e){
 
   <div class="sect" id="s-tl">
     <div class="card">
-      <h3 class="t" style="margin-top:0">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
-      <div id="reps"></div>
-      <h3 class="t">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
+      <!-- KHO TÀI LIỆU GỐC ĐỨNG TRƯỚC BÁO CÁO CTCK (user chốt 15/08/2026). Vào thẻ này là
+           để đi tải BCTC gốc và hồ sơ doanh nghiệp — mấy cái link đó phải nằm ngay tầm mắt,
+           không phải cuộn qua danh sách báo cáo phân tích dài cả chục mục mới thấy. -->
+      <h3 class="t" style="margin-top:0">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
       <div class="subnote">Số liệu KQKD/CĐKT/LCTT đã có ở thẻ "Báo cáo tài chính". File BCTC gốc (PDF có chữ ký, thuyết minh đầy đủ) tải tại các cổng lưu trữ chính thống:</div>
       <div class="btnrow" id="docLinks"></div>
+      <h3 class="t">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
+      <div id="reps"></div>
     </div>
   </div>
 
@@ -1415,10 +1418,15 @@ async function renderDocsNews(){
     return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${CP.esc(r.source)}</span><span class="dt">${CP.esc(r.date)}</span></div>`+
       `<a class="rt" ${r.pdf?`href="${CP.esc(r.pdf)}" target="_blank" rel="noopener"`:''}>${CP.esc(r.title)}${dl}</a></div>`;
   }).join(''):'<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>';
+  /* Vietstock rồi CafeF đứng đầu (user chốt 15/08/2026) — Simplize xuống cuối.
+     Đường dẫn CafeF cố ý giữ nhánh `hastc` cho MỌI mã dù mã đó niêm yết ở đâu: nguồn tự
+     chuyển hướng về đúng sàn kèm slug tên công ty đầy đủ (đo 15/08: VIC -> /du-lieu/hose/
+     vic-tap-doan-vingroup-cong-ty-co-phan, SHS -> /du-lieu/hastc/shs-…). Đừng "sửa" thành
+     tên sàn thật rồi tự ghép slug — trang chỉ có mã, không có tên pháp lý để ghép. */
   $('docLinks').innerHTML=[
-    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
-    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
     [`https://finance.vietstock.vn/${C.sym}/tai-tai-lieu.htm`,'📑 Tài liệu & BCTC (Vietstock)'],
+    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
+    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
   ].map(x=>`<a href="${x[0]}" target="_blank" rel="noopener">${x[1]}</a>`).join('');
   const nl=$('newsL');
   nl.innerHTML=(d.news&&d.news.length)?d.news.slice(0,30).map((n,i)=>
