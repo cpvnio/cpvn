@@ -279,19 +279,44 @@ giá sai hoặc giá nhảy — đừng đẩy.
      trong khi SCIC nắm 10% một mã lẻ thì lại có nhãn. Đo 13/08/2026: 30/164 nhóm bị dán
      nhầm là tập đoàn tư nhân — PVN, EVN, TKV, Viettel, Vinachem, VIMC, GVR, Vinatex,
      Sonadezi, BID, CTG, GAS, ACV, HVN, BVH, KSV, DCM, DPM, OIL, PVT, BHN, TVN, LLM…
-     Hai lối nhận, thiếu lối nào cũng hụt:
+     BA lối nhận, thiếu lối nào cũng hụt cả mảng lớn (đo 14/08/2026: **74/164 nhóm** là nhà
+     nước, trước khi vá chỉ nhận ra 12):
+     · **Cơ quan (`NHA_NUOC`)** — Bộ, UBND, Tỉnh uỷ, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý
+       vốn. **Phải khai đủ BIẾN THỂ CHÍNH TẢ của nguồn**: có mã ghi "People's Committee of X",
+       mã khác ghi "People Committee of X" (thiếu dấu sở hữu), lại có mã ghi thẳng "Province
+       of Ha Tinh" hay "…State-owned Company". Khai một kiểu là mất sạch mấy kiểu kia.
      · **Khai tay `NN_TAY`** — CHỈ cho nhóm mà mẹ **chưa niêm yết** (PVN, EVN, TKV, Viettel,
        Vinachem) hoặc nguồn không trả nổi một dòng cổ đông nào (VIMC): kho không có
        `data/profile/{MÃ}.json` của chính mẹ thì không có đường nào suy ra. Tên nhận diện
        dùng lại luôn từ khoá của nhóm đó trong `TU_KHOA`, khỏi khai hai chỗ.
-     · **Suy từ dữ liệu** — nhóm nào có mẹ NIÊM YẾT thì đọc thẳng cổ đông của chính mẹ:
-       nhà nước nắm **quá bán** là cả nhóm mang nhãn. Nhờ vậy GAS (PVN 95,8%), BID/CTG
-       (NHNN), ACV/HVN (Uỷ ban), GVR 96,8%, VGT 53,5%, SNZ 99,5%, KSV 98% tự có nhãn.
-       **ĐỪNG khai tay mấy nhóm này** — thêm một chỗ phải nhớ cập nhật mà chẳng được gì.
-     **Ngưỡng phải là QUÁ BÁN, đừng hạ.** SCIC nắm 36% Vinamilk và 36% Sabeco — cổ đông lớn
-     nhất nhưng không cầm quyền; gọi hai nhà đó là doanh nghiệp nhà nước là sai hẳn, Sabeco
-     do ThaiBev nắm 53,6%. Dòng log cũng phải đếm RIÊNG ba loại: bản cũ ghi "{tt} tập đoàn,
-     {còn lại} nhà nước/cơ quan" nên gộp luôn nhóm cá nhân chi phối vào cột nhà nước.
+     · **Bảng `NN_TEN`** — tổng công ty nhà nước CHƯA NIÊM YẾT mà không tự thành nhóm lớn:
+       Petrolimex, VICEM, Vinataba, Sông Đà, HUD, Agribank, VNPT, Becamex, SAWACO, Tân Cảng
+       Sài Gòn, EVNCPC/EVNSPC, NXB Giáo dục, Saigontourist, SAMCO, SAGRI, Bến Thành, IPC…
+       Ghi kèm CHỦ SỞ HỮU ngay cạnh mỗi dòng để soát lại được. **KHÔNG khai tổng công ty ĐÃ
+       THOÁI VỐN** — Vinaconex (nay Pacific Holdings 50,6%), Viglacera (GELEX), IDICO, DIC
+       Corp, Viconship, VNE đều đã về tay tư nhân, dán nhãn nhà nước là sai hẳn.
+       **CẮT ĐUÔI LOẠI HÌNH khi khai từ khoá**: nguồn ghi Becamex IDC là "Investment and
+       Industrial Development **Joint Stock Company**" chứ không phải "…Corporation" — khai
+       trọn tên pháp lý là trượt, mà trượt thì im lặng.
+     · **Suy từ dữ liệu** — nhóm nào có mẹ NIÊM YẾT thì đọc thẳng cổ đông của chính mẹ và
+       **CỘNG DỒN mọi cổ đông nhà nước**, quá bán là cả nhóm mang nhãn. Cộng dồn chứ đừng đòi
+       một ông nắm quá bán một mình: nhà nước hay chia phần qua nhiều cửa (HVN = Uỷ ban 55,2%
+       + SCIC 31,1%). Nhờ vậy GAS (PVN 95,8%), BID/CTG (NHNN), ACV/HVN (Uỷ ban), GVR 96,8%,
+       VGT 53,5%, SNZ 99,5%, KSV 98%, BVH (Bộ Tài chính 65%) tự có nhãn — **ĐỪNG khai tay mấy
+       nhóm này**, thêm một chỗ phải nhớ cập nhật mà chẳng được gì.
+     **Ngưỡng phải là QUÁ BÁN, đừng hạ** — đó cũng đúng định nghĩa "doanh nghiệp nhà nước"
+     của Luật Doanh nghiệp. SCIC nắm 36% Vinamilk và 36% Sabeco, cổ đông lớn nhất nhưng không
+     cầm quyền; gọi hai nhà đó là doanh nghiệp nhà nước là sai hẳn, Sabeco do ThaiBev nắm
+     53,6%. Hai ca sát ngưỡng cố ý để NGOÀI: Tín Nghĩa (UBND Đồng Nai 48,1%) và CLX (HFIC
+     49,0%). Dòng log phải đếm RIÊNG ba loại: bản cũ ghi "{tt} tập đoàn, {còn lại} nhà
+     nước/cơ quan" nên gộp luôn nhóm cá nhân chi phối vào cột nhà nước.
+     > **`khong_dau` PHẢI ĐỔI đ/Đ THÀNH d TRƯỚC KHI BỎ DẤU.** Chữ Đ (U+0110) và đ (U+0111)
+     > KHÔNG tách được bằng NFD, nên `encode(ascii,"ignore")` **nuốt luôn** chứ không để lại
+     > chữ d: "Điện lực" ra `ien luc`, "Đô Thị" ra `o thi`, "Đầu tư" ra `au tu`. Hệ quả im
+     > lặng: mọi từ khoá viết bằng "d" — `dien luc viet nam` (EVN), `det may viet nam`
+     > (Vinatex) — **không bao giờ khớp**; hai nhóm đó chỉ sống sót nhờ tình cờ có thêm từ
+     > khoá viết tắt "evn"/"vinatex" trong tên. Cùng bài học với hai dạng Unicode của
+     > `data/fin`: so tên tiếng Việt mà không chuẩn hoá là trượt lặng lẽ, không có lỗi nào.
   Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` (`nn`/`cn`) để giao diện
   dán nhãn — Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
   Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự

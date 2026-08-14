@@ -93,27 +93,86 @@ LOAI_TRU = ["quan ly quy", "fund management", "fund mangement", "asset managemen
 DAU_DN = ["cong ty", "ctcp", "tap doan", "tong cong ty", "tnhh", "jsc", "corp", "corporation",
           "group", "holding", "ltd", "limited", "pte", "bank", "ngan hang", "ministry",
           "committee", "commission", "uy ban", "bo ", "quy ", "fund", "inc", "sbh", "pjico"]
-# cổ đông là NHÀ NƯỚC/CƠ QUAN — giữ nhưng đánh dấu riêng, không phải tập đoàn tư nhân
+# cổ đông là NHÀ NƯỚC/CƠ QUAN — giữ nhưng đánh dấu riêng, không phải tập đoàn tư nhân.
+# `khong_dau` biến "People's" -> "people s" và "State-owned" -> "state owned", nên biến thể
+# nào cũng phải khai riêng: nguồn ghi cả "People's Committee of X" LẪN "People Committee of
+# X" (thiếu dấu sở hữu) — chỉ khai một kiểu là mất luôn kiểu kia.
 NHA_NUOC = ["ngan hang nha nuoc", "bo cong thuong", "bo tai chinh", "bo xay dung",
             "bo nong nghiep", "bo giao thong", "ministry", "commission for the management",
-            "people s committee", "uy ban nhan dan", "kinh doanh von nha nuoc", "scic",
-            "state bank", "state capital"]
+            "people s committee", "people committee", "uy ban nhan dan",
+            "kinh doanh von nha nuoc", "scic", "state bank", "state capital",
+            "state owned",                      # "…Finance and Investment State-owned Company" (HFIC)
+            "province of",                      # nguồn ghi thẳng "Province of Ha Tinh"
+            "official party committee", "tinh uy", "thanh uy",   # Tỉnh uỷ / Thành uỷ
+            "so tai chinh", "department of finance"]
+# TỔNG CÔNG TY / TẬP ĐOÀN NHÀ NƯỚC **CHƯA NIÊM YẾT** — phải khai tay vì kho không có
+# `data/profile/{MÃ}.json` của chúng để đọc xem ai nắm, mà tên thì không mang chữ nào của
+# cơ quan. Ghi kèm CHỦ SỞ HỮU ngay cạnh để soát lại được, đúng nếp của TU_KHOA.
+# CHỈ khai pháp nhân mà quyền sở hữu nhà nước là chuyện công khai và ổn định. Mấy tổng công
+# ty ĐÃ THOÁI VỐN thì KHÔNG khai — Vinaconex (nay Pacific Holdings nắm 50,6%), Viglacera
+# (GELEX), DIC Corp, Viconship đều đã về tay tư nhân, dán nhãn nhà nước là sai hẳn.
+NN_TEN = {
+    "vietnam national petroleum": "Petrolimex — Uỷ ban Quản lý vốn 75,9%",
+    "petrolimex":                 "Petrolimex và công ty con",
+    "vietnam national cement":    "VICEM — Bộ Xây dựng 100%",
+    "vietnam national tobacco":   "Vinataba — Uỷ ban Quản lý vốn 100%",
+    "vietnam education publishing": "NXB Giáo dục Việt Nam — Bộ GD&ĐT 100%",
+    "housing and urban development corporation": "HUD — Bộ Xây dựng 100%",
+    "song da corporation":        "Tổng công ty Sông Đà — SCIC 99,8%",
+    "saigon newport":             "Tân Cảng Sài Gòn — Bộ Quốc phòng 100%",
+    "central power corporation":  "EVNCPC — EVN 100%",
+    "southern power corporation": "EVNSPC — EVN 100%",
+    "northern power corporation": "EVNNPC — EVN 100%",
+    "ngan hang nong nghiep":      "Agribank — 100% vốn nhà nước",
+    "agribank":                   "Agribank — 100% vốn nhà nước",
+    "buu chinh vien thong":       "VNPT — Uỷ ban Quản lý vốn 100%",
+    "vnpt":                       "VNPT — Uỷ ban Quản lý vốn 100%",
+    "vietnam public joint stock commercial bank": "PVcomBank — PVN 52%",
+    "binh long rubber":           "Cao su Bình Long — thuộc VRG",
+    "saigon water corporation":   "SAWACO — UBND TP.HCM 100%",
+    # CẮT ĐUÔI LOẠI HÌNH, đừng khai trọn tên pháp lý: nguồn ghi Becamex IDC là "Investment
+    # and Industrial Development **Joint Stock Company**" chứ không phải "…Corporation" như
+    # tên tiếng Anh hay gặp — khai trọn là trượt, mà trượt thì im lặng.
+    "investment and industrial development": "Becamex IDC — UBND Bình Dương 95%",
+    "dong nai food industrial":   "Dofico — UBND Đồng Nai 100%",
+    "saigon real estate corporation": "Resco — UBND TP.HCM 100%",
+    "hoptackinhte":               "Công ty Hợp tác kinh tế (COECCO) — Quân khu 4, Bộ Quốc phòng",
+    # Công ty "Môi trường đô thị" là đơn vị vệ sinh công ích của tỉnh/thành, ở Việt Nam
+    # gần như luôn do UBND sở tại nắm 100% — nhận theo cụm chung để không phải khai 63 tỉnh.
+    "moi truong do thi":          "URENCO các tỉnh/thành — UBND sở tại",
+    "hanoitourism":               "Hanoitourist — UBND Hà Nội 100%",
+    "saigontourist":              "Saigontourist — UBND TP.HCM 100%",
+    "saigon transportation mechanical": "SAMCO — UBND TP.HCM 100%",
+    "saigon agriculture":         "SAGRI — UBND TP.HCM 100%",
+    "ben thanh group":            "Bến Thành Group — UBND TP.HCM 100%",
+    "tan thuan industrial promotion": "IPC — UBND TP.HCM 100%",
+}
 
 
 def khong_dau(s):
-    s = unicodedata.normalize("NFD", str(s or "")).encode("ascii", "ignore").decode().lower()
+    """Bỏ dấu tiếng Việt. PHẢI ĐỔI đ/Đ THÀNH d TRƯỚC — chữ Đ (U+0110) và đ (U+0111) KHÔNG
+    tách được bằng NFD, nên `encode(ascii,"ignore")` nuốt luôn chứ không để lại chữ d:
+    "Điện lực" ra "ien luc", "Đô Thị" ra "o thi", "Đầu tư" ra "au tu".
+    Hệ quả im lặng: mọi từ khoá viết bằng "d" như `dien luc viet nam` (EVN) hay
+    `det may viet nam` (Vinatex) KHÔNG BAO GIỜ khớp — hai nhóm đó chỉ sống sót nhờ tình cờ
+    có thêm từ khoá viết tắt "evn"/"vinatex" trong tên. Cùng bài học với `data/fin` lẫn hai
+    dạng Unicode: so tên tiếng Việt mà không chuẩn hoá là trượt lặng lẽ, không có lỗi nào."""
+    s = str(s or "").replace("đ", "d").replace("Đ", "D")
+    s = unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode().lower()
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
 
 def la_nha_nuoc(ten):
-    """Cổ đông này có phải NHÀ NƯỚC không? Hai lối nhận, thiếu lối nào cũng hụt:
-      · CƠ QUAN — Bộ, UBND, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý vốn (bảng NHA_NUOC);
-      · TẬP ĐOÀN nhà nước — PVN, EVN, TKV, Viettel, Vinachem, VIMC (bảng NN_TAY, nhận qua
-        chính từ khoá của nhóm đó trong TU_KHOA nên chỉ phải khai tên ở MỘT chỗ).
-    Khớp TRỌN TỪ cho từ khoá TU_KHOA, cùng lý do với vòng gom nhóm: khớp chuỗi con thì
-    "Geleximco" chui vào GELEX."""
+    """Cổ đông này có phải NHÀ NƯỚC không? BA lối nhận, thiếu lối nào cũng hụt cả mảng lớn:
+      · CƠ QUAN — Bộ, UBND, Tỉnh uỷ, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý vốn (NHA_NUOC);
+      · TẬP ĐOÀN nhà nước ĐÃ CÓ NHÓM — PVN, EVN, TKV, Viettel, Vinachem, VIMC (NN_TAY, nhận
+        qua chính từ khoá của nhóm đó trong TU_KHOA nên chỉ phải khai tên ở MỘT chỗ);
+      · TỔNG CÔNG TY nhà nước chưa niêm yết, không tự thành nhóm lớn — Petrolimex, VICEM,
+        Vinataba, Sông Đà, HUD, Agribank, VNPT, Becamex, SAWACO… (NN_TEN).
+    Khớp TRỌN TỪ, cùng lý do với vòng gom nhóm: khớp chuỗi con thì "Geleximco" chui vào GELEX."""
     t = khong_dau(ten)
     if any(k in t for k in NHA_NUOC): return True
+    if any(re.search(r"\b" + re.escape(k) + r"\b", t) for k in NN_TEN): return True
     for gid, _, _, tks in TU_KHOA:
         if gid not in NN_TAY: continue
         if any(re.search(r"\b" + re.escape(k.strip()) + r"\b", t) for k in tks): return True
@@ -315,14 +374,17 @@ def main():
     # BVH, GVR, VGT, SNZ tự có nhãn, không phải nhớ khai từng cái.
     # Đòi QUÁ BÁN: SCIC nắm 36% Vinamilk và 36% Sabeco, gọi hai nhà đó là doanh nghiệp nhà
     # nước là sai (Sabeco do ThaiBev nắm 53,6%).
+    # CỘNG DỒN mọi cổ đông nhà nước, đừng đòi MỘT ông nắm quá bán một mình: nhà nước hay
+    # chia phần qua nhiều cửa (HVN = Uỷ ban 55,2% + SCIC 31,1%; có mã là Bộ 30% + SCIC 25%).
+    # Cộng lại vẫn không đụng mấy ca cố ý phải để ngoài — Vinamilk chỉ có SCIC 36%, Sabeco
+    # SCIC 36% (ThaiBev mới là chủ với 53,6%), Traphaco SCIC 35,7%.
     for khoa in nhom:
         if la_nn.get(khoa): continue
         me2 = ten_map.get(khoa, (None, None))[1] or (khoa[3:] if khoa.startswith("ma:") else None)
         if not me2: continue
-        for x in (P.get(me2) or {}).get("sh") or []:
-            if (x.get("p") or 0) >= NGUONG_CHI_PHOI and la_nha_nuoc(x.get("n")):
-                la_nn[khoa] = True
-                break
+        tong = sum((x.get("p") or 0) for x in ((P.get(me2) or {}).get("sh") or [])
+                   if la_nha_nuoc(x.get("n")))
+        if tong >= NGUONG_CHI_PHOI: la_nn[khoa] = True
 
     ra = []
     for khoa, ds in nhom.items():
