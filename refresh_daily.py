@@ -882,21 +882,34 @@ HL["profile"]={"need":len(ptargets),"ok":pdone[1],"giu_cu":pkeep[0]}
 #    (Kho gốc dựng 1 lần bằng tools/fetch_logos.py; ở đây chỉ vá phần thiếu.)
 LOGO_DIR=os.path.join(BASE,"assets","logo")
 os.makedirs(LOGO_DIR,exist_ok=True)
-lmiss=[s for s in syms if stocks[s].get("img") and not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp"))]
+# ĐẾM THEO FILE THIẾU, ĐỪNG ĐẾM THEO MÃ CÓ URL. Bản cũ lọc `stocks[s].get("img")` ngay từ
+# dòng đầu nên mã KHÔNG CÓ url biến mất khỏi cả vòng tải LẪN báo cáo — phiên 13/08 thực tế
+# thiếu 16 logo mà health.json ghi 10, sáu mã còn lại (DTH, TAN, ANI, TAH, ULG, PCB) không
+# ai biết là có tồn tại. Nay tách hai rổ và ghi cả hai ra:
+#   `missing`  = thiếu file mà CÓ url  -> lượt sau thử lại được
+#   `khong_url`= thiếu file mà KHÔNG có url -> nguồn Simplize không có, phải tìm nguồn khác
+# `fetched` = 0 nhiều phiên liền TRONG KHI `missing` không giảm nghĩa là mấy url đó đang
+# 404 ở nguồn, thử lại bao nhiêu lần cũng vậy — đừng đọc thành "chưa chạy tới".
+lthieu=[s for s in syms if not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp"))]
+lmiss=[s for s in lthieu if stocks[s].get("img")]
+lno=[s for s in lthieu if not stocks[s].get("img")]
+lok=0; lerr=None
 if lmiss:
     try:
         sys.path.insert(0,os.path.join(BASE,"tools"))
         from fetch_logos import fetch_one
-        lok=0
         for s in lmiss[:60]:                      # trần an toàn: mỗi lượt chạy tối đa 60 mã
             if fetch_one(s,stocks[s]["img"],os.path.join(LOGO_DIR,f"{s}.webp")): lok+=1
-        print(f"kho logo: thiếu {len(lmiss)}, tải thêm {lok}",flush=True)
-        HL["logo"]={"missing":len(lmiss),"fetched":lok}
     except ImportError as e:                      # thiếu Pillow -> bỏ qua, web tự rơi về CDN nguồn
+        lerr="no-pillow"
         print(f"kho logo: BỎ QUA ({e}) — cài Pillow để tự tải logo mã mới",flush=True)
-        HL["logo"]={"missing":len(lmiss),"fetched":0,"err":"no-pillow"}
-else:
-    HL["logo"]={"missing":0,"fetched":0}
+if lthieu:
+    print(f"kho logo: thiếu {len(lthieu)} file — {len(lmiss)} mã có url (tải thêm {lok}), "
+          f"{len(lno)} mã NGUỒN KHÔNG CÓ URL"
+          +(f" -> {', '.join(sorted(lno)[:12])}" if lno else ""),flush=True)
+HL["logo"]={"missing":len(lmiss),"fetched":lok,"khong_url":len(lno),
+            "ma":sorted(s for s in lthieu if not os.path.exists(os.path.join(LOGO_DIR,f"{s}.webp")))[:24]}
+if lerr: HL["logo"]["err"]=lerr
 
 # 10) DỮ LIỆU PHÂN TÍCH data/screen.json + data/market.json (Radar · Bản đồ nhiệt ·
 #     So găng · Đường đua): RSI/MA/RS Rating/điểm cơ bản/nhịp thị trường — tự tươi mỗi phiên.

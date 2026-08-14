@@ -41,6 +41,10 @@ NGUONG_HIEU = 10.0     # SÀN cho tỉ lệ HIỆU DỤNG sau khi nhân dồn qu
                        # ngưỡng không có nghĩa là cả chuỗi còn ý nghĩa: 22,5% × 20% = 4,5%,
                        # nắm 4,5% thì gọi là cùng một nhà với ai. Không có sàn này thì đẻ
                        # ra cả loạt "tập đoàn" hai mã mà mã thứ hai chỉ là cháu hờ.
+NGUONG_CHI_PHOI = 50.0 # nhà nước nắm QUÁ BÁN mẹ thì cả nhóm là nhà nước. Quá bán mới là
+                       # chi phối thật: SCIC nắm 36% Vinamilk và 36% Sabeco — cổ đông lớn
+                       # nhất nhưng không cầm quyền, gọi hai nhà đó là doanh nghiệp nhà
+                       # nước thì sai hẳn (Sabeco do ThaiBev nắm 53,6%).
 TOI_THIEU = 2          # nhóm phải có ít nhất bấy nhiêu mã niêm yết
 
 # (id, tên hiển thị, mã mẹ nếu có niêm yết, các từ khoá nhận diện trong TÊN cổ đông)
@@ -65,6 +69,19 @@ TU_KHOA = [
     ("mbbank",   "MB Bank",             "MBB", ["military commercial", "quan doi mb"]),
     ("scic",     "SCIC",                None,  ["kinh doanh von nha nuoc", "scic"]),
 ]
+# TẬP ĐOÀN NHÀ NƯỚC PHẢI KHAI TAY — và CHỈ những nhóm mà kho KHÔNG THỂ tự biết.
+# `NHA_NUOC` bên dưới chỉ nhận ra CƠ QUAN (Bộ, UBND, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản
+# lý vốn). Còn PVN, EVN, TKV, Viettel, Vinachem là DOANH NGHIỆP nhà nước 100% vốn: tên chúng
+# không mang chữ nào của cơ quan, mà bản thân chúng lại CHƯA NIÊM YẾT nên không có
+# `data/profile/{MÃ}.json` để đọc xem ai nắm — không có đường nào suy ra từ dữ liệu. VIMC
+# thì niêm yết (MVN) nhưng nguồn không trả về nổi một dòng cổ đông nào.
+# Hệ quả trước khi vá: 64 mã dầu khí của PVN đứng cạnh Vingroup và Masan không một dấu
+# hiệu nào cho biết đó là nhà nước, trong khi SCIC nắm 10% một mã lẻ thì lại có nhãn.
+# ĐỪNG KHAI THÊM VÀO ĐÂY nhóm nào mà mẹ CÓ niêm yết: GVR (Uỷ ban 96,8%), VGT (SCIC 53,5%),
+# SNZ (UBND Đồng Nai 99,5%), BID/CTG (Ngân hàng Nhà nước), ACV/HVN (Uỷ ban), GAS (PVN 95,8%)
+# đều tự suy ra được từ danh sách cổ đông của chính mẹ — khai tay là thêm một chỗ phải nhớ
+# cập nhật mà chẳng được gì.
+NN_TAY = {"pvn", "evn", "tkv", "viettel", "vinachem", "vimc"}
 # QUỸ / CÔNG TY QUẢN LÝ VỐN không phải công ty mẹ — họ mua bán cổ phần chứ không điều hành.
 # Bỏ hẳn, bằng không "FPT Fund Management" nắm 11,7% TN1 sẽ biến TN1 thành con của FPT.
 LOAI_TRU = ["quan ly quy", "fund management", "fund mangement", "asset management",
@@ -86,6 +103,21 @@ NHA_NUOC = ["ngan hang nha nuoc", "bo cong thuong", "bo tai chinh", "bo xay dung
 def khong_dau(s):
     s = unicodedata.normalize("NFD", str(s or "")).encode("ascii", "ignore").decode().lower()
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
+
+
+def la_nha_nuoc(ten):
+    """Cổ đông này có phải NHÀ NƯỚC không? Hai lối nhận, thiếu lối nào cũng hụt:
+      · CƠ QUAN — Bộ, UBND, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý vốn (bảng NHA_NUOC);
+      · TẬP ĐOÀN nhà nước — PVN, EVN, TKV, Viettel, Vinachem, VIMC (bảng NN_TAY, nhận qua
+        chính từ khoá của nhóm đó trong TU_KHOA nên chỉ phải khai tên ở MỘT chỗ).
+    Khớp TRỌN TỪ cho từ khoá TU_KHOA, cùng lý do với vòng gom nhóm: khớp chuỗi con thì
+    "Geleximco" chui vào GELEX."""
+    t = khong_dau(ten)
+    if any(k in t for k in NHA_NUOC): return True
+    for gid, _, _, tks in TU_KHOA:
+        if gid not in NN_TAY: continue
+        if any(re.search(r"\b" + re.escape(k.strip()) + r"\b", t) for k in tks): return True
+    return False
 
 
 def chuan(s):
@@ -218,7 +250,7 @@ def main():
             nhom.setdefault(khoa, {})
             nhom[khoa][sym] = max(nhom[khoa].get(sym, 0), pc)
             ten_goc.setdefault(khoa, x.get("n") or "")
-            if any(t in thoTen for t in NHA_NUOC): la_nn[khoa] = True
+            if la_nha_nuoc(x.get("n")): la_nn[khoa] = True
             # gắn cờ PHÁP NHÂN nếu BẤT KỲ biến thể tên nào của nhóm có dấu hiệu doanh nghiệp.
             # Chấm theo từng tên rồi gán "cá nhân" ngay là hỏng: PVN vào nhóm qua cả "Tập đoàn
             # Dầu khí Việt Nam" lẫn "PVN" trơ trọi, chỉ cần một biến thể trống là cả tập đoàn
@@ -275,6 +307,23 @@ def main():
         if not sau: break
         lop = sau
 
+    # NHÓM CÓ MẸ NIÊM YẾT THÌ ĐỌC THẲNG CỔ ĐÔNG CỦA CHÍNH MẸ, ĐỪNG KHAI TAY.
+    # Vòng gom ở trên chỉ nhìn được cái tên đã DỰNG RA nhóm: nhóm "GAS" sinh ra từ cổ đông
+    # "Tổng Công ty Khí Việt Nam" — cái tên đó không mang dấu hiệu nhà nước nào, nên nhóm
+    # đứng trơ là "tập đoàn" dù GAS do PVN nắm 95,76%. Mẹ là mã niêm yết thì kho CÓ hồ sơ
+    # của nó, mở ra là thấy ngay ai đứng trên. Nhờ lớp này mà GAS, BID, CTG, ACV, HVN, KSV,
+    # BVH, GVR, VGT, SNZ tự có nhãn, không phải nhớ khai từng cái.
+    # Đòi QUÁ BÁN: SCIC nắm 36% Vinamilk và 36% Sabeco, gọi hai nhà đó là doanh nghiệp nhà
+    # nước là sai (Sabeco do ThaiBev nắm 53,6%).
+    for khoa in nhom:
+        if la_nn.get(khoa): continue
+        me2 = ten_map.get(khoa, (None, None))[1] or (khoa[3:] if khoa.startswith("ma:") else None)
+        if not me2: continue
+        for x in (P.get(me2) or {}).get("sh") or []:
+            if (x.get("p") or 0) >= NGUONG_CHI_PHOI and la_nha_nuoc(x.get("n")):
+                la_nn[khoa] = True
+                break
+
     ra = []
     for khoa, ds in nhom.items():
         if len(ds) < TOI_THIEU: continue
@@ -323,8 +372,12 @@ def main():
     ra.sort(key=lambda g: -g["mcap"])
     json.dump({"generated": datetime.date.today().isoformat(), "nhom": ra},
               open(OUT, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    tt = [g for g in ra if g["kieu"] == "tt"]
-    print(f"✓ data/tapdoan.json: {len(ra)} nhóm ({len(tt)} tập đoàn, {len(ra)-len(tt)} nhà nước/cơ quan)"
+    dem = {k: sum(1 for g in ra if g["kieu"] == k) for k in ("tt", "nn", "cn")}
+    # ĐẾM RIÊNG BA LOẠI. Dòng cũ ghi "{tt} tập đoàn, {còn lại} nhà nước/cơ quan" nên gộp
+    # luôn nhóm do CÁ NHÂN chi phối vào cột nhà nước — đọc log là tưởng nhà nước nhiều gấp
+    # đôi thực tế.
+    print(f"✓ data/tapdoan.json: {len(ra)} nhóm ({dem['tt']} tập đoàn tư nhân, "
+          f"{dem['nn']} nhà nước, {dem['cn']} cá nhân chi phối)"
           f" · {sum(len(g['syms']) for g in ra)} lượt mã")
     for g in ra[:16]:
         print(f"  {g['mcap']/1e3:8,.0f} nt · {len(g['syms']):2d} mã · [{g['kieu']}] {g['ten'][:34]:34s} "

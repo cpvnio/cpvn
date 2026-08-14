@@ -273,6 +273,25 @@ giá sai hoặc giá nhảy — đừng đẩy.
      gian luôn là mã niêm yết nên vốn hoá của nó đã gồm phần nó nắm — vốn hoá GAS đã gồm
      35% PGS. Trước chỉ trừ được ở tầng mẹ (`co_me`), có cháu chắt rồi mà không trừ là đếm
      hai lần. Dùng **% CẠNH** (cha nắm con) chứ không phải % hiệu dụng của cả nhóm.
+  9. **NHÃN NHÀ NƯỚC: nhận CƠ QUAN thôi là hụt gần hết, phải nhận cả TẬP ĐOÀN nhà nước.**
+     Bảng `NHA_NUOC` chỉ bắt tên cơ quan (Bộ, UBND, Ngân hàng Nhà nước, SCIC, Uỷ ban Quản lý
+     vốn) nên **64 mã dầu khí của PVN đứng cạnh Vingroup và Masan không một dấu hiệu nào**,
+     trong khi SCIC nắm 10% một mã lẻ thì lại có nhãn. Đo 13/08/2026: 30/164 nhóm bị dán
+     nhầm là tập đoàn tư nhân — PVN, EVN, TKV, Viettel, Vinachem, VIMC, GVR, Vinatex,
+     Sonadezi, BID, CTG, GAS, ACV, HVN, BVH, KSV, DCM, DPM, OIL, PVT, BHN, TVN, LLM…
+     Hai lối nhận, thiếu lối nào cũng hụt:
+     · **Khai tay `NN_TAY`** — CHỈ cho nhóm mà mẹ **chưa niêm yết** (PVN, EVN, TKV, Viettel,
+       Vinachem) hoặc nguồn không trả nổi một dòng cổ đông nào (VIMC): kho không có
+       `data/profile/{MÃ}.json` của chính mẹ thì không có đường nào suy ra. Tên nhận diện
+       dùng lại luôn từ khoá của nhóm đó trong `TU_KHOA`, khỏi khai hai chỗ.
+     · **Suy từ dữ liệu** — nhóm nào có mẹ NIÊM YẾT thì đọc thẳng cổ đông của chính mẹ:
+       nhà nước nắm **quá bán** là cả nhóm mang nhãn. Nhờ vậy GAS (PVN 95,8%), BID/CTG
+       (NHNN), ACV/HVN (Uỷ ban), GVR 96,8%, VGT 53,5%, SNZ 99,5%, KSV 98% tự có nhãn.
+       **ĐỪNG khai tay mấy nhóm này** — thêm một chỗ phải nhớ cập nhật mà chẳng được gì.
+     **Ngưỡng phải là QUÁ BÁN, đừng hạ.** SCIC nắm 36% Vinamilk và 36% Sabeco — cổ đông lớn
+     nhất nhưng không cầm quyền; gọi hai nhà đó là doanh nghiệp nhà nước là sai hẳn, Sabeco
+     do ThaiBev nắm 53,6%. Dòng log cũng phải đếm RIÊNG ba loại: bản cũ ghi "{tt} tập đoàn,
+     {còn lại} nhà nước/cơ quan" nên gộp luôn nhóm cá nhân chi phối vào cột nhà nước.
   Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` (`nn`/`cn`) để giao diện
   dán nhãn — Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
   Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự
@@ -892,6 +911,15 @@ news 6, profile 5) — tăng lên dễ bị chặn IP.
 > `build_tapdoan` chạy ngay sau đó trong CÙNG lượt — hồ sơ bị khoét là bản đồ tập đoàn dựng
 > lại từ kho rỗng, im lặng. Guard này che sự cố nguồn nên `health.json` có `giu_cu` đếm số
 > mã phải lấy số cũ: **`giu_cu` vọt lên là nguồn đang hỏng**, đừng đọc thành "vẫn ổn".
+
+> **KHO LOGO (bước 9): ĐẾM THEO FILE THIẾU, ĐỪNG ĐẾM THEO MÃ CÓ URL.** Bản cũ lọc
+> `stocks[s].get("img")` ngay dòng đầu nên mã KHÔNG CÓ url biến mất khỏi cả vòng tải lẫn báo
+> cáo — phiên 13/08/2026 thiếu **16** logo mà `health.json` ghi 10; sáu mã còn lại (DTH, TAN,
+> ANI, TAH, ULG, PCB) không ai biết là có tồn tại. Nay tách hai rổ: `missing` = thiếu file mà
+> CÓ url (lượt sau thử lại được) · `khong_url` = nguồn Simplize không có ảnh, **phải tìm nguồn
+> khác chứ thử lại vô ích** · `ma` = danh sách mã để soi thẳng.
+> **`fetched:0` nhiều phiên liền TRONG KHI `missing` không giảm nghĩa là mấy url đó đang 404 ở
+> nguồn** — đừng đọc thành "chưa chạy tới". 10 mã nhóm A hiện đúng trạng thái ấy.
 
 **Lịch chạy**: VPS Windows Scheduled Task 15:15 chạy `server/run_refresh.ps1` (commit
 `EOD <phiên> (server)`) — **đường chính**. GitHub Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN,
