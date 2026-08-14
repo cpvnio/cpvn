@@ -632,6 +632,16 @@ except Exception as e:
     print(f"kho sâu LỖI (không chặn pipeline): {e}",flush=True)
     HL["finq"]={"err":str(e)[:120]}
 
+# 6d) CHỈ SỐ ĐẶC THÙ NGÀNH data/nganh/{MÃ}.json — tính từ fin + finq, KHÔNG gọi mạng.
+#     Phải đứng SAU 6c: lưu chuyển tiền tệ chỉ tin dấu của finq (kho fin sai dấu 60% số ô).
+#     `--moi` so mtime nên ngày thường chỉ dựng lại mã vừa có báo cáo mới, vài giây là xong.
+try:
+    import build_nganh as _bn
+    HL["nganh"]=_bn.main(moi=True)
+except Exception as e:
+    print(f"chỉ số ngành LỖI (không chặn pipeline): {e}",flush=True)
+    HL["nganh"]={"err":str(e)[:120]}
+
 # 7) KHO TIN TỨC + BÁO CÁO CTCK data/news/{SYM}.json — web tự rơi về đây khi nguồn sống chết
 #    Hằng ngày: top 200 GTGD (tin đổi nhanh); --full T2: TOÀN BỘ mã.
 os.makedirs(NEWS_DIR,exist_ok=True)

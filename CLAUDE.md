@@ -34,6 +34,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `demo-mobi*.html`, `demo-nen.html` | — | Bản demo để CHỌN, không nằm trong luồng chính. `demo-mobi.html` so hai mẫu bằng 2 iframe + postMessage |
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
+| `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -44,6 +45,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
+| `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
 | `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
@@ -223,6 +225,31 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > ô đúng**. `data/finq` vì thế lấy số CÓ DẤU của VNDirect cho mọi kỳ của khối `cf*`, còn khối
   > `bs*` (toàn số dương) vẫn ưu tiên số kho. **`data/fin` thì chưa sửa** — chạy
   > `python3 tools/kho_sau.py --va-fin` mới đổi, vì nó đổi thứ trang cổ phiếu đang hiện.
+- **CHỈ SỐ ĐẶC THÙ NGÀNH (`data/nganh`, bước 6d, 14/08/2026): mỗi loại hình một bộ số.**
+  Trang cổ phiếu mở thẻ Báo cáo tài chính bằng khối ô màu `#nganhBox`; kho tính sẵn CHUỖI
+  quý đủ lịch sử, client chỉ chọn ô + tô màu + vẽ spark. Năm mẫu: `nh` cho vay/tiền gửi/
+  LDR/đòn bẩy/ROE · `ck` vốn vay/vay÷VCSH/đòn bẩy/biên ròng/ROE · `bh` · `bds` tồn kho
+  (%TTS)/NGƯỜI MUA TRẢ TRƯỚC/vay÷VCSH/phải thu/CFO4/ROE · `sx` tồn kho+ngày tồn/phải thu+
+  ngày thu/vay÷VCSH/biên gộp/CFO4 so LNST4/ROE. Bốn luật, phá là số sai âm thầm:
+  1. **LCTT chỉ lấy `finq`** (dấu `fin` sai 60% — xem ngay trên). Mã chưa có finq thì ô CFO
+     TRỐNG, tuyệt đối không rơi về `fin` cho "đủ ô".
+  2. **Trục kỳ = HỢP fin+finq, kỳ trùng số fin thắng** (fin cập nhật hằng ngày, finq chờ
+     `kho_sau --moi` ≤500 mã/lượt nên có thể trễ). Ô nào lấy kỳ CŨ hơn kỳ chung thì client
+     in nhãn kỳ vàng cạnh con số — nói ra chứ không im lặng trộn hai kỳ.
+  3. **Mẫu chọn theo sector NHƯNG phải có dữ liệu thật**: F88 mang sector ngân hàng mà báo
+     cáo mẫu thường → rơi về `sx`; EVF/TIN có đủ dòng ngân hàng nhưng LDR ~770% vì là CÔNG
+     TY TÀI CHÍNH (vốn từ vay/trái phiếu, tiền gửi không đáng kể) → client thấy LDR>300%
+     là dán nhãn đúng bản chất và để XÁM, đừng tô đỏ như thể ngân hàng vỡ trận.
+  4. **CTCK KHÔNG có dòng "cho vay ký quỹ"** — cả 24hMoney lẫn finq chỉ giữ 20 dòng tóm
+     tắt mẫu THƯỜNG cho CTCK (margin của SSI ~20 nghìn tỷ, còn "phải thu ngắn hạn" chỉ 1,1
+     nghìn tỷ — đừng bịa từ dòng khác). Muốn có thật phải mở thêm mã dòng mẫu CTCK ở
+     `kho_sau` (cần mạng để dò + chấm điểm như `va_quy`). Thẻ in thẳng ghi chú này.
+  **Ngưỡng màu nằm ở CLIENT, tooltip ghi nguồn gốc từng ngưỡng**: cái đo từ phân bố thật
+  ghi rõ mẫu đo (LDR 100/120 và đòn bẩy 10/13 = tam phân vị 29 ngân hàng · CTCK vay/VCSH
+  0,7/1,3 trên 35 mã, đòn bẩy 1,5/2,5 trên 42 · bảo hiểm 3/5 trên 13 — đều đo 14/08/2026);
+  cái là mốc quy ước thì nói là quy ước (ROE 8/15 · D/E 0,5/1,5 · BĐS 0,5/1). Tồn kho và
+  phải thu so với CHÍNH MÃ ĐÓ 12 quý (xếp hạng ngày tồn/ngày thu), không so chéo ngành.
+  Xám = tham khảo, không áp ngưỡng. Mọi câu chữ là mô tả quá khứ, không phải khuyến nghị.
 - **KHỐI NGOẠI `fb`/`fs`: lịch sử lấy ở VNDirect, đừng tin mỗi nguồn hằng ngày.** Pipeline chỉ
   biết khối ngoại của PHIÊN HÔM ĐÓ (bảng giá VPS) + bù 30 phiên (24hMoney), nên trước 6/2026
   hai trường này **toàn số 0** — 290/500 mã mẫu không có lấy một số khác 0, mọi phép đo dòng
@@ -887,6 +914,10 @@ hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky
 `dailyRows`, chung kho hình vẽ; chỉ khác palette (`'gon'` 10 nút vs `'full'` 14 nút).
 Bốn bảng KQKD/CĐKT/LCTT/cổ tức dùng **chung một lưới cột** — đổi số cột là lệch cả bốn.
 Kỳ mới nhất luôn bên **trái**. Chiều cao canvas không đặt cứng, do cột trái quyết định.
+Thẻ Báo cáo tài chính mở đầu bằng khối **Chỉ số đặc thù ngành** (`#nganhBox`, đọc
+`data/nganh/{MÃ}.json`, thiếu file thì tự ẩn) — luật màu và bốn cái bẫy nguồn xem mục
+CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. Chấm màu đặt ở TÊN ô chứ không tô cả ô: sáu ô loè
+loẹt cạnh nhau là không đọc ra ô nào đáng nhìn.
 
 **`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
 rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
@@ -970,7 +1001,9 @@ chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thà
 ## Pipeline
 
 11 bước, thứ tự bắt buộc: **bảng giá (bước 2) phải chạy TRƯỚC kho nến (bước 3)** vì
-`fetch_hist` dò hệ số đơn vị bằng cách đối chiếu với `ref` của bảng giá.
+`fetch_hist` dò hệ số đơn vị bằng cách đối chiếu với `ref` của bảng giá. **Bước 6d
+(`build_nganh`) phải đứng SAU 6c (`kho_sau`)** vì nó chỉ tin dấu lưu chuyển tiền tệ
+của `finq`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
 Mọi JSON ghi qua `jdump()` (compact, `ensure_ascii=False`, atomic `.tmp`+`os.replace`).
 Chỉ cập nhật universe bằng giá trị **khác None** — đó là cách giữ số cũ khi API lỗi.
 Song song đã cân theo giới hạn nguồn (Simplize 4 luồng + sleep 0.15, hist 12, fin 5,
