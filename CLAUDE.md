@@ -711,14 +711,27 @@ vùng dưới, hai góc TRÊN là chỗ khó với nhất — mà menu cũ nằm
 chuột*, thao tác không tồn tại trên điện thoại.
 
 **Bảng giá SẠCH HOÀN TOÀN** — không dải mục con nào, mở ra là thấy mã ngay.
-**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Bong
-bóng và Tập đoàn có trang riêng nên đi bằng link thật; Chủ điểm và Về bờ nằm **cùng trang
-radar** nên nút bấm thẳng vào mục tương ứng trong menu máy bàn (`.dd a[data-md][data-t]`, đã
-ẩn) để `congcu.js` đổi tab tại chỗ — đúng lối đã dùng cho nút đổi chế độ Đường đua. Dải hiện
+**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Dải hiện
 ở cả ba trang của nhóm và thanh đáy sáng ở Radar trên cả ba, bằng không vào Bong bóng là mất
 đường quay lại.
 
-Năm cái bẫy, phá cái nào cũng hỏng:
+> **CẢ BỐN MỤC ĐỀU LÀ `<a href>` THẬT, kể cả hai mục nằm cùng trang radar** (`congcu.html?m=radar&t=cd|vb`).
+> Bản trước để chúng là `<button>` không href, chỉ chạy nhờ bấm hộ vào menu máy bàn
+> (`.dd a[data-md][data-t]`, đã ẩn ở khổ hẹp) — mà menu đó **CHỈ CÓ trên `congcu.html`**.
+> Đứng ở `/bubbles` bấm "Chủ điểm" là NÚT CHẾT: `dd` trả null, trang đứng im, mà nút vẫn
+> sáng lên. Có href thì trang nào cũng đi được; `congcu.html` mới `preventDefault` để đổi tab
+> TẠI CHỖ (nhanh hơn tải lại), trang khác cứ để link chạy bình thường. **Đừng nuốt cú bấm
+> khi không chắc trang này tự đổi tab được.**
+
+Bảy cái bẫy, phá cái nào cũng hỏng (đánh số từ 0 vì bẫy đầu là bẫy mới nhất, user tự bắt):
+
+0. **XOÁ `.on` TRÊN CẢ DẢI, đừng chỉ quét mấy mục đổi-tại-chỗ.** User chụp ảnh báo
+   14/08/2026: vào `/tapdoan` (mục "Tập đoàn" đang sáng) rồi bấm "Về bờ" thì **SÁNG HAI MỤC
+   CÙNG LÚC** — trang đã sang Radar phiên mà dải vẫn bảo đang ở Tập đoàn. Gốc: vòng dọn cũ
+   viết `s.querySelectorAll('button')`, mà "Tập đoàn"/"Bong bóng" là thẻ `<a>` nên không bao
+   giờ bị dọn. Quét `'a'` (nay cả bốn mục đều là `<a>`) là hết. Luật chung: **hàm dọn trạng
+   thái phải quét ĐÚNG TẬP mà hàm dựng đã sinh ra** — dựng hai loại thẻ mà dọn một loại thì
+   loại kia đóng băng ở trạng thái cũ.
 
 1. **`mobi.js` phải đọc CẢ URL SẠCH, đừng chỉ dò chuỗi `"congcu"`.** `_redirects` viết lại
    `/radar`, `/tapdoan`, `/duongdua` bằng **rewrite 200** nên thanh địa chỉ giữ nguyên tên
@@ -726,6 +739,11 @@ Năm cái bẫy, phá cái nào cũng hỏng:
    thanh đáy sáng nhầm ở Bảng giá. Loại lỗi chỉ lộ ra ở đúng đường người dùng thật đi — ở
    localhost toàn gõ `congcu.html?m=...` nên nhánh đó không bao giờ chạy tới. `congcu.js`
    đọc theo path (`byPath`) cũng vì lý do y hệt.
+   **HAI ĐƯỜNG VÀO CÙNG MỘT TRANG PHẢI RA CÙNG MỘT KẾT QUẢ**: `/radar?t=vb` và
+   `congcu.html?m=radar&t=vb` là y hệt nhau. Bản trước chặn `/radar` ở một dòng riêng trả
+   cứng `'phien'` rồi mới đọc `?t=` ở nhánh `/congcu` phía dưới — nên mở `cpvn.io/radar?t=vb`
+   (đúng thứ chính dải này sinh ra) thì nội dung là Về bờ mà dải không sáng mục nào. Nay hai
+   nhánh nhập một, chỉ khác chỗ lấy `m`.
 2. **Thanh tab và dải mục con TỰ MANG BẢNG MÀU**, đừng mượn biến của trang. Bốn trang đặt
    tên biến khác nhau (index `--panel/--muted/--accent`, congcu `--solid/--mut/--rose`) nên
    mượn nhầm là `var()` không phân giải được, nền thành **trong suốt** — đo trên congcu ra
@@ -748,6 +766,13 @@ Năm cái bẫy, phá cái nào cũng hỏng:
    nó xuống dưới, biểu đồ nát hẳn trên điện thoại. Đã khoá thành `#ptHead .ptseg`. Luật
    chung: trong `@media` mobile, luật **bố cục** phải neo vào id hoặc tổ tiên cụ thể, chỉ
    luật **hình thức** (cỡ chữ, padding) mới được để class trần.
+6. **GỘP HAI GIÁ TRỊ LÀM MỘT THÌ PHẢI ĐI TÌM HẾT CHỖ ĐỌC GIÁ TRỊ CŨ.** Bản đồ toàn cầu gộp
+   vào Nhịp phiên 13/08/2026 (`radarTab` thôi mang giá trị `'tg'`), nhưng `tgNhip` còn sót
+   `if(cur==='radar'&&radarTab==='tg') tgVeLai()` — điều kiện **không bao giờ đúng nữa**.
+   Hậu quả im lặng và đúng thứ nhịp riêng ấy sinh ra để chữa: mỗi 2 phút vẫn gọi mạng, tải
+   số mới về đàng hoàng, rồi **VỨT ĐI** — mở lúc 9 giờ tối xem Mỹ thì số đứng im. Đo bằng
+   nguồn giả trả % đổi theo từng lượt: bản cũ sau 150s vẫn hiện `+1,70%`, bản vá hiện
+   `+3,40%`. Cùng họ với bẫy số 0: **một nhánh chết không báo lỗi, chỉ lặng lẽ không chạy.**
 
 ### Bảng giá ở khổ hẹp
 

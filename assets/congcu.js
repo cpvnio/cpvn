@@ -1296,7 +1296,11 @@ function tgNhip(){
     /* Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích — trừ khi có cờ kiểm thử ?forcelive,
        dùng chung với startLive vì khung xem tự động luôn báo document.hidden=true. */
     if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<120000) return;
-    tgLoad().then(()=>{ if(cur==='radar'&&radarTab==='tg') tgVeLai(); });
+    /* 'phien' chứ KHÔNG phải 'tg': bản đồ đã gộp vào Nhịp phiên 13/08/2026 nên radarTab
+       không bao giờ còn mang giá trị 'tg'. Để sót một chữ ở đây là mỗi 2 phút vẫn tải số
+       mới về đàng hoàng rồi VỨT ĐI — bản đồ đứng im, đúng cái cảnh "mở lúc 9 giờ tối xem
+       Mỹ mà số không nhúc nhích" mà nhịp riêng này sinh ra để chữa. */
+    tgLoad().then(()=>{ if(cur==='radar'&&radarTab==='phien') tgVeLai(); });
   },20000);
 }
 
