@@ -188,6 +188,65 @@ def chuan(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+# TÊN CƠ QUAN — nguồn trả về BẰNG TIẾNG ANH, để nguyên thì bảng của một trang tiếng Việt
+# đọc ra "Commission for the Management of State Capita…" và "People's Committee of Binh
+# Duong province", vừa dài vừa bị cắt cụt vừa lạc quẻ. Đổi sang tên tiếng Việt quen thuộc:
+# ngắn hơn nên KHÔNG bị cắt, và người đọc nhận ra ngay đó là cơ quan nào.
+DOI_TEN = {
+    "commission for the management of state capital at enterprises": "Uỷ ban Quản lý vốn nhà nước",
+    "ministry of construction of socialist republic of vietnam": "Bộ Xây dựng",
+    "ministry of national defence": "Bộ Quốc phòng",
+    "ministry of health (vietnam)": "Bộ Y tế",
+    "ministry of finance (vietnam)": "Bộ Tài chính",
+    "ministry of industry and trade": "Bộ Công Thương",
+    "ho chi minh city finance and investment state owned company": "HFIC · Tài chính Nhà nước TP.HCM",
+    "vietnam national petroleum corporation": "Petrolimex",
+    "vietnam national cement corporation": "VICEM · Xi măng Việt Nam",
+    "vietnam national tobacco corporation": "Vinataba",
+    "vietnam education publishing house limited company": "NXB Giáo dục Việt Nam",
+    "song da corporation-jsc": "Tổng công ty Sông Đà",
+    "housing and urban development corporation": "HUD · Phát triển Nhà và Đô thị",
+    "saigon newport one member limited liability corporation": "Tân Cảng Sài Gòn",
+    "saigon water corporation": "SAWACO · Cấp nước Sài Gòn",
+    "investment and industrial development joint stock company": "Becamex IDC",
+    "vietnam public joint stock commercial bank": "PVcomBank",
+    "central power corporation": "EVNCPC · Điện lực miền Trung",
+    "southern power corporation": "EVNSPC · Điện lực miền Nam",
+}
+# TÊN TỈNH — nguồn viết KHÔNG DẤU trong chuỗi tiếng Anh ("People's Committee of Binh Duong
+# province"), cắt phần tiếng Anh xong còn lại "UBND Binh Duong" đứng giữa bảng toàn tiếng
+# Việt có dấu. Khai đủ 63 tỉnh cũ + tên sau sáp nhập 2025, khoá bằng chính `khong_dau()` nên
+# gạch nối, chữ hoa hay khoảng trắng thừa đều khớp.
+TINH = {}
+for _t in ("An Giang|Bà Rịa - Vũng Tàu|Bắc Giang|Bắc Kạn|Bạc Liêu|Bắc Ninh|Bến Tre|Bình Định|"
+           "Bình Dương|Bình Phước|Bình Thuận|Cà Mau|Cần Thơ|Cao Bằng|Đà Nẵng|Đắk Lắk|"
+           "Đắk Nông|Điện Biên|Đồng Nai|Đồng Tháp|Gia Lai|Hà Giang|Hà Nam|Hà Nội|Hà Tĩnh|"
+           "Hải Dương|Hải Phòng|Hậu Giang|Hoà Bình|Hưng Yên|Khánh Hoà|Kiên Giang|Kon Tum|"
+           "Lai Châu|Lâm Đồng|Lạng Sơn|Lào Cai|Long An|Nam Định|Nghệ An|Ninh Bình|Ninh Thuận|"
+           "Phú Thọ|Phú Yên|Quảng Bình|Quảng Nam|Quảng Ngãi|Quảng Ninh|Quảng Trị|Sóc Trăng|"
+           "Sơn La|Tây Ninh|Thái Bình|Thái Nguyên|Thanh Hoá|Thừa Thiên Huế|Tiền Giang|"
+           "Trà Vinh|Tuyên Quang|Vĩnh Long|Vĩnh Phúc|Yên Bái|Huế|TP.HCM").split("|"):
+    TINH[khong_dau(_t)] = _t
+TINH["ho chi minh"] = TINH["ho chi minh city"] = TINH["hcm"] = "TP.HCM"
+TINH["ba ria vung tau"] = "Bà Rịa - Vũng Tàu"
+TINH["thua thien hue"] = "Thừa Thiên Huế"
+
+_RX_UBND = re.compile(r"^(?:people'?s? committee of|province of)\s+(.+?)"
+                      r"(?:\s+(?:province|city))?$", re.I)
+_RX_TINHUY = re.compile(r"^(.+?)\s+official party committee$", re.I)
+def ten_viet(t):
+    """Tên hiển thị của một nhóm. Chỉ đụng CƠ QUAN và mấy tổng công ty nguồn ghi tiếng Anh —
+    tên doanh nghiệp bình thường giữ nguyên, đừng dịch bừa."""
+    s = re.sub(r"\s+", " ", str(t or "").strip())
+    k = s.lower().rstrip(" .,")
+    if k in DOI_TEN: return DOI_TEN[k]
+    m = _RX_UBND.match(s)
+    if m: return "UBND " + TINH.get(khong_dau(m.group(1)), m.group(1).strip())
+    m = _RX_TINHUY.match(s)
+    if m: return "Tỉnh uỷ " + TINH.get(khong_dau(m.group(1)), m.group(1).strip())
+    return s
+
+
 def _ngay(d):
     """'30/06/2026' -> '2026-06-30' để so sánh và xếp thứ tự được."""
     m = re.match(r"(\d{2})/(\d{2})/(\d{4})$", str(d or "").strip())
@@ -275,7 +334,7 @@ def main():
     dung_quy(P)
 
     # gom: khoá nhóm -> {mã con: % sở hữu}
-    nhom, ten_goc, la_nn, la_dn = {}, {}, {}, {}
+    nhom, ten_goc, la_nn, la_dn, la_cq = {}, {}, {}, {}, {}
     ten_map = {g: (ten, me) for g, ten, me, _ in TU_KHOA}
     me_map = {me: g for g, _, me, _ in TU_KHOA if me}      # mã mẹ -> nhóm đã khai tay
     for sym, d in P.items():
@@ -310,6 +369,12 @@ def main():
             nhom[khoa][sym] = max(nhom[khoa].get(sym, 0), pc)
             ten_goc.setdefault(khoa, x.get("n") or "")
             if la_nha_nuoc(x.get("n")): la_nn[khoa] = True
+            # CƠ QUAN ≠ TẬP ĐOÀN NHÀ NƯỚC — hai thứ khác hẳn nhau, phải tách:
+            # · PVN, EVN, Viettel là một NHÀ: mẹ con hợp nhất, chung một ban điều hành;
+            # · Ngân hàng Nhà nước, SCIC, Bộ, UBND chỉ là CHỦ SỞ HỮU CỔ PHẦN — VCB, BID,
+            #   CTG cùng do Ngân hàng Nhà nước nắm nhưng là ĐỐI THỦ của nhau, gọi chung
+            #   một "tập đoàn" là sai bản chất.
+            if any(t in thoTen for t in NHA_NUOC): la_cq[khoa] = True
             # gắn cờ PHÁP NHÂN nếu BẤT KỲ biến thể tên nào của nhóm có dấu hiệu doanh nghiệp.
             # Chấm theo từng tên rồi gán "cá nhân" ngay là hỏng: PVN vào nhóm qua cả "Tập đoàn
             # Dầu khí Việt Nam" lẫn "PVN" trơ trọi, chỉ cần một biến thể trống là cả tập đoàn
@@ -398,7 +463,9 @@ def main():
             me = khoa[3:]
             ten = me + " · " + re.sub(r"\s+", " ", ((U.get(me) or {}).get("name") or me).strip())
         if not ten:
-            ten = re.sub(r"\s+", " ", (ten_goc.get(khoa) or "").strip())
+            # ĐỔI TÊN CƠ QUAN SANG TIẾNG VIỆT TRƯỚC KHI CẮT: cắt trước rồi mới đổi thì
+            # "Commission for the Management of State Capita…" không còn khớp bảng nào.
+            ten = ten_viet(ten_goc.get(khoa) or "")
         if len(ten) > 46: ten = ten[:45].rstrip() + "…"
         syms = sorted(ds.items(), key=lambda kv: -mcap(kv[0]))
         # VỐN HOÁ CẢ NHÓM. Cộng thô là đếm hai lần KHI MẸ CŨNG NIÊM YẾT: vốn hoá VIC đã
@@ -426,20 +493,57 @@ def main():
         ra.append({
             "id": khoa.replace("auto:", "a-").replace("ma:", "m-").replace(" ", "-")[:40],
             "ten": ten, "me": me if me in U else None,
-            "kieu": "nn" if la_nn.get(khoa) else ("tt" if la_dn.get(khoa) else "cn"),
+            # BỐN HẠNG, không phải ba: `cq` (cơ quan nắm vốn) tách khỏi `nn` (doanh
+            # nghiệp nhà nước) vì hai thứ đọc ra hai nghĩa khác hẳn — xem chú thích
+            # ở chỗ đặt `la_cq`. Cơ quan xét TRƯỚC: SCIC vừa là cơ quan vừa được
+            # `la_nha_nuoc` gật đầu, để `nn` thắng thì nó lại thành "tập đoàn".
+            "kieu": ("cq" if la_cq.get(khoa) else "nn" if la_nn.get(khoa)
+                     else "tt" if la_dn.get(khoa) else "cn"),
             "mcap": round(von / 1e9),
             "mcapTho": round(sum(mcap(s) for s, _ in syms) / 1e9),
             "syms": sy,
         })
+    # ── QUAN HỆ CHA–CON GIỮA CÁC NHÓM ────────────────────────────────────────────────
+    # 42/164 nhóm thật ra là NHÁNH CON của một nhóm khác: mẹ của nhóm này (CTG, GAS, TCB,
+    # MBB…) lại là thành viên của nhóm kia (Ngân hàng Nhà nước, PVN, Masan, Viettel). Danh
+    # sách phẳng cho chúng đứng NGANG HÀNG nên đọc ra mâu thuẫn — "nhà nước đã nắm CTG ở
+    # nhóm trên rồi, sao xuống dưới CTG lại có nhãn nhà nước nữa".
+    # KHÔNG gộp hay xoá nhánh con: 26/49 cặp có mã mà nhóm cha KHÔNG có (SCIC chỉ nắm VGT,
+    # còn 19 mã kia là con của chính Vinatex) — bỏ đi là mất thật. Chỉ ghi quan hệ ra để
+    # giao diện nói được "thuộc <nhà nào>" thay vì lặp lại một nhãn vô nghĩa.
+    trong = {}
+    for g in ra:
+        for s in g["syms"]: trong.setdefault(s["s"], []).append(g)
+    for g in ra:
+        me = g.get("me")
+        if not me: continue
+        # Mẹ nằm trong NHIỀU nhóm thì chọn nhà nắm NHIỀU NHẤT: HVN thuộc cả Uỷ ban Quản lý
+        # vốn (55,2%) lẫn SCIC (31,1%), PPC thuộc cả EVN lẫn REE — phải chỉ đúng nhà chính.
+        ung = sorted(((next((s.get("p") or 0) for s in c["syms"] if s["s"] == me), c)
+                      for c in trong.get(me, []) if c is not g), key=lambda x: -x[0])
+        if not ung: continue
+        cha = ung[0][1]
+        # tên ngắn cho cái nhãn "thuộc …": bỏ phần đuôi sau " · " (tên pháp lý dài lê thê)
+        # Nhãn "thuộc …" nằm ngay cạnh tên nhóm nên phải NGẮN: bỏ phần đuôi sau " · "
+        # (tên pháp lý dài lê thê) rồi bỏ nốt đuôi "Việt Nam" — mã nào ở sàn Việt Nam thì
+        # cũng ở Việt Nam cả, giữ lại chỉ tổ đẩy cái nhãn vượt bề rộng rồi bị cắt cụt.
+        ten_cha = str(cha["ten"]).split(" · ")[0].strip()
+        # bỏ đuôi "Việt Nam" CHỈ KHI tên quá dài — bỏ vô điều kiện thì "Cao su Việt Nam"
+        # (một cái tên vốn đã ngắn và đúng) teo thành "Cao su", đọc chẳng ra nhà nào
+        if len(ten_cha) > 30: ten_cha = re.sub(r"\s+Việt Nam$", "", ten_cha).strip()
+        if len(ten_cha) > 30: ten_cha = ten_cha[:29].rstrip() + "…"
+        g["cha"] = cha["id"]; g["chaTen"] = ten_cha
+
     ra.sort(key=lambda g: -g["mcap"])
     json.dump({"generated": datetime.date.today().isoformat(), "nhom": ra},
               open(OUT, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    dem = {k: sum(1 for g in ra if g["kieu"] == k) for k in ("tt", "nn", "cn")}
-    # ĐẾM RIÊNG BA LOẠI. Dòng cũ ghi "{tt} tập đoàn, {còn lại} nhà nước/cơ quan" nên gộp
+    dem = {k: sum(1 for g in ra if g["kieu"] == k) for k in ("tt", "nn", "cq", "cn")}
+    # ĐẾM RIÊNG TỪNG LOẠI. Dòng cũ ghi "{tt} tập đoàn, {còn lại} nhà nước/cơ quan" nên gộp
     # luôn nhóm do CÁ NHÂN chi phối vào cột nhà nước — đọc log là tưởng nhà nước nhiều gấp
     # đôi thực tế.
     print(f"✓ data/tapdoan.json: {len(ra)} nhóm ({dem['tt']} tập đoàn tư nhân, "
-          f"{dem['nn']} nhà nước, {dem['cn']} cá nhân chi phối)"
+          f"{dem['nn']} doanh nghiệp nhà nước, {dem['cq']} cơ quan nắm vốn, "
+          f"{dem['cn']} cá nhân chi phối · {sum(1 for g in ra if g.get('cha'))} nhánh con)"
           f" · {sum(len(g['syms']) for g in ra)} lượt mã")
     for g in ra[:16]:
         print(f"  {g['mcap']/1e3:8,.0f} nt · {len(g['syms']):2d} mã · [{g['kieu']}] {g['ten'][:34]:34s} "

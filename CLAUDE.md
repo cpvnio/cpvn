@@ -317,8 +317,41 @@ giá sai hoặc giá nhảy — đừng đẩy.
      > (Vinatex) — **không bao giờ khớp**; hai nhóm đó chỉ sống sót nhờ tình cờ có thêm từ
      > khoá viết tắt "evn"/"vinatex" trong tên. Cùng bài học với hai dạng Unicode của
      > `data/fin`: so tên tiếng Việt mà không chuẩn hoá là trượt lặng lẽ, không có lỗi nào.
-  Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` (`nn`/`cn`) để giao diện
-  dán nhãn — Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
+  10. **BỐN HẠNG + QUAN HỆ CHA–CON, vì danh sách phẳng trộn BA TẦNG của cùng một cây sở hữu.**
+     User bắt đúng chỗ này 14/08/2026: "Ngân hàng Nhà nước đã nắm CTG ở nhóm trên rồi, sao
+     xuống dưới CTG lại có nhãn nhà nước nữa — hơi mâu thuẫn". Đo ra thì không phải lỗi nhãn
+     mà là lỗi CẤU TRÚC: **42/164 nhóm thật ra là NHÁNH CON của một nhóm khác** (CTG/BID ⊂
+     Ngân hàng Nhà nước, GAS ⊂ PVN, TCB ⊂ Masan, MBB ⊂ Viettel, VNM/SAB/Vinatex ⊂ SCIC), và
+     **144/678 mã nằm trong hơn một nhóm** — nhưng tất cả bày phẳng như nhau nên không đọc
+     ra cái nào chứa cái nào.
+     · `kieu` nay có **BỐN** giá trị: `tt` tập đoàn tư nhân · `nn` doanh nghiệp nhà nước ·
+       **`cq` cơ quan nắm vốn** · `cn` cá nhân chi phối. Tách `cq` khỏi `nn` là mấu chốt:
+       PVN/EVN/Viettel là MỘT NHÀ (hợp nhất báo cáo, chung ban điều hành), còn Ngân hàng Nhà
+       nước / SCIC / Bộ / UBND chỉ là **danh mục cổ phần** — VCB, BID, CTG cùng một chủ
+       nhưng là ĐỐI THỦ của nhau. Cơ quan xét TRƯỚC `nn`, bằng không SCIC (vừa là cơ quan
+       vừa được `la_nha_nuoc` gật đầu) lại thành "tập đoàn".
+     · `cha`/`chaTen` = nhóm chứa CÔNG TY MẸ của nhóm này. Mẹ nằm trong nhiều nhóm thì chọn
+       nhà nắm NHIỀU NHẤT (HVN thuộc cả Uỷ ban 55,2% lẫn SCIC 31,1%; PPC thuộc cả EVN lẫn REE).
+     · **KHÔNG gộp hay xoá nhánh con**: 26/49 cặp có mã mà nhóm cha KHÔNG có — SCIC chỉ nắm
+       VGT, còn 19 mã dệt may kia là con của chính Vinatex. Bỏ đi là mất thật.
+     Giao diện: bảng chia **bốn khối có tiêu đề** (`.tdhang`) kèm một câu giải thích ngay
+     dưới tiêu đề khối (`.tdghi`) — chỗ user thắc mắc thì lời giải phải nằm ngay đó, đừng
+     đẩy xuống ghi chú cuối bảng. **Mỗi hàng chỉ MỘT nhãn và nhãn phải nói thêm được điều
+     gì**: nhánh con mang `thuộc <nhà mẹ>` (xám, chữ thường) THAY CHO việc lặp lại "nhà
+     nước" — đó chính là câu trả lời cho thắc mắc trên; nhóm gốc mới giữ nhãn hạng.
+     > **Tên cơ quan phải VIỆT HOÁ trước khi cắt** (`ten_viet` + bảng `DOI_TEN`): nguồn trả
+     > "Commission for the Management of State Capital at Enterprises", "People's Committee
+     > of Binh Duong province" — để nguyên thì bảng của một trang tiếng Việt vừa dài vừa bị
+     > cắt cụt vừa lạc quẻ. Cắt trước rồi mới đổi là không khớp bảng nào nữa.
+     > Nhãn `thuộc …` bỏ đuôi "Việt Nam" **chỉ khi tên quá 30 ký tự** — bỏ vô điều kiện thì
+     > "Cao su Việt Nam" teo thành "Cao su", đọc chẳng ra nhà nào.
+     > **TÊN TỈNH nằm trong chuỗi tiếng Anh nên KHÔNG DẤU** — cắt phần tiếng Anh xong còn
+     > "UBND Binh Duong", "Tỉnh uỷ Ba Ria-Vung Tau" đứng giữa một bảng toàn tiếng Việt có
+     > dấu, trông như dữ liệu hỏng. Bảng `TINH` khai đủ 63 tỉnh cũ + tên sau sáp nhập 2025,
+     > **khoá bằng chính `khong_dau()`** nên gạch nối và khoảng trắng thừa đều khớp; nguồn
+     > viết cả `…province` lẫn `…city` nên regex phải nuốt cả hai đuôi. 9 nhóm được đổi.
+  Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` để giao diện dán nhãn —
+  Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
   Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự
   áp cho cả hàng nhóm lẫn công ty con. **Màn hẹp chỉ đủ một cột tiền nên nó phải là cột
   ĐANG XẾP THEO** (`#tdPanel.xcap` đổi `.sc`↔`.sv`), bằng không xếp theo vốn hoá mà cột hiện

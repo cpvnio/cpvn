@@ -593,16 +593,35 @@ function tapDoanPanel(){
     const cMe=g.me&&ST.map.get(g.me);
     const dau=cMe?logoHTML(cMe)
       :'<span class="gini">'+esc((g.ten||'').replace(/[^\p{L}\p{N}]/gu,'').slice(0,2).toUpperCase())+'</span>';
+    /* MỘT NHÃN DUY NHẤT, và nó phải NÓI THÊM ĐƯỢC ĐIỀU GÌ.
+       Nhánh con thì nhãn là "thuộc <nhà mẹ>" chứ KHÔNG lặp lại "nhà nước": nhóm đã nằm
+       trong khối "Doanh nghiệp nhà nước" rồi, dán thêm chữ ấy là nói hai lần cùng một
+       chuyện — mà lại đúng chỗ dễ đọc ra mâu thuẫn nhất ("Ngân hàng Nhà nước đã nắm CTG ở
+       trên, sao xuống dưới CTG lại có nhãn nhà nước nữa?"). Đổi thành "thuộc Ngân hàng Nhà
+       nước" là câu trả lời cho chính thắc mắc đó. Nhóm GỐC mới giữ nhãn hạng. */
+    /* Nhãn trên hàng phải NGẮN nên `chaTen` đã bị cắt; tooltip thì lấy TÊN ĐẦY ĐỦ tra
+       ngược từ id — có sẵn trong chính danh sách đang dựng, khỏi nhét thêm trường vào kho. */
+    const chaDay=((ST.tapdoan||[]).find(x=>x.id===g.cha)||{}).ten||g.chaTen;
+    const nhan=g.cha
+      ? '<b class="nn thuoc" title="Nhánh con — công ty mẹ của nhóm này nằm trong nhóm “'
+        +esc(chaDay)+'”. Vốn hoá phần chồng lấn đã được trừ nên không đếm hai lần.">thuộc '
+        +esc(g.chaTen)+'</b>'
+      : g.kieu==='nn' ? '<b class="nn">nhà nước</b>'
+      : g.kieu==='cq' ? '<b class="nn cq">cơ quan</b>'
+      : g.kieu==='cn' ? '<b class="nn cn">cá nhân</b>' : '';
     return '<div class="tdrow'+(mo?' on':'')+'" data-td="'+esc(g.id)+'">'
       +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+dau+'<em class="nm">'+esc(g.ten)+'</em>'
-      +(g.kieu==='nn'?'<b class="nn">nhà nước</b>':g.kieu==='cn'?'<b class="nn cn">cá nhân</b>':'')+'</span>'
+      +nhan+'</span>'
       +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
       +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
       +'<span class="sp '+cls(x.d)+'">'+pct(x.d)+'</span>'
       +'<span class="sb"><b class="up">▲'+x.up+'</b> <b class="dn">▼'+x.dn+'</b>'
       +'<u>/'+x.ma.length+'</u></span>'
       +'<span class="sc"><i>GTGD</i>'+ty(x.gtgd)+'</span>'
-      +'<span class="sn2 '+cls(x.nn)+'"><i>NN ròng</i>'+(x.nn>=0?'+':'−')+ty(Math.abs(x.nn))+'</span>'
+      /* KHÔNG có số NN thì để gạch ngang TRƠN, đừng ghép dấu vào: ty(0) trả về "—" nên
+         bản cũ ra "+—", đọc như lỗi hiển thị. Cùng bẫy đã vá ở hàng công ty con. */
+      +'<span class="sn2 '+cls(x.nn)+'"><i>NN ròng</i>'
+      +(x.nn?(x.nn>0?'+':'−')+ty(Math.abs(x.nn)):'—')+'</span>'
       +'<span class="sv"><i>vốn hoá</i>'+ty(x.cap)+'</span></div>'
       /* HÀNG CON PHẢI ĂN KHỚP CỘT VỚI HÀNG NHÓM. Trước đây nó có lưới riêng (5 cột) lồng
          trong khung thụt lề 26px nên mọi con số lệch hẳn khỏi cột của hàng nhóm ngay phía
@@ -629,12 +648,40 @@ function tapDoanPanel(){
   const nutXep=(k,t)=>'<button class="srtb'+(tdSort.k===k?' on':'')+'" data-srt="'+k+'"'
     +' title="Xếp theo '+t+(tdSort.k===k?' — bấm lại để lật chiều':'')+'">'+t
     +(tdSort.k===k?'<i>'+(tdSort.d<0?'↓':'↑')+'</i>':'')+'</button>';
+  /* ═══ BỐN HẠNG, MỖI HẠNG MỘT KHỐI ═══
+     Bản trước là một danh sách PHẲNG 164 dòng trộn ba tầng khác hẳn nhau của cùng một cây
+     sở hữu: cơ quan nhà nước, tập đoàn, và nhánh con của chính tập đoàn đó. Vingroup đứng
+     ngang hàng Ngân hàng Nhà nước, mà "Ngân hàng Nhà nước" không phải một NHÀ — VCB, BID,
+     CTG là đối thủ của nhau. Tách khối kèm một câu giải thích ngay dưới tiêu đề thì mỗi
+     dòng đọc ra đúng nghĩa của nó, khỏi phải suy. */
+  const HANG=[
+    ['tt','🏢','Tập đoàn tư nhân',''],
+    ['nn','🏛️','Doanh nghiệp nhà nước',
+     'Nhà nước sở hữu quá bán công ty mẹ. Đây là MỘT NHÀ thật: mẹ con hợp nhất báo cáo, '
+     +'chung một ban điều hành.'],
+    ['cq','📋','Cơ quan nắm vốn nhà nước',
+     '<b>Không phải một nhà</b> — đây là DANH MỤC CỔ PHẦN của một cơ quan. Ngân hàng Nhà '
+     +'nước nắm cả VCB, BID và CTG nhưng ba ngân hàng đó là đối thủ của nhau; SCIC cũng vậy '
+     +'với 82 mã. Muốn xem từng nhà thì mở khối bên trên.'],
+    ['cn','👤','Cá nhân chi phối',
+     'Một người (thường là cả gia đình) nắm chi phối từ hai mã trở lên. Vẫn đáng theo dõi, '
+     +'nhưng gọi đúng tên chứ không phải tập đoàn.'],
+  ];
+  const khoi=HANG.map(([k,ic,ten,mo])=>{
+    const p=ds.filter(x=>(x.g.kieu||'tt')===k);
+    if(!p.length) return '';
+    const con=p.filter(x=>x.g.cha).length;
+    return '<div class="tdhang">'+ic+' '+ten
+      +'<em>'+p.length+' nhóm'+(con?' · '+con+' nhánh con':'')+'</em></div>'
+      +(mo?'<div class="tdghi">'+mo+'</div>':'')
+      +p.map(hang).join('');
+  }).join('');
   return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn'
     +'<span class="tdsrt">xếp theo'+nutXep('cap','vốn hoá')+nutXep('gtgd','GTGD')+'</span>'
     +'<span class="cnt">'+ds.length+' nhóm</span></div>'
     /* lớp x<khoá> để màn hẹp hiện ĐÚNG cột đang xếp theo — nó chỉ đủ chỗ cho một cột tiền,
        xếp theo vốn hoá mà cột hiện ra là GTGD thì bảng trông như không xếp gì cả */
-    +'<div class="pb x'+tdSort.k+'" style="padding:10px 16px" id="tdPanel">'+ds.map(hang).join('')+'</div></div>';
+    +'<div class="pb x'+tdSort.k+'" style="padding:10px 16px" id="tdPanel">'+khoi+'</div></div>';
 }
 /* ═══════════ BỨC TRANH TOÀN CẦU — bản đồ thế giới tô theo chỉ số từng nước ═══════════
    MÀU THEO LUẬT CHỨNG KHOÁN VIỆT NAM: xanh = tăng, đỏ = giảm, vàng = tham chiếu.
@@ -2004,8 +2051,16 @@ function tapDoanNote(){
     +'Thứ tự áp cho cả danh sách công ty con bên trong. <b>% cạnh mã là tỉ lệ nhà mẹ '
     +'nắm, đã nhân dồn dọc chuỗi</b>: FPT nắm 45,7% FPT Telecom, FPT Telecom nắm 56,4% FOC thì '
     +'FOC ghi ≈23,8% chứ không phải 56,4%. Dấu ≈ là nắm gián tiếp, rê chuột vào biết đi qua ai. '
-    +'Nhóm do nhà nước hoặc cá nhân chi phối được dán nhãn riêng: Ngân hàng Nhà nước '
-    +'nắm cả BID, VCB, CTG nhưng ba ngân hàng đó không cùng một nhà.</div>';
+    +'<br/><br/><b>Vì sao chia bốn khối:</b> danh sách này trộn ba tầng của cùng một cây sở '
+    +'hữu. <b>Doanh nghiệp nhà nước</b> (PVN, EVN, Viettel) là một NHÀ thật — mẹ con hợp '
+    +'nhất báo cáo. <b>Cơ quan nắm vốn</b> (Ngân hàng Nhà nước, SCIC, các Bộ, UBND tỉnh) thì '
+    +'không: đó chỉ là danh mục cổ phần, VCB–BID–CTG cùng một chủ nhưng là đối thủ của nhau. '
+    +'Còn <b>nhánh con</b> mang nhãn "thuộc …" là nhóm mà công ty mẹ của nó đã nằm trong một '
+    +'nhóm khác — CTG thuộc Ngân hàng Nhà nước, GAS thuộc PVN, Techcombank thuộc Masan. '
+    +'Nhánh con vẫn để riêng chứ không gộp vào mẹ, vì phần lớn có mã mà nhóm mẹ không có: '
+    +'SCIC chỉ nắm VGT, còn 19 mã dệt may kia là con của chính Vinatex. '
+    +'<b>Vốn hoá không bị đếm hai lần</b> — mã tới qua một thành viên khác chỉ tính phần '
+    +'ngoài (vốn hoá GAS đã gồm 35% PGS).</div>';
 }
 /* ---- CHỦ ĐIỂM ĐẦU TƯ — DẪN NGUỒN SSI RESEARCH ----------------------------------
    ĐÂY LÀ Ý KIẾN KHUYẾN NGHỊ CỦA BÊN THỨ BA, KHÔNG PHẢI của trang. Trang chỉ dẫn lại,
