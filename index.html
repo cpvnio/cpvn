@@ -283,12 +283,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   /* CHIP PRO: hàng riêng phía trên vì nó không cùng loại với các chip một-điều-kiện.
      Viền vàng đậm + chữ đậm để đọc ra ngay là "cái này khác", nhưng vẫn giữ đúng
      hình dạng và chiều cao chip chung — không đẻ ra một ngôn ngữ thứ hai. */
-  .chipbar button.chippro{color:#f5b40a;border-color:#f5b40a;background:transparent;font-weight:800}
-  .chipbar button.chippro:hover{color:#f5b40a;background:rgba(245,180,10,.10)}
-  .chipbar button.chippro.on{background:#f5b40a;border-color:#f5b40a;color:#1a1205}
-  .chipbar button.chippro i{font-style:normal;opacity:.72;font-weight:700;margin-left:5px}
-  #scrPro{flex:0 1 auto}
-  .scrPromo{font-size:11.5px;color:var(--muted);line-height:1.45;padding:1px 0 0}
+  /* CSS chip Pro (.chippro, #scrPro, .scrPromo) đã xoá 16/08/2026 cùng cả bộ lọc. */
   /* CHIP CÓ THAM SỐ: ô chọn số kỳ nằm NGAY TRONG viên chip, đọc liền mạch thành câu
      "Lỗ [3] năm nhưng thu hẹp". Bấm phần chữ = bật/tắt, bấm ô số = đổi số kỳ. */
   .chipbar .chipn{display:inline-flex;align-items:center;gap:4px;background:var(--panel);color:var(--muted);
@@ -657,8 +652,7 @@ document.addEventListener(MO,function(e){
 </div>
 
 <div id="scrPanel">
-  <div class="scrRow"><span class="scrLb">Pro</span><div class="chipbar" id="scrPro"></div>
-    <span class="scrPromo" id="scrProMo"></span></div>
+  <!-- Hàng chip "Pro" đã bỏ 16/08/2026 — xem ghi chú ở đầu assets/screener.js. -->
   <div class="scrRow"><span class="scrLb">Lọc nhanh</span><div class="chipbar" id="scrChips"></div>
     <button id="scrClear">✕ Xoá hết lọc</button></div>
   <div id="scrDesc"></div>
@@ -705,7 +699,7 @@ document.addEventListener(MO,function(e){
 </footer>
 
 <script src="assets/core.js?v=20260816c"></script>
-<script src="assets/screener.js?v=20260813b"></script>
+<script src="assets/screener.js?v=20260816c"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -870,11 +864,9 @@ function filterRows(){
       }
     });
   }
-  /* Bộ lọc Pro xếp hạng SO VỚI CẢ THỊ TRƯỜNG, không phải so trong phần đang lọc dở —
-     nên phải dựng lại từ CP.coins đầy đủ mỗi lượt vẽ (giá sống đổi thì vốn hoá, E/P,
-     khoảng cách đỉnh đổi theo). Dựng lại tốn ~2ms cho 1.520 mã. Chọn Pro cùng một ngành
-     thì thấy phần giao — đúng như vậy, "Pro" luôn là cùng 30 mã của toàn sàn. */
-  if(SCR.on&&CPScreen.loaded){ CPScreen.proReset(); list=list.filter(scrPass); }
+  /* Mọi chip nay đều là điều kiện của RIÊNG một mã nên lọc thẳng từng dòng, không còn
+     bước dựng danh sách trước (proReset/proBuild đã bỏ cùng bộ lọc Pro 16/08/2026). */
+  if(SCR.on&&CPScreen.loaded) list=list.filter(scrPass);
   const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
   /* Mã THIẾU DỮ LIỆU luôn nằm CUỐI dù sắp xếp tăng hay giảm — bấm P/E mà một loạt
      dấu "—" nhảy lên đầu bảng thì coi như cột đó vô dụng. */
@@ -1317,20 +1309,11 @@ function scrBuild(){
       `<option value="${v}"${v===SCR.num[x.id]?' selected':''}>${v}</option>`).join('')+'</select>';
     return `<span class="chipn" data-id="${x.id}" title="${x.g}">${x.nm.replace('{n}',sel)}</span>`;
   }).join('');
-  /* HÀNG PRO — một chip duy nhất, dựng riêng khỏi hàng "Lọc nhanh" */
-  const P=CPScreen.pro;
-  $('scrPro').innerHTML=`<button data-id="${P.id}" class="chippro" title="${CP.esc(P.mo)}">`
-    +`${P.nm}<i>${CPScreen.PRO_N} mã</i></button>`;
-  /* Lời mô tả nằm NGOÀI .chipbar: ở khổ hẹp .chipbar biến thành lưới 2 hàng cuộn ngang,
-     nhét câu chữ vào đó là nó thành một "chip" dài ngoằng chiếm nguyên hàng thứ hai. */
-  $('scrProMo').textContent='biến động thấp · vốn hoá lớn · E/P cao · gần đỉnh 52 tuần'
-    +' — trừ mã đang lỗ và nhóm phải thu phình';
   const bat=(el,id)=>{                              // bật/tắt một chip rồi vẽ lại bảng
     SCR.chips.has(id)?SCR.chips.delete(id):SCR.chips.add(id);
     el.classList.toggle('on',SCR.chips.has(id));
     ST.page=1; render();
   };
-  document.querySelectorAll('#scrPro [data-id]').forEach(b=>b.onclick=()=>bat(b,b.dataset.id));
   document.querySelectorAll('#scrChips [data-id]').forEach(b=>b.onclick=e=>{
     if(e.target.tagName==='SELECT') return;         // bấm vào ô số thì đừng tắt chip
     bat(b,b.dataset.id);
@@ -1361,7 +1344,7 @@ $('scrClear').onclick=()=>{
   SCR.chips.clear();
   // phải quét CẢ hàng Pro: SCR.chips.clear() đã tắt nó về mặt logic, quên bỏ class `on`
   // thì chip vẫn sáng vàng trong khi bảng đã hết lọc — người dùng đọc ra là nút hỏng.
-  document.querySelectorAll('#scrChips [data-id],#scrPro [data-id]').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('#scrChips [data-id]').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('#scrChips select[data-num]').forEach(s=>{   // số kỳ về mặc định
     SCR.num[s.dataset.num]=CPScreen.def(s.dataset.num); s.value=SCR.num[s.dataset.num];
   });

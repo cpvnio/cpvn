@@ -23,7 +23,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 
 | Tệp | Dòng | Vai trò |
 |---|---|---|
-| `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc pro |
+| `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc nhanh |
 | `cophieu.html` | 1169 | Trang một mã: hero giá · thống kê · nến · PTKT toàn màn hình · 5 thẻ nội dung |
 | `bubbles.html` | 2185 | Bong bóng (canvas vật lý) + bản đồ nhiệt (treemap DOM). **Tự chứa bản sao lõi giá** |
 | `congcu.html` + `assets/congcu.js` | 384+676 | 3 module: Radar phiên · **Danh mục tập đoàn** (kèm tab quỹ) · Đường đua vốn hoá |
@@ -1049,27 +1049,22 @@ theo đúng `.n` để khoá bề rộng cột (dùng `Range.getBoundingClientRe
 canvas `measureText` — nó trả sai font). Đổi bề ngang là phải gọi lại `fitNumCols`.
 Mã thiếu dữ liệu luôn nằm **cuối** dù sort tăng hay giảm.
 
-**BỘ LỌC PRO (hàng riêng trên cùng panel lọc, 12/08/2026)** — khác mọi chip còn lại ở chỗ
-nó là điều kiện **so với cả rổ**, không phải điều kiện của riêng một mã: phải xếp hạng
-toàn thị trường rồi mới biết mã nào lọt. Vì thế `render()` gọi `CPScreen.proReset()` TRƯỚC
-khi lọc, và `proBuild` dựng từ **`CP.coins` đầy đủ** chứ không từ danh sách đang lọc dở —
-chọn Pro cùng lúc với một ngành thì thấy phần giao, "Pro" luôn là cùng 30 mã của toàn sàn.
-Bốn yếu tố (biến động 60 phiên thấp · vốn hoá lớn · E/P cao · gần đỉnh 52 tuần) chọn theo
-IC 12 tháng đo trên 97.794 dòng mã-tháng, chỉ giữ yếu tố **giữ nguyên dấu ở cả hai giai
-đoạn** 2020-22 và 2023-26; danh mục thử nghiệm 20,2% trong mẫu / 20,4% ngoài mẫu.
-Ba cổng loại trừ, mỗi cổng có lý do đo được:
-- **đang lỗ** (IC −5,5%) và **20% phải thu/doanh thu cao nhất** (chỉ số cơ bản mạnh nhất
-  tìm được, IC −14,3%; thêm cổng này nâng 20,3% → 21,6%/năm). **Thiếu dữ liệu thì CHO QUA**
-  — ngân hàng không có khoản mục này mà lại chiếm phần lớn danh mục, loại vì thiếu số là
-  tự tay vứt đi thứ đã đo ra là tốt.
-- **`flat60` > 30%** — bộ lọc "biến động thấp" không phân biệt được mã ổn định THẬT với mã
-  KHÔNG CHẠY: TLD khớp 1,86 tỷ/phiên nhưng đứng giá 21/59 phiên nên độ lệch chuẩn 0,28%,
-  thấp nhất bảng, lọt top 30 vì lý do sai. Đo ba ngưỡng: không chặn 20,3% · >40% 20,2% ·
-  **>30% 20,6%** · >20% 19,0% (bắt đầu cắt nhầm mã ổn định thật).
-Hai trường mới trong kho lọc phục vụ nó: `vol60`+`flat60` (screen.json), `recRevL`
-(fund.json — **MỨC** phải thu/doanh thu, khác `recRev` đã có là ĐỘ LỆCH TĂNG TRƯỞNG).
-Nút "✕ Xoá hết lọc" phải quét cả `#scrPro`, quên là chip vẫn sáng vàng trong khi bảng đã
-hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky-2026-08`.
+**BỘ LỌC PRO ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.** `PRO_N`/`PRO_LIQ`/`PRO_FLAT`,
+`_pro`, `proReset()`, `proBuild()`, `CPScreen.pro`, nhánh `case 'pro'`, hàng chip riêng
+trong `index.html` và CSS `.chippro`/`#scrPro`/`.scrPromo` đều xoá. Panel lọc nay chỉ còn
+một hàng "Lọc nhanh" với 22 chip thường.
+
+Vì sao bỏ: nó là chip DUY NHẤT không phải một điều kiện đo được của riêng một mã (P/E<10,
+RSI<30…) mà là **một danh sách 30 mã do chủ trang chọn ra** — bốn yếu tố, ba cổng loại, rồi
+cắt top 30. Dù từng yếu tố đều đo được và nhãn ghi rõ "thống kê mô tả quá khứ", thứ người
+dùng nhận về vẫn là *"đây là 30 mã"*, tức một danh mục gợi ý. Cộng thêm việc chủ trang **có
+nắm giữ cổ phiếu Việt Nam**, đó đúng là hình dạng mà khoản 32 Điều 4 Luật CK và điều khoản
+thao túng (Luật CK sửa đổi 2024 — *đưa ra ý kiến sau khi đã nắm giữ vị thế*) cùng nhắm tới.
+> **`vol60` / `flat60` / `recRevL` trong `screen.json` và `fund.json` VẪN GIỮ** dù nay không
+> chip nào đọc: chúng là con số ĐO ĐƯỢC từ dữ liệu công khai (độ lệch chuẩn lợi suất 60
+> phiên, tỉ lệ phiên đứng giá, phải thu trên doanh thu 4 quý), không phải ý kiến — và là
+> nguyên liệu sẵn nếu sau này làm chip THƯỜNG cho từng chỉ số, loại chip mà **người dùng tự
+> đặt ngưỡng**. Nội dung nghiên cứu đứng sau: memory `nghien-cuu-chu-ky-2026-08`.
 
 **`cophieu.html`** — Biểu đồ nhỏ và PTKT toàn màn hình dùng **chung** `CPChart`, chung
 `dailyRows`, chung kho hình vẽ; chỉ khác palette (`'gon'` 10 nút vs `'full'` 14 nút).
