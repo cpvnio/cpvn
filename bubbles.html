@@ -312,12 +312,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #detNews .ni .meta{color:var(--muted);font-size:11px;margin-top:2px}
 
   /* báo cáo phân tích CTCK */
-  /* Một dòng mỗi báo cáo — .rec/.mt/.rt đã xoá cùng dữ liệu sinh ra chúng (16/08/2026). */
-  #detReports .rp{padding:6px 0;border-top:1px solid var(--line)}
-  #detReports .rp .rp1{font-size:12px;line-height:1.4;color:var(--muted);display:block;text-decoration:none}
-  #detReports .rp a.rp1{color:#7ab7ff}
-  #detReports .rp a.rp1:hover{text-decoration:underline}
-  #detReports .rp .rp1 b{color:var(--txt);font-weight:700}
+  /* CSS #detReports đã xoá 16/08/2026 cùng cả mục báo cáo phân tích. */
 
   /* MIỄN TRỪ ở chân trang. ĐỪNG thêm padding-bottom cho thanh tab đáy: `mobi.css` đã đặt
      `body{padding-bottom:calc(var(--mbar)+safe-area)}` — chừa hai lần là hở một khoảng
@@ -533,8 +528,7 @@ document.addEventListener(MO,function(e){
       <div class="sect"><span>Tin tức liên quan</span><span class="subnote" id="newsSrc"></span></div>
       <div id="detNews"></div>
 
-      <div class="sect"><span>Báo cáo phân tích (CTCK)</span><span class="subnote" id="repSrc"></span></div>
-      <div id="detReports"></div>
+      <!-- Mục "Báo cáo phân tích (CTCK)" đã bỏ 16/08/2026 — xem ghi chú ở `repCache`. -->
 
       <a class="btn" id="detLink" target="_blank" rel="noopener">Xem trên Simplize ↗</a>
     </div>
@@ -1716,7 +1710,6 @@ function showDetail(c){
   renderProfit(c.sym);
   renderPeers();
   renderNews(c.sym,true);
-  renderReports(c.sym,true);
   loadFlow(c.sym);
   loadFund(c.sym);
   clearInterval(newsTimer);
@@ -2023,59 +2016,13 @@ function paintNews(items){
 }
 
 /* ---- BÁO CÁO PHÂN TÍCH của CTCK (Simplize, theo mã) ---- */
-const repCache=new Map();
-/* recStyle ĐÃ XOÁ 16/08/2026 (nó tô xanh chữ "MUA", đỏ chữ "BÁN"). Trang này tự chứa lõi
-   giá nên cũng phải tự chứa bảng CTCK — bản sao của CP.CTCK_WEB/CP.ctckLink trong core.js;
-   sửa một chỗ thì sửa cả hai, đúng luật "cặp hàm trùng lặp" của file này. */
-const CTCK_WEB={
-  'SSI':'https://www.ssi.com.vn',            'HSC':'https://www.hsc.com.vn',
-  'VNDS':'https://www.vndirect.com.vn',      'VIETCAP':'https://www.vietcap.com.vn',
-  'VCSC':'https://www.vietcap.com.vn',       'ACBS':'https://acbs.com.vn',
-  'DSC':'https://www.dsc.com.vn',            'FPTS':'https://www.fpts.com.vn',
-  'MAS':'https://masvn.com',                 'BSC':'https://www.bsc.com.vn',
-  'MBS':'https://mbs.com.vn',                'KBSV':'https://www.kbsec.com.vn',
-  'SHS':'https://www.shs.com.vn',            'VPBS':'https://vpbanks.com.vn',
-  'BVSC':'https://bvsc.com.vn',              'KIS':'https://www.kisvn.vn',
-  'SHINHAN':'https://www.shinhansec.com.vn', 'VCBS':'https://www.vcbs.com.vn',
-  'ABS':'https://abs.vn',                    'YUANTA':'https://yuanta.com.vn',
-  'VDSC':'https://www.vdsc.com.vn',          'VDS':'https://www.vdsc.com.vn',
-  'PHS':'https://www.phs.vn',                'AGRISECO':'https://agriseco.com.vn',
-  'AGR':'https://agriseco.com.vn',           'PSI':'https://www.psi.vn',
-  'CTS':'https://www.cts.vn',                'AAS':'https://aas.com.vn',
-  'NHSV':'https://nhsv.vn',                  'KAFI':'https://kafi.vn',
-  'VNDIRECT':'https://www.vndirect.com.vn',  'MIRAE':'https://masvn.com',
-};
-/* KHỚP TRỌN TỪ, không khớp chuỗi con — 'SBSC' chứa 'BSC' nên `indexOf` link sai nhà.
-   Xem ghi chú đầy đủ ở CP.ctckLink trong core.js. Hai bản phải giống hệt nhau. */
-function ctckLink(src){
-  const s=String(src||'').trim().toUpperCase();
-  if(!s) return '';
-  if(CTCK_WEB[s]) return CTCK_WEB[s];
-  for(const t of s.split(/[^A-Z0-9]+/)) if(t&&CTCK_WEB[t]) return CTCK_WEB[t];
-  return '';
-}
-async function renderReports(sym,showLoading){
-  const box=$('detReports'), src=$('repSrc');
-  if(showLoading) box.innerHTML='<div class="subnote">Đang tải báo cáo…</div>';
-  let data=repCache.get(sym);
-  if(!data){
-    if(!SRC.reports){ box.innerHTML='<div class="subnote">Nguồn báo cáo không khả dụng.</div>'; return; }
-    try{ data=await SRC.reports(sym); repCache.set(sym,data); }catch(e){ data=null; }
-  }
-  if(sym!==detailSym) return;
-  if(!data){ box.innerHTML='<div class="subnote">Không lấy được báo cáo.</div>'; return; }
-  if(!data.items.length){ src.textContent=''; box.innerHTML='<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>'; return; }
-  src.textContent=`${data.total} báo cáo`;
-  const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  box.innerHTML=data.items.slice(0,8).map(r=>{
-    const ng=String(r.date||'').indexOf('-')>0?r.date.slice(0,10).split('-').reverse().join('/'):(r.date||'');
-    const u=ctckLink(r.source);
-    const noi=`Báo cáo của <b>${esc(r.source||'CTCK')}</b>${ng?` — <b>${esc(ng)}</b>`:''}`;
-    return `<div class="rp">${u?`<a class="rp1" href="${u}" target="_blank" rel="noopener">${noi} ↗</a>`
-                              :`<span class="rp1">${noi}</span>`}</div>`;
-  }).join('')+`<div class="subnote" style="margin-top:6px">Nguồn: tổng hợp từ các công ty chứng khoán. `
-   +`CPVN không dẫn lại khuyến nghị hay giá mục tiêu.</div>`;
-}
+/* MỤC "BÁO CÁO PHÂN TÍCH (CTCK)" ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.
+   `repCache`, `CTCK_WEB`, `ctckLink`, `renderReports` và bản sao ở cophieu.html đều gỡ
+   cùng lúc (hai trang hiện CÙNG nội dung nên bỏ một nơi mà giữ nơi kia là vô nghĩa).
+   Lý do: nguồn chỉ trả về đúng một đường dẫn — FILE PDF trên cdn.simplize.vn — chứ không
+   có URL nào tới bài báo cáo trên trang của chính CTCK; đã dò ba dạng trang riêng của
+   Simplize, 404 cả ba. Chỉ hiện tên CTCK + ngày mà không mở ra đọc được thì vô dụng, còn
+   dẫn thẳng file PDF thì quay lại đúng vấn đề bản quyền đã gỡ ở lượt trước. */
 
 /* ---- chips & refresher ---- */
 document.querySelectorAll('#candleTf button').forEach(b=>b.onclick=()=>{
@@ -2255,16 +2202,8 @@ function wireSources(){
     return {Y:y, Q:q};
   };
 
-  // (4) BÁO CÁO PHÂN TÍCH theo mã — Simplize analysis-report (CORS *, không token).
-  //     CHỈ LẤY DỮ KIỆN "CÓ BÁO CÁO": CTCK nào, ngày nào. Khuyến nghị (`recommend`), giá
-  //     mục tiêu (`targetPrice`), tiêu đề và link PDF (`attachedLink`) đã gỡ 16/08/2026 —
-  //     lý do đầy đủ ở refresh_daily.work_news. Đừng lấy lại "cho đủ trường".
-  SRC.reports=async(sym)=>{
-    const j=await fetch(`https://api2.simplize.vn/api/company/analysis-report/list?ticker=${sym}&page=0&size=12`).then(r=>r.json());
-    return { total:j.total||0, items:(j.data||[]).map(r=>({
-      source:r.source||'', date:r.issueDate||'',
-    })) };
-  };
+  // (4) SRC.reports ĐÃ GỠ 16/08/2026 cùng cả mục báo cáo phân tích — xem ghi chú ở chỗ
+  //     `repCache` phía trên. Đừng gọi lại endpoint analysis-report/list ở client.
 
   // (5) LỊCH SỬ NN + TỔNG KLGD theo ngày — 24hMoney iOS (CORS *, không token, 30 phiên)
   //     ghép foreign-trading-history + trading-history theo trading_date

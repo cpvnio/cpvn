@@ -401,14 +401,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .peer .mc small{display:block;color:var(--muted);font-weight:600;font-size:10px}
 
   /* tài liệu + tin */
-  /* Mục báo cáo nay CHỈ CÓ MỘT DÒNG mỗi báo cáo (16/08/2026). Các class .rec (badge
-     MUA/BÁN), .mt (giá mục tiêu), .rt (tiêu đề), .dl (tải PDF) đã xoá cùng với dữ liệu
-     sinh ra chúng — đừng khai lại, không còn gì đổ vào. */
-  .rp{padding:8px 0;border-bottom:1px solid var(--rowline)}
-  .rp .rp1{font-size:13px;line-height:1.45;color:var(--muted);display:block}
-  .rp a.rp1{color:#7ab7ff}
-  .rp a.rp1:hover{text-decoration:underline}
-  .rp .rp1 b{color:var(--txt);font-weight:700}
+  /* CSS mục báo cáo phân tích (.rp/.rp1 và trước đó .rec/.mt/.rt/.dl) đã xoá 16/08/2026
+     cùng cả mục — xem ghi chú ở chỗ khai `#reps` trong phần thân. */
   .ni{padding:9px 0;border-bottom:1px solid var(--rowline)}
   .ni a{font-size:13.5px;line-height:1.45;display:block}
   .ni a:hover{color:#fff;text-decoration:underline}
@@ -577,8 +571,14 @@ document.addEventListener(MO,function(e){
       <h3 class="t" style="margin-top:0">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
       <div class="subnote">Số liệu KQKD/CĐKT/LCTT đã có ở thẻ "Báo cáo tài chính". File BCTC gốc (PDF có chữ ký, thuyết minh đầy đủ) tải tại các cổng lưu trữ chính thống:</div>
       <div class="btnrow" id="docLinks"></div>
-      <h3 class="t">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
-      <div id="reps"></div>
+      <!-- MỤC "BÁO CÁO PHÂN TÍCH CỦA CTCK" ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.
+           Nguồn (api2.simplize.vn/analysis-report/list) chỉ trả về một đường dẫn duy nhất
+           là FILE PDF trên cdn.simplize.vn — không có URL nào trỏ tới bài báo cáo trên
+           trang của chính CTCK (đã dò `simplize.vn/co-phieu/{MÃ}/bao-cao-phan-tich`,
+           `/bao-cao-phan-tich/{id}` và biến thể: **404 cả ba**). Mà tiêu đề báo cáo thì
+           mang sẵn khuyến nghị trong tên: "CTCP Tập đoàn Hòa Phát (HPG/Mua/GMT:30,000)".
+           User chốt: dẫn thẳng được tới bài báo cáo thì giữ, không thì bỏ — không dẫn được,
+           nên bỏ. Chỉ hiện tên CTCK + ngày mà không mở ra đọc được thì cũng vô dụng. -->
     </div>
   </div>
 
@@ -626,7 +626,7 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260816a"></script>
+<script src="assets/core.js?v=20260816b"></script>
 <script src="assets/chart.js?v=20260813a"></script>
 <script>
 'use strict';
@@ -1550,15 +1550,7 @@ function veNganhRows(){
 /* ---------- tài liệu + tin tức ---------- */
 async function renderDocsNews(){
   const d=await CP.loadNews(C.sym);
-  $('repN').textContent=d.total?`· ${d.total} báo cáo`:'';
-  /* CHỈ NÊU CÓ BÁO CÁO, KHÔNG DẪN LẠI NỘI DUNG (16/08/2026) — khuyến nghị, giá mục tiêu,
-     tiêu đề và link PDF đều đã gỡ ở cả nguồn ghi (refresh_daily) lẫn nguồn đọc (core.js).
-     Lý do đầy đủ nằm ở refresh_daily.work_news. Đừng dựng lại "để đầy đủ hơn". */
-  $('reps').innerHTML=(d.reports&&d.reports.length)
-    ? d.reports.map(r=>`<div class="rp">${CP.reportRow(r)}</div>`).join('')
-      +'<div class="subnote" style="margin-top:6px">Nguồn: tổng hợp từ các công ty chứng khoán. '
-      +'CPVN không dẫn lại khuyến nghị hay giá mục tiêu — bấm để đọc tại trang của chính CTCK.</div>'
-    : '<div class="subnote">Chưa ghi nhận báo cáo phân tích cho mã này.</div>';
+  /* Mục báo cáo phân tích CTCK đã bỏ — xem ghi chú ở chỗ khai `#reps` trong phần thân. */
   /* Vietstock rồi CafeF đứng đầu (user chốt 15/08/2026) — Simplize xuống cuối.
      Đường dẫn CafeF cố ý giữ nhánh `hastc` cho MỌI mã dù mã đó niêm yết ở đâu: nguồn tự
      chuyển hướng về đúng sàn kèm slug tên công ty đầy đủ (đo 15/08: VIC -> /du-lieu/hose/

@@ -1003,11 +1003,23 @@ việc đó khi chưa được UBCKNN cấp phép. CPVN không phải công ty c
 | `kn` / `tp` / `ch` / `pdf` / `knSSI` của Chủ điểm | `build_chudiem.py` · `congcu.js` · `data/chudiem.json` | như trên; `ch` là lời khuyên mua viết bằng % |
 | `riskLevel` | `refresh_daily.work_prof` · `backfill_profiles.py` · 1.458 file `data/profile` | xếp hạng rủi ro của bên thứ ba về một mã cụ thể; chưa từng hiển thị |
 | `recStyle` / `CP.recStyle` / `cdBadge` + CSS `.rec .mt .rt .dl .cdkn .cdtp .cdch` | 4 trang | hàm tô xanh chữ "MUA", đỏ chữ "BÁN" |
+| **CẢ MỤC báo cáo phân tích CTCK** — `#reps`/`#repN` (cophieu), `#detReports`/`repSrc` + `renderReports` + `repCache` (bubbles), `SRC.reports`, `CP.reportRow`, `CP.CTCK_WEB`, `CP.ctckLink`, lượt gọi `analysis-report/list` trong `loadNews` | cophieu.html · bubbles.html · core.js | **không dẫn được tới bài báo cáo** — xem ngay dưới |
 
-**Còn được giữ:** CTCK nào đã ra báo cáo và **ngày nào** — đó là dữ kiện, không phải ý kiến.
-`CP.reportRow()` + `CP.CTCK_WEB`/`CP.ctckLink()` dựng một dòng *"Báo cáo của **SSI Research**
-— **05/03/2026**"* link về trang phân tích của chính CTCK đó. **`bubbles.html` giữ bản sao
-`CTCK_WEB`/`ctckLink`** (trang này tự chứa lõi) — sửa một chỗ phải sửa cả hai.
+**VÌ SAO BỎ HẲN MỤC BÁO CÁO CTCK (16/08/2026) — ĐỪNG DỰNG LẠI DÙ CHỈ "HIỆN TÊN CHO ĐỦ":**
+đi qua ba bản rồi mới bỏ, đừng lặp lại vòng đó. ① Bản đầu: badge MUA/BÁN + giá mục tiêu +
+nút ⬇ Tải PDF → gỡ vì khoản 32 Điều 4 Luật CK và vì phát tán PDF của CTCK là xâm phạm quyền
+tác giả. ② Bản hai: rút còn *"Báo cáo của **MAS** — **12/08/2026**"* link về **trang chủ**
+hãng → user bác: *"nên dẫn nguồn đến thẳng link bài báo cáo, không phải chỉ đưa mỗi website
+trang chủ của họ; nếu không làm đc thì nên bỏ luôn"*. ③ Dò đường dẫn tới bài báo cáo: API
+`api2.simplize.vn/api/company/analysis-report/list` trả về **đúng một** đường dẫn —
+`attachedLink` = file PDF trên `cdn.simplize.vn` — cùng một `id` nội bộ; đã thử
+`simplize.vn/co-phieu/{MÃ}/bao-cao-phan-tich`, `/bao-cao-phan-tich/{id}` và biến thể:
+**404 cả ba**. Không có URL nào tới bài báo cáo trên trang của chính CTCK. Thêm nữa `title`
+mang sẵn khuyến nghị trong tên (*"CTCP Tập đoàn Hòa Phát (HPG/Mua/GMT:30,000)"*) nên cũng
+không hiện được. Hiện tên + ngày mà không mở ra đọc được thì vô dụng → bỏ.
+> **Kho `data/news/*.json` VẪN giữ mảng `reports` (chỉ `source`+`date`)** — client không
+> đọc nữa, nhưng `tools/build_chudiem.py` đọc nó để lấy NGÀY báo cáo SSI gần nhất mỗi mã.
+> Xoá mảng đó khỏi kho là Chủ điểm mất luôn dòng ngày.
 
 **BỐN LUẬT KHÔNG ĐƯỢC PHÁ:**
 1. **Không có chữ mua / bán / giá mục tiêu / khuyến nghị** ở bất kỳ đâu — của mình hay dẫn
