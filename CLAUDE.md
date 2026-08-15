@@ -431,6 +431,21 @@ giá sai hoặc giá nhảy — đừng đẩy.
   ĐANG XẾP THEO** (`#tdPanel.xcap` đổi `.sc`↔`.sv`), bằng không xếp theo vốn hoá mà cột hiện
   ra là GTGD thì bảng trông như không xếp gì. Hàng nhãn cột phải mang **đúng class của từng
   cột** (`tdp`/`tdv`/`tdg`) — thiếu class thì nhãn canh trái còn số canh phải.
+- **VỀ BỜ — HÀNG NHÃN CỘT CŨNG PHẢI MANG CLASS CỦA CỘT, cùng bài học với bảng tập đoàn.**
+  Bản cũ để tám thẻ `<span>` TRẦN, trong khi khổ hẹp ẩn ba cột dữ liệu bằng chính class
+  (`.vbb`/`.vbp`/`.vbv`) — nhãn không ẩn theo, tám nhãn dồn vào lưới năm cột rồi tràn xuống
+  dòng: user chụp ảnh báo 15/08/2026 thấy "GIÁ · ĐỈNH CŨ VỐN HOÁ" dính liền ở dòng hai, còn
+  con số vốn hoá nằm ngay dưới chữ "ĐỂ VỀ BỜ" nên đọc ra thành *"vốn hoá để về bờ"* — vô
+  nghĩa. Có class thì nhãn ẩn/hiện và canh lề tự đi theo cột, **bỏ hẳn được luật
+  `nth-child`**; đổi lại phải tắt phần TRANG TRÍ mà class mang theo (`.vbb` trong hàng nhãn
+  sẽ hiện thành một vạch xám nếu không `height:auto;background:none`).
+  Kèm hai thứ: **padding NGANG của hàng nhãn phải bằng hàng dữ liệu** (đo được lệch đúng 4px
+  khi hàng nhãn giữ 6px còn hàng dữ liệu 2px), và nhãn ở khổ hẹp phải **được xuống dòng** —
+  "vốn hoá hiện tại" mà ép `nowrap` là tràn khỏi cột đè sang cột bên.
+  **Chữ trên nhãn phải BỔ SUNG cho ô, đừng lặp lại**: cột `×1.4` trong ô đã có phụ đề "để
+  về bờ" rồi nên nhãn ghi **"cần tăng"** — đọc dọc thành "cần tăng ×1,4 để về bờ". Cột tiền
+  ghi đủ **"vốn hoá hiện tại"** chứ không phải "vốn hoá" cụt: đứng cạnh cột "để về bờ" thì
+  một chữ "vốn hoá" trần bị đọc dính vào cột bên trái.
 - **HÀNG CON DÙNG CHUNG LƯỚI CỘT VỚI HÀNG NHÓM** — biến `--tdc` khai một chỗ cho cả `.tdrow`
   lẫn `.tdcon .rw` (`#quyPanel` có `--tdc` riêng vì hàng quỹ chỉ 5 ô). Hai lưới riêng là mọi
   con số của hàng con lệch khỏi cột của hàng nhóm ngay phía trên, bấm mở ra đọc rất khó chịu.

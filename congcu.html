@@ -604,8 +604,11 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 #vbPanel .rw.hd{cursor:default;padding:2px 6px 6px;border-bottom:1px solid var(--line2)}
 #vbPanel .rw.hd:hover{background:none}
 #vbPanel .rw.hd>span{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--faint);opacity:.75;white-space:nowrap}
-#vbPanel .rw.hd>span:nth-child(3),#vbPanel .rw.hd>span:nth-child(n+5){text-align:right}
+  color:var(--faint);opacity:.75;line-height:1.25}
+/* nhãn mang class của cột nên tự canh lề theo cột — KHÔNG cần nth-child nữa. Đổi lại phải
+   tắt phần TRANG TRÍ mà class ấy mang theo: ô thanh đỏ (.vbb) sẽ hiện thành một vạch xám
+   ngay trên hàng nhãn nếu để nguyên. */
+#vbPanel .rw.hd>span.vbb{height:auto;background:none}
 #vbPanel .rw:hover{background:var(--card2)}
 #vbPanel .rw:last-child{border-bottom:0}
 .vbd{text-align:right;font-weight:800;font-size:14px;color:var(--red)}
@@ -618,9 +621,14 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .vbv{text-align:right;font-weight:800;font-size:13px}
 @media(max-width:640px){
   /* màn hẹp bỏ thanh và giá — giữ MÃ · mức rơi · số lần phải tăng để về bờ */
-  #vbPanel .rw{grid-template-columns:22px minmax(58px,1fr) 54px 78px 84px;gap:7px;padding:6px 2px}
+  #vbPanel .rw{grid-template-columns:22px minmax(52px,1fr) 52px 74px 92px;gap:7px;padding:6px 2px}
   #vbPanel .vbb,#vbPanel .vbp,#vbPanel .vbv{display:none}
-  #vbPanel .rw.hd>span:nth-child(3),#vbPanel .rw.hd>span:nth-child(n+5){text-align:right}
+  /* nhãn hai chữ ("vốn hoá hiện tại") phải được XUỐNG DÒNG trong ô của nó — ép nowrap ở
+     khổ này là tràn khỏi cột rồi đè sang cột bên cạnh */
+  #vbPanel .rw.hd>span{font-size:9px;letter-spacing:.02em}
+  /* PADDING NGANG CỦA HÀNG NHÃN PHẢI BẰNG HÀNG DỮ LIỆU, bằng không mọi nhãn lệch khỏi
+     cột đúng bằng phần chênh (đo được 4px khi hàng nhãn giữ 6px còn hàng dữ liệu 2px) */
+  #vbPanel .rw.hd{padding:2px 2px 6px}
   #vbPanel .rw .lgw,#vbPanel .rw .noimg{width:22px;height:22px}
 }
 .tdcon .rw.hd{cursor:default;padding-bottom:3px}
@@ -909,6 +917,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260814b"></script>
+<script src="assets/congcu.js?v=20260814c"></script>
 </body>
 </html>

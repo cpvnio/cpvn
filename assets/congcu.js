@@ -2142,9 +2142,16 @@ function veBoPanel(){
   const nut=(k,t)=>'<button class="srtb'+(vbSort.k===k?' on':'')+'" data-vbs="'+k+'"'
     +' title="Xếp theo '+t+(vbSort.k===k?' — bấm lại để lật chiều':'')+'">'+t
     +(vbSort.k===k?'<i>'+(vbSort.d===(k==='roi'?1:-1)?'↓':'↑')+'</i>':'')+'</button>';
-  const hd='<div class="rw hd"><span></span><span>công ty</span><span>rơi khỏi đỉnh</span>'
-    +'<span></span><span>để về bờ</span><span>giá · đỉnh cũ</span><span>vốn hoá</span>'
-    +'<span>hôm nay</span></div>';
+  /* HÀNG NHÃN CỘT PHẢI MANG ĐÚNG CLASS CỦA TỪNG CỘT. Bản cũ để tám thẻ <span> trần, mà
+     khổ hẹp lại ẩn ba cột dữ liệu (.vbb/.vbp/.vbv) bằng chính class đó — nên nhãn không
+     bị ẩn theo, tám nhãn dồn vào lưới năm cột rồi tràn xuống dòng: "GIÁ · ĐỈNH CŨ VỐN
+     HOÁ" dính liền nhau ở dòng hai, còn con số vốn hoá thì nằm dưới chữ "ĐỂ VỀ BỜ" nên
+     đọc ra thành "vốn hoá để về bờ" — vô nghĩa. Có class thì nhãn ẩn/hiện và canh lề đi
+     theo đúng cột của nó, khỏi cần luật nth-child riêng. */
+  const hd='<div class="rw hd"><span></span><span>công ty</span>'
+    +'<span class="vbd">rơi khỏi đỉnh</span><span class="vbb"></span>'
+    +'<span class="vbl">cần tăng</span><span class="vbp">giá · đỉnh cũ</span>'
+    +'<span class="vbm">vốn hoá hiện tại</span><span class="vbv">hôm nay</span></div>';
   const hang=c=>'<div class="rw" data-sym="'+c.sym+'" title="Bấm mở trang '+c.sym+'">'+logoHTML(c)
     +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
     +'<span class="vbd">'+c.dath.toFixed(0)+'%</span>'
