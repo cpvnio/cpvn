@@ -967,6 +967,42 @@ Kết quả lượt dọn: **27.633 → 4.894 tin**, 1.527 → 1.435 file, kho 5
 hnx.vn 3.287 · hsx.vn 1.324 · tapchicongthuong.vn 193 · vndirect.com.vn 90.
 > Tin cũ **vẫn nằm trong lịch sử git** nếu sau này cần lấy lại.
 
+## Cổ đông — LỌC CÁ NHÂN DƯỚI 5%, TỔ CHỨC GIỮ HẾT
+
+`tools/codong.py` là bản gốc; `cophieu.html` giữ **bản sao JS** cho nhánh `liveOwnership`
+(mã kho chưa có) — **sửa một chỗ phải sửa cả hai**, bằng không mã mới hiện một rổ cổ đông
+khác hẳn mọi mã khác mà người xem không có cách nào biết.
+
+Tên người thật + tỉ lệ sở hữu là **dữ liệu cá nhân** theo Luật 91/2025 (hiệu lực
+01/01/2026) — nhóm có trần phạt cao nhất trong hồ sơ. Lập luận bảo vệ là *"đã công khai
+theo nghĩa vụ pháp luật"*, mà nghĩa vụ ấy chỉ áp cho **cổ đông lớn ≥5%**. Kết quả:
+**15.318 → 5.435 bản ghi**.
+
+> **TỔ CHỨC KHÔNG CÓ SÀN %** — cắt là vỡ ÂM THẦM `build_tapdoan.py`: nhãn doanh nghiệp
+> nhà nước tính bằng cách **cộng dồn mọi cổ đông nhà nước, không có sàn**. Một Bộ nắm 3%
+> cộng SCIC 48% = 51% → nhà nước; bỏ ô 3% là còn 48%, cả nhóm mất nhãn, không lỗi nào báo.
+> Phép thử hồi quy sau khi lọc: **164 nhóm → 164, 0 nhãn hạng đổi, 0 mã con đổi.**
+
+**BA KIỂU KHỚP, mỗi kiểu chữa một lỗi ĐO ĐƯỢC — đừng gộp làm một:**
+- `CHUA` — từ khoá dài, khớp chuỗi con bất kỳ đâu.
+- `DAU` — từ tiếng Việt chỉ cơ quan (`quy`,`bo`,`so`,`cuc`,`vien`…), **CHỈ khi đứng đầu**.
+  Khớp ở cuối là bắt nhầm TÊN NGƯỜI: "Nguyen Van Quy", "La Thi Quy", "Le Thanh Vien",
+  "Lim Young So" — riêng `quy` dính **48 bản ghi**.
+- `DUOI` — hậu tố pháp lý Latin (`ltd`,`jsc`,`llc`,`ab`,`sa`…), **CHỈ trong hai từ cuối**.
+  Cho lùi một nấc vì có tên đính đuôi trong ngoặc: "T. Rowe Price International Ltd.
+  (Australia)". Bản đầu để `ab` vào nhóm chuỗi con còn bản JS quên khai → "Tundra Fonder
+  AB" ra hai kết quả khác nhau ở hai bên.
+
+> **GIỚI HẠN ĐÃ BIẾT: KHÔNG NHẬN RA NGƯỜI NỘI BỘ.** Người nội bộ (HĐQT, BKS, TGĐ, Kế toán
+> trưởng…) phải công bố sở hữu **bất kể tỉ lệ** (Điều 127 Luật CK 2019, Thông tư 96/2020)
+> nên họ VẪN thuộc diện "đã công khai" — nhưng nguồn Simplize
+> `ownership/shareholder-fund-details` **không trả trường chức vụ** (chỉ tên, %, số CP,
+> giá trị, quốc tịch) và **không có endpoint ban lãnh đạo** (đã dò 5 dạng, 404 cả 5).
+> Nên sếp nắm dưới 5% bị cắt cùng nhà đầu tư nhỏ lẻ. Muốn giữ họ thì phải lấy nguồn có
+> NHÃN CHỨC VỤ — báo cáo quản trị công ty của HOSE/HNX — chứ đừng hạ ngưỡng xuống 1%:
+> ngưỡng đó không có căn cứ pháp lý nào, chỉ là đoán.
+> Tỉ trọng sở hữu tổng thể vẫn còn ở trường `own` (cổ đông chiến lược / thông thường / quỹ).
+
 ## Quy ước toàn site
 
 - **Đơn vị**: kho để **ĐỒNG**. VPS trả nghìn đồng (**×1000**) và lô 10 cp (**×10**).

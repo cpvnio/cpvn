@@ -864,6 +864,14 @@ def fetch_ownership(sym,o):
                "p":rnd(r.get("pctOfSharesOutHeld")),"s":r.get("sharesHeld"),"c":r.get("countryOfInvestor")}
             if t: e["t"]=t
             out.append({k:v for k,v in e.items() if v is not None})
+        # LỌC CỔ ĐÔNG CÁ NHÂN DƯỚI 5% (16/08/2026) — xem tools/codong.py để biết vì sao.
+        # Tóm tắt: tên người thật + tỉ lệ sở hữu là dữ liệu cá nhân theo Luật 91/2025;
+        # lập luận "đã công khai theo nghĩa vụ pháp luật" chỉ đứng vững với cổ đông lớn
+        # từ 5%. TỔ CHỨC GIỮ HẾT, KHÔNG CÓ SÀN — cắt tổ chức là vỡ ÂM THẦM build_tapdoan
+        # (nhãn doanh nghiệp nhà nước cộng dồn mọi cổ đông nhà nước, không có sàn %).
+        sys.path.insert(0,os.path.join(BASE,"tools"))
+        import codong as _cd
+        out=_cd.loc(out)
         if out: o["sh"]=out[:40]
         ff=[{"n":f.get("fundCode"),"fn":f.get("fundName"),"s":f.get("sharesHeld"),
              "v":f.get("sharesHeldValueVnd"),"d":f.get("fillingDate")}

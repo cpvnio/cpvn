@@ -621,7 +621,7 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260816d"></script>
+<script src="assets/core.js?v=20260816f"></script>
 <script src="assets/chart.js?v=20260813a"></script>
 <script>
 'use strict';
@@ -1531,6 +1531,42 @@ function vnName(nm,c){   // việt hoá gọn phía client (bản đầy đủ n
   if(n!==nm) return 'Công ty TNHH '+n.trim();
   return nm;
 }
+/* BẢN SAO của tools/codong.py — SỬA MỘT CHỖ PHẢI SỬA CẢ HAI, bằng không mã kho chưa có
+   hiện một rổ cổ đông khác hẳn mọi mã khác mà người xem không có cách nào biết.
+   Ba kiểu khớp, mỗi kiểu chữa một lỗi đã đo được trên kho thật:
+     CHUA — từ khoá dài, khớp chuỗi con ở bất kỳ đâu
+     DAU  — từ tiếng Việt chỉ cơ quan, CHỈ khi đứng đầu ("Quỹ …", "Bộ …", "Viện …").
+            Khớp ở cuối là bắt nhầm tên người: "Nguyen Van Quy", "Le Thanh Vien",
+            "Lim Young So" — riêng "quy" dính 48 bản ghi.
+     DUOI — hậu tố pháp lý Latin, CHỈ trong hai từ cuối ("… Pte. Ltd.", "Tundra Fonder AB") */
+const SH_CHUA=['cong ty','cty','ctcp','tnhh','co phan','tap doan','tong cong ty','doanh nghiep',
+ 'xi nghiep','nong truong','lam truong','hop tac xa','chi nhanh','van phong dai dien',
+ 'fund','fonder','fondi','ngan hang','bank','bao hiem','insurance','chung khoan','securities',
+ 'dau tu','investment','capital','asset','holding','financ','credit','trust','pension','sicav',
+ 'portfolio','partners','advisor','adviser','associates','management','managers','co., ltd',
+ 'co.,ltd','co ltd','limited','corporation','company','incorporated','enterprise','group',
+ 'gmbh','sarl','kgaa','ubnd','uy ban','tinh uy','thanh uy','hoc vien','truong dai hoc',
+ 'university','ministry','commission','committee','authority','agency','government',
+ "people's committee",'peoples committee','province','treasury','central bank','federation',
+ 'association','hiep hoi','lien doan','cong doan','to chuc','organization','foundation',
+ 'institute','scic','vsd'];
+const SH_DAU=['quy','bo','so','cuc','vien','ban','hoi','lien','tong','trung'];
+const SH_DUOI=['ab','abp','as','a/s','oyj','plc','inc','inc.','corp','corp.','ltd','ltd.',
+ 'llc','l.l.c','lp','l.p','jsc','j.s.c','pte','pte.','nv','n.v','bv','b.v','sa','s.a',
+ 'spa','s.p.a','ag','se'];
+function laToChuc(x){
+  if(!x) return false;
+  if((x.t||'').trim()) return true;
+  const t=String(x.n||'').replace(/Đ/g,'D').replace(/đ/g,'d')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+  if(!t) return true;                       // không có tên thì không dám coi là cá nhân
+  if(SH_CHUA.some(k=>t.indexOf(k)>=0)) return true;
+  const tu=t.split(/[^a-z0-9./]+/).filter(Boolean);
+  if(!tu.length) return true;
+  if(SH_DAU.indexOf(tu[0])>=0) return true;
+  return tu.slice(-2).some(w=>SH_DUOI.indexOf(w)>=0);
+}
+const locCoDong=arr=>(arr||[]).filter(x=>laToChuc(x)||(x.p||0)>=5);
 async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho chưa có (fallback)
   try{
     const j=await fetch(`https://api2.simplize.vn/api/company/ownership/shareholder-fund-details/${C.sym}?page=0&size=100`).then(r=>r.json());
@@ -1540,7 +1576,12 @@ async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho ch
       if(!nm||seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
       out.push({n:vnName(nm,r.countryOfInvestor),p:r.pctOfSharesOutHeld,s:r.sharesHeld,c:r.countryOfInvestor});
     }
-    if(out.length) d.sh=out.slice(0,40);
+    /* CÙNG LUẬT LỌC VỚI KHO — bản sao của tools/codong.py, sửa một chỗ phải sửa cả hai.
+       Nhánh này chỉ chạy cho mã kho CHƯA có; nếu không lọc thì mã mới hiện đủ cổ đông cá
+       nhân 0,01% trong khi mọi mã khác đã cắt từ 5% — người xem không có cách nào biết
+       mình đang xem rổ nào. Giữ MỌI tổ chức, cắt cá nhân dưới 5%. */
+    d.sh=locCoDong(out).slice(0,40);
+    if(!d.sh.length) delete d.sh;
     const fh=((j.data&&j.data.fundHoldings)||[]).filter(f=>f.sharesHeld);
     if(fh.length) d.funds=fh.sort((a,b)=>(b.sharesHeldValueVnd||0)-(a.sharesHeldValueVnd||0)).slice(0,12)
       .map(f=>({n:f.fundCode,fn:f.fundName,s:f.sharesHeld,v:f.sharesHeldValueVnd,d:f.fillingDate}));
