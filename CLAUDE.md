@@ -35,6 +35,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
 | `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
+| `tools/cao_cocau.py` | 200 | Cào `data/cocau/{MÃ}.json` — cơ cấu lợi nhuận theo mảng + dư nợ cho vay ký quỹ (Simplize). Bước 6c2 |
 | `tools/soi_nguon.py` | 150 | Soi nguồn vẽ chart: đối chiếu VNDirect · VPS · kho · bảng giá cho từng mã. Chạy tay khi nghi nguồn sai |
 
 ## Kho dữ liệu `data/` (~130MB)
@@ -47,6 +48,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
+| `data/cocau/{MÃ}.json` | **Cơ cấu lợi nhuận theo mảng** (1.526 mã, 1,2MB) + dư nợ cho vay ký quỹ của CTCK. Nhãn dòng lưu MỘT LẦN ở `data/cocau/_nhan.json` theo 4 nhóm của Simplize. Nguồn chỉ sâu **15 quý / 10 năm** — xem mục CƠ CẤU LỢI NHUẬN |
 | `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
@@ -284,19 +286,66 @@ giá sai hoặc giá nhảy — đừng đẩy.
      cáo mẫu thường → rơi về `sx`; EVF/TIN có đủ dòng ngân hàng nhưng LDR ~770% vì là CÔNG
      TY TÀI CHÍNH (vốn từ vay/trái phiếu, tiền gửi không đáng kể) → client thấy LDR>300%
      là dán nhãn đúng bản chất và để XÁM, đừng tô đỏ như thể ngân hàng vỡ trận.
-  4. **CTCK KHÔNG có dòng "cho vay ký quỹ"** — cả 24hMoney lẫn finq chỉ giữ 20 dòng tóm
-     tắt mẫu THƯỜNG cho CTCK (margin của SSI ~20 nghìn tỷ, còn "phải thu ngắn hạn" chỉ 1,1
-     nghìn tỷ — đừng bịa từ dòng khác). User nhấn lại 14/08/2026: với CTCK thì **số tiền
-     ĐANG CHO VAY (bên tài sản) mới là con số quan trọng**, không phải vốn vay — nên bảng
-     in hẳn một dòng "Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung" toàn `—` kèm
-     tooltip giải thích, thay vì im lặng. Muốn có thật phải mở thêm mã dòng mẫu CTCK ở
-     `kho_sau` (cần mạng để dò + chấm điểm như `va_quy` — session hiện bị chặn egress).
+  4. **CTCK: dòng "cho vay ký quỹ" NAY ĐÃ CÓ, lấy từ `data/cocau` (15/08/2026).** Cả
+     24hMoney lẫn finq chỉ giữ 20 dòng tóm tắt mẫu THƯỜNG cho CTCK nên không dòng nào chứa
+     nó — bảng từng phải in "nguồn chưa mở, sẽ bổ sung" toàn `—`. Đường ra KHÔNG phải mở
+     thêm mã dòng ở `kho_sau` như dự tính, mà là một nguồn khác hẳn: Simplize có sẵn bảng
+     phân rã theo đúng loại hình (xem mục CƠ CẤU LỢI NHUẬN). `build_nganh.margin_ck()` đọc
+     `ts.bs5` của kho đó, khớp theo NHÃN kỳ. Hai dòng in ra: **Dư nợ cho vay ký quỹ (tỷ)**
+     không tô màu (to hay nhỏ không tự nó là tốt xấu) và **Cho vay ký quỹ / vốn chủ (%)**
+     tô theo trần pháp lý 200% — xanh ≤100 · vàng 100–160 · đỏ >160.
+     User nhấn 14/08/2026: với CTCK thì **số tiền ĐANG CHO VAY (bên tài sản) mới là con số
+     quan trọng**, không phải vốn vay ở bên nguồn vốn — hai dòng này vì thế đứng TRÊN dòng
+     "Vay / vốn chủ". Nguồn chỉ sâu 15 quý nên phần trục trước Q4/22 để `—`; **tuyệt đối
+     đừng kéo giá trị gần nhất lấp vào**, dư nợ đổi từng quý.
   **Ngưỡng màu nằm ở CLIENT, tooltip ghi nguồn gốc từng ngưỡng**: cái đo từ phân bố thật
   ghi rõ mẫu đo (LDR 100/120 và đòn bẩy 10/13 = tam phân vị 29 ngân hàng · CTCK vay/VCSH
   0,7/1,3 trên 35 mã, đòn bẩy 1,5/2,5 trên 42 · bảo hiểm 3/5 trên 13 — đều đo 14/08/2026);
   cái là mốc quy ước thì nói là quy ước (ROE 8/15 · D/E 0,5/1,5 · BĐS 0,5/1). Tồn kho và
   phải thu so với CHÍNH MÃ ĐÓ 12 quý (xếp hạng ngày tồn/ngày thu), không so chéo ngành.
   Xám = tham khảo, không áp ngưỡng. Mọi câu chữ là mô tả quá khứ, không phải khuyến nghị.
+- **CƠ CẤU LỢI NHUẬN (`data/cocau`, bước 6c2, 15/08/2026) — "doanh nghiệp này kiếm tiền
+  từ đâu", thứ cả fin lẫn finq đều không trả lời được.** Hai kho kia lấy bản báo cáo **mẫu
+  THƯỜNG** dùng chung cho mọi loại hình, nên với công ty chứng khoán thì bảng CĐKT hiện
+  "Hàng tồn kho = None, Tài sản cố định 176 tỷ" trong khi **40.473 tỷ đang cho khách vay
+  không nằm ở dòng nào**. Simplize `api2.simplize.vn/api/company/fi/structure/overview/{MÃ}?period=Q|Y`
+  trả bảng phân rã theo ĐÚNG loại hình + **lợi nhuận tách theo mảng kinh doanh**.
+  **ACAO `*`** nên trình duyệt gọi thẳng được, nhưng vẫn cào vào kho để giữ chế độ `?offline`.
+  Trang gọi API này là `simplize.vn/co-phieu/{MÃ}/so-lieu-tai-chinh`; cả bốn tab con
+  (Cơ cấu / Cân đối / Thu nhập / Lưu chuyển) đều ăn từ **một** endpoint đó.
+  **ĐỘ TIN — đã đối chiếu ĐỘC LẬP**: cộng toàn bộ dòng tài sản của Simplize so với `bsa53
+  TỔNG TÀI SẢN` của kho (nguồn 24hMoney, đường lấy số khác hẳn) trên 12 mã phủ cả bốn nhóm
+  → **12/12 khớp 0,00%**. Thêm một phép độc lập nữa cho riêng dòng ký quỹ: luật cấm CTCK
+  cho vay quá 200% vốn chủ, đo 42/42 CTCK thì **0 mã vượt trần**, HCM 198,3% sát trần —
+  đúng thứ ai theo ngành cũng biết. Nguồn trả ĐỒNG, kho ghi TỶ.
+  Bốn thứ phải nhớ, phá cái nào cũng sai âm thầm:
+  1. **Cộng các mảng KHÔNG ra lợi nhuận trước thuế** — đây là lãi GỘP từng mảng, chưa trừ
+     chi phí quản lý (ngân hàng còn chưa trừ dự phòng rủi ro). Đo 15/08/2026: tổng mảng cao
+     hơn LNTT **3–17%** ở CTCK, 15–31% sản xuất, **51–79%** ngân hàng, **204–234%** bảo
+     hiểm. Nhãn phải là "lãi gộp theo mảng" và câu ghi chú phải nằm ngay dưới biểu đồ; gọi
+     tắt thành "lợi nhuận" là người đọc tự cộng ra một con số sai.
+  2. **HAI KHỐI CÓ DANH SÁCH KỲ KHÁC NHAU — khớp theo NHÃN, đừng zip theo vị trí.** Bản đầu
+     lấy trục kỳ của khối dài hơn rồi ghép thẳng mảng khối kia vào: ACE trả `pvalue` có
+     [Q3/08, Q3/09, Q3/14, Q3/15] còn `bsAssetValue` có [Q3/09, Q3/15, Q2/17] — lệch cả độ
+     dài lẫn MỐC. Đo toàn kho: **423 chuỗi bị dán sang nhãn kỳ của người khác**, không có
+     lỗi nào báo, biểu đồ vẫn vẽ ra một hình trông rất hợp lý. Nay mỗi khối giữ bản đồ
+     `{nhãn → giá trị}` rồi chiếu lên trục HỢP đã xếp thời gian.
+     Kỳ nguồn còn **không liên tục** ở mã ngừng công bố (ACE nhảy Q3/08 → Q3/09 → Q3/14),
+     nên đừng giả định trục là chuỗi quý đều nhau.
+  3. **Nguồn CHỈ trả 15 quý (từ Q4/2022) và 10 năm — không có cách xin thêm.** Đã thử
+     `size` `limit` `page` `periodDate` `date` `to` `value` `fromDate/toDate`
+     `numberOfPeriod`: mọi tham số bị bỏ qua, luôn đúng 15 kỳ. Vì thế chuỗi ở đây NGẮN HƠN
+     HẲN `data/nganh` (79 quý) — biểu đồ phải in rõ khoảng kỳ đang vẽ, và dòng ký quỹ trong
+     bảng CĐKT để `—` ở kỳ cũ chứ không lấp. Cũng vì nông nên **đây KHÔNG phải kho vĩnh
+     viễn**: mất là cào lại được, không cần guard "giữ số cũ" như `data/fin`.
+  4. **Nhóm của Simplize chỉ có BỐN** (`BANK` `INVESTMENT` `INSURANCE` `MANUFACTURING`),
+     thô hơn 5 mẫu của `build_nganh`: **bất động sản nằm chung MANUFACTURING** (VHM, NLG,
+     DXG đều ra MANUFACTURING). Đừng dùng `nhom` thay cho `mau` của data/nganh.
+  **Nhãn dòng do NHÓM quyết định, không do mã** (đã kiểm 15 mã trên cả bốn nhóm, mỗi nhóm
+  đúng MỘT bộ nhãn) → lưu một lần ở `_nhan.json`, file mã chỉ còn số nên ~1KB thay vì 40KB.
+  Kho chỉ giữ khối `p` (lợi nhuận, mọi mã) và `ts` (tài sản, **chỉ INVESTMENT** — chỉ để
+  lấy dòng ký quỹ); khối nguồn vốn và dòng tiền của nguồn bị bỏ vì không chỗ nào đọc.
+  Độ phủ: 1.497/1.526 mã vẽ được, 29 mã nguồn rỗng (tự ẩn cả khối), 189 mã chỉ có số NĂM.
 - **KHỐI NGOẠI `fb`/`fs`: lịch sử lấy ở VNDirect, đừng tin mỗi nguồn hằng ngày.** Pipeline chỉ
   biết khối ngoại của PHIÊN HÔM ĐÓ (bảng giá VPS) + bù 30 phiên (24hMoney), nên trước 6/2026
   hai trường này **toàn số 0** — 290/500 mã mẫu không có lấy một số khác 0, mọi phép đo dòng
@@ -982,6 +1031,22 @@ hình, đường biên ròng chạy suốt bề ngang với một chữ V cắm 
 Cách chặn: `kqkdTable` ghi lại danh sách cột vừa vẽ vào `finColsVe`, mọi lượt vẽ lại đi
 qua `veLaiFinChart()`. Bất biến nằm ở CẤU TRÚC chứ không phải ở việc nhớ truyền đúng.
 
+**KHỐI "LỢI NHUẬN ĐẾN TỪ ĐÂU" (`#segBox`, `drawSegChart`) ĐỨNG TRÊN bảng KQKD** — user
+chốt 15/08/2026. Cột chồng theo mảng kinh doanh, đọc `data/cocau`, thiếu file thì tự ẩn cả
+khối. **Cố ý KHÔNG bám cột bảng như `#finCv`**: nguồn chỉ sâu 15 quý còn bảng mở ra được cả
+chuỗi dài, ép chung một trục là hoặc cắt cụt biểu đồ hoặc dựng cột rỗng — nên nó tự vẽ nhãn
+kỳ của mình, chỉ ăn theo nút Theo quý/Theo năm. Ba thứ phải giữ:
+① **Không kê chiều cao tối thiểu cho cột con** (khác `drawFinChart` vốn `Math.max(1.5,…)`):
+đây là cột CHỒNG, nống một mảng bé lên là tổng cột không còn bằng tổng các mảng, mắt đọc ra
+một tỷ trọng không có thật. Mảng quá bé thì rê chuột vào có số đầy đủ.
+② **Listener rê chuột gắn MỘT LẦN ở mức tài liệu**, không gắn trong `drawSegChart` — hàm đó
+chạy lại theo resize/đổi đèn/đổi kỳ, gắn bên trong là chồng listener vô hạn.
+③ **Nhãn chú giải rút gọn** (`segNgan` cắt tiền tố "Lợi nhuận từ hoạt động…"/"Lãi/lỗ thuần
+từ…") vì tiêu đề khối đã nói "Lợi nhuận" — để nguyên thì riêng cụm chú giải cao **138px**
+trên màn 375. Nhưng **rút gọn mà đụng tên thì trả lại tên đầy đủ cho cả cụm đụng**: mẫu bảo
+hiểm có cả "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác", rút xong thành hai mục "Khác"
+hai màu đứng cạnh nhau, đọc ra như lỗi dữ liệu. Tên đầy đủ luôn còn ở `title` và thẻ rê chuột.
+
 Bảng Cân đối kế toán kết thúc bằng nhóm dòng **Chỉ số đặc thù ngành** (`veNganhRows`,
 đọc `data/nganh/{MÃ}.json`, thiếu file thì không chèn gì) — trình bày y hệt dòng bảng,
 chỉ đánh màu con số theo từng cột; luật màu, ánh xạ năm→Q4 và bốn cái bẫy nguồn xem
@@ -1072,7 +1137,10 @@ chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thà
 11 bước, thứ tự bắt buộc: **bảng giá (bước 2) phải chạy TRƯỚC kho nến (bước 3)** vì
 `fetch_hist` dò hệ số đơn vị bằng cách đối chiếu với `ref` của bảng giá. **Bước 6d
 (`build_nganh`) phải đứng SAU 6c (`kho_sau`)** vì nó chỉ tin dấu lưu chuyển tiền tệ
-của `finq`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
+của `finq`, **và SAU 6c2 (`cao_cocau`)** vì dòng ký quỹ của mẫu CTCK đọc thẳng
+`data/cocau`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
+**6c2 dùng `--moi --ngay 20`**, không phải hằng ngày: báo cáo quý ra mỗi 3 tháng, hỏi lại
+mỗi phiên là phí ~3.000 lượt gọi cho một con số cả quý mới nhúc nhích một lần.
 Mọi JSON ghi qua `jdump()` (compact, `ensure_ascii=False`, atomic `.tmp`+`os.replace`).
 Chỉ cập nhật universe bằng giá trị **khác None** — đó là cách giữ số cũ khi API lỗi.
 Song song đã cân theo giới hạn nguồn (Simplize 4 luồng + sleep 0.15, hist 12, fin 5,

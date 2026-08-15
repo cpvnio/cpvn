@@ -272,6 +272,16 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .sect{display:none}
   .sect.on{display:block}
   h3.t{margin:18px 0 8px;font-size:15px}
+  /* Thẻ rê chuột của biểu đồ cơ cấu: cột chồng mà không đọc được số thì chỉ xem được
+     hình dáng. Đặt trong .finwrap (đã position:relative) nên cuộn ngang là trôi theo cột. */
+  #segTip{position:absolute;pointer-events:none;display:none;z-index:5;background:var(--panel2);
+    border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11.5px;
+    box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:nowrap}
+  #segTip b{display:block;font-size:12px;margin-bottom:4px}
+  #segTip .r{display:flex;gap:8px;align-items:center;line-height:1.65}
+  #segTip .r i{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  #segTip .r s{margin-left:auto;text-decoration:none;font-weight:700;
+    font-variant-numeric:tabular-nums;padding-left:10px}
   .finlegend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:4px 0 6px;flex-wrap:wrap}
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   canvas.fin{width:100%;height:200px;display:block}
@@ -531,6 +541,16 @@ document.addEventListener(MO,function(e){
     <div class="card">
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
+      </div>
+      <!-- CƠ CẤU LỢI NHUẬN — đứng TRÊN bảng KQKD (user chốt 15/08/2026). Cố ý KHÔNG bám
+           cột của bảng như #finCv: nguồn (data/cocau) chỉ sâu 15 quý còn bảng mở ra được
+           cả chuỗi dài, ép chung một trục là hoặc cắt cụt biểu đồ hoặc dựng cột rỗng. Nó
+           tự vẽ nhãn kỳ của mình, chỉ ăn theo nút Theo quý/Theo năm. -->
+      <div id="segBox" style="display:none">
+        <h3 class="t" style="margin-top:0">Lợi nhuận đến từ đâu <span class="subnote" id="segKy"></span></h3>
+        <div class="finlegend" id="segLg"></div>
+        <div class="finwrap" style="position:relative"><canvas class="fin" id="segCv"></canvas><div id="segTip"></div></div>
+        <div class="subnote" id="segNote"></div>
       </div>
       <h3 class="t">Kết quả kinh doanh</h3>
       <div class="finlegend">
@@ -1041,7 +1061,130 @@ function renderPeers(){
    chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc bấm đổi giao diện, nên lọt lưới rất lâu.
    Luật: MỌI lượt vẽ lại phải đi qua biến này, đừng bao giờ tự dựng danh sách cột. */
 let finColsVe=null;
-function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
+function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); drawSegChart(); }
+
+/* ---------- CƠ CẤU LỢI NHUẬN (data/cocau, nguồn Simplize) ----------
+   Trả lời "doanh nghiệp này kiếm tiền từ đâu" — thứ cả data/fin lẫn data/finq đều không
+   có, vì hai kho đó chỉ giữ bản báo cáo mẫu THƯỜNG. Với công ty chứng khoán là môi giới /
+   cho vay ký quỹ / tự doanh / ngân hàng đầu tư; với ngân hàng là lãi thuần / dịch vụ /
+   ngoại hối / chứng khoán.
+
+   HAI THỨ TUYỆT ĐỐI KHÔNG ĐƯỢC NÓI SAI:
+   1. **Cộng các mảng KHÔNG ra lợi nhuận trước thuế** — đây là lãi gộp từng mảng, CHƯA trừ
+      chi phí quản lý (và với ngân hàng thì chưa trừ cả dự phòng rủi ro). Đo 15/08/2026:
+      tổng mảng cao hơn LNTT 3–17% ở công ty chứng khoán, 15–31% ở sản xuất, 51–79% ở ngân
+      hàng, 204–234% ở bảo hiểm. Nên nhãn phải là "lợi nhuận gộp theo mảng", và có câu ghi
+      chú ngay dưới; gọi tắt thành "lợi nhuận" là người đọc tự cộng ra một con số sai.
+   2. **Nguồn chỉ sâu 15 quý / 10 năm** (xem tools/cao_cocau.py) — ghi rõ khoảng kỳ đang vẽ
+      chứ đừng để người xem tưởng đây là toàn bộ lịch sử như mấy bảng bên dưới. */
+const SEG_MAU=['#006cec','#16c784','#a855f7','#f59e0b','#64748b','#ec4899'];
+let segData=null, segNhan=null, segSym=null, segHover=null;
+/* Nhãn nguồn mở đầu bằng "Lợi nhuận từ hoạt động …" / "Lãi/lỗ thuần từ …" ở MỌI mảng —
+   tiêu đề khối đã nói "Lợi nhuận đến từ đâu" nên phần đầu đó chỉ lặp lại. Đo trên màn
+   375px: để nguyên thì riêng cụm chú giải cao 138px, tức gần một phần sáu màn hình trôi
+   qua trước khi nhìn thấy cái biểu đồ. Tên đầy đủ vẫn nằm ở `title` và ở thẻ rê chuột —
+   chỗ nào có sẵn chiều ngang thì chỗ đó nói đủ. */
+const segNgan=t=>{
+  const s=String(t||'').replace(/^(Lợi nhuận|Lãi\/lỗ thuần)\s+(gộp\s+)?((từ|về)\s+)?(hoạt động\s+)?/i,'').trim();
+  return (s?s[0].toUpperCase()+s.slice(1):String(t||''));
+};
+async function loadCoCau(sym){
+  if(segSym===sym) return segData;
+  segSym=sym; segData=null;
+  try{
+    const [d,n]=await Promise.all([
+      fetch(`data/cocau/${sym}.json`).then(r=>r.ok?r.json():null),
+      segNhan?Promise.resolve(segNhan):fetch('data/cocau/_nhan.json').then(r=>r.ok?r.json():null)]);
+    segNhan=n||segNhan; segData=d;
+  }catch(e){}
+  return segData;
+}
+function drawSegChart(){
+  const box=$('segBox'), cvs=$('segCv');
+  if(!box||!cvs) return;
+  const d=segData, ten=(segNhan&&d&&segNhan[d.nhom]&&segNhan[d.nhom].p)||null;
+  const kho=d&&d[finPeriod]&&d[finPeriod].p, ky=d&&d.ky&&d.ky[finPeriod];
+  if(!kho||!ky||!ky.length||!ten){ box.style.display='none'; return; }
+  const keys=Object.keys(ten).filter(k=>kho[k]);
+  if(!keys.length){ box.style.display='none'; return; }
+  box.style.display='';
+  $('segKy').textContent=`· ${ky[0]} – ${ky[ky.length-1]}`;
+  /* Rút gọn mà ĐỤNG NHAU thì trả lại tên đầy đủ cho cả cụm đụng — mẫu bảo hiểm có cả
+     "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác", rút xong thành hai mục cùng tên
+     "Khác" đứng cạnh nhau với hai màu khác nhau, đọc ra như lỗi dữ liệu. */
+  const dem={}; keys.forEach(k=>{ const s=segNgan(ten[k]); dem[s]=(dem[s]||0)+1; });
+  const nhanGon=k=>{ const s=segNgan(ten[k]); return dem[s]>1?ten[k]:s; };
+  $('segLg').innerHTML=keys.map((k,i)=>
+    `<span title="${CP.esc(ten[k])}"><i style="background:${SEG_MAU[i%SEG_MAU.length]}"></i>${CP.esc(nhanGon(k))}</span>`).join('');
+  $('segNote').textContent='Lãi gộp từng mảng, CHƯA trừ chi phí quản lý'+
+    (d.nhom==='BANK'?' và dự phòng rủi ro':'')+' — cộng lại sẽ lớn hơn lợi nhuận trước thuế ở bảng dưới. '+
+    'Đơn vị: tỷ đồng · nguồn Simplize.';
+
+  const n=ky.length, DPRl=Math.min(2,window.devicePixelRatio||1);
+  const w=Math.max(cvs.parentElement.clientWidth||600, n*44), h=210;
+  cvs.width=Math.round(w*DPRl); cvs.height=h*DPRl;
+  cvs.style.width=w+'px'; cvs.style.height=h+'px';
+  const g=cvs.getContext('2d'); g.setTransform(DPRl,0,0,DPRl,0,0); g.clearRect(0,0,w,h);
+
+  // thang phải ôm CẢ cột dương lẫn cột âm của cùng một kỳ — cộng riêng hai chiều
+  let mx=0,mn=0;
+  for(let i=0;i<n;i++){ let p=0,m=0;
+    for(const k of keys){ const v=kho[k][i]; if(v>0)p+=v; else if(v<0)m+=v; }
+    mx=Math.max(mx,p); mn=Math.min(mn,m); }
+  if(mx-mn<1e-9) mx=mn+1;
+  const padT=12,padB=18, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
+  g.font='10px system-ui'; g.textBaseline='middle';
+  for(let i=0;i<=3;i++){ const v=mn+(mx-mn)*i/3, yy=y(v);
+    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
+    if(i>0){ g.fillStyle='#71717f'; g.textAlign='left';
+      g.fillText(Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':Math.round(v),3,yy); } }
+  const cw=w/n, bw=Math.max(7,Math.min(26,cw-14));
+  for(let i=0;i<n;i++){
+    const cx=cw*i+cw/2; let up=zero, dn=zero;
+    keys.forEach((k,j)=>{ const v=kho[k][i]; if(v==null||v===0) return;
+      /* KHÔNG kê chiều cao tối thiểu như drawFinChart. Đây là cột CHỒNG: nống một mảng
+         bé lên 1,5px là tổng cột không còn bằng tổng các mảng nữa, mắt đọc ra một tỷ
+         trọng không có thật. Mảng quá bé thì đúng là bé — rê chuột vào có số đầy đủ. */
+      const hh=Math.abs(y(v)-zero);
+      g.fillStyle=SEG_MAU[j%SEG_MAU.length];
+      if(v>0){ up-=hh; g.fillRect(cx-bw/2,up,bw,hh); }
+      else { g.fillRect(cx-bw/2,dn,bw,hh); dn+=hh; } });
+  }
+  segHover={cvs:cvs,keys:keys,ten:ten,kho:kho,ky:ky,cw:cw,n:n};
+  g.strokeStyle=ZEROC(); g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
+  // nhãn kỳ tự vẽ (biểu đồ này KHÔNG có bảng nằm dưới để mượn hàng kỳ như #finCv)
+  g.fillStyle='#71717f'; g.textAlign='center'; g.textBaseline='alphabetic';
+  const buoc=Math.ceil(n*46/w)||1;
+  for(let i=0;i<n;i++) if(i%buoc===0||i===n-1) g.fillText(ky[i],cw*i+cw/2,h-5);
+}
+/* Gắn MỘT LẦN ở mức tài liệu, không gắn lại mỗi lượt vẽ: drawSegChart chạy lại theo
+   resize / đổi đèn / đổi kỳ, gắn trong đó là chồng listener lên nhau mãi mãi. */
+(function segRe(){
+  const tip=()=>$('segTip');
+  document.addEventListener('mousemove',e=>{
+    const t=tip(); if(!t||!segHover) return;
+    const {cvs,keys,ten,kho,ky,cw,n}=segHover;
+    const r=cvs.getBoundingClientRect();
+    if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){
+      t.style.display='none'; return; }
+    const i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-r.left)/cw)));
+    let tong=0; const hang=keys.map((k,j)=>{ const v=kho[k][i];
+      if(v==null) return ''; tong+=v;
+      return `<div class="r"><i style="background:${SEG_MAU[j%SEG_MAU.length]}"></i>`+
+        `${CP.esc(ten[k])}<s style="color:${v<0?'var(--red)':'var(--text)'}">`+
+        `${CP.fmtD(Math.round(v))}</s></div>`; }).join('');
+    t.innerHTML=`<b>${CP.esc(ky[i])}</b>${hang}`+
+      `<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:4px">`+
+      `Cộng các mảng<s>${CP.fmtD(Math.round(tong))}</s></div>`;
+    t.style.display='block';
+    // neo trong .finwrap: toạ độ tính theo chính khung cuộn, không theo cửa sổ
+    const box=cvs.parentElement, br=box.getBoundingClientRect();
+    let x=e.clientX-br.left+box.scrollLeft+14;
+    if(x+t.offsetWidth>box.scrollLeft+br.width-6) x=x-t.offsetWidth-28;
+    t.style.left=Math.max(box.scrollLeft+4,x)+'px';
+    t.style.top=Math.max(4,Math.min(e.clientY-br.top+10,br.height-t.offsetHeight-4))+'px';
+  },{passive:true});
+})();
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
   const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
@@ -1277,6 +1420,7 @@ function pickFinHighlights(){
 async function renderFin(){
   finData=await CP.loadFin(C.sym);
   veKQKD();
+  await loadCoCau(C.sym); drawSegChart();   // kho riêng, thiếu file thì hàm tự ẩn cả khối
   const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);
@@ -1350,10 +1494,14 @@ function veNganhRows(){
     dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
       'pct',lay('roe'),banRoe);
   }else if(NG.mau==='ck'){
-    // CON SỐ QUAN TRỌNG NHẤT của công ty chứng khoán là TIỀN ĐANG CHO VAY (ký quỹ) —
-    // nguồn đang cào chưa trả dòng này, in hẳn một dòng trống để nói ra chứ không im lặng.
-    rows.push(`<tr class="ngr"><td title="Con số quan trọng nhất của công ty chứng khoán — tiền đang cho khách vay (chủ yếu ký quỹ), nằm bên TÀI SẢN. Nguồn đang cào (24hMoney lẫn VNDirect bản rút gọn) chỉ trả 20 dòng tóm tắt nên chưa có; sẽ bổ sung ngay khi mở được mã dòng mẫu công ty chứng khoán. Tạm soi qua vốn vay và đòn bẩy ở các dòng dưới."><div class="lb">Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung</div></td>`+
-      cols.map(()=>'<td>—</td>').join('')+'<td class="sp"></td></tr>');
+    // CON SỐ QUAN TRỌNG NHẤT của công ty chứng khoán là TIỀN ĐANG CHO VAY (ký quỹ).
+    // Từ 15/08/2026 đã có thật (kho data/cocau, nguồn Simplize) — trước đó in dòng trống
+    // vì hai kho fin/finq đều dùng bản CĐKT mẫu THƯỜNG, không có khoản mục cho vay.
+    // Nguồn chỉ sâu 15 quý nên phần trục trước Q4/22 để `—`, KHÔNG kéo số gần nhất lấp vào.
+    dong('Dư nợ cho vay ký quỹ (tỷ)','Tiền đang cho khách vay, nằm bên TÀI SẢN — với công ty chứng khoán đây mới là con số sinh lãi, khác hẳn vốn vay ở dòng dưới (bên nguồn vốn). Không tô màu: to hay nhỏ không tự nó là tốt hay xấu, phải soi cùng dòng kế tiếp. Nguồn Simplize, chỉ có từ Q4/2022 nên kỳ cũ hơn để trống.',
+      'ty',lay('margin'),null);
+    dong('Cho vay ký quỹ / vốn chủ (%)','Luật cấm cho vay quá 200% vốn chủ sở hữu — nên đây là thước đo còn bao nhiêu dư địa. Xanh ≤100% · vàng 100–160% · đỏ >160% (đã dùng quá 80% hạn mức, gần như hết chỗ để tăng). Đo 15/08/2026 trên 37 công ty chứng khoán có dư nợ >50 tỷ: trung vị 99%, cao nhất 198% (sát trần), thấp nhất 4%.',
+      'pct',lay('marginvc'),banThap(100,160));
     dong('Vay / vốn chủ (lần)','Vốn vay tài trợ cho vay ký quỹ và tự doanh. Xanh ≤0,7 · vàng 0,7–1,3 · đỏ >1,3 lần — tam phân vị 35 công ty chứng khoán (08/2026).',
       'lan',lay('vayvc'),banThap(0.7,1.3));
     dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤1,5 · vàng 1,5–2,5 · đỏ >2,5 lần — tam phân vị 42 công ty chứng khoán (08/2026).',

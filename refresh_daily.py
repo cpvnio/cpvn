@@ -662,8 +662,24 @@ except Exception as e:
     print(f"kho sâu LỖI (không chặn pipeline): {e}",flush=True)
     HL["finq"]={"err":str(e)[:120]}
 
-# 6d) CHỈ SỐ ĐẶC THÙ NGÀNH data/nganh/{MÃ}.json — tính từ fin + finq, KHÔNG gọi mạng.
+# 6c2) CƠ CẤU LỢI NHUẬN + DƯ NỢ CHO VAY KÝ QUỸ data/cocau/{MÃ}.json — cào Simplize.
+#      Thứ DUY NHẤT ở đây mà hai kho kia không có: bảng phân rã theo ĐÚNG loại hình doanh
+#      nghiệp. fin/finq đều lấy bản báo cáo mẫu THƯỜNG nên với công ty chứng khoán thì
+#      40 nghìn tỷ đang cho khách vay không nằm ở dòng nào (xem tools/cao_cocau.py).
+#      `--moi` với ngưỡng 20 ngày: báo cáo quý ra mỗi 3 tháng, hỏi lại hằng ngày là phí
+#      3.000 lượt gọi mỗi phiên cho một con số cả quý mới nhúc nhích. Nguồn chỉ trả 15 quý
+#      nên đây KHÔNG phải kho vĩnh viễn — mất là cào lại được, không cần bảo toàn như fin.
+try:
+    sys.path.insert(0,os.path.join(BASE,"tools"))
+    import cao_cocau as _cc
+    HL["cocau"]=_cc.main(moi=True, ngay=20)
+except Exception as e:
+    print(f"cơ cấu lợi nhuận LỖI (không chặn pipeline): {e}",flush=True)
+    HL["cocau"]={"err":str(e)[:120]}
+
+# 6d) CHỈ SỐ ĐẶC THÙ NGÀNH data/nganh/{MÃ}.json — tính từ fin + finq + cocau, KHÔNG gọi mạng.
 #     Phải đứng SAU 6c: lưu chuyển tiền tệ chỉ tin dấu của finq (kho fin sai dấu 60% số ô).
+#     Và SAU 6c2: dòng "Dư nợ cho vay ký quỹ" của mẫu CTCK đọc thẳng data/cocau.
 #     `--moi` so mtime nên ngày thường chỉ dựng lại mã vừa có báo cáo mới, vài giây là xong.
 try:
     import build_nganh as _bn
