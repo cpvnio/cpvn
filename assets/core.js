@@ -644,8 +644,12 @@ CP.loadNews=async function(sym){
     try{
       const j=await fetch(`https://api2.simplize.vn/api/company/analysis-report/list?ticker=${sym}&page=0&size=12`).then(r=>r.json());
       total=j.total||0;
-      reports=(j.data||[]).map(r=>({source:r.source||'',rec:r.recommend||'',target:r.targetPrice||null,
-        date:r.issueDate||'',title:r.title||'',pdf:r.attachedLink||''}));
+      /* CHỈ LẤY "CÓ BÁO CÁO", KHÔNG LẤY NỘI DUNG KHUYẾN NGHỊ — xem ghi chú dài ở
+         refresh_daily.work_news. Tóm tắt: recommend/targetPrice là khuyến nghị mua bán của
+         đơn vị CÓ giấy phép tư vấn đầu tư, dẫn lại vẫn là "cung cấp cho khách hàng" theo
+         khoản 32 Điều 4 Luật CK; attachedLink là PDF có bản quyền của CTCK; title tự nó là
+         nhận định. Còn lại là dữ kiện: CTCK nào, ngày nào. */
+      reports=(j.data||[]).map(r=>({source:r.source||'',date:r.issueDate||''}));
     }catch(e){}
   }
   if(!news||!reports){   // nguồn sống chết -> kho tin tức
@@ -669,12 +673,60 @@ CP.openNewsItem=async function(n){
   }
   window.open('https://simplize.vn','_blank','noopener');
 };
-CP.recStyle=function(r){
-  r=(r||'').toUpperCase();
-  if(/MUA|KHẢ QUAN|TÍCH LŨY|TĂNG|OUTPERFORM|BUY|ADD/.test(r)) return 'background:var(--green);color:#04240f';
-  if(/BÁN|KÉM|SELL|UNDERPERFORM|REDUCE/.test(r))              return 'background:var(--red);color:#fff';
-  if(/TRUNG LẬP|NẮM GIỮ|NEUTRAL|HOLD/.test(r))                return 'background:var(--yellow);color:#332703';
-  return 'background:#3a3a44;color:#c9c9d2';
+/* CP.recStyle ĐÃ XOÁ 16/08/2026 — nó tô xanh chữ "MUA", tô đỏ chữ "BÁN". Đừng dựng lại.
+
+   TRANG CỦA TỪNG CTCK. Nguồn chỉ trả về link PDF nằm trên CDN của bên thứ ba; muốn đưa
+   người đọc về đúng nhà phát hành thì phải tự khai.
+   KHOÁ LÀ MÃ CTCK ĐÚNG NHƯ NGUỒN TRẢ VỀ — đã đếm trên 1.924 báo cáo trong kho, có 48 mã
+   khác nhau. Đừng đoán khoá theo tên thương hiệu: nguồn ghi 'MAS' (không phải 'MASVN'),
+   'VNDS' (không phải 'VNDIRECT'), 'VDS' lẫn 'VDSC' cho cùng Rồng Việt.
+   ĐÍCH LÀ TRANG CHỦ, KHÔNG PHẢI TRANG BÁO CÁO. Đường dẫn sâu của CTCK đổi luôn và phần lớn
+   nằm sau WAF nên không kiểm chứng được — link 404 còn tệ hơn không link. Trang chủ thì
+   không bao giờ sai. 28 domain đã kiểm 16/08/2026 (403/400/302 = có thật, chỉ chặn curl);
+   `baovietsecurities.com.vn` chết nên BVSC dùng `bvsc.com.vn`.
+   9 mã CHƯA ánh xạ vì không chắc là nhà nào — SSV, CSI, SBSC, ELDIAN, SBBS, Beta, VFS,
+   FNS, TCSC (65/1.924 báo cáo ≈ 3,4%). Chúng hiện chữ không link, đúng như thiết kế.
+   THÀ KHÔNG LINK CÒN HƠN LINK SAI NHÀ — đừng điền bừa cho đủ bảng. */
+CP.CTCK_WEB={
+  'SSI':'https://www.ssi.com.vn',            'HSC':'https://www.hsc.com.vn',
+  'VNDS':'https://www.vndirect.com.vn',      'VIETCAP':'https://www.vietcap.com.vn',
+  'VCSC':'https://www.vietcap.com.vn',       'ACBS':'https://acbs.com.vn',
+  'DSC':'https://www.dsc.com.vn',            'FPTS':'https://www.fpts.com.vn',
+  'MAS':'https://masvn.com',                 'BSC':'https://www.bsc.com.vn',
+  'MBS':'https://mbs.com.vn',                'KBSV':'https://www.kbsec.com.vn',
+  'SHS':'https://www.shs.com.vn',            'VPBS':'https://vpbanks.com.vn',
+  'BVSC':'https://bvsc.com.vn',              'KIS':'https://www.kisvn.vn',
+  'SHINHAN':'https://www.shinhansec.com.vn', 'VCBS':'https://www.vcbs.com.vn',
+  'ABS':'https://abs.vn',                    'YUANTA':'https://yuanta.com.vn',
+  'VDSC':'https://www.vdsc.com.vn',          'VDS':'https://www.vdsc.com.vn',
+  'PHS':'https://www.phs.vn',                'AGRISECO':'https://agriseco.com.vn',
+  'AGR':'https://agriseco.com.vn',           'PSI':'https://www.psi.vn',
+  'CTS':'https://www.cts.vn',                'AAS':'https://aas.com.vn',
+  'NHSV':'https://nhsv.vn',                  'KAFI':'https://kafi.vn',
+  'VNDIRECT':'https://www.vndirect.com.vn',  'MIRAE':'https://masvn.com',
+};
+/* KHỚP THEO TỪNG TỪ, TUYỆT ĐỐI KHÔNG KHỚP CHUỖI CON.
+   Bản đầu dùng `indexOf` và dính ngay: **'SBSC' chứa 'BSC'** nên Chứng khoán Sài Gòn Berjaya
+   bị link sang BIDV Securities — đúng cái hại mà bảng này sinh ra để tránh. Cùng họ còn
+   'VDSC' ⊃ 'DSC' và 'VDSC' ⊃ 'VDS'. Sắp xếp dài-trước-ngắn chỉ chữa được họ sau, không chữa
+   được họ trước, vì 'SBSC' dài HƠN 'BSC'.
+   Nay cắt tên nguồn thành các TỪ rồi so khớp trọn từ: 'SSI Research' → ['SSI','RESEARCH']
+   khớp 'SSI'; 'SBSC' → ['SBSC'] không khớp gì → hiện chữ không link, đúng như mong muốn. */
+CP.ctckLink=function(src){
+  const s=String(src||'').trim().toUpperCase();
+  if(!s) return '';
+  if(CP.CTCK_WEB[s]) return CP.CTCK_WEB[s];
+  for(const t of s.split(/[^A-Z0-9]+/)) if(t&&CP.CTCK_WEB[t]) return CP.CTCK_WEB[t];
+  return '';
+};
+/* Một dòng báo cáo: "Báo cáo của <b>SSI Research</b> — <b>05/03/2026</b>".
+   KHÔNG khuyến nghị, KHÔNG giá mục tiêu, KHÔNG tiêu đề, KHÔNG link PDF. */
+CP.reportRow=function(r){
+  const ng=String(r.date||'').indexOf('-')>0 ? r.date.slice(0,10).split('-').reverse().join('/') : (r.date||'');
+  const u=CP.ctckLink(r.source);
+  const noi=`Báo cáo của <b>${CP.esc(r.source||'CTCK')}</b>${ng?` — <b>${CP.esc(ng)}</b>`:''}`;
+  return u ? `<a class="rp1" href="${u}" target="_blank" rel="noopener">${noi} ↗</a>`
+           : `<span class="rp1">${noi}</span>`;
 };
 
 /* ---------- watchlist (⭐ localStorage) ------------------------------------ */

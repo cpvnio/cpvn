@@ -720,10 +720,20 @@ def work_news(sym):
     try:
         j=get(f"https://api2.simplize.vn/api/company/analysis-report/list?ticker={sym}&page=0&size=12")
         o["total_reports"]=j.get("total") or 0
+        # CHỈ LƯU SỰ KIỆN "CÓ BÁO CÁO", KHÔNG LƯU NỘI DUNG KHUYẾN NGHỊ (16/08/2026).
+        # `recommend`/`targetPrice` là khuyến nghị mua-bán của một đơn vị CÓ GIẤY PHÉP tư vấn
+        # đầu tư chứng khoán; CPVN thì không có. Khoản 32 Điều 4 Luật CK 2019 định nghĩa tư
+        # vấn đầu tư là "cung cấp cho khách hàng kết quả phân tích, báo cáo phân tích VÀ đưa
+        # ra khuyến nghị" — điều luật KHÔNG đòi phân tích phải do mình viết ra, nên dẫn lại
+        # cũng là cung cấp. Án lệ: CTCP Đầu tư ITP, QĐ 197/QĐ-XPHC ngày 17/4/2026, phạt 225
+        # triệu + đình chỉ 4 nhóm hoạt động 2 năm chỉ vì đăng khuyến nghị lên website.
+        # `attachedLink` là file PDF báo cáo — phát tán là xâm phạm quyền tác giả của CTCK,
+        # một tầng trách nhiệm ĐỘC LẬP với giấy phép (bồi thường dân sự toà ấn định tới 1 tỷ
+        # theo Điều 205 Luật SHTT sửa đổi, hiệu lực 01/04/2026).
+        # `title` cũng bỏ: tiêu đề báo cáo tự nó là nhận định ("Mức định giá hấp dẫn…").
+        # Còn lại là DỮ KIỆN thuần: CTCK nào ra báo cáo, ngày nào.
         for r in j.get("data") or []:
-            o["reports"].append({"source":r.get("source") or "","rec":r.get("recommend") or "",
-                "target":r.get("targetPrice"),"date":r.get("issueDate") or "",
-                "title":r.get("title") or "","pdf":r.get("attachedLink") or ""})
+            o["reports"].append({"source":r.get("source") or "","date":r.get("issueDate") or ""})
     except Exception: pass
     seen=set(); dedup=[]
     for it in sorted(o["news"],key=lambda x:-(x.get("ts") or 0)):
@@ -906,7 +916,11 @@ def work_prof(sym):
        "freeFloat":d.get("freeFloatRate"),"bookValue":d.get("bookValue"),
        "eps":rnd(d.get("epsRatio")),"evEbitda":rnd(d.get("evEbitdaRatio")),
        "revLtmGrowth":rnd(d.get("revenueLtmGrowth")),"npLtmGrowth":rnd(d.get("netIncomeLtmGrowth")),
-       "riskLevel":d.get("overallRiskLevel"),"shares":d.get("outstandingSharesValue")}
+       # KHÔNG lưu `overallRiskLevel` (16/08/2026): đó là XẾP HẠNG RỦI RO của bên thứ ba đối
+       # với từng mã cụ thể — một nhận định về chứng khoán, không phải dữ kiện. Trường này
+       # chưa bao giờ được trang nào hiển thị, chỉ nằm im trong kho; thứ đo được tương đương
+       # là `vol60` do chính CPVN tính trong build_screen.py.
+       "shares":d.get("outstandingSharesValue")}
     _learn(o.get("nameVi"),sym); _learn(o.get("nameEn"),sym)
     fetch_ownership(sym,o)
     # GIỮ SỐ CŨ KHI LƯỢT NÀY CÀO HỤT. fetch_ownership nuốt mọi lỗi rồi trả về lặng thinh,

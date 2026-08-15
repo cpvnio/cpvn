@@ -272,16 +272,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .sect{display:none}
   .sect.on{display:block}
   h3.t{margin:18px 0 8px;font-size:15px}
-  /* Thẻ rê chuột của biểu đồ cơ cấu: cột chồng mà không đọc được số thì chỉ xem được
-     hình dáng. Đặt trong .finwrap (đã position:relative) nên cuộn ngang là trôi theo cột. */
-  #segTip{position:absolute;pointer-events:none;display:none;z-index:5;background:var(--panel2);
-    border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11.5px;
-    box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:nowrap}
-  #segTip b{display:block;font-size:12px;margin-bottom:4px}
-  #segTip .r{display:flex;gap:8px;align-items:center;line-height:1.65}
-  #segTip .r i{width:8px;height:8px;border-radius:2px;flex-shrink:0}
-  #segTip .r s{margin-left:auto;text-decoration:none;font-weight:700;
-    font-variant-numeric:tabular-nums;padding-left:10px}
+  /* #segTip (thẻ rê chuột của biểu đồ cơ cấu lợi nhuận) đã gỡ 16/08/2026 cùng canvas
+     #segCv — cơ cấu lợi nhuận nay là dòng trong bảng KQKD, số đọc thẳng trên bảng. */
   .finlegend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:4px 0 6px;flex-wrap:wrap}
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   canvas.fin{width:100%;height:200px;display:block}
@@ -331,6 +323,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   table.ft td.ngv{color:var(--yellow);font-weight:650}
   table.ft td.ngd{color:var(--red);font-weight:650}
   table.ft tr.ngcap td{border-top:2px solid var(--line)}
+  /* Dòng CƠ CẤU LỢI NHUẬN nối vào cuối bảng KQKD — dùng chung lưới cột và chung ba màu
+     ngl/ngv/ngd với chỉ số ngành. Hàng tiêu đề nhóm in nhạt, không đậm như dòng số. */
+  table.ft tr.ccr.head td .lb{color:var(--muted);font-size:11.5px;letter-spacing:.04em}
+  table.ft tr.ccr td{font-variant-numeric:tabular-nums}
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   /* VỐN HOÁ theo kỳ: đậm vừa để dò nhanh cạnh dòng LN sau thuế, tách bằng vạch mảnh */
   table.ft tr.mcapRow td{font-weight:700;border-top:1px solid var(--line)}
@@ -405,16 +401,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .peer .mc small{display:block;color:var(--muted);font-weight:600;font-size:10px}
 
   /* tài liệu + tin */
-  .rp{padding:10px 0;border-bottom:1px solid var(--rowline)}
-  .rp .rh{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
-  .rp .rec{font-size:10.5px;font-weight:800;border-radius:4px;padding:1.5px 7px}
-  .rp .mt{font-size:12.5px;font-weight:800}
-  .rp .src{font-size:11.5px;color:#7ab7ff;font-weight:700}
-  .rp .dt{font-size:11px;color:var(--muted);margin-left:auto}
-  .rp a.rt{font-size:13px;line-height:1.45}
-  .rp a.rt:hover{color:#fff;text-decoration:underline}
-  .rp a.dl{font-size:11.5px;font-weight:800;color:var(--green);border:1px solid rgba(22,199,132,.4);
-    border-radius:6px;padding:2px 9px;margin-left:8px;white-space:nowrap}
+  /* Mục báo cáo nay CHỈ CÓ MỘT DÒNG mỗi báo cáo (16/08/2026). Các class .rec (badge
+     MUA/BÁN), .mt (giá mục tiêu), .rt (tiêu đề), .dl (tải PDF) đã xoá cùng với dữ liệu
+     sinh ra chúng — đừng khai lại, không còn gì đổ vào. */
+  .rp{padding:8px 0;border-bottom:1px solid var(--rowline)}
+  .rp .rp1{font-size:13px;line-height:1.45;color:var(--muted);display:block}
+  .rp a.rp1{color:#7ab7ff}
+  .rp a.rp1:hover{text-decoration:underline}
+  .rp .rp1 b{color:var(--txt);font-weight:700}
   .ni{padding:9px 0;border-bottom:1px solid var(--rowline)}
   .ni a{font-size:13.5px;line-height:1.45;display:block}
   .ni a:hover{color:#fff;text-decoration:underline}
@@ -426,6 +420,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
   footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:16px;color:var(--muted);
     font-size:11.5px;flex-wrap:wrap;text-align:center}
+  /* MIỄN TRỪ — xem CLAUDE.md mục "Ranh giới pháp lý". */
+  .mientru{flex-basis:100%;max-width:70ch;margin:2px auto 0;line-height:1.75;
+    font-size:11px;color:var(--muted);opacity:.92}
+  .mientru b{color:var(--muted);font-weight:800}
   @media(max-width:980px){
     .tabs{margin-left:6px}
     #top{grid-template-columns:1fr}
@@ -436,7 +434,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260814b"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260816a"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -542,16 +540,10 @@ document.addEventListener(MO,function(e){
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
       </div>
-      <!-- CƠ CẤU LỢI NHUẬN — đứng TRÊN bảng KQKD (user chốt 15/08/2026). Cố ý KHÔNG bám
-           cột của bảng như #finCv: nguồn (data/cocau) chỉ sâu 15 quý còn bảng mở ra được
-           cả chuỗi dài, ép chung một trục là hoặc cắt cụt biểu đồ hoặc dựng cột rỗng. Nó
-           tự vẽ nhãn kỳ của mình, chỉ ăn theo nút Theo quý/Theo năm. -->
-      <div id="segBox" style="display:none">
-        <h3 class="t" style="margin-top:0">Lợi nhuận đến từ đâu <span class="subnote" id="segKy"></span></h3>
-        <div class="finlegend" id="segLg"></div>
-        <div class="finwrap" style="position:relative"><canvas class="fin" id="segCv"></canvas><div id="segTip"></div></div>
-        <div class="subnote" id="segNote"></div>
-      </div>
+      <!-- CƠ CẤU LỢI NHUẬN: từ 16/08/2026 KHÔNG còn là biểu đồ riêng (#segBox + canvas
+           #segCv đã gỡ). User chốt: đưa xuống thành DÒNG trong bảng KQKD và đánh màu —
+           cùng lối trình bày với "chỉ số đặc thù ngành" ở cuối bảng CĐKT. Dựng bởi
+           veCoCauRows(). Nguồn chỉ sâu 15 quý / 10 năm nên kỳ ngoài tầm để `—`. -->
       <h3 class="t">Kết quả kinh doanh</h3>
       <div class="finlegend">
         <span><i style="background:#5b6b7a"></i>Doanh thu</span>
@@ -626,9 +618,15 @@ document.addEventListener(MO,function(e){
     <div id="ptWrap"><canvas id="ptCv"></canvas></div></div>
 </div>
 
-<footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
+<footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span>
+  <div class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
+    <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không
+    cung cấp dịch vụ tư vấn đầu tư chứng khoán; mục báo cáo chỉ nêu công ty chứng khoán nào
+    đã phát hành báo cáo và vào ngày nào, không dẫn lại nội dung khuyến nghị. Người vận hành
+    có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
+    định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260814a"></script>
+<script src="assets/core.js?v=20260816a"></script>
 <script src="assets/chart.js?v=20260813a"></script>
 <script>
 'use strict';
@@ -1061,7 +1059,9 @@ function renderPeers(){
    chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc bấm đổi giao diện, nên lọt lưới rất lâu.
    Luật: MỌI lượt vẽ lại phải đi qua biến này, đừng bao giờ tự dựng danh sách cột. */
 let finColsVe=null;
-function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); drawSegChart(); }
+/* Cơ cấu lợi nhuận nay là DÒNG BẢNG, không phải canvas — không cần vẽ lại theo resize
+   hay đổi đèn, chỉ cần dựng lại khi bảng KQKD được dựng lại (veKQKD tự lo). */
+function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
 
 /* ---------- CƠ CẤU LỢI NHUẬN (data/cocau, nguồn Simplize) ----------
    Trả lời "doanh nghiệp này kiếm tiền từ đâu" — thứ cả data/fin lẫn data/finq đều không
@@ -1077,13 +1077,10 @@ function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); drawSegChart();
       chú ngay dưới; gọi tắt thành "lợi nhuận" là người đọc tự cộng ra một con số sai.
    2. **Nguồn chỉ sâu 15 quý / 10 năm** (xem tools/cao_cocau.py) — ghi rõ khoảng kỳ đang vẽ
       chứ đừng để người xem tưởng đây là toàn bộ lịch sử như mấy bảng bên dưới. */
-const SEG_MAU=['#006cec','#16c784','#a855f7','#f59e0b','#64748b','#ec4899'];
-let segData=null, segNhan=null, segSym=null, segHover=null;
+let segData=null, segNhan=null, segSym=null;
 /* Nhãn nguồn mở đầu bằng "Lợi nhuận từ hoạt động …" / "Lãi/lỗ thuần từ …" ở MỌI mảng —
-   tiêu đề khối đã nói "Lợi nhuận đến từ đâu" nên phần đầu đó chỉ lặp lại. Đo trên màn
-   375px: để nguyên thì riêng cụm chú giải cao 138px, tức gần một phần sáu màn hình trôi
-   qua trước khi nhìn thấy cái biểu đồ. Tên đầy đủ vẫn nằm ở `title` và ở thẻ rê chuột —
-   chỗ nào có sẵn chiều ngang thì chỗ đó nói đủ. */
+   nhóm dòng đã có tiêu đề nói rõ đây là cơ cấu lợi nhuận nên phần đầu đó chỉ lặp lại,
+   mà cột tên bảng thì hẹp. Tên đầy đủ vẫn nằm ở `title` của ô tên dòng. */
 const segNgan=t=>{
   const s=String(t||'').replace(/^(Lợi nhuận|Lãi\/lỗ thuần)\s+(gộp\s+)?((từ|về)\s+)?(hoạt động\s+)?/i,'').trim();
   return (s?s[0].toUpperCase()+s.slice(1):String(t||''));
@@ -1099,92 +1096,82 @@ async function loadCoCau(sym){
   }catch(e){}
   return segData;
 }
-function drawSegChart(){
-  const box=$('segBox'), cvs=$('segCv');
-  if(!box||!cvs) return;
+/* ---- DÒNG CƠ CẤU LỢI NHUẬN NỐI VÀO CUỐI BẢNG KQKD ----
+   Bám ĐÚNG các cột bảng đang hiện (đọc `finColsVe`, thứ kqkdTable vừa dựng), y như
+   veNganhRows bám bảng CĐKT. Vì thế phải chạy SAU kqkdTable trong cùng một lượt vẽ.
+   Chế độ NĂM có thể bung thêm cột QUÝ (`r._q`) — cột đó tra trục QUÝ của kho, cột năm
+   tra trục NĂM. Tra nhầm trục là dán số cả năm xuống dưới một cột quý. */
+function veCoCauRows(){
+  const wrap=$('kqkdT'), tb=wrap&&wrap.querySelector('table.ft tbody');
+  if(!tb) return;
+  tb.querySelectorAll('tr.ccr').forEach(r=>r.remove());
   const d=segData, ten=(segNhan&&d&&segNhan[d.nhom]&&segNhan[d.nhom].p)||null;
-  const kho=d&&d[finPeriod]&&d[finPeriod].p, ky=d&&d.ky&&d.ky[finPeriod];
-  if(!kho||!ky||!ky.length||!ten){ box.style.display='none'; return; }
-  const keys=Object.keys(ten).filter(k=>kho[k]);
-  if(!keys.length){ box.style.display='none'; return; }
-  box.style.display='';
-  $('segKy').textContent=`· ${ky[0]} – ${ky[ky.length-1]}`;
-  /* Rút gọn mà ĐỤNG NHAU thì trả lại tên đầy đủ cho cả cụm đụng — mẫu bảo hiểm có cả
-     "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác", rút xong thành hai mục cùng tên
-     "Khác" đứng cạnh nhau với hai màu khác nhau, đọc ra như lỗi dữ liệu. */
+  if(!d||!ten||!finColsVe||!finColsVe.length) return;
+  const khoQ=(d.Q||{}).p, khoY=(d.Y||{}).p, kyQ=(d.ky||{}).Q||[], kyY=(d.ky||{}).Y||[];
+  // mỗi cột bảng -> [kho nào, chỉ số nào]; -1 = kỳ nằm ngoài tầm nguồn -> in "—"
+  const cols=finColsVe.map(r=>{
+    const lb=String(r.label);
+    return (finPeriod==='Y'&&!r._q) ? [khoY,kyY.indexOf(lb)] : [khoQ,kyQ.indexOf(lb)];
+  });
+  if(!cols.some(c=>c[0]&&c[1]>=0)) return;
+  const keys=Object.keys(ten).filter(k=>(khoQ&&khoQ[k])||(khoY&&khoY[k]));
+  if(!keys.length) return;
+  /* RÚT GỌN MÀ ĐỤNG NHAU THÌ TRẢ LẠI TÊN ĐẦY ĐỦ CHO CẢ CỤM ĐỤNG. Mẫu bảo hiểm có cả
+     "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác" — rút xong thành HAI dòng cùng tên
+     "Khác" nằm sát nhau, đọc ra như lỗi dữ liệu chứ không phải hai khoản mục thật.
+     (Bẫy này đã trả giá một lần ở bản biểu đồ cũ; viết lại thì đừng làm rơi.) */
   const dem={}; keys.forEach(k=>{ const s=segNgan(ten[k]); dem[s]=(dem[s]||0)+1; });
   const nhanGon=k=>{ const s=segNgan(ten[k]); return dem[s]>1?ten[k]:s; };
-  $('segLg').innerHTML=keys.map((k,i)=>
-    `<span title="${CP.esc(ten[k])}"><i style="background:${SEG_MAU[i%SEG_MAU.length]}"></i>${CP.esc(nhanGon(k))}</span>`).join('');
-  $('segNote').textContent='Lãi gộp từng mảng, CHƯA trừ chi phí quản lý'+
-    (d.nhom==='BANK'?' và dự phòng rủi ro':'')+' — cộng lại sẽ lớn hơn lợi nhuận trước thuế ở bảng dưới. '+
-    'Đơn vị: tỷ đồng · nguồn Simplize.';
-
-  const n=ky.length, DPRl=Math.min(2,window.devicePixelRatio||1);
-  const w=Math.max(cvs.parentElement.clientWidth||600, n*44), h=210;
-  cvs.width=Math.round(w*DPRl); cvs.height=h*DPRl;
-  cvs.style.width=w+'px'; cvs.style.height=h+'px';
-  const g=cvs.getContext('2d'); g.setTransform(DPRl,0,0,DPRl,0,0); g.clearRect(0,0,w,h);
-
-  // thang phải ôm CẢ cột dương lẫn cột âm của cùng một kỳ — cộng riêng hai chiều
-  let mx=0,mn=0;
-  for(let i=0;i<n;i++){ let p=0,m=0;
-    for(const k of keys){ const v=kho[k][i]; if(v>0)p+=v; else if(v<0)m+=v; }
-    mx=Math.max(mx,p); mn=Math.min(mn,m); }
-  if(mx-mn<1e-9) mx=mn+1;
-  const padT=12,padB=18, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
-  g.font='10px system-ui'; g.textBaseline='middle';
-  for(let i=0;i<=3;i++){ const v=mn+(mx-mn)*i/3, yy=y(v);
-    g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
-    if(i>0){ g.fillStyle='#71717f'; g.textAlign='left';
-      g.fillText(Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':Math.round(v),3,yy); } }
-  const cw=w/n, bw=Math.max(7,Math.min(26,cw-14));
-  for(let i=0;i<n;i++){
-    const cx=cw*i+cw/2; let up=zero, dn=zero;
-    keys.forEach((k,j)=>{ const v=kho[k][i]; if(v==null||v===0) return;
-      /* KHÔNG kê chiều cao tối thiểu như drawFinChart. Đây là cột CHỒNG: nống một mảng
-         bé lên 1,5px là tổng cột không còn bằng tổng các mảng nữa, mắt đọc ra một tỷ
-         trọng không có thật. Mảng quá bé thì đúng là bé — rê chuột vào có số đầy đủ. */
-      const hh=Math.abs(y(v)-zero);
-      g.fillStyle=SEG_MAU[j%SEG_MAU.length];
-      if(v>0){ up-=hh; g.fillRect(cx-bw/2,up,bw,hh); }
-      else { g.fillRect(cx-bw/2,dn,bw,hh); dn+=hh; } });
+  const oCua=(k,c)=>{ const [kho,j]=c; if(!kho||j<0||!kho[k]) return null;
+                      const v=kho[k][j]; return v==null?null:v; };
+  /* MÀU CHỈ NÓI HAI ĐIỀU, cố ý không hơn: mảng nào ĐANG LỖ (đỏ) và mảng nào GÁNH CHÍNH
+     kỳ đó (xanh — lãi lớn nhất trong các mảng dương của chính cột ấy). Không tô thang
+     ba bậc như chỉ số ngành: ở đây không có ngưỡng "tốt/xấu" nào đo được, một mảng nhỏ
+     không phải là dở. Trụ cột tính theo TỪNG CỘT nên đọc ngang một dòng là thấy nguồn
+     lãi chính chuyển từ mảng nào sang mảng nào theo thời gian. */
+  const trum=cols.map(c=>{ let mx=0,ai=null;
+    for(const k of keys){ const v=oCua(k,c); if(v!=null&&v>mx){ mx=v; ai=k; } } return ai; });
+  /* Q4 LỆCH GIỮA HAI NGUỒN — nói ra chứ đừng im lặng. Đo 16/08/2026 trên 8.782 cặp
+     mã-quý nhóm sản xuất, đối chiếu ps1 với lợi nhuận gộp của data/fin (nguồn 24hMoney,
+     đường lấy số độc lập): Q1 khớp 99,77% · Q2 99,08% · Q3 99,72% nhưng **Q4 chỉ 82,01%**,
+     và Q4 chiếm 92% toàn bộ ca lệch. Gần như chắc chắn do Q4 riêng lẻ được suy ra bằng
+     (cả năm đã kiểm toán − luỹ kế 9 tháng), mà số cả năm bị điều chỉnh sau kiểm toán nên
+     hai nguồn chốt ở hai thời điểm khác nhau. Không biết bên nào đúng -> vẫn hiện số,
+     nhưng gắn tooltip cảnh báo lên đúng ô Q4. */
+  const laQ4=cols.map((c,i)=>/^Q4\//.test(String((finColsVe[i]||{}).label||'')));
+  const CB_Q4='Quý 4 thường được suy ra bằng (cả năm đã kiểm toán − luỹ kế 9 tháng) nên '
+    +'hai nguồn hay lệch nhau: đo trên 8.782 cặp mã-quý thì Q1–Q3 khớp 99%+ với báo cáo '
+    +'kết quả kinh doanh ở trên, riêng Q4 chỉ 82%. Đối chiếu lại với bảng trên trước khi dùng.';
+  const rows=[];
+  for(const k of keys){
+    let co=false;
+    const tds=cols.map((c,i)=>{
+      const v=oCua(k,c);
+      if(v==null) return '<td>—</td>';
+      co=true;
+      const cls=v<0?'ngd':(trum[i]===k?'ngl':'');
+      return '<td'+(cls?' class="'+cls+'"':'')+(laQ4[i]?' title="'+CP.esc(CB_Q4)+'"':'')+'>'
+        +Math.round(v).toLocaleString('en-US')+'</td>';
+    });
+    if(!co) continue;
+    rows.push(`<tr class="ccr"><td title="${CP.esc(ten[k])}"><div class="lb">${CP.esc(nhanGon(k))}</div></td>`
+      +tds.join('')+'<td class="sp"></td></tr>');
   }
-  segHover={cvs:cvs,keys:keys,ten:ten,kho:kho,ky:ky,cw:cw,n:n};
-  g.strokeStyle=ZEROC(); g.beginPath(); g.moveTo(0,zero); g.lineTo(w,zero); g.stroke();
-  // nhãn kỳ tự vẽ (biểu đồ này KHÔNG có bảng nằm dưới để mượn hàng kỳ như #finCv)
-  g.fillStyle='#71717f'; g.textAlign='center'; g.textBaseline='alphabetic';
-  const buoc=Math.ceil(n*46/w)||1;
-  for(let i=0;i<n;i++) if(i%buoc===0||i===n-1) g.fillText(ky[i],cw*i+cw/2,h-5);
+  if(!rows.length) return;
+  /* CÂU GHI CHÚ Ở TIÊU ĐỀ NHÓM LÀ BẮT BUỘC, đừng rút cho gọn: cộng các mảng KHÔNG ra
+     lợi nhuận trước thuế. Đo 15/08/2026: tổng mảng cao hơn LNTT 3–17% ở công ty chứng
+     khoán, 15–31% sản xuất, 51–79% ngân hàng, 204–234% bảo hiểm. Người đọc thấy mấy dòng
+     này nằm ngay trong bảng KQKD thì phản xạ đầu tiên là cộng lại — phải chặn trước. */
+  const dai=[kyQ,kyY][finPeriod==='Y'?1:0];
+  const tam=dai.length?` Nguồn có từ ${CP.esc(dai[0])} tới ${CP.esc(dai[dai.length-1])}; kỳ ngoài khoảng đó để trống.`:'';
+  const why='Lợi nhuận GỘP của từng mảng, chưa trừ chi phí bán hàng và quản lý'
+    +(d.nhom==='BANK'?' và chưa trừ dự phòng rủi ro':'')
+    +' — CỘNG LẠI SẼ LỚN HƠN lợi nhuận trước thuế ở trên, đừng tự cộng. '
+    +'Xanh = mảng lãi lớn nhất kỳ đó · đỏ = mảng đang lỗ.'+tam+' Nguồn Simplize.';
+  tb.insertAdjacentHTML('beforeend',
+    `<tr class="ccr head ngcap"><td title="${CP.esc(why)}"><div class="lb">LỢI NHUẬN ĐẾN TỪ ĐÂU</div></td>`
+    +cols.map(()=>'<td></td>').join('')+'<td class="sp"></td></tr>'+rows.join(''));
 }
-/* Gắn MỘT LẦN ở mức tài liệu, không gắn lại mỗi lượt vẽ: drawSegChart chạy lại theo
-   resize / đổi đèn / đổi kỳ, gắn trong đó là chồng listener lên nhau mãi mãi. */
-(function segRe(){
-  const tip=()=>$('segTip');
-  document.addEventListener('mousemove',e=>{
-    const t=tip(); if(!t||!segHover) return;
-    const {cvs,keys,ten,kho,ky,cw,n}=segHover;
-    const r=cvs.getBoundingClientRect();
-    if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){
-      t.style.display='none'; return; }
-    const i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-r.left)/cw)));
-    let tong=0; const hang=keys.map((k,j)=>{ const v=kho[k][i];
-      if(v==null) return ''; tong+=v;
-      return `<div class="r"><i style="background:${SEG_MAU[j%SEG_MAU.length]}"></i>`+
-        `${CP.esc(ten[k])}<s style="color:${v<0?'var(--red)':'var(--text)'}">`+
-        `${CP.fmtD(Math.round(v))}</s></div>`; }).join('');
-    t.innerHTML=`<b>${CP.esc(ky[i])}</b>${hang}`+
-      `<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:4px">`+
-      `Cộng các mảng<s>${CP.fmtD(Math.round(tong))}</s></div>`;
-    t.style.display='block';
-    // neo trong .finwrap: toạ độ tính theo chính khung cuộn, không theo cửa sổ
-    const box=cvs.parentElement, br=box.getBoundingClientRect();
-    let x=e.clientX-br.left+box.scrollLeft+14;
-    if(x+t.offsetWidth>box.scrollLeft+br.width-6) x=x-t.offsetWidth-28;
-    t.style.left=Math.max(box.scrollLeft+4,x)+'px';
-    t.style.top=Math.max(4,Math.min(e.clientY-br.top+10,br.height-t.offsetHeight-4))+'px';
-  },{passive:true});
-})();
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
   const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
@@ -1350,10 +1337,14 @@ function finCols(){
 let finLuot=0;                                    // đánh số lượt vẽ, chặn kết quả về trễ
 function veKQKD(){
   const cols=finCols(), dv=finData&&finData.div;
-  kqkdTable(cols,dv); drawFinChart(cols);         // bảng TRƯỚC -> biểu đồ đo cột bảng
+  // bảng TRƯỚC -> biểu đồ đo cột bảng -> dòng cơ cấu lợi nhuận nối vào cuối bảng
+  kqkdTable(cols,dv); drawFinChart(cols); veCoCauRows();
   const luot=++finLuot;
-  // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại (giữ nguyên kỳ và các năm đang mở)
-  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){ kqkdTable(cols,dv); drawFinChart(cols); } });
+  // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại (giữ nguyên kỳ và các năm đang mở).
+  // kqkdTable dựng lại tbody từ đầu nên PHẢI gọi lại veCoCauRows, bằng không mấy dòng
+  // cơ cấu lợi nhuận biến mất ngay khi vốn hoá về — im lặng và chỉ thấy ở mã tải chậm.
+  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){
+    kqkdTable(cols,dv); drawFinChart(cols); veCoCauRows(); } });
 }
 /* CÂN ĐỐI KẾ TOÁN: "TỔNG TÀI SẢN" và "TỔNG NGUỒN VỐN" là HAI VẾ CỦA MỘT ĐẲNG THỨC,
    luôn bằng nhau (đo toàn kho: 20.730/20.751 cặp khớp; 21 ca lệch là lỗi số liệu
@@ -1420,7 +1411,8 @@ function pickFinHighlights(){
 async function renderFin(){
   finData=await CP.loadFin(C.sym);
   veKQKD();
-  await loadCoCau(C.sym); drawSegChart();   // kho riêng, thiếu file thì hàm tự ẩn cả khối
+  // kho riêng, nạp xong mới nối được dòng cơ cấu lợi nhuận; thiếu file thì hàm tự bỏ qua
+  await loadCoCau(C.sym); veCoCauRows();
   const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);
@@ -1559,13 +1551,14 @@ function veNganhRows(){
 async function renderDocsNews(){
   const d=await CP.loadNews(C.sym);
   $('repN').textContent=d.total?`· ${d.total} báo cáo`:'';
-  $('reps').innerHTML=(d.reports&&d.reports.length)?d.reports.map(r=>{
-    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${CP.recStyle(r.rec)}">${CP.esc(r.rec)}</span>`:'';
-    const mt=r.target?`<span class="mt">Mục tiêu ${CP.fmtD(r.target)}đ</span>`:'';
-    const dl=r.pdf?`<a class="dl" href="${CP.esc(r.pdf)}" target="_blank" rel="noopener">⬇ Tải PDF</a>`:'';
-    return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${CP.esc(r.source)}</span><span class="dt">${CP.esc(r.date)}</span></div>`+
-      `<a class="rt" ${r.pdf?`href="${CP.esc(r.pdf)}" target="_blank" rel="noopener"`:''}>${CP.esc(r.title)}${dl}</a></div>`;
-  }).join(''):'<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>';
+  /* CHỈ NÊU CÓ BÁO CÁO, KHÔNG DẪN LẠI NỘI DUNG (16/08/2026) — khuyến nghị, giá mục tiêu,
+     tiêu đề và link PDF đều đã gỡ ở cả nguồn ghi (refresh_daily) lẫn nguồn đọc (core.js).
+     Lý do đầy đủ nằm ở refresh_daily.work_news. Đừng dựng lại "để đầy đủ hơn". */
+  $('reps').innerHTML=(d.reports&&d.reports.length)
+    ? d.reports.map(r=>`<div class="rp">${CP.reportRow(r)}</div>`).join('')
+      +'<div class="subnote" style="margin-top:6px">Nguồn: tổng hợp từ các công ty chứng khoán. '
+      +'CPVN không dẫn lại khuyến nghị hay giá mục tiêu — bấm để đọc tại trang của chính CTCK.</div>'
+    : '<div class="subnote">Chưa ghi nhận báo cáo phân tích cho mã này.</div>';
   /* Vietstock rồi CafeF đứng đầu (user chốt 15/08/2026) — Simplize xuống cuối.
      Đường dẫn CafeF cố ý giữ nhánh `hastc` cho MỌI mã dù mã đó niêm yết ở đâu: nguồn tự
      chuyển hướng về đúng sàn kèm slug tên công ty đầy đủ (đo 15/08: VIC -> /du-lieu/hose/

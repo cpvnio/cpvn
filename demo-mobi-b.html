@@ -569,23 +569,21 @@ function vennSVG(){
 }
 /* tên trục rút gọn cho thẻ hẹp — vẫn còn đủ nghĩa, không phải cắt bừa từ đầu */
 const TRNG={tt:'Tăng trưởng',nh:'Nâng hạng',dg:'Định giá'};
+/* GỠ 16/08/2026: badge khuyến nghị, tiêu đề báo cáo, ô "Giá mục tiêu" — xem ghi chú ở
+   tools/build_chudiem.bao_cao_ssi. Giữ lại ô "Trục thuộc về" (cách phân nhóm, có ghi nguồn). */
 function mCd(){
   return `<div class="card"><div class="cb" style="padding:8px 10px">${vennSVG()}</div></div>
-    <div class="src">Nguồn sơ đồ: <b>${esc(D.cd.nguon)}</b>. Trang này chỉ dẫn lại,
-      không tự đưa ra khuyến nghị mua bán.</div>
-    <div class="sec">Khuyến nghị mới nhất<small>${D.cd.ma.filter(m=>m.ssi).length} mã có báo cáo</small></div>
-    ${D.cd.ma.filter(m=>m.ssi).slice(0,7).map(m=>`
+    <div class="src">Cách phân nhóm theo <b>${esc(D.cd.nguon)}</b>. Trang này không dẫn lại
+      khuyến nghị hay giá mục tiêu, và không tự đưa ra khuyến nghị mua bán.</div>
+    <div class="sec">Mã có báo cáo gần đây<small>${D.cd.ma.filter(m=>m.ssi&&m.ssi.d).length} mã</small></div>
+    ${D.cd.ma.filter(m=>m.ssi&&m.ssi.d).slice(0,7).map(m=>`
       <div class="card"><div class="cb">
         <div style="display:flex;gap:11px;align-items:center">${logo(m.s)}
           <div style="flex:1;min-width:0"><div style="font-size:var(--f4);font-weight:800">${m.s}</div>
-            <div style="font-size:var(--f2);color:var(--mut2);margin-top:1px">${esc(m.ssi.d)}</div></div>
-          <span class="pill2 ${m.ssi.kn==='MUA'||m.ssi.kn==='KHẢ QUAN'?'up':'fl'}">${esc(m.ssi.kn)}</span>
+            <div style="font-size:var(--f2);color:var(--mut2);margin-top:1px">${esc(D.cd.nguon)} có báo cáo
+              ${esc(m.ssi.d.split('-').reverse().join('/'))}</div></div>
         </div>
-        <div style="font-size:var(--f3);color:var(--mut);margin-top:9px;line-height:1.5">${esc(m.ssi.td)}</div>
         <div style="display:flex;gap:10px;margin-top:10px">
-          <div style="flex:1;background:var(--pan2);border-radius:12px;padding:9px 11px">
-            <div class="k lab">Giá mục tiêu</div>
-            <div style="font-size:var(--f4);font-weight:800;margin-top:2px">${nf(m.ssi.tp)} đ</div></div>
           <div style="flex:1;background:var(--pan2);border-radius:12px;padding:9px 11px">
             <div class="k lab">Trục thuộc về</div>
             <div style="display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:5px">${

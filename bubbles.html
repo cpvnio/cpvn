@@ -312,14 +312,19 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #detNews .ni .meta{color:var(--muted);font-size:11px;margin-top:2px}
 
   /* báo cáo phân tích CTCK */
-  #detReports .rp{padding:7px 0;border-top:1px solid var(--line)}
-  #detReports .rp .rh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
-  #detReports .rp .rec{font-size:10px;font-weight:800;border-radius:4px;padding:1px 6px}
-  #detReports .rp .mt{font-size:11.5px;font-weight:700;color:var(--txt)}
-  #detReports .rp .src{font-size:10.5px;color:#7ab7ff;font-weight:600}
-  #detReports .rp .dt{font-size:10.5px;color:var(--muted);margin-left:auto}
-  #detReports .rp a.rt{color:var(--txt);text-decoration:none;font-size:12px;line-height:1.4;display:block}
-  #detReports .rp a.rt:hover{color:#fff;text-decoration:underline}
+  /* Một dòng mỗi báo cáo — .rec/.mt/.rt đã xoá cùng dữ liệu sinh ra chúng (16/08/2026). */
+  #detReports .rp{padding:6px 0;border-top:1px solid var(--line)}
+  #detReports .rp .rp1{font-size:12px;line-height:1.4;color:var(--muted);display:block;text-decoration:none}
+  #detReports .rp a.rp1{color:#7ab7ff}
+  #detReports .rp a.rp1:hover{text-decoration:underline}
+  #detReports .rp .rp1 b{color:var(--txt);font-weight:700}
+
+  /* MIỄN TRỪ ở chân trang. ĐỪNG thêm padding-bottom cho thanh tab đáy: `mobi.css` đã đặt
+     `body{padding-bottom:calc(var(--mbar)+safe-area)}` — chừa hai lần là hở một khoảng
+     trống to ở đáy, và thành hai chỗ phải nhớ sửa khi đổi chiều cao thanh tab. */
+  footer.mientru{max-width:70ch;margin:0 auto;padding:18px 18px 26px;text-align:center;
+    font-size:11px;line-height:1.7;color:var(--muted)}
+  footer.mientru b{font-weight:800}
 
   .legend{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);
     background:var(--legendbg);padding:6px 12px;border-radius:20px;border:1px solid var(--line);flex-wrap:wrap;z-index:4}
@@ -367,7 +372,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260814b"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260816a"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -536,6 +541,12 @@ document.addEventListener(MO,function(e){
   </main>
   </div>
 </div>
+
+<!-- MIỄN TRỪ — trang này trước không có footer. Xem CLAUDE.md mục "Ranh giới pháp lý". -->
+<footer class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
+  <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không cung
+  cấp dịch vụ tư vấn đầu tư chứng khoán. Người vận hành có thể nắm giữ cổ phiếu xuất hiện
+  trên trang. Người dùng tự chịu trách nhiệm với quyết định của mình.</footer>
 
 <script src="assets/chart.js?v=20260813a"></script>
 <script src="html2canvas.min.js"></script>
@@ -2013,12 +2024,35 @@ function paintNews(items){
 
 /* ---- BÁO CÁO PHÂN TÍCH của CTCK (Simplize, theo mã) ---- */
 const repCache=new Map();
-function recStyle(r){
-  r=(r||'').toUpperCase();
-  if(/MUA|KHẢ QUAN|TÍCH LŨY|TĂNG|OUTPERFORM|BUY|ADD/.test(r)) return 'background:var(--green);color:#04240f';
-  if(/BÁN|KÉM|SELL|UNDERPERFORM|REDUCE/.test(r))              return 'background:var(--red);color:#fff';
-  if(/TRUNG LẬP|NẮM GIỮ|NEUTRAL|HOLD/.test(r))                return 'background:var(--yellow);color:#332703';
-  return 'background:#3a3a44;color:#c9c9d2';
+/* recStyle ĐÃ XOÁ 16/08/2026 (nó tô xanh chữ "MUA", đỏ chữ "BÁN"). Trang này tự chứa lõi
+   giá nên cũng phải tự chứa bảng CTCK — bản sao của CP.CTCK_WEB/CP.ctckLink trong core.js;
+   sửa một chỗ thì sửa cả hai, đúng luật "cặp hàm trùng lặp" của file này. */
+const CTCK_WEB={
+  'SSI':'https://www.ssi.com.vn',            'HSC':'https://www.hsc.com.vn',
+  'VNDS':'https://www.vndirect.com.vn',      'VIETCAP':'https://www.vietcap.com.vn',
+  'VCSC':'https://www.vietcap.com.vn',       'ACBS':'https://acbs.com.vn',
+  'DSC':'https://www.dsc.com.vn',            'FPTS':'https://www.fpts.com.vn',
+  'MAS':'https://masvn.com',                 'BSC':'https://www.bsc.com.vn',
+  'MBS':'https://mbs.com.vn',                'KBSV':'https://www.kbsec.com.vn',
+  'SHS':'https://www.shs.com.vn',            'VPBS':'https://vpbanks.com.vn',
+  'BVSC':'https://bvsc.com.vn',              'KIS':'https://www.kisvn.vn',
+  'SHINHAN':'https://www.shinhansec.com.vn', 'VCBS':'https://www.vcbs.com.vn',
+  'ABS':'https://abs.vn',                    'YUANTA':'https://yuanta.com.vn',
+  'VDSC':'https://www.vdsc.com.vn',          'VDS':'https://www.vdsc.com.vn',
+  'PHS':'https://www.phs.vn',                'AGRISECO':'https://agriseco.com.vn',
+  'AGR':'https://agriseco.com.vn',           'PSI':'https://www.psi.vn',
+  'CTS':'https://www.cts.vn',                'AAS':'https://aas.com.vn',
+  'NHSV':'https://nhsv.vn',                  'KAFI':'https://kafi.vn',
+  'VNDIRECT':'https://www.vndirect.com.vn',  'MIRAE':'https://masvn.com',
+};
+/* KHỚP TRỌN TỪ, không khớp chuỗi con — 'SBSC' chứa 'BSC' nên `indexOf` link sai nhà.
+   Xem ghi chú đầy đủ ở CP.ctckLink trong core.js. Hai bản phải giống hệt nhau. */
+function ctckLink(src){
+  const s=String(src||'').trim().toUpperCase();
+  if(!s) return '';
+  if(CTCK_WEB[s]) return CTCK_WEB[s];
+  for(const t of s.split(/[^A-Z0-9]+/)) if(t&&CTCK_WEB[t]) return CTCK_WEB[t];
+  return '';
 }
 async function renderReports(sym,showLoading){
   const box=$('detReports'), src=$('repSrc');
@@ -2034,13 +2068,13 @@ async function renderReports(sym,showLoading){
   src.textContent=`${data.total} báo cáo`;
   const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
   box.innerHTML=data.items.slice(0,8).map(r=>{
-    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${recStyle(r.rec)}">${esc(r.rec)}</span>`:'';
-    const mt=r.target?`<span class="mt">MT ${fmtD(r.target)}</span>`:'';
-    const link=r.pdf?`href="${esc(r.pdf)}" target="_blank" rel="noopener"`:'href="#" onclick="return false"';
-    return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${esc(r.source)}</span>`+
-      `<span class="dt">${esc(r.date)}</span></div>`+
-      `<a class="rt" ${link}>${esc(r.title)}</a></div>`;
-  }).join('')+`<div class="subnote" style="margin-top:6px">Nguồn: tổng hợp CTCK qua Simplize · bấm để mở PDF</div>`;
+    const ng=String(r.date||'').indexOf('-')>0?r.date.slice(0,10).split('-').reverse().join('/'):(r.date||'');
+    const u=ctckLink(r.source);
+    const noi=`Báo cáo của <b>${esc(r.source||'CTCK')}</b>${ng?` — <b>${esc(ng)}</b>`:''}`;
+    return `<div class="rp">${u?`<a class="rp1" href="${u}" target="_blank" rel="noopener">${noi} ↗</a>`
+                              :`<span class="rp1">${noi}</span>`}</div>`;
+  }).join('')+`<div class="subnote" style="margin-top:6px">Nguồn: tổng hợp từ các công ty chứng khoán. `
+   +`CPVN không dẫn lại khuyến nghị hay giá mục tiêu.</div>`;
 }
 
 /* ---- chips & refresher ---- */
@@ -2222,12 +2256,13 @@ function wireSources(){
   };
 
   // (4) BÁO CÁO PHÂN TÍCH theo mã — Simplize analysis-report (CORS *, không token).
-  //     Báo cáo của CTCK: nguồn (SSI/HSC/VND...), khuyến nghị, giá mục tiêu, link PDF.
+  //     CHỈ LẤY DỮ KIỆN "CÓ BÁO CÁO": CTCK nào, ngày nào. Khuyến nghị (`recommend`), giá
+  //     mục tiêu (`targetPrice`), tiêu đề và link PDF (`attachedLink`) đã gỡ 16/08/2026 —
+  //     lý do đầy đủ ở refresh_daily.work_news. Đừng lấy lại "cho đủ trường".
   SRC.reports=async(sym)=>{
     const j=await fetch(`https://api2.simplize.vn/api/company/analysis-report/list?ticker=${sym}&page=0&size=12`).then(r=>r.json());
     return { total:j.total||0, items:(j.data||[]).map(r=>({
-      source:r.source||'', rec:r.recommend||'', target:r.targetPrice||null,
-      date:r.issueDate||'', ago:r.issueDateTimeAgo||'', title:r.title||'', pdf:r.attachedLink||'',
+      source:r.source||'', date:r.issueDate||'',
     })) };
   };
 

@@ -49,13 +49,13 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
 | `data/cocau/{MÃ}.json` | **Cơ cấu lợi nhuận theo mảng** (1.526 mã, 1,2MB) + dư nợ cho vay ký quỹ của CTCK. Nhãn dòng lưu MỘT LẦN ở `data/cocau/_nhan.json` theo 4 nhóm của Simplize. Nguồn chỉ sâu **15 quý / 10 năm** — xem mục CƠ CẤU LỢI NHUẬN |
-| `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
+| `data/news/` `data/profile/` | Tin + **sự kiện có báo cáo CTCK** (chỉ `source`+`date`, xem *Ranh giới pháp lý*) · hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
 | `data/quy.json` | Danh mục các quỹ: quỹ → mã đang nắm + giá trị + **kỳ công bố**. Cùng script |
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
-| `data/chudiem.json` | Chủ điểm đầu tư **dẫn nguồn SSI** — sơ đồ 3 trục nhập tay + khuyến nghị/giá mục tiêu SSI tự cào. `tools/build_chudiem.py` |
+| `data/chudiem.json` | Chủ điểm đầu tư **dẫn nguồn SSI** — sơ đồ 3 trục nhập tay + **NGÀY** báo cáo SSI gần nhất mỗi mã. Khuyến nghị và giá mục tiêu đã gỡ 16/08/2026, xem *Ranh giới pháp lý*. `tools/build_chudiem.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
 ## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
@@ -512,15 +512,17 @@ giá sai hoặc giá nhảy — đừng đẩy.
   có `ticker=`** (để rỗng trả 0 bản ghi) nên không có cửa lấy báo cáo chiến lược toàn thị
   trường. Sơ đồ ba trục nằm trong slide báo cáo chiến lược → **nhập tay** ở bảng `SO_DO` của
   `tools/build_chudiem.py`, SSI ra kỳ mới thì sửa đúng bảng đó và cập nhật trường `ky`.
-  **Phần TỰ CẬP NHẬT được** là khuyến nghị + giá mục tiêu từng mã của SSI: đã nằm sẵn trong
-  `data/news/{MÃ}.json` (bước 7 cào từ Simplize, 97 báo cáo SSI trên 61 mã) — build_chudiem
-  rút bản mới nhất mỗi mã nên chạy SAU bước 7.
-  > **GHI NGUỒN LÀ RÀNG BUỘC, KHÔNG PHẢI TRANG TRÍ** — đây là khuyến nghị đầu tư của một đơn
-  > vị có giấy phép, chủ trang thì không. Tên nguồn phải nằm ở đầu mục, lời miễn trừ nằm ngay
-  > dưới, và ngày ra báo cáo phải đi kèm từng mã (báo cáo cũ thì giá mục tiêu hết giá trị
-  > tham chiếu). Đừng rút gọn mấy thứ đó cho gọn mắt.
-  > **Giá mục tiêu tính bằng ĐỒNG/cổ phiếu** — nhét vào `ty()` (đơn vị tỷ) thì 105.900 đ hiện
-  > thành "0 tỷ", đọc như đang khuyên mua một mã vô giá trị.
+  **Phần TỰ CẬP NHẬT được** nay chỉ còn **NGÀY** báo cáo SSI gần nhất mỗi mã, rút từ
+  `data/news/{MÃ}.json` (bước 7) — build_chudiem chạy SAU bước 7.
+  > **KHUYẾN NGHỊ VÀ GIÁ MỤC TIÊU ĐÃ GỠ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.** Bản cũ hiện badge
+  > MUA/BÁN, giá mục tiêu, và `ch` = chênh % giữa giá mục tiêu với giá hiện tại (comment cũ
+  > gọi nó là "con số đáng xem nhất" — đó chính là vấn đề: một lời khuyên mua diễn đạt bằng
+  > phần trăm). Ghi nguồn KHÔNG cứu được: khoản 32 Điều 4 Luật CK không đòi phân tích phải do
+  > mình viết ra. Xem mục **Ranh giới pháp lý**.
+  > **TÊN TRỤC PHẢI GỌI TÊN CHỦ ĐIỂM, KHÔNG PHÁN XÉT MÃ.** "Hưởng lợi từ nâng hạng" → "Nâng
+  > hạng thị trường"; "Định giá hấp dẫn" → "Chủ điểm định giá". Cũng **đừng** đổi sang tên
+  > nghe như CPVN tự đo ("E/P cao nhất nhóm") — danh sách mã là do SSI chọn, gắn nhãn đo
+  > lường vào là nhận vơ một phương pháp không có thật.
 - **ĐIỀU HƯỚNG: MENU THẢ XUỐNG KHI RÊ CHUỘT (10/08/2026) — nay CHỈ CÒN CHO MÁY BÀN.**
   Từ 11/08/2026 khổ ≤760px ẩn hẳn dải này (`header .tabs{display:none!important}` trong
   `mobi.css`) và dùng thanh tab đáy — xem mục **Giao diện mobile** bên dưới. Mọi luật rê
@@ -978,7 +980,68 @@ Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó 
 - **Gộp ngành** (`SECTOR_EXPLICIT` + ngành <4 mã dồn về "Khác") phải **y hệt** giữa
   `core.js` và `bubbles.html`, nếu không cùng tên ngành ra số mã khác nhau.
 - Mọi `innerHTML` từ nguồn ngoài phải qua `CP.esc`; HTML thô của Simplize qua `sanHTML()`.
-- Nội dung là **thống kê mô tả quá khứ, không khuyến nghị mua bán**.
+- Nội dung là **thống kê mô tả quá khứ, không khuyến nghị mua bán** — xem mục dưới.
+
+## Ranh giới pháp lý — ĐỌC TRƯỚC KHI THÊM BẤT KỲ TÍNH NĂNG NÀO
+
+Rà soát 16/08/2026. Luật nền: **khoản 32 Điều 4 Luật CK 2019** định nghĩa *tư vấn đầu tư
+chứng khoán* = "cung cấp cho khách hàng kết quả phân tích, báo cáo phân tích **và đưa ra
+khuyến nghị** liên quan đến việc mua, bán, nắm giữ chứng khoán"; **khoản 4 Điều 12** cấm làm
+việc đó khi chưa được UBCKNN cấp phép. CPVN không phải công ty chứng khoán.
+
+> **ĐIỀU LUẬT KHÔNG ĐÒI PHÂN TÍCH PHẢI DO MÌNH VIẾT RA.** Dẫn lại khuyến nghị của một đơn vị
+> CÓ giấy phép vẫn là "cung cấp cho khách hàng … khuyến nghị". Ghi nguồn không miễn trách.
+> Án lệ sát nhất: **CTCP Đầu tư ITP, QĐ 197/QĐ-XPHC ngày 17/4/2026** — đăng báo cáo phân tích
+> và khuyến nghị mua/bán/nắm giữ lên website riêng, **phạt 225 triệu + đình chỉ 4 nhóm hoạt
+> động chứng khoán trong 2 năm**. Không thu phí, không hợp đồng, chỉ đăng lên web là đủ.
+
+**BỐN THỨ ĐÃ GỠ, ĐỪNG DỰNG LẠI DÙ CÓ VẺ "THIẾU THÔNG TIN":**
+
+| Đã gỡ | Ở đâu | Vì sao |
+|---|---|---|
+| `rec` / `target` / `title` / `pdf` của báo cáo CTCK | `refresh_daily.work_news` · `core.js loadNews` · `bubbles.SRC.reports` · 282 file `data/news` (7.696 trường) | khuyến nghị + giá mục tiêu + PDF có bản quyền |
+| `kn` / `tp` / `ch` / `pdf` / `knSSI` của Chủ điểm | `build_chudiem.py` · `congcu.js` · `data/chudiem.json` | như trên; `ch` là lời khuyên mua viết bằng % |
+| `riskLevel` | `refresh_daily.work_prof` · `backfill_profiles.py` · 1.458 file `data/profile` | xếp hạng rủi ro của bên thứ ba về một mã cụ thể; chưa từng hiển thị |
+| `recStyle` / `CP.recStyle` / `cdBadge` + CSS `.rec .mt .rt .dl .cdkn .cdtp .cdch` | 4 trang | hàm tô xanh chữ "MUA", đỏ chữ "BÁN" |
+
+**Còn được giữ:** CTCK nào đã ra báo cáo và **ngày nào** — đó là dữ kiện, không phải ý kiến.
+`CP.reportRow()` + `CP.CTCK_WEB`/`CP.ctckLink()` dựng một dòng *"Báo cáo của **SSI Research**
+— **05/03/2026**"* link về trang phân tích của chính CTCK đó. **`bubbles.html` giữ bản sao
+`CTCK_WEB`/`ctckLink`** (trang này tự chứa lõi) — sửa một chỗ phải sửa cả hai.
+
+**BỐN LUẬT KHÔNG ĐƯỢC PHÁ:**
+1. **Không có chữ mua / bán / giá mục tiêu / khuyến nghị** ở bất kỳ đâu — của mình hay dẫn
+   lại đều như nhau. Cũng đừng dùng "tiềm năng", "hấp dẫn", "mã tốt", "đáng mua", "hưởng lợi".
+   Thay bằng: *đạt tiêu chí*, *thống kê mô tả*, *xếp theo chỉ số*.
+2. **Bộ lọc là CÔNG CỤ ĐO, không phải danh mục gợi ý.** Pro hiện là danh sách 30 mã chốt sẵn
+   theo tiêu chí của chủ trang — **việc còn nợ**: đưa `PRO_N`/`PRO_LIQ`/`PRO_FLAT` và bốn
+   trọng số lên giao diện cho người dùng tự chỉnh, hiện điểm thành phần từng mã. Khi người
+   dùng tự chọn tiêu chí thì kết quả là của họ.
+3. **Không lưu văn bản hay file của người khác.** Con số là dữ kiện, không được bảo hộ quyền
+   tác giả; câu chữ và tài liệu thì có. Bồi thường dân sự do toà ấn định tới **1 tỷ**
+   (Điều 205 Luật SHTT sửa đổi, hiệu lực 01/04/2026) — cao hơn hẳn phạt hành chính 10–35tr.
+   **Việc còn nợ**: `data/profile` còn 1.526 hồ sơ chứa văn bản biên tập của nguồn
+   (`overview`/`services`/`strategy`/`risk`, markup còn nguyên `FONT-FAMILY: Arial`).
+4. **Thu ít dữ liệu người dùng nhất có thể.** Hiện site **không có form, không cookie, không
+   analytics, không tài nguyên ngoài** — chỉ localStorage nằm trên máy người dùng. Giữ
+   nguyên trạng thái đó: Luật BVDLCN 91/2025 có trần **3 tỷ / 5% doanh thu**, cao nhất trong
+   cả hồ sơ, và hiện đang bằng 0.
+
+**MIỄN TRỪ (`.mientru`) ở chân CẢ BỐN TRANG** — ba câu, thiếu câu nào cũng mất tác dụng:
+mô tả quá khứ · không phải CTCK · **người vận hành có thể nắm giữ cổ phiếu xuất hiện trên
+trang**. Câu ba là **công bố vị thế**, không phải câu khách sáo: chủ trang là nhà đầu tư cá
+nhân có nắm giữ thật, nên **tuyệt đối không được viết "không nắm giữ"**. Nó cũng là lá chắn
+cho luật thao túng — khoản thao túng của Luật CK sửa đổi 2024 bắt vào hành vi *"đưa ra ý
+kiến … sau khi đã nắm giữ vị thế"*, mà yếu tố cấu thành là **lợi thế ẩn**; công khai thì
+không còn ẩn. Hệ quả trực tiếp: **đừng bao giờ thêm một danh sách mã do chủ trang chọn** —
+đó là chỗ biến vi phạm hành chính thành trách nhiệm hình sự (Điều 211 BLHS).
+
+**CÒN NỢ, chưa làm trong đợt này** (xếp theo mức rủi ro giảm dần): mở khoá bộ lọc Pro · viết
+lại 1.526 hồ sơ doanh nghiệp từ nguồn gốc · lọc ~5.800 tin nguồn **báo chí** khỏi `data/news`
+và nhánh live `core.js:626` (giữ 17.786 tin CBTT của HOSE/HNX — NĐ 147/2024 coi việc **đăng
+đường dẫn** tới tin báo chí là dấu hiệu của trang TTĐT tổng hợp phải xin phép) · chỉ hiện cổ
+đông ≥5% · User-Agent tự định danh + rate limit cho crawler · xin thoả thuận dữ liệu với
+VNDirect · pháp nhân + Điều khoản + Chính sách bảo mật trước khi thu phí.
 
 ## Ghi chú từng trang
 
@@ -1031,21 +1094,40 @@ hình, đường biên ròng chạy suốt bề ngang với một chữ V cắm 
 Cách chặn: `kqkdTable` ghi lại danh sách cột vừa vẽ vào `finColsVe`, mọi lượt vẽ lại đi
 qua `veLaiFinChart()`. Bất biến nằm ở CẤU TRÚC chứ không phải ở việc nhớ truyền đúng.
 
-**KHỐI "LỢI NHUẬN ĐẾN TỪ ĐÂU" (`#segBox`, `drawSegChart`) ĐỨNG TRÊN bảng KQKD** — user
-chốt 15/08/2026. Cột chồng theo mảng kinh doanh, đọc `data/cocau`, thiếu file thì tự ẩn cả
-khối. **Cố ý KHÔNG bám cột bảng như `#finCv`**: nguồn chỉ sâu 15 quý còn bảng mở ra được cả
-chuỗi dài, ép chung một trục là hoặc cắt cụt biểu đồ hoặc dựng cột rỗng — nên nó tự vẽ nhãn
-kỳ của mình, chỉ ăn theo nút Theo quý/Theo năm. Ba thứ phải giữ:
-① **Không kê chiều cao tối thiểu cho cột con** (khác `drawFinChart` vốn `Math.max(1.5,…)`):
-đây là cột CHỒNG, nống một mảng bé lên là tổng cột không còn bằng tổng các mảng, mắt đọc ra
-một tỷ trọng không có thật. Mảng quá bé thì rê chuột vào có số đầy đủ.
-② **Listener rê chuột gắn MỘT LẦN ở mức tài liệu**, không gắn trong `drawSegChart` — hàm đó
-chạy lại theo resize/đổi đèn/đổi kỳ, gắn bên trong là chồng listener vô hạn.
-③ **Nhãn chú giải rút gọn** (`segNgan` cắt tiền tố "Lợi nhuận từ hoạt động…"/"Lãi/lỗ thuần
-từ…") vì tiêu đề khối đã nói "Lợi nhuận" — để nguyên thì riêng cụm chú giải cao **138px**
-trên màn 375. Nhưng **rút gọn mà đụng tên thì trả lại tên đầy đủ cho cả cụm đụng**: mẫu bảo
-hiểm có cả "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác", rút xong thành hai mục "Khác"
-hai màu đứng cạnh nhau, đọc ra như lỗi dữ liệu. Tên đầy đủ luôn còn ở `title` và thẻ rê chuột.
+**"LỢI NHUẬN ĐẾN TỪ ĐÂU" — NAY LÀ DÒNG CUỐI BẢNG KQKD (`veCoCauRows`), KHÔNG CÒN BIỂU ĐỒ.**
+User chốt 16/08/2026: *"bỏ phần lợi nhuận đến từ đâu theo kiểu biểu đồ đi, đưa xuống dữ liệu
+báo cáo tài chính và đánh màu cho nó là được"* — cùng lối trình bày với chỉ số đặc thù ngành
+ở cuối bảng CĐKT. `#segBox`, canvas `#segCv`, `#segTip`, `drawSegChart`, `SEG_MAU`, `segHover`
+và listener rê chuột **đã xoá hết**; giữ lại `loadCoCau` và `segNgan`. Năm thứ phải giữ:
+① **Bám ĐÚNG cột bảng qua `finColsVe`** (thứ `kqkdTable` vừa dựng) → phải chạy SAU
+`kqkdTable` trong cùng lượt. Bản biểu đồ cũ cố ý KHÔNG bám cột; nay nằm trong bảng thì bắt
+buộc phải bám. Kỳ ngoài tầm nguồn (15 quý / 10 năm) in `—`, **đừng kéo số gần nhất lấp vào**.
+② **`fillMcap` xong là `kqkdTable` dựng lại tbody từ đầu → PHẢI gọi lại `veCoCauRows`.**
+Quên là mấy dòng này biến mất ngay khi vốn hoá về — im lặng, và chỉ lộ ở mã tải chậm.
+③ **Chế độ NĂM bung thêm cột QUÝ (`r._q`) → cột đó tra trục QUÝ, cột năm tra trục NĂM.**
+Tra nhầm trục là dán số cả năm xuống dưới một cột quý. Đã kiểm BVH: năm 2025 = 1.238, bốn
+quý bung ra −177+245+593+577 = 1.238, khớp tuyệt đối.
+④ **Màu chỉ nói HAI điều**: đỏ = mảng đang lỗ · xanh = mảng lãi lớn nhất CỦA CHÍNH CỘT ĐÓ.
+Không tô thang ba bậc như chỉ số ngành — ở đây không có ngưỡng "tốt/xấu" nào đo được, mảng
+nhỏ không phải là dở. Tính theo từng cột nên đọc ngang là thấy nguồn lãi chính đổi từ mảng
+nào sang mảng nào.
+⑤ **Rút gọn tên mà đụng nhau thì trả lại tên đầy đủ cho CẢ CỤM đụng** (`dem`/`nhanGon`):
+mẫu bảo hiểm có cả "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác", rút xong thành hai dòng
+cùng tên "Khác" nằm sát nhau, đọc ra như lỗi dữ liệu. **Bẫy này đã trả giá hai lần** — một
+lần ở bản biểu đồ, một lần nữa khi viết lại thành bảng và làm rơi mất đoạn xử lý.
+> **Q4 LỆCH GIỮA HAI NGUỒN — đo 16/08/2026, chưa có cách chữa, chỉ mới cảnh báo.** Đối chiếu
+> `ps1` với lợi nhuận gộp của `data/fin` (nguồn 24hMoney, đường lấy số độc lập) trên **8.782
+> cặp mã-quý** nhóm sản xuất: Q1 khớp **99,77%** · Q2 **99,08%** · Q3 **99,72%** · **Q4 chỉ
+> 82,01%**, và Q4 chiếm **92%** toàn bộ ca lệch (TMS Q4/25: 1.166,9 vs 166,9). Gần như chắc
+> chắn do Q4 riêng lẻ suy ra bằng *(cả năm đã kiểm toán − luỹ kế 9 tháng)*, hai nguồn chốt ở
+> hai thời điểm khác nhau. Không xác định được bên nào đúng nên **vẫn hiện số, kèm `title`
+> cảnh báo trên đúng ô Q4**. Đừng lẳng lặng lấy `fin.gross` đè lên `ps1` ở Q4: chỉ chữa được
+> 1 trong 4-6 dòng, phần còn lại vẫn của nguồn kia, thành ra một cột trộn hai nguồn.
+> **KHÔNG PHẢI BÁO CÁO BỘ PHẬN THEO NGÀNH HÀNG.** Đây là phân tách theo **loại lợi nhuận
+> trên báo cáo KQKD**. Với ngân hàng và CTCK thì hai thứ trùng nhau (lãi thuần, phí dịch vụ,
+> tự doanh, ký quỹ đúng là các mảng kinh doanh) nên tên mục đọc rất hợp; nhưng **với doanh
+> nghiệp sản xuất thì không** — HPG chỉ hiện "gộp bán hàng 10.488 tỷ", không tách được thép
+> với nông nghiệp. Số đó nằm ở *thuyết minh bộ phận* của BCTC, không nguồn nào đang dùng có.
 
 Bảng Cân đối kế toán kết thúc bằng nhóm dòng **Chỉ số đặc thù ngành** (`veNganhRows`,
 đọc `data/nganh/{MÃ}.json`, thiếu file thì không chèn gì) — trình bày y hệt dòng bảng,

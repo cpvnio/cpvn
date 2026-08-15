@@ -2067,17 +2067,14 @@ function tapDoanNote(){
     +'ngoài (vốn hoá GAS đã gồm 35% PGS).</div>';
 }
 /* ---- CHỦ ĐIỂM ĐẦU TƯ — DẪN NGUỒN SSI RESEARCH ----------------------------------
-   ĐÂY LÀ Ý KIẾN KHUYẾN NGHỊ CỦA BÊN THỨ BA, KHÔNG PHẢI của trang. Trang chỉ dẫn lại,
-   nên tên nguồn phải nằm ngay đầu mục và lời miễn trừ nằm ngay dưới — cả hai KHÔNG
-   được rút gọn cho gọn mắt.
+   CÁCH PHÂN NHÓM LÀ CỦA BÊN THỨ BA, KHÔNG PHẢI của trang. Tên nguồn phải nằm ngay đầu mục
+   và lời miễn trừ nằm ngay dưới — cả hai KHÔNG được rút gọn cho gọn mắt.
 
-   Sơ đồ ba trục nhập tay (SSI không mở dữ liệu này ra ngoài — xem tools/build_chudiem.py),
-   còn khuyến nghị + giá mục tiêu từng mã thì tự cập nhật mỗi phiên từ kho báo cáo. */
-function cdBadge(kn){
-  const k=(kn||'').toUpperCase();
-  const m=/MUA|KHẢ QUAN/.test(k)?'mua':/BÁN|KÉM/.test(k)?'ban':/TRUNG LẬP|NẮM GIỮ/.test(k)?'giu':'';
-  return kn?'<b class="cdkn '+m+'">'+esc(kn)+'</b>':'';
-}
+   Sơ đồ ba trục nhập tay (SSI không mở dữ liệu này ra ngoài — xem tools/build_chudiem.py).
+   Phần tự cập nhật mỗi phiên nay CHỈ CÒN NGÀY ra báo cáo gần nhất của từng mã; khuyến nghị
+   và giá mục tiêu đã gỡ hẳn 16/08/2026 — xem CLAUDE.md mục "Ranh giới pháp lý". */
+/* cdBadge ĐÃ XOÁ 16/08/2026 — nó dựng badge MUA/BÁN/TRUNG LẬP tô xanh đỏ cho từng mã.
+   Class CSS `.cdkn`, `.cdtp`, `.cdch` đi kèm cũng đã gỡ. Đừng dựng lại. */
 /* SƠ ĐỒ BA VÒNG (Venn) — dựng lại đúng dạng slide gốc của nguồn, vẽ bằng SVG nên co giãn
    theo bề ngang và đổi màu theo giao diện sáng/tối. Ba vòng tô cùng một độ mờ, chỗ chồng
    nhau tự đậm lên — đó chính là thứ nói lên "mã này hội tụ mấy chủ điểm", khỏi cần chú thích. */
@@ -2111,8 +2108,10 @@ function vennSVG(D,T){
     for(const x of vung[k]){
       const c=ST.map.get(x.s), kn=x.ssi||{};
       const chu=c&&c.chg!=null?'  '+pct(c.chg):'';
+      /* Tooltip trước đây đọc ' · SSI MUA · mục tiêu 105.900 đ'. Gỡ 16/08/2026 cùng với
+         badge và giá mục tiêu ở thẻ mã — xem ghi chú ở `the()` bên dưới. */
       g+='<g class="cdsym" data-sym="'+x.s+'"><title>'+esc(x.s+(c?' · '+shortName(c.name||''):'')
-          +(kn.kn?' · SSI '+kn.kn:'')+(kn.tp?' · mục tiêu '+Math.round(kn.tp).toLocaleString('en-US')+' đ':''))+'</title>'
+          +(kn.d?' · SSI có báo cáo '+kn.d.split('-').reverse().join('/'):''))+'</title>'
         +'<text class="vsym" x="'+ax+'" y="'+y+'">'+x.s
         +'<tspan class="vpc '+cls(c&&c.chg)+'">'+esc(chu)+'</tspan></text></g>';
       y+=LH;
@@ -2178,23 +2177,23 @@ function chuDiemPanel(){
   const nhom=[[3,'Trọng tâm — hội tụ cả 3 chủ điểm'],[2,'Giao hai chủ điểm'],[1,'Từng chủ điểm riêng']];
   const the=x=>{
     const c=ST.map.get(x.s), k=x.ssi||{};
-    /* CHÊNH so với giá mục tiêu của SSI — con số đáng xem nhất, nhưng chỉ tính khi có
-       ĐỦ cả giá hiện tại lẫn giá mục tiêu, đừng suy ra từ một nửa dữ liệu */
-    const gia=c&&c.close>0?c.close:0, tp=k.tp||0;
-    const ch=(gia&&tp)?(tp-gia)/gia*100:null;
+    /* GỠ 16/08/2026 — ba thứ, nặng dần:
+       · badge `cdBadge(k.kn)` in thẳng chữ MUA / BÁN / TRUNG LẬP, tô xanh đỏ;
+       · `k.tp` giá mục tiêu;
+       · `ch` = (giá mục tiêu − giá hiện tại)/giá hiện tại — comment cũ gọi nó là "con số
+         đáng xem nhất", và đó chính là vấn đề: một lời khuyên mua diễn đạt bằng phần trăm.
+       Cả ba đều là khuyến nghị đầu tư của đơn vị CÓ giấy phép, dẫn lại vẫn thuộc khoản 32
+       Điều 4 Luật CK. Còn lại: mã nằm ở chủ điểm nào (cách phân nhóm của SSI, có ghi nguồn)
+       và ngày SSI ra báo cáo gần nhất. Đừng dựng lại vì "thiếu thông tin". */
     return '<div class="cdcard" data-sym="'+x.s+'">'
       +'<div class="cdtop">'+(c?logoHTML(c):'')
       +'<span class="cdid"><b>'+x.s+'</b><i>'+esc(c?shortName(c.name||''):'')+'</i></span>'
       +'<span class="cdpc '+cls(c&&c.chg)+'">'+(c?pct(c.chg):'—')+'</span></div>'
       +'<div class="cdtruc">'+x.truc.map(id=>T[id]
           ?'<em style="color:'+T[id].mau+';border-color:'+T[id].mau+'">'+esc(T[id].ten)+'</em>':'').join('')+'</div>'
-      +(k.kn||k.tp?'<div class="cdssi">'+cdBadge(k.kn)
-          /* GIÁ MỤC TIÊU LÀ GIÁ MỘT CỔ PHIẾU, tính bằng ĐỒNG — nhét vào ty() (đơn vị tỷ)
-             thì 105.900 đ ra thành "0 tỷ", đọc như báo cáo khuyên mua một mã vô giá trị */
-          +(tp?'<span class="cdtp">mục tiêu <b>'+Math.round(tp).toLocaleString('en-US')+' đ</b></span>':'')
-          +(ch!=null?'<span class="cdch '+(ch>=0?'up':'dn')+'">'+(ch>=0?'+':'')+ch.toFixed(0)+'%</span>':'')
-          +(k.d?'<span class="cdd">'+k.d.split('-').reverse().join('/')+'</span>':'')
-          +'</div>':'<div class="cdssi trong">SSI chưa có báo cáo riêng cho mã này trong kho</div>')
+      +(k.d?'<div class="cdssi">SSI Research có báo cáo <b>'
+             +k.d.split('-').reverse().join('/')+'</b></div>'
+           :'<div class="cdssi trong">Kho chưa ghi nhận báo cáo SSI cho mã này</div>')
       +'</div>';
   };
   let html='<div class="panel"><div class="ph">Chủ điểm đầu tư'
@@ -2209,15 +2208,17 @@ function chuDiemPanel(){
       +'<div class="cdgrid">'+ds.map(the).join('')+'</div>';
   }
   html+='</div></div>'
-    +'<div class="note"><b>Dẫn nguồn '+esc(D.nguon||'SSI Research')+'</b>'+(D.ky?' — '+esc(D.ky):'')+'. '
-    +'Sơ đồ ba chủ điểm là quan điểm của '+esc(D.nguon||'SSI Research')+', CPVN.IO chỉ dẫn lại và '
-    +'ghép thêm giá cùng khuyến nghị đang lưu trong kho, <b>không đưa ra khuyến nghị nào của riêng '
-    +'mình</b>. Khuyến nghị và giá mục tiêu từng mã lấy từ báo cáo phân tích của chính '
-    +esc(D.nguon||'SSI Research')+', tự làm mới mỗi phiên; ngày ghi cạnh mỗi mã là ngày ra báo cáo — '
-    +'báo cáo càng cũ thì giá mục tiêu càng ít còn giá trị tham chiếu. '
-    +'Sơ đồ thuần phân tích cơ bản và câu chuyện doanh nghiệp, <b>chưa tính tới dòng tiền, thanh khoản '
-    +'hay trạng thái của VN-Index</b>. Đây là thông tin tham khảo, không phải lời mời hay khuyến nghị '
-    +'mua bán.</div>';
+    /* Ghi chú viết lại 16/08/2026 cùng lượt gỡ khuyến nghị. Bản cũ nói "ghép thêm giá cùng
+       khuyến nghị đang lưu trong kho" và giải thích cách đọc giá mục tiêu — nay không còn
+       khuyến nghị lẫn giá mục tiêu nào để mà giải thích. Câu chữ phải theo kịp dữ liệu,
+       bằng không trang tự mô tả sai chính nó. */
+    +'<div class="note"><b>Cách phân nhóm theo '+esc(D.nguon||'SSI Research')+'</b>'
+    +(D.ky?' — '+esc(D.ky):'')+'. Sơ đồ ba chủ điểm là quan điểm của '
+    +esc(D.nguon||'SSI Research')+'; CPVN.IO chỉ dẫn lại cách phân nhóm và ngày ra báo cáo, '
+    +'<b>không dẫn lại khuyến nghị hay giá mục tiêu, và không đưa ra khuyến nghị nào của '
+    +'riêng mình</b>. Sơ đồ thuần phân tích cơ bản và câu chuyện doanh nghiệp, <b>chưa tính '
+    +'tới dòng tiền, thanh khoản hay trạng thái của VN-Index</b>. Đây là thông tin tham khảo, '
+    +'không phải lời mời hay khuyến nghị mua bán.</div>';
   return html;
 }
 /* ============================================ 2. DANH MỤC TẬP ĐOÀN (module riêng)
