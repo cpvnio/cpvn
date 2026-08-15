@@ -622,23 +622,29 @@ CP.loadNews=async function(sym){
   if(newsCache.has(sym)&&Date.now()-newsCache.get(sym).at<300000) return newsCache.get(sym).d;
   let news=null;
   if(!CP.OFFLINE){
+    /* NGUỒN SIMPLIZE news-event/list ĐÃ BỎ 16/08/2026 — ĐỪNG GỌI LẠI. Nó không trả url
+       thật của bài báo, chỉ có `slug` nội bộ; mở bài phải gọi THÊM một lượt tới Simplize,
+       hỏng thì đẩy người dùng sang simplize.vn. Đo 16/08: 8.966/9.847 tin báo chí trong
+       kho ở đúng tình trạng đó. Nay chỉ còn VNDirect finfo — nguồn có url thật. */
     try{
-      const [sim,vnd]=await Promise.all([
-        fetch(`https://api2.simplize.vn/api/company/news-event/list?ticker=${sym}&page=0&size=15`).then(r=>r.json()).catch(()=>null),
-        fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl`).then(r=>r.json()).catch(()=>null),
-      ]);
+      const vnd=await fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl`)
+        .then(r=>r.json()).catch(()=>null);
       const items=[];
-      for(const n of (sim&&sim.data)||[])
-        items.push({title:n.title,source:n.sourceNameDisplay||n.sourceName||'',ts:n.ts||0,slug:n.slug,url:null});
       for(const n of (vnd&&vnd.data)||[]){
         const ts=Date.parse((n.newsDate||'')+'T'+(n.newsTime||'00:00:00')+'+07:00')||0;
-        items.push({title:n.newsTitle,source:n.newsSource||'',ts,slug:null,url:n.newsUrl});
+        items.push({title:n.newsTitle,source:n.newsSource||'',ts,url:n.newsUrl});
       }
       if(items.length){
         items.sort((a,b)=>b.ts-a.ts);
+        /* BA CỔNG, y hệt refresh_daily.work_news — client và kho phải cùng luật, bằng
+           không nguồn sống trả về một rổ còn kho trả về rổ khác. */
+        const HAN=Date.now()-30*86400*1000;
         const seen=new Set(); news=[];
         for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45);
-          if(!k||seen.has(k)||!CP.tinDungMa(sym,it.title))continue; seen.add(k); news.push(it); }
+          if(!k||seen.has(k)||!CP.tinDungMa(sym,it.title)) continue;
+          if((it.ts||0)<HAN) continue;
+          if(!it.url||/simplize/i.test(it.url)) continue;
+          seen.add(k); news.push(it); }
       }
     }catch(e){}
     /* KHÔNG còn gọi analysis-report/list: cả mục báo cáo phân tích CTCK đã bỏ 16/08/2026
@@ -653,17 +659,11 @@ CP.loadNews=async function(sym){
   const d={news:news||[]};
   newsCache.set(sym,{at:Date.now(),d}); return d;
 };
-CP.openNewsItem=async function(n){
-  if(n.url){ window.open(n.url,'_blank','noopener'); return; }
-  if(n.slug&&!CP.OFFLINE){
-    try{
-      const j=await fetch(`https://api2.simplize.vn/api/company/news-event/detail/${n.slug}`).then(r=>r.json());
-      const u=j.data&&(j.data.sourceUrl||j.data.sourceWebsite);
-      window.open(u||'https://simplize.vn/tin-tuc','_blank','noopener'); return;
-    }catch(e){}
-  }
-  window.open('https://simplize.vn','_blank','noopener');
-};
+/* Mọi tin trong kho nay đều CÓ url thật (ba cổng lọc ở loadNews), nên mở thẳng.
+   Nhánh cũ dò `slug` rồi hỏi Simplize lấy sourceUrl, hỏng thì mở simplize.vn — đã bỏ
+   16/08/2026 cùng nguồn sinh ra slug. Không có url thì không làm gì, đừng đoán. */
+CP.openNewsItem=function(n){ if(n&&n.url) window.open(n.url,'_blank','noopener'); };
+;
 /* BÁO CÁO PHÂN TÍCH CTCK ĐÃ BỎ HẲN 16/08/2026 — CP.recStyle, CP.CTCK_WEB, CP.ctckLink,
    CP.reportRow đều xoá, cùng cả mục hiển thị ở cophieu.html và bubbles.html.
    Chặng đường đã đi, đừng lặp lại: bản đầu hiện badge MUA/BÁN + giá mục tiêu + nút tải

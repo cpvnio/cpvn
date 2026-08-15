@@ -49,7 +49,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
 | `data/cocau/{MÃ}.json` | **CHỈ CÒN dư nợ cho vay ký quỹ của công ty chứng khoán** (42 mã, 61KB) — khối lợi nhuận theo mảng đã thôi lấy 16/08/2026, xem mục *Cơ cấu lợi nhuận*. Nguồn chỉ sâu **15 quý / 10 năm** |
-| `data/news/` `data/profile/` | Tin + **sự kiện có báo cáo CTCK** (chỉ `source`+`date`, xem *Ranh giới pháp lý*) · hồ sơ DN, cổ đông, công ty con |
+| `data/news/{MÃ}.json` | Tin theo mã — **BA CỔNG: trong 30 ngày · có url thật · không trỏ Simplize** (16/08/2026). 4.894 tin / 1.435 mã, nguồn hnx.vn + hsx.vn + báo có link |
+| `data/profile/` | Hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
@@ -940,6 +941,31 @@ mắt không so thẳng được; chỉ câu chữ mới viết "nghìn tỷ".
 Mép vùng cuộn ngang phải có **dải mờ** (`.mfade`) — cắt phẳng giữa chữ trông như lỗi tràn.
 Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó là khung cuộn nên
 `::after` sẽ trôi theo nội dung thay vì đứng yên ở mép.
+
+## Tin tức — BA CỔNG LỌC, giống hệt ở CẢ BA NƠI
+
+User chốt 16/08/2026: *"tin chỉ nên đăng trong 30 ngày gần nhất … chỉ đưa tin có link dẫn
+qua bên các trang báo chính thống, nếu dẫn tới simplize thì bỏ luôn"*. Ba cổng:
+
+1. **Trong 30 ngày** — mục tin của trang mã là "gần đây có gì", không phải kho lưu trữ.
+2. **Phải có `url` thật** — không mở được bài tại nguồn thì lý do duy nhất để dẫn tin của
+   người khác cũng mất.
+3. **Không trỏ Simplize.**
+
+> **NGUỒN `api2.simplize.vn/news-event/list` ĐÃ BỎ HẲN — ĐỪNG GỌI LẠI.** Nó KHÔNG trả url
+> thật của bài, chỉ có `slug` nội bộ; muốn mở bài phải gọi THÊM một lượt tới Simplize hỏi
+> `sourceUrl`, lượt đó hỏng thì người dùng bị đẩy thẳng sang simplize.vn. Đo 16/08:
+> **8.966/9.847** tin báo chí trong kho ở đúng tình trạng đó — tức "dẫn nguồn rõ ràng, bấm
+> là sang trang họ" chỉ đúng với **9%** số tin. Nay chỉ còn VNDirect finfo (có url thật).
+> `openNews(slug)` của bubbles và nhánh `slug` trong `CP.openNewsItem` đã xoá theo.
+
+**BA NƠI PHẢI GIỐNG NHAU**: `refresh_daily.work_news` · `CP.loadNews` (core.js) ·
+`SRC.news` (bubbles.html). Lệch một chỗ là nguồn sống trả một rổ còn kho trả rổ khác, mà
+người dùng không có cách nào biết mình đang xem rổ nào.
+
+Kết quả lượt dọn: **27.633 → 4.894 tin**, 1.527 → 1.435 file, kho 5,6MB. Nguồn còn lại:
+hnx.vn 3.287 · hsx.vn 1.324 · tapchicongthuong.vn 193 · vndirect.com.vn 90.
+> Tin cũ **vẫn nằm trong lịch sử git** nếu sau này cần lấy lại.
 
 ## Quy ước toàn site
 

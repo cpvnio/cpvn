@@ -2012,7 +2012,7 @@ function paintNews(items){
     `<div class="ni"><a href="#" data-i="${i}">${esc(n.title)}</a>`+
     `<div class="meta">${esc(n.source)}${n.source&&n.ts?' · ':''}${n.ts?timeAgo(n.ts):''}</div></div>`).join('');
   box.querySelectorAll('a[data-i]').forEach(a=>a.onclick=e=>{ e.preventDefault();
-    const n=items[+a.dataset.i]; if(n.url) window.open(n.url,'_blank','noopener'); else if(n.slug) openNews(n.slug); });
+    const n=items[+a.dataset.i]; if(n&&n.url) window.open(n.url,'_blank','noopener'); });
 }
 
 /* ---- BÁO CÁO PHÂN TÍCH của CTCK (Simplize, theo mã) ---- */
@@ -2154,22 +2154,27 @@ function wireSources(){
     }).filter(d=>d.value>0);
   };
 
-  // (2) TIN TỨC theo mã — GỘP Simplize + VNDirect (link gốc, mới hơn), sắp mới nhất trước
+  // (2) TIN TỨC theo mã — CHỈ VNDirect finfo. Nguồn Simplize news-event/list đã bỏ
+  //     16/08/2026: nó không trả url thật của bài, chỉ có `slug` nội bộ nên muốn mở bài
+  //     phải gọi thêm một lượt tới Simplize, hỏng thì đẩy người xem sang simplize.vn.
+  //     Ba cổng lọc phải GIỐNG HỆT core.js và refresh_daily.work_news, bằng không nguồn
+  //     sống trả một rổ còn kho trả rổ khác.
   SRC.news=async(sym)=>{
-    const [sim,vnd]=await Promise.all([
-      fetch(`https://api2.simplize.vn/api/company/news-event/list?ticker=${sym}&page=0&size=15`).then(r=>r.json()).catch(()=>null),
-      fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsId,newsDate,newsTime,newsTitle,newsSource,newsUrl`).then(r=>r.json()).catch(()=>null),
-    ]);
+    const vnd=await fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsId,newsDate,newsTime,newsTitle,newsSource,newsUrl`)
+      .then(r=>r.json()).catch(()=>null);
     const items=[];
-    for(const n of (sim&&sim.data)||[])
-      items.push({title:n.title, source:n.sourceNameDisplay||n.sourceName||'', ts:n.ts||0, slug:n.slug, url:null});
     for(const n of (vnd&&vnd.data)||[]){
       const ts=Date.parse((n.newsDate||'')+'T'+(n.newsTime||'00:00:00')+'+07:00')||0;
-      items.push({title:n.newsTitle, source:n.newsSource||'', ts, slug:null, url:n.newsUrl});
+      items.push({title:n.newsTitle, source:n.newsSource||'', ts, url:n.newsUrl});
     }
     items.sort((a,b)=>b.ts-a.ts);
+    const HAN=Date.now()-30*86400*1000;
     const seen=new Set(), out=[];   // khử trùng theo tiêu đề
-    for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45); if(!k||seen.has(k))continue; seen.add(k); out.push(it); }
+    for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45);
+      if(!k||seen.has(k)) continue;
+      if((it.ts||0)<HAN) continue;
+      if(!it.url||/simplize/i.test(it.url)) continue;
+      seen.add(k); out.push(it); }
     return out;
   };
 
@@ -2253,13 +2258,8 @@ function wireSources(){
   };
 }
 /* mở bài báo gốc: gọi detail lấy sourceUrl rồi mở tab (list không có link) */
-async function openNews(slug){
-  try{
-    const j=await fetch(`https://api2.simplize.vn/api/company/news-event/detail/${slug}`).then(r=>r.json());
-    const u=j.data&&(j.data.sourceUrl||j.data.sourceWebsite);
-    window.open(u||`https://simplize.vn/tin-tuc`,'_blank','noopener');
-  }catch(e){ window.open('https://simplize.vn','_blank','noopener'); }
-}
+/* openNews(slug) ĐÃ XOÁ 16/08/2026: mọi tin nay đều có url thật nên mở thẳng, không còn
+   đường vòng hỏi Simplize lấy sourceUrl rồi rơi về simplize.vn khi hỏng. */
 
 /* ---------- KHỞI ĐỘNG ----------------------------------------------------- */
 (async function init(){

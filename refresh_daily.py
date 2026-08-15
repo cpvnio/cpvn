@@ -698,13 +698,12 @@ else:
 nlock=threading.Lock(); ndone=[0,0]
 def work_news(sym):
     o={"sym":sym,"updated":sess_date,"news":[]}
-    try:
-        j=get(f"https://api2.simplize.vn/api/company/news-event/list?ticker={sym}&page=0&size=15")
-        for n in j.get("data") or []:
-            o["news"].append({"title":n.get("title"),"source":n.get("sourceNameDisplay") or n.get("sourceName") or "",
-                              "ts":n.get("ts") or 0,"slug":n.get("slug"),"url":None})
-    except Exception: pass
-    time.sleep(0.08)
+    # NGUỒN SIMPLIZE news-event/list ĐÃ BỎ 16/08/2026 — ĐỪNG GỌI LẠI.
+    # Nó KHÔNG trả về url thật của bài báo, chỉ có `slug` nội bộ; muốn mở bài phải gọi
+    # THÊM một lượt tới Simplize để hỏi sourceUrl, lượt đó hỏng thì người dùng bị đẩy
+    # thẳng sang simplize.vn. Đo 16/08: 8.966/9.847 tin báo chí trong kho ở đúng tình
+    # trạng này — tức "dẫn nguồn rõ ràng, bấm là sang trang họ" chỉ đúng với 9% số tin.
+    # User chốt: chỉ đưa tin có link thẳng tới trang báo, dẫn tới Simplize thì bỏ.
     try:
         j=get(f"https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:{sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl")
         for n in j.get("data") or []:
@@ -723,9 +722,20 @@ def work_news(sym):
     # SSI gần nhất), mà Chủ điểm đầu tư nay cũng bỏ nốt -> không còn ai đọc.
     # Bớt được ~1.500 lượt gọi api2.simplize.vn mỗi lượt --full.
     seen=set(); dedup=[]
+    # BA CỔNG LỌC (user chốt 16/08/2026), theo thứ tự rẻ tới đắt:
+    #   · TRONG 30 NGÀY — tin cũ hơn thì không thêm vào kho nữa. Mục tin của trang mã là
+    #     "gần đây có gì", không phải kho lưu trữ; giữ vô hạn chỉ phình repo.
+    #   · PHẢI CÓ URL THẬT — không có link thì người đọc không mở được bài tại nguồn,
+    #     mà đó chính là lý do duy nhất để dẫn tin của người khác.
+    #   · KHÔNG TRỎ VỀ SIMPLIZE — dẫn người xem sang một sản phẩm cùng phân khúc thì
+    #     thà đừng đưa tin đó.
+    HAN = NOW*1000 - 30*86400*1000
     for it in sorted(o["news"],key=lambda x:-(x.get("ts") or 0)):
         k=(it.get("title") or "").lower()[:45]
         if not k or k in seen or not tin_dung_ma(sym,it.get("title")): continue
+        if (it.get("ts") or 0) < HAN: continue
+        u=(it.get("url") or "")
+        if not u or "simplize" in u.lower(): continue
         seen.add(k); dedup.append(it)
     o["news"]=dedup[:20]
     with nlock:
