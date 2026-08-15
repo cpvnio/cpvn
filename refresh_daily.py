@@ -697,7 +697,7 @@ else:
                     key=lambda s:-(board.get(s,{}).get("gtgd") or 0))[:200]
 nlock=threading.Lock(); ndone=[0,0]
 def work_news(sym):
-    o={"sym":sym,"updated":sess_date,"news":[],"reports":[]}
+    o={"sym":sym,"updated":sess_date,"news":[]}
     try:
         j=get(f"https://api2.simplize.vn/api/company/news-event/list?ticker={sym}&page=0&size=15")
         for n in j.get("data") or []:
@@ -716,25 +716,12 @@ def work_news(sym):
             o["news"].append({"title":n.get("newsTitle"),"source":n.get("newsSource") or "","ts":ts,
                               "slug":None,"url":n.get("newsUrl")})
     except Exception: pass
-    time.sleep(0.08)
-    try:
-        j=get(f"https://api2.simplize.vn/api/company/analysis-report/list?ticker={sym}&page=0&size=12")
-        o["total_reports"]=j.get("total") or 0
-        # CHỈ LƯU SỰ KIỆN "CÓ BÁO CÁO", KHÔNG LƯU NỘI DUNG KHUYẾN NGHỊ (16/08/2026).
-        # `recommend`/`targetPrice` là khuyến nghị mua-bán của một đơn vị CÓ GIẤY PHÉP tư vấn
-        # đầu tư chứng khoán; CPVN thì không có. Khoản 32 Điều 4 Luật CK 2019 định nghĩa tư
-        # vấn đầu tư là "cung cấp cho khách hàng kết quả phân tích, báo cáo phân tích VÀ đưa
-        # ra khuyến nghị" — điều luật KHÔNG đòi phân tích phải do mình viết ra, nên dẫn lại
-        # cũng là cung cấp. Án lệ: CTCP Đầu tư ITP, QĐ 197/QĐ-XPHC ngày 17/4/2026, phạt 225
-        # triệu + đình chỉ 4 nhóm hoạt động 2 năm chỉ vì đăng khuyến nghị lên website.
-        # `attachedLink` là file PDF báo cáo — phát tán là xâm phạm quyền tác giả của CTCK,
-        # một tầng trách nhiệm ĐỘC LẬP với giấy phép (bồi thường dân sự toà ấn định tới 1 tỷ
-        # theo Điều 205 Luật SHTT sửa đổi, hiệu lực 01/04/2026).
-        # `title` cũng bỏ: tiêu đề báo cáo tự nó là nhận định ("Mức định giá hấp dẫn…").
-        # Còn lại là DỮ KIỆN thuần: CTCK nào ra báo cáo, ngày nào.
-        for r in j.get("data") or []:
-            o["reports"].append({"source":r.get("source") or "","date":r.get("issueDate") or ""})
-    except Exception: pass
+    # BÁO CÁO PHÂN TÍCH CTCK: THÔI CÀO HẲN 16/08/2026.
+    # Trước đó rút dần: bỏ recommend/targetPrice/title/attachedLink (giữ mỗi source+date),
+    # rồi gỡ cả mục hiển thị vì nguồn không đưa được link tới bài báo cáo trên trang CTCK.
+    # Hộ tiêu thụ cuối cùng của mảng `reports` là tools/build_chudiem.py (lấy NGÀY báo cáo
+    # SSI gần nhất), mà Chủ điểm đầu tư nay cũng bỏ nốt -> không còn ai đọc.
+    # Bớt được ~1.500 lượt gọi api2.simplize.vn mỗi lượt --full.
     seen=set(); dedup=[]
     for it in sorted(o["news"],key=lambda x:-(x.get("ts") or 0)):
         k=(it.get("title") or "").lower()[:45]
@@ -743,7 +730,7 @@ def work_news(sym):
     o["news"]=dedup[:20]
     with nlock:
         ndone[0]+=1
-        if o["news"] or o["reports"]: ndone[1]+=1
+        if o["news"]: ndone[1]+=1
         else: return
         if ndone[0]%200==0: print(f"  tin tức {ndone[0]}/{len(ntargets)}",flush=True)
     jdump(o,os.path.join(NEWS_DIR,f"{sym}.json"))
@@ -1006,16 +993,9 @@ try:
     except Exception as e3:
         print(f"cotuc.json LỖI (không chặn pipeline): {e3}",flush=True)
         HL["cotuc"]={"ok":0,"err":str(e3)[:120]}
-    # CHỦ ĐIỂM ĐẦU TƯ (dẫn nguồn SSI) -> data/chudiem.json. Sơ đồ ba trục nhập tay trong
-    # chính script đó; phần chạy ở đây là bồi khuyến nghị + giá mục tiêu MỚI NHẤT của SSI
-    # rút từ kho tin/báo cáo vừa cào ở bước 7 — nên phải đứng SAU bước ấy.
-    try:
-        import build_chudiem as _bcd
-        _bcd.main()
-        HL["chudiem"]={"ok":1}
-    except Exception as e4:
-        print(f"chudiem.json LỖI (không chặn pipeline): {e4}",flush=True)
-        HL["chudiem"]={"ok":0,"err":str(e4)[:120]}
+    # CHỦ ĐIỂM ĐẦU TƯ đã BỎ HẲN 16/08/2026 — bước dựng data/chudiem.json và
+    # tools/build_chudiem.py đều gỡ. Cả mục là quan điểm của SSI Research dẫn lại; sau khi
+    # gỡ khuyến nghị và giá mục tiêu thì phần còn lại chỉ là cách phân nhóm của họ.
 except Exception as e:
     print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
     HL["screen"]={"ok":0,"err":str(e)[:120]}

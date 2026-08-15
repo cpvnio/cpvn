@@ -161,7 +161,7 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), tapdoan:[], quy:[], chudiem:null, pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), tapdoan:[], quy:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
 /* GỘP NGÀNH — BẢN SAO Y HỆT core.js và bubbles.html. Trang này trước đây dùng thẳng
    `sector` thô của nguồn, nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
    "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng trong khi bảng giá
@@ -202,11 +202,10 @@ function gopNganh(){
 }
 async function loadAll(){
   const j=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
-  const [u,eod,pk,mk,td,qy,cd]=await Promise.all([
+  const [u,eod,pk,mk,td,qy]=await Promise.all([
     j('universe.json'), j('data/eod/latest.json'),
-    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json'), j('data/quy.json'),
-    j('data/chudiem.json')]);
-  ST.tapdoan=(td&&td.nhom)||[]; ST.quy=(qy&&qy.quy)||[]; ST.chudiem=cd||null;
+    j('data/screen.json'), j('data/market.json'), j('data/tapdoan.json'), j('data/quy.json')]);
+  ST.tapdoan=(td&&td.nhom)||[]; ST.quy=(qy&&qy.quy)||[];
   if(!u||!pk) throw new Error('thiếu dữ liệu');
   ST.pack=pk; ST.market=mk;
   ST.date=(eod&&eod.date)||pk.date||''; ST.indices=(eod&&eod.indices)||[];
@@ -483,7 +482,7 @@ function head(m){
 /* chọn tab bên trong của một module từ menu thả xuống */
 function moTab(m,t){
   /* 'tg' gộp vào 'phien' từ 13/08/2026 — giữ nhánh này để link cũ ?t=tg còn mở được */
-  if(m==='radar'){ radarTab=(t==='cd'||t==='vb')?t:'phien'; if(cur==='radar') renderRadar(); else done.radar=0; }
+  if(m==='radar'){ radarTab=(t==='vb')?t:'phien'; if(cur==='radar') renderRadar(); else done.radar=0; }
   /* ĐANG Ở TRANG ĐUA thì BẤM THẲNG nút chuyển chế độ có sẵn, đừng dựng lại module:
      nút đó mới là chỗ chạy syncMode (dừng animation, về vạch xuất phát, đổi khung đồ thị).
      Dựng lại module tưởng gọn mà chế độ không đổi — đã dính đúng vậy. */
@@ -1374,7 +1373,7 @@ function tgKhung(M,path,cham,tang,giam,nhan){
     +'</div></div>'
 }
 
-let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'cd' | 'vb' | 'tg'
+let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'vb'  ('cd' đã bỏ 16/08/2026)
 function renderRadar(){
   const m=MODULES.find(x=>x.id==='radar');
   const L=ST.list, liq=c=>(c.avgval20||0);
@@ -1448,8 +1447,6 @@ function renderRadar(){
   $('#m-radar').innerHTML=head(m)
     /* dải tab của radar đã dọn lên MENU THẢ XUỐNG của mục "Radar" trên thanh trên —
        giữ lại ở đây là hai chỗ chọn cùng một thứ, lại ăn thêm một hàng */
-    +'<div id="rdCd"'+(radarTab==='cd'?'':' style="display:none"')+'>'
-    +(radarTab==='cd'?chuDiemPanel():'')+'</div>'
     +'<div id="rdVb"'+(radarTab==='vb'?'':' style="display:none"')+'>'
     +(radarTab==='vb'?veBoPanel():'')+'</div>'
     +'<div id="rdPhien"'+(radarTab!=='phien'?' style="display:none"':'')+'>'
@@ -2066,60 +2063,15 @@ function tapDoanNote(){
     +'<b>Vốn hoá không bị đếm hai lần</b> — mã tới qua một thành viên khác chỉ tính phần '
     +'ngoài (vốn hoá GAS đã gồm 35% PGS).</div>';
 }
-/* ---- CHỦ ĐIỂM ĐẦU TƯ — DẪN NGUỒN SSI RESEARCH ----------------------------------
-   CÁCH PHÂN NHÓM LÀ CỦA BÊN THỨ BA, KHÔNG PHẢI của trang. Tên nguồn phải nằm ngay đầu mục
-   và lời miễn trừ nằm ngay dưới — cả hai KHÔNG được rút gọn cho gọn mắt.
-
-   Sơ đồ ba trục nhập tay (SSI không mở dữ liệu này ra ngoài — xem tools/build_chudiem.py).
-   Phần tự cập nhật mỗi phiên nay CHỈ CÒN NGÀY ra báo cáo gần nhất của từng mã; khuyến nghị
-   và giá mục tiêu đã gỡ hẳn 16/08/2026 — xem CLAUDE.md mục "Ranh giới pháp lý". */
-/* cdBadge ĐÃ XOÁ 16/08/2026 — nó dựng badge MUA/BÁN/TRUNG LẬP tô xanh đỏ cho từng mã.
-   Class CSS `.cdkn`, `.cdtp`, `.cdch` đi kèm cũng đã gỡ. Đừng dựng lại. */
-/* SƠ ĐỒ BA VÒNG (Venn) — dựng lại đúng dạng slide gốc của nguồn, vẽ bằng SVG nên co giãn
-   theo bề ngang và đổi màu theo giao diện sáng/tối. Ba vòng tô cùng một độ mờ, chỗ chồng
-   nhau tự đậm lên — đó chính là thứ nói lên "mã này hội tụ mấy chủ điểm", khỏi cần chú thích. */
-function vennSVG(D,T){
-  const tr=(D.truc||[]).slice(0,3);
-  if(tr.length<3) return '';
-  const R=210, d=165, C=[[0,-d],[-d*0.866,d*0.5],[d*0.866,d*0.5]];   // 0 trên · 1 trái · 2 phải
-  /* NEO TỪNG VÙNG đặt tay chứ không lấy trọng tâm hình học: trọng tâm của vùng "chỉ một
-     vòng" nằm lệch về phía chỗ chồng lấn, chữ hai vùng cạnh nhau sẽ đè lên nhau. */
-  const NEO={'0':[0,-258],'1':[-234,116],'2':[234,116],
-             '01':[-152,-86],'02':[152,-86],'12':[0,172],'012':[0,4]};
-  const LH=27, idx={};
-  tr.forEach((t,i)=>idx[t.id]=i);
-  const khoa=x=>x.truc.map(id=>idx[id]).filter(i=>i!=null).sort().join('');
-  const vung={};
-  for(const x of D.ma){ const k=khoa(x); if(NEO[k]) (vung[k]=vung[k]||[]).push(x); }
-  /* tên chủ điểm dài thì bẻ CÂN hai dòng — bẻ theo số ký tự tối đa sẽ ra một dòng dài
-     một dòng cụt lủn, nhìn lệch hẳn so với khối mã bên dưới */
-  const beDoi=s=>{ if(s.length<=17) return [s];
-    const w=s.split(' '); let a='',i=0;
-    while(i<w.length && (a+' '+w[i]).trim().length<=Math.ceil(s.length/2)) a=(a+' '+w[i++]).trim();
-    return [a||w[0], w.slice(a?i:1).join(' ')].filter(Boolean); };
-  let g='';
-  for(let i=0;i<3;i++) g+='<circle cx="'+C[i][0].toFixed(1)+'" cy="'+C[i][1].toFixed(1)+'" r="'+R
-    +'" fill="'+tr[i].mau+'" fill-opacity=".15" stroke="'+tr[i].mau+'" stroke-opacity=".45"/>';
-  for(const k in vung){
-    const mot=k.length===1, dong=mot?beDoi(tr[+k].ten):[];
-    const n=dong.length+vung[k].length, [ax,ay]=NEO[k];
-    let y=ay-(n-1)*LH/2;
-    for(const t of dong){ g+='<text class="vtt" x="'+ax+'" y="'+y+'" fill="'+tr[+k].mau+'">'+esc(t)+'</text>'; y+=LH; }
-    for(const x of vung[k]){
-      const c=ST.map.get(x.s), kn=x.ssi||{};
-      const chu=c&&c.chg!=null?'  '+pct(c.chg):'';
-      /* Tooltip trước đây đọc ' · SSI MUA · mục tiêu 105.900 đ'. Gỡ 16/08/2026 cùng với
-         badge và giá mục tiêu ở thẻ mã — xem ghi chú ở `the()` bên dưới. */
-      g+='<g class="cdsym" data-sym="'+x.s+'"><title>'+esc(x.s+(c?' · '+shortName(c.name||''):'')
-          +(kn.d?' · SSI có báo cáo '+kn.d.split('-').reverse().join('/'):''))+'</title>'
-        +'<text class="vsym" x="'+ax+'" y="'+y+'">'+x.s
-        +'<tspan class="vpc '+cls(c&&c.chg)+'">'+esc(chu)+'</tspan></text></g>';
-      y+=LH;
-    }
-  }
-  return '<div class="venn"><svg viewBox="-375 -395 750 700" role="img" aria-label="Sơ đồ chủ điểm đầu tư">'
-    +g+'</svg></div>';
-}
+/* ---- CHỦ ĐIỂM ĐẦU TƯ — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI ----------------------
+   Sơ đồ Venn ba trục, thẻ từng mã, `chuDiemPanel()`, `cdBadge()` và kho `data/chudiem.json`
+   đều xoá; `tools/build_chudiem.py` và bước gọi nó trong refresh_daily cũng gỡ.
+   Lý do: cả mục là quan điểm của SSI Research dẫn lại — danh sách mã do họ chọn, cách phân
+   nhóm do họ đặt. Sau khi gỡ khuyến nghị và giá mục tiêu (16/08) thì phần còn lại chỉ là
+   "SSI xếp 16 mã này vào ba nhóm", vừa không còn mấy giá trị vừa vẫn là ý kiến của một đơn
+   vị CÓ giấy phép tư vấn đầu tư mà CPVN dẫn lại. User chốt bỏ.
+   Sơ đồ ba trục vốn NHẬP TAY (SSI không mở dữ liệu ra ngoài — đã dò iboard-api 401,
+   api.ssi.com.vn 404, trang báo cáo chặn máy) nên cũng không có gì để tự động hoá lại. */
 /* ---- KHI NÀO VỀ BỜ: mã đã rơi sâu khỏi ĐỈNH CỦA CẢ CHUỖI, xếp theo mức rơi --------
    Đo bằng `dath` (đỉnh của toàn bộ chuỗi giá trong kho) chứ KHÔNG phải đỉnh 52 tuần:
    phần lớn mã sập từ 2021-2022, lấy đỉnh 52 tuần thì mã mất 80% bốn năm nay lại hiện
@@ -2170,62 +2122,6 @@ function veBoPanel(){
     +'thanh khoản mỏng nhất. Rơi sâu KHÔNG có nghĩa là sắp hồi: nhiều mã rơi vì doanh nghiệp hỏng '
     +'thật. Đây là danh sách để soi, không phải danh sách để mua.</div>';
 }
-function chuDiemPanel(){
-  const D=ST.chudiem;
-  if(!D||!(D.ma||[]).length) return '<div class="empty">Chưa có dữ liệu chủ điểm — chạy tools/build_chudiem.py</div>';
-  const T={}; for(const t of D.truc||[]) T[t.id]=t;
-  const nhom=[[3,'Trọng tâm — hội tụ cả 3 chủ điểm'],[2,'Giao hai chủ điểm'],[1,'Từng chủ điểm riêng']];
-  const the=x=>{
-    const c=ST.map.get(x.s), k=x.ssi||{};
-    /* GỠ 16/08/2026 — ba thứ, nặng dần:
-       · badge `cdBadge(k.kn)` in thẳng chữ MUA / BÁN / TRUNG LẬP, tô xanh đỏ;
-       · `k.tp` giá mục tiêu;
-       · `ch` = (giá mục tiêu − giá hiện tại)/giá hiện tại — comment cũ gọi nó là "con số
-         đáng xem nhất", và đó chính là vấn đề: một lời khuyên mua diễn đạt bằng phần trăm.
-       Cả ba đều là khuyến nghị đầu tư của đơn vị CÓ giấy phép, dẫn lại vẫn thuộc khoản 32
-       Điều 4 Luật CK. Còn lại: mã nằm ở chủ điểm nào (cách phân nhóm của SSI, có ghi nguồn)
-       và ngày SSI ra báo cáo gần nhất. Đừng dựng lại vì "thiếu thông tin". */
-    return '<div class="cdcard" data-sym="'+x.s+'">'
-      +'<div class="cdtop">'+(c?logoHTML(c):'')
-      +'<span class="cdid"><b>'+x.s+'</b><i>'+esc(c?shortName(c.name||''):'')+'</i></span>'
-      +'<span class="cdpc '+cls(c&&c.chg)+'">'+(c?pct(c.chg):'—')+'</span></div>'
-      +'<div class="cdtruc">'+x.truc.map(id=>T[id]
-          ?'<em style="color:'+T[id].mau+';border-color:'+T[id].mau+'">'+esc(T[id].ten)+'</em>':'').join('')+'</div>'
-      +(k.d?'<div class="cdssi">SSI Research có báo cáo <b>'
-             +k.d.split('-').reverse().join('/')+'</b></div>'
-           :'<div class="cdssi trong">Kho chưa ghi nhận báo cáo SSI cho mã này</div>')
-      +'</div>';
-  };
-  let html='<div class="panel"><div class="ph">Chủ điểm đầu tư'
-    +'<span class="cdsrc">nguồn <b>'+esc(D.nguon||'SSI Research')+'</b>'
-    +(D.ky?' · '+esc(D.ky):'')+'</span>'
-    +'<span class="cnt">'+D.ma.length+' mã</span></div><div class="pb" style="padding:12px 16px">';
-  html+=vennSVG(D,T);
-  for(const [n,ten] of nhom){
-    const ds=D.ma.filter(x=>x.truc.length===n);
-    if(!ds.length) continue;
-    html+='<div class="cdgrp">'+esc(ten)+'<u>'+ds.length+' mã</u></div>'
-      +'<div class="cdgrid">'+ds.map(the).join('')+'</div>';
-  }
-  html+='</div></div>'
-    /* Ghi chú viết lại 16/08/2026 cùng lượt gỡ khuyến nghị. Bản cũ nói "ghép thêm giá cùng
-       khuyến nghị đang lưu trong kho" và giải thích cách đọc giá mục tiêu — nay không còn
-       khuyến nghị lẫn giá mục tiêu nào để mà giải thích. Câu chữ phải theo kịp dữ liệu,
-       bằng không trang tự mô tả sai chính nó. */
-    +'<div class="note"><b>Cách phân nhóm theo '+esc(D.nguon||'SSI Research')+'</b>'
-    +(D.ky?' — '+esc(D.ky):'')+'. Sơ đồ ba chủ điểm là quan điểm của '
-    +esc(D.nguon||'SSI Research')+'; CPVN.IO chỉ dẫn lại cách phân nhóm và ngày ra báo cáo, '
-    +'<b>không dẫn lại khuyến nghị hay giá mục tiêu, và không đưa ra khuyến nghị nào của '
-    +'riêng mình</b>. Sơ đồ thuần phân tích cơ bản và câu chuyện doanh nghiệp, <b>chưa tính '
-    +'tới dòng tiền, thanh khoản hay trạng thái của VN-Index</b>. Đây là thông tin tham khảo, '
-    +'không phải lời mời hay khuyến nghị mua bán.</div>';
-  return html;
-}
-/* ============================================ 2. DANH MỤC TẬP ĐOÀN (module riêng)
-   Tách khỏi Radar vì hai thứ khác nhịp hẳn nhau: radar là thứ soi TRONG PHIÊN, còn bản đồ
-   tập đoàn và danh mục quỹ là cấu trúc sở hữu, cả tháng mới nhúc nhích. Quỹ đứng chung
-   trang này vì cùng một câu hỏi "ai đang nắm gì". */
-let tdTab='td';                          // 'td' = tập đoàn · 'quy' = quỹ
 function renderTapDoan(){
   const m=MODULES.find(x=>x.id==='tapdoan');
   $('#m-tapdoan').innerHTML=head(m)
@@ -2531,7 +2427,7 @@ async function init(){
   const start=q||byPath||(location.hash||'').replace('#','');
   /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
   const t0=new URLSearchParams(location.search).get('t');
-  if(t0==='cd'||t0==='phien'||t0==='vb') radarTab=t0;
+  if(t0==='phien'||t0==='vb') radarTab=t0;   // 'cd' (chủ điểm) đã bỏ — link cũ rơi về 'phien'
   if(t0==='dca'||t0==='dua') RA.mode=(t0==='dca'?'dca':'race');
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)

@@ -673,8 +673,9 @@ CP.openNewsItem=async function(n){
    Mà nguồn (api2.simplize.vn/api/company/analysis-report/list) chỉ trả về đúng một đường
    dẫn là file PDF trên cdn.simplize.vn; đã dò trang riêng từng báo cáo của Simplize theo
    `id` và theo mã, 404 cả ba dạng. Không dẫn được -> bỏ.
-   Kho `data/news/*.json` VẪN giữ mảng `reports` (chỉ source+date) vì
-   tools/build_chudiem.py đọc nó để lấy NGÀY báo cáo SSI gần nhất — client thì không đọc. */
+   Từ 16/08/2026 kho `data/news` cũng THÔI lưu mảng `reports`: hộ tiêu thụ cuối cùng là
+   tools/build_chudiem.py, mà Chủ điểm đầu tư nay đã bỏ nốt. Pipeline không gọi endpoint
+   analysis-report/list nữa — bớt ~1.500 lượt tới Simplize mỗi lượt --full. */
 
 /* ---------- watchlist (⭐ localStorage) ------------------------------------ */
 CP.watch={

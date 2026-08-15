@@ -55,7 +55,6 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
 | `data/quy.json` | Danh mục các quỹ: quỹ → mã đang nắm + giá trị + **kỳ công bố**. Cùng script |
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
-| `data/chudiem.json` | Chủ điểm đầu tư **dẫn nguồn SSI** — sơ đồ 3 trục nhập tay + **NGÀY** báo cáo SSI gần nhất mỗi mã. Khuyến nghị và giá mục tiêu đã gỡ 16/08/2026, xem *Ranh giới pháp lý*. `tools/build_chudiem.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
 ## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
@@ -491,30 +490,30 @@ giá sai hoặc giá nhảy — đừng đẩy.
   170/170 ngày**. Ngày hiện ra phải là `effectiveDate` = **ngày giao dịch không hưởng
   quyền**, không phải `actualDate` (ngày tiền về, thường sau cả tháng). Nguồn trả CẢ bản EN
   lẫn VN nên phải lọc `locale=='VN'`, bằng không mọi sự kiện nhân đôi.
-- **CHỦ ĐIỂM ĐẦU TƯ: KHÔNG có nguồn SSI nào lấy được tự động cho phần SƠ ĐỒ.** Đã dò hết:
-  `iboard-api.ssi.com.vn/research/*` → **401** (đòi đăng nhập), `api.ssi.com.vn/research/*` →
-  **404**, `ssi.com.vn/.../bao-cao-phan-tich` chặn máy, và API báo cáo của Simplize **bắt buộc
-  có `ticker=`** (để rỗng trả 0 bản ghi) nên không có cửa lấy báo cáo chiến lược toàn thị
-  trường. Sơ đồ ba trục nằm trong slide báo cáo chiến lược → **nhập tay** ở bảng `SO_DO` của
-  `tools/build_chudiem.py`, SSI ra kỳ mới thì sửa đúng bảng đó và cập nhật trường `ky`.
-  **Phần TỰ CẬP NHẬT được** nay chỉ còn **NGÀY** báo cáo SSI gần nhất mỗi mã, rút từ
-  `data/news/{MÃ}.json` (bước 7) — build_chudiem chạy SAU bước 7.
-  > **KHUYẾN NGHỊ VÀ GIÁ MỤC TIÊU ĐÃ GỠ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.** Bản cũ hiện badge
-  > MUA/BÁN, giá mục tiêu, và `ch` = chênh % giữa giá mục tiêu với giá hiện tại (comment cũ
-  > gọi nó là "con số đáng xem nhất" — đó chính là vấn đề: một lời khuyên mua diễn đạt bằng
-  > phần trăm). Ghi nguồn KHÔNG cứu được: khoản 32 Điều 4 Luật CK không đòi phân tích phải do
-  > mình viết ra. Xem mục **Ranh giới pháp lý**.
-  > **TÊN TRỤC PHẢI GỌI TÊN CHỦ ĐIỂM, KHÔNG PHÁN XÉT MÃ.** "Hưởng lợi từ nâng hạng" → "Nâng
-  > hạng thị trường"; "Định giá hấp dẫn" → "Chủ điểm định giá". Cũng **đừng** đổi sang tên
-  > nghe như CPVN tự đo ("E/P cao nhất nhóm") — danh sách mã là do SSI chọn, gắn nhãn đo
-  > lường vào là nhận vơ một phương pháp không có thật.
+- **CHỦ ĐIỂM ĐẦU TƯ ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.** `data/chudiem.json`,
+  `tools/build_chudiem.py`, `chuDiemPanel()`, `cdBadge()`, sơ đồ Venn, tab `?t=cd`, mục trong
+  menu thả xuống của cả 4 trang và lối rẽ "Chủ điểm" trong dải Radar mobile đều xoá.
+  Đường dẫn cũ `?t=cd` **rơi về Nhịp phiên** chứ không trắng trang.
+  Lý do: cả mục là quan điểm của SSI Research dẫn lại — danh sách 16 mã do họ chọn, cách chia
+  ba trục do họ đặt. Sau khi gỡ khuyến nghị + giá mục tiêu (cùng ngày) thì phần còn lại chỉ là
+  "SSI xếp mấy mã này vào ba nhóm": vừa mất gần hết giá trị, vừa vẫn là ý kiến của một đơn vị
+  CÓ giấy phép tư vấn đầu tư mà CPVN dẫn lại. User chốt bỏ.
+  > **Sơ đồ ba trục vốn NHẬP TAY nên cũng không có gì để tự động hoá lại.** Đã dò hết cửa và
+  > đều đóng: `iboard-api.ssi.com.vn/research/*` → **401**, `api.ssi.com.vn/research/*` →
+  > **404**, `ssi.com.vn/.../bao-cao-phan-tich` chặn máy, API báo cáo Simplize **bắt buộc có
+  > `ticker=`** nên không lấy được báo cáo chiến lược toàn thị trường. Ghi lại để lần sau
+  > không ai mất công dò lại.
+  > **Hệ quả dây chuyền:** build_chudiem là hộ tiêu thụ CUỐI CÙNG của mảng `reports` trong
+  > `data/news`. Bỏ nó xong thì pipeline **thôi gọi `analysis-report/list`** luôn — bớt
+  > ~1.500 lượt tới Simplize mỗi lượt `--full` — và mảng `reports` đã gỡ khỏi 1.527 file kho.
+
 - **ĐIỀU HƯỚNG: MENU THẢ XUỐNG KHI RÊ CHUỘT (10/08/2026) — nay CHỈ CÒN CHO MÁY BÀN.**
   Từ 11/08/2026 khổ ≤760px ẩn hẳn dải này (`header .tabs{display:none!important}` trong
   `mobi.css`) và dùng thanh tab đáy — xem mục **Giao diện mobile** bên dưới. Mọi luật rê
   chuột/chạm dưới đây vẫn đúng, nhưng chỉ còn chạy ở khổ rộng (kể cả tablet cảm ứng >760px).
   Bảng giá · Radar · Đường đua, mỗi mục có menu con hiện khi rê chuột (`.tw:hover>.dd`).
   Bảng giá → 3 trang (`index.html` · `bubbles.html` · `congcu.html?m=tapdoan`);
-  Radar → Nhịp phiên · Chủ điểm đầu tư; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
+  Radar → Nhịp phiên · Khi nào về bờ; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
   Bản trước để mục con thành dải LUÔN HIỆN dưới header + dải tab riêng trong Radar — ăn
   một hàng cố định trên mọi trang chỉ để chờ người ta bấm. Cả hai dải đã gỡ.
   Năm thứ phải giữ, thiếu cái nào là menu hỏng:
@@ -548,7 +547,7 @@ giá sai hoặc giá nhảy — đừng đẩy.
   `?t=` trên URL chọn sẵn tab bên trong (`t=cd`, `t=dca`…) để trang khác trỏ thẳng vào.
   "Danh mục tập đoàn" chạy trên congcu.html nhưng THUỘC nhóm Bảng giá — `renderNav` phải tự
   tay bật `.on` cho mục cha đầu tiên khi `cur==='tapdoan'`.
-  Radar nay chỉ còn **Nhịp phiên · Chủ điểm đầu tư**; tập đoàn và quỹ đã dọn sang module
+  Radar nay chỉ còn **Nhịp phiên · Khi nào về bờ**; tập đoàn và quỹ đã dọn sang module
   riêng vì khác nhịp hẳn: radar soi TRONG PHIÊN, còn cấu trúc sở hữu cả tháng mới nhúc nhích.
 - **BỨC TRANH TOÀN CẦU (radar `?t=tg`) — bản đồ thế giới tô theo chỉ số từng nước.**
   Màu theo luật CK Việt Nam: **xanh = tăng, đỏ = giảm**, đậm dần tới ±3%. Cố ý khác
@@ -821,7 +820,7 @@ vùng dưới, hai góc TRÊN là chỗ khó với nhất — mà menu cũ nằm
 chuột*, thao tác không tồn tại trên điện thoại.
 
 **Bảng giá SẠCH HOÀN TOÀN** — không dải mục con nào, mở ra là thấy mã ngay.
-**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Dải hiện
+**Radar là cửa vào ba góc soi thị trường**: Bong bóng · Tập đoàn · Về bờ. Dải hiện
 ở cả ba trang của nhóm và thanh đáy sáng ở Radar trên cả ba, bằng không vào Bong bóng là mất
 đường quay lại.
 
@@ -985,7 +984,7 @@ việc đó khi chưa được UBCKNN cấp phép. CPVN không phải công ty c
 | Đã gỡ | Ở đâu | Vì sao |
 |---|---|---|
 | `rec` / `target` / `title` / `pdf` của báo cáo CTCK | `refresh_daily.work_news` · `core.js loadNews` · `bubbles.SRC.reports` · 282 file `data/news` (7.696 trường) | khuyến nghị + giá mục tiêu + PDF có bản quyền |
-| `kn` / `tp` / `ch` / `pdf` / `knSSI` của Chủ điểm | `build_chudiem.py` · `congcu.js` · `data/chudiem.json` | như trên; `ch` là lời khuyên mua viết bằng % |
+| **CẢ MỤC Chủ điểm đầu tư** (trước đó đã gỡ `kn`/`tp`/`ch`/`pdf`/`knSSI`) | `build_chudiem.py` và `data/chudiem.json` **đã xoá** · `congcu.js` · menu 4 trang · dải Radar mobile | quan điểm của SSI dẫn lại; `ch` là lời khuyên mua viết bằng % |
 | `riskLevel` | `refresh_daily.work_prof` · `backfill_profiles.py` · 1.458 file `data/profile` | xếp hạng rủi ro của bên thứ ba về một mã cụ thể; chưa từng hiển thị |
 | `recStyle` / `CP.recStyle` / `cdBadge` + CSS `.rec .mt .rt .dl .cdkn .cdtp .cdch` | 4 trang | hàm tô xanh chữ "MUA", đỏ chữ "BÁN" |
 | **CẢ MỤC báo cáo phân tích CTCK** — `#reps`/`#repN` (cophieu), `#detReports`/`repSrc` + `renderReports` + `repCache` (bubbles), `SRC.reports`, `CP.reportRow`, `CP.CTCK_WEB`, `CP.ctckLink`, lượt gọi `analysis-report/list` trong `loadNews` | cophieu.html · bubbles.html · core.js | **không dẫn được tới bài báo cáo** — xem ngay dưới |
@@ -1002,9 +1001,9 @@ trang chủ của họ; nếu không làm đc thì nên bỏ luôn"*. ③ Dò đ
 **404 cả ba**. Không có URL nào tới bài báo cáo trên trang của chính CTCK. Thêm nữa `title`
 mang sẵn khuyến nghị trong tên (*"CTCP Tập đoàn Hòa Phát (HPG/Mua/GMT:30,000)"*) nên cũng
 không hiện được. Hiện tên + ngày mà không mở ra đọc được thì vô dụng → bỏ.
-> **Kho `data/news/*.json` VẪN giữ mảng `reports` (chỉ `source`+`date`)** — client không
-> đọc nữa, nhưng `tools/build_chudiem.py` đọc nó để lấy NGÀY báo cáo SSI gần nhất mỗi mã.
-> Xoá mảng đó khỏi kho là Chủ điểm mất luôn dòng ngày.
+> **Mảng `reports` trong `data/news` cũng đã xoá hẳn** (1.527 file) và pipeline THÔI gọi
+> `analysis-report/list`: hộ tiêu thụ cuối cùng là `build_chudiem.py`, mà Chủ điểm đầu tư
+> nay bỏ nốt. Bớt ~1.500 lượt tới Simplize mỗi lượt `--full`.
 
 **BỐN LUẬT KHÔNG ĐƯỢC PHÁ:**
 1. **Không có chữ mua / bán / giá mục tiêu / khuyến nghị** ở bất kỳ đâu — của mình hay dẫn
