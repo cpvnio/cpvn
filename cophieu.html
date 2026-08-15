@@ -323,10 +323,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   table.ft td.ngv{color:var(--yellow);font-weight:650}
   table.ft td.ngd{color:var(--red);font-weight:650}
   table.ft tr.ngcap td{border-top:2px solid var(--line)}
-  /* Dòng CƠ CẤU LỢI NHUẬN nối vào cuối bảng KQKD — dùng chung lưới cột và chung ba màu
-     ngl/ngv/ngd với chỉ số ngành. Hàng tiêu đề nhóm in nhạt, không đậm như dòng số. */
-  table.ft tr.ccr.head td .lb{color:var(--muted);font-size:11.5px;letter-spacing:.04em}
-  table.ft tr.ccr td{font-variant-numeric:tabular-nums}
+  /* CSS dòng cơ cấu lợi nhuận (tr.ccr) đã xoá 16/08/2026 cùng cả tính năng. */
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   /* VỐN HOÁ theo kỳ: đậm vừa để dò nhanh cạnh dòng LN sau thuế, tách bằng vạch mảnh */
   table.ft tr.mcapRow td{font-weight:700;border-top:1px solid var(--line)}
@@ -534,10 +531,8 @@ document.addEventListener(MO,function(e){
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
       </div>
-      <!-- CƠ CẤU LỢI NHUẬN: từ 16/08/2026 KHÔNG còn là biểu đồ riêng (#segBox + canvas
-           #segCv đã gỡ). User chốt: đưa xuống thành DÒNG trong bảng KQKD và đánh màu —
-           cùng lối trình bày với "chỉ số đặc thù ngành" ở cuối bảng CĐKT. Dựng bởi
-           veCoCauRows(). Nguồn chỉ sâu 15 quý / 10 năm nên kỳ ngoài tầm để `—`. -->
+      <!-- Cơ cấu lợi nhuận (biểu đồ #segBox, rồi dòng bảng tr.ccr) đã bỏ hẳn 16/08/2026 —
+           lý do đầy đủ ở khối chú thích cùng tên trong phần script. -->
       <h3 class="t">Kết quả kinh doanh</h3>
       <div class="finlegend">
         <span><i style="background:#5b6b7a"></i>Doanh thu</span>
@@ -1063,115 +1058,29 @@ let finColsVe=null;
    hay đổi đèn, chỉ cần dựng lại khi bảng KQKD được dựng lại (veKQKD tự lo). */
 function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
 
-/* ---------- CƠ CẤU LỢI NHUẬN (data/cocau, nguồn Simplize) ----------
-   Trả lời "doanh nghiệp này kiếm tiền từ đâu" — thứ cả data/fin lẫn data/finq đều không
-   có, vì hai kho đó chỉ giữ bản báo cáo mẫu THƯỜNG. Với công ty chứng khoán là môi giới /
-   cho vay ký quỹ / tự doanh / ngân hàng đầu tư; với ngân hàng là lãi thuần / dịch vụ /
-   ngoại hối / chứng khoán.
+/* ---------- CƠ CẤU LỢI NHUẬN — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI ----------
+   Đi qua ba bản rồi mới bỏ: ① biểu đồ cột chồng riêng (#segBox/#segCv) → ② dòng cuối bảng
+   KQKD có đánh màu (veCoCauRows) → ③ bỏ. `loadCoCau`, `segNgan`, `veCoCauRows`, `segData`,
+   `segNhan`, `segSym` đều xoá.
 
-   HAI THỨ TUYỆT ĐỐI KHÔNG ĐƯỢC NÓI SAI:
-   1. **Cộng các mảng KHÔNG ra lợi nhuận trước thuế** — đây là lãi gộp từng mảng, CHƯA trừ
-      chi phí quản lý (và với ngân hàng thì chưa trừ cả dự phòng rủi ro). Đo 15/08/2026:
-      tổng mảng cao hơn LNTT 3–17% ở công ty chứng khoán, 15–31% ở sản xuất, 51–79% ở ngân
-      hàng, 204–234% ở bảo hiểm. Nên nhãn phải là "lợi nhuận gộp theo mảng", và có câu ghi
-      chú ngay dưới; gọi tắt thành "lợi nhuận" là người đọc tự cộng ra một con số sai.
-   2. **Nguồn chỉ sâu 15 quý / 10 năm** (xem tools/cao_cocau.py) — ghi rõ khoảng kỳ đang vẽ
-      chứ đừng để người xem tưởng đây là toàn bộ lịch sử như mấy bảng bên dưới. */
-let segData=null, segNhan=null, segSym=null;
-/* Nhãn nguồn mở đầu bằng "Lợi nhuận từ hoạt động …" / "Lãi/lỗ thuần từ …" ở MỌI mảng —
-   nhóm dòng đã có tiêu đề nói rõ đây là cơ cấu lợi nhuận nên phần đầu đó chỉ lặp lại,
-   mà cột tên bảng thì hẹp. Tên đầy đủ vẫn nằm ở `title` của ô tên dòng. */
-const segNgan=t=>{
-  const s=String(t||'').replace(/^(Lợi nhuận|Lãi\/lỗ thuần)\s+(gộp\s+)?((từ|về)\s+)?(hoạt động\s+)?/i,'').trim();
-  return (s?s[0].toUpperCase()+s.slice(1):String(t||''));
-};
-async function loadCoCau(sym){
-  if(segSym===sym) return segData;
-  segSym=sym; segData=null;
-  try{
-    const [d,n]=await Promise.all([
-      fetch(`data/cocau/${sym}.json`).then(r=>r.ok?r.json():null),
-      segNhan?Promise.resolve(segNhan):fetch('data/cocau/_nhan.json').then(r=>r.ok?r.json():null)]);
-    segNhan=n||segNhan; segData=d;
-  }catch(e){}
-  return segData;
-}
-/* ---- DÒNG CƠ CẤU LỢI NHUẬN NỐI VÀO CUỐI BẢNG KQKD ----
-   Bám ĐÚNG các cột bảng đang hiện (đọc `finColsVe`, thứ kqkdTable vừa dựng), y như
-   veNganhRows bám bảng CĐKT. Vì thế phải chạy SAU kqkdTable trong cùng một lượt vẽ.
-   Chế độ NĂM có thể bung thêm cột QUÝ (`r._q`) — cột đó tra trục QUÝ của kho, cột năm
-   tra trục NĂM. Tra nhầm trục là dán số cả năm xuống dưới một cột quý. */
-function veCoCauRows(){
-  const wrap=$('kqkdT'), tb=wrap&&wrap.querySelector('table.ft tbody');
-  if(!tb) return;
-  tb.querySelectorAll('tr.ccr').forEach(r=>r.remove());
-  const d=segData, ten=(segNhan&&d&&segNhan[d.nhom]&&segNhan[d.nhom].p)||null;
-  if(!d||!ten||!finColsVe||!finColsVe.length) return;
-  const khoQ=(d.Q||{}).p, khoY=(d.Y||{}).p, kyQ=(d.ky||{}).Q||[], kyY=(d.ky||{}).Y||[];
-  // mỗi cột bảng -> [kho nào, chỉ số nào]; -1 = kỳ nằm ngoài tầm nguồn -> in "—"
-  const cols=finColsVe.map(r=>{
-    const lb=String(r.label);
-    return (finPeriod==='Y'&&!r._q) ? [khoY,kyY.indexOf(lb)] : [khoQ,kyQ.indexOf(lb)];
-  });
-  if(!cols.some(c=>c[0]&&c[1]>=0)) return;
-  const keys=Object.keys(ten).filter(k=>(khoQ&&khoQ[k])||(khoY&&khoY[k]));
-  if(!keys.length) return;
-  /* RÚT GỌN MÀ ĐỤNG NHAU THÌ TRẢ LẠI TÊN ĐẦY ĐỦ CHO CẢ CỤM ĐỤNG. Mẫu bảo hiểm có cả
-     "Lợi nhuận hoạt động khác" lẫn "Lợi nhuận khác" — rút xong thành HAI dòng cùng tên
-     "Khác" nằm sát nhau, đọc ra như lỗi dữ liệu chứ không phải hai khoản mục thật.
-     (Bẫy này đã trả giá một lần ở bản biểu đồ cũ; viết lại thì đừng làm rơi.) */
-  const dem={}; keys.forEach(k=>{ const s=segNgan(ten[k]); dem[s]=(dem[s]||0)+1; });
-  const nhanGon=k=>{ const s=segNgan(ten[k]); return dem[s]>1?ten[k]:s; };
-  const oCua=(k,c)=>{ const [kho,j]=c; if(!kho||j<0||!kho[k]) return null;
-                      const v=kho[k][j]; return v==null?null:v; };
-  /* MÀU CHỈ NÓI HAI ĐIỀU, cố ý không hơn: mảng nào ĐANG LỖ (đỏ) và mảng nào GÁNH CHÍNH
-     kỳ đó (xanh — lãi lớn nhất trong các mảng dương của chính cột ấy). Không tô thang
-     ba bậc như chỉ số ngành: ở đây không có ngưỡng "tốt/xấu" nào đo được, một mảng nhỏ
-     không phải là dở. Trụ cột tính theo TỪNG CỘT nên đọc ngang một dòng là thấy nguồn
-     lãi chính chuyển từ mảng nào sang mảng nào theo thời gian. */
-  const trum=cols.map(c=>{ let mx=0,ai=null;
-    for(const k of keys){ const v=oCua(k,c); if(v!=null&&v>mx){ mx=v; ai=k; } } return ai; });
-  /* Q4 LỆCH GIỮA HAI NGUỒN — nói ra chứ đừng im lặng. Đo 16/08/2026 trên 8.782 cặp
-     mã-quý nhóm sản xuất, đối chiếu ps1 với lợi nhuận gộp của data/fin (nguồn 24hMoney,
-     đường lấy số độc lập): Q1 khớp 99,77% · Q2 99,08% · Q3 99,72% nhưng **Q4 chỉ 82,01%**,
-     và Q4 chiếm 92% toàn bộ ca lệch. Gần như chắc chắn do Q4 riêng lẻ được suy ra bằng
-     (cả năm đã kiểm toán − luỹ kế 9 tháng), mà số cả năm bị điều chỉnh sau kiểm toán nên
-     hai nguồn chốt ở hai thời điểm khác nhau. Không biết bên nào đúng -> vẫn hiện số,
-     nhưng gắn tooltip cảnh báo lên đúng ô Q4. */
-  const laQ4=cols.map((c,i)=>/^Q4\//.test(String((finColsVe[i]||{}).label||'')));
-  const CB_Q4='Quý 4 thường được suy ra bằng (cả năm đã kiểm toán − luỹ kế 9 tháng) nên '
-    +'hai nguồn hay lệch nhau: đo trên 8.782 cặp mã-quý thì Q1–Q3 khớp 99%+ với báo cáo '
-    +'kết quả kinh doanh ở trên, riêng Q4 chỉ 82%. Đối chiếu lại với bảng trên trước khi dùng.';
-  const rows=[];
-  for(const k of keys){
-    let co=false;
-    const tds=cols.map((c,i)=>{
-      const v=oCua(k,c);
-      if(v==null) return '<td>—</td>';
-      co=true;
-      const cls=v<0?'ngd':(trum[i]===k?'ngl':'');
-      return '<td'+(cls?' class="'+cls+'"':'')+(laQ4[i]?' title="'+CP.esc(CB_Q4)+'"':'')+'>'
-        +Math.round(v).toLocaleString('en-US')+'</td>';
-    });
-    if(!co) continue;
-    rows.push(`<tr class="ccr"><td title="${CP.esc(ten[k])}"><div class="lb">${CP.esc(nhanGon(k))}</div></td>`
-      +tds.join('')+'<td class="sp"></td></tr>');
-  }
-  if(!rows.length) return;
-  /* CÂU GHI CHÚ Ở TIÊU ĐỀ NHÓM LÀ BẮT BUỘC, đừng rút cho gọn: cộng các mảng KHÔNG ra
-     lợi nhuận trước thuế. Đo 15/08/2026: tổng mảng cao hơn LNTT 3–17% ở công ty chứng
-     khoán, 15–31% sản xuất, 51–79% ngân hàng, 204–234% bảo hiểm. Người đọc thấy mấy dòng
-     này nằm ngay trong bảng KQKD thì phản xạ đầu tiên là cộng lại — phải chặn trước. */
-  const dai=[kyQ,kyY][finPeriod==='Y'?1:0];
-  const tam=dai.length?` Nguồn có từ ${CP.esc(dai[0])} tới ${CP.esc(dai[dai.length-1])}; kỳ ngoài khoảng đó để trống.`:'';
-  const why='Lợi nhuận GỘP của từng mảng, chưa trừ chi phí bán hàng và quản lý'
-    +(d.nhom==='BANK'?' và chưa trừ dự phòng rủi ro':'')
-    +' — CỘNG LẠI SẼ LỚN HƠN lợi nhuận trước thuế ở trên, đừng tự cộng. '
-    +'Xanh = mảng lãi lớn nhất kỳ đó · đỏ = mảng đang lỗ.'+tam+' Nguồn Simplize.';
-  tb.insertAdjacentHTML('beforeend',
-    `<tr class="ccr head ngcap"><td title="${CP.esc(why)}"><div class="lb">LỢI NHUẬN ĐẾN TỪ ĐÂU</div></td>`
-    +cols.map(()=>'<td></td>').join('')+'<td class="sp"></td></tr>'+rows.join(''));
-}
+   LÝ DO — user chốt: *"tốt nhất là không lấy data thế mạnh của họ, chỉ nên lấy những thứ
+   được báo cáo và không xâm phạm quyền"*. Kho này KHÔNG thoả vế đầu. Đối chiếu HPG Q2/26
+   với từng mã dòng KQKD (nguồn VNDirect, đường lấy số độc lập):
+     · Lợi nhuận gộp        = mã 23100  -> CÓ in trong báo cáo
+     · Liên doanh, liên kết = mã 23300  -> CÓ
+     · Khác                 = mã 23900  -> CÓ
+     · **Hoạt động tài chính -> KHÔNG có mã dòng nào.** Simplize tự tính 21500 − 22500
+       (doanh thu tài chính 616,7 − chi phí tài chính 1.925,8 = −1.309,1).
+   Với công ty chứng khoán còn nặng hơn: mẫu B02-CTCK in DOANH THU và CHI PHÍ theo từng
+   nghiệp vụ nhưng KHÔNG in lợi nhuận theo nghiệp vụ, nên "Lợi nhuận từ môi giới" / "từ cho
+   vay ký quỹ" là Simplize PHÂN BỔ chứ không phải trích ra.
+   > Đừng thử "chỉ giữ dòng nào truy được về mã BCTC": chỉ đối chứng được nhóm sản xuất.
+   > VNDirect trả 0 dòng KQKD cho VCB và SSI nên ngân hàng/CTCK không có nguồn để soi —
+   > giữ hay bỏ dòng nào cũng chỉ là đoán. (Suýt kết luận ngược vì phép đo rỗng đó.)
+
+   `data/cocau` VẪN CÒN nhưng chỉ giữ khối `ts` của công ty chứng khoán: `build_nganh.
+   margin_ck()` đọc `ts.bs5` để in dòng "Dư nợ cho vay ký quỹ" ở cuối bảng CĐKT. Đó là
+   khoản mục CÓ in trên bảng cân đối mẫu CTCK, đúng vế "những thứ được báo cáo". */
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
   const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
@@ -1337,14 +1246,10 @@ function finCols(){
 let finLuot=0;                                    // đánh số lượt vẽ, chặn kết quả về trễ
 function veKQKD(){
   const cols=finCols(), dv=finData&&finData.div;
-  // bảng TRƯỚC -> biểu đồ đo cột bảng -> dòng cơ cấu lợi nhuận nối vào cuối bảng
-  kqkdTable(cols,dv); drawFinChart(cols); veCoCauRows();
+  kqkdTable(cols,dv); drawFinChart(cols);         // bảng TRƯỚC -> biểu đồ đo cột bảng
   const luot=++finLuot;
-  // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại (giữ nguyên kỳ và các năm đang mở).
-  // kqkdTable dựng lại tbody từ đầu nên PHẢI gọi lại veCoCauRows, bằng không mấy dòng
-  // cơ cấu lợi nhuận biến mất ngay khi vốn hoá về — im lặng và chỉ thấy ở mã tải chậm.
-  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){
-    kqkdTable(cols,dv); drawFinChart(cols); veCoCauRows(); } });
+  // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại (giữ nguyên kỳ và các năm đang mở)
+  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){ kqkdTable(cols,dv); drawFinChart(cols); } });
 }
 /* CÂN ĐỐI KẾ TOÁN: "TỔNG TÀI SẢN" và "TỔNG NGUỒN VỐN" là HAI VẾ CỦA MỘT ĐẲNG THỨC,
    luôn bằng nhau (đo toàn kho: 20.730/20.751 cặp khớp; 21 ca lệch là lỗi số liệu
@@ -1411,8 +1316,6 @@ function pickFinHighlights(){
 async function renderFin(){
   finData=await CP.loadFin(C.sym);
   veKQKD();
-  // kho riêng, nạp xong mới nối được dòng cơ cấu lợi nhuận; thiếu file thì hàm tự bỏ qua
-  await loadCoCau(C.sym); veCoCauRows();
   const bs=finData&&(finPeriod==='Q'?finData.bsQ:finData.bsY);
   const cf=finData&&(finPeriod==='Q'?finData.cfQ:finData.cfY);
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);

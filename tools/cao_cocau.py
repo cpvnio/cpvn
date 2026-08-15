@@ -68,13 +68,25 @@ _khoa = threading.Lock()
 # vốn (`bsCapitalValue`) và dòng tiền (`cfValue`) không có chỗ nào đọc: dòng tiền đã có
 # trong `data/finq` với dấu đúng của VNDirect, còn nguồn vốn thì `data/nganh` đã rút sẵn
 # mấy dòng cần (vay, vay/VCSH, đòn bẩy). Bỏ hai khối đó tiết kiệm ~2,5MB.
-KHOI = [("pvalue", "p"), ("bsAssetValue", "ts")]
-KHOI_TEN = [("ptitle", "p"), ("bsAssetTitle", "ts")]
+#
+# KHỐI LỢI NHUẬN (`pvalue`) ĐÃ THÔI LẤY 16/08/2026 — ĐỪNG MỞ LẠI. User chốt nguyên tắc:
+# *"tốt nhất là không lấy data thế mạnh của họ, chỉ nên lấy những thứ được báo cáo và
+# không xâm phạm quyền"*. Khối này không thoả vế đầu: nó là phần Simplize TỰ TÍNH, không
+# phải trích từ báo cáo. Đối chiếu HPG Q2/26 với mã dòng KQKD của VNDirect — lợi nhuận gộp
+# = 23100, liên doanh liên kết = 23300, khác = 23900 đều CÓ in trong báo cáo, nhưng
+# "Lợi nhuận hoạt động tài chính" KHÔNG có mã dòng nào: Simplize lấy 21500 − 22500. Với
+# công ty chứng khoán còn nặng hơn — mẫu B02-CTCK in doanh thu và chi phí theo từng nghiệp
+# vụ nhưng không in lợi nhuận theo nghiệp vụ, nên "lợi nhuận từ môi giới" là PHÂN BỔ.
+#
+# CÒN GIỮ đúng khối tài sản, và chỉ vì MỘT dòng: `bs5` "Các khoản cho vay" — dư nợ ký quỹ
+# của công ty chứng khoán, thứ cả `data/fin` lẫn `data/finq` đều không có (hai kho đó lấy
+# bản CĐKT mẫu THƯỜNG). Đây là khoản mục CÓ in trên bảng cân đối mẫu CTCK nên thoả đúng vế
+# "những thứ được báo cáo". `build_nganh.margin_ck()` là nơi duy nhất đọc nó.
+KHOI = [("bsAssetValue", "ts")]
+KHOI_TEN = [("bsAssetTitle", "ts")]
 
-# Khối tài sản CHỈ giữ cho công ty chứng khoán, và chỉ vì một dòng: `bs5` "Các khoản cho
-# vay" — con số dư nợ ký quỹ mà cả `data/fin` lẫn `data/finq` đều không có (hai kho đó
-# lấy bản CĐKT mẫu THƯỜNG). Nhóm khác thì phần tài sản đã nằm đủ trong data/nganh, giữ
-# lại chỉ tổ phình kho.
+# Chỉ công ty chứng khoán mới cần khối tài sản — nhóm khác đã có đủ trong data/nganh.
+# Nay `p` không còn thì mã ngoài nhóm này KHÔNG CÒN GÌ để ghi -> không tạo file.
 TS_GIU = {"INVESTMENT"}
 
 
@@ -172,12 +184,13 @@ def mot_ma(sym):
         nhom, ky, so, ten = mot_ky(sym, ky_loai)
         if not nhom or not ky:
             continue
+        # Mã ngoài nhóm chứng khoán nay không còn khối nào để ghi (khối lợi nhuận đã thôi
+        # lấy) -> bỏ hẳn, đừng đẻ ra file rỗng chỉ có `sym`/`nhom`/`ky`.
+        if nhom not in TS_GIU:
+            continue
         co = True
         ra["nhom"] = nhom
         ra.setdefault("ky", {})[ky_loai] = ky
-        if nhom not in TS_GIU:
-            so.pop("ts", None)
-            ten.pop("ts", None)
         ra[ky_loai] = so
         tenchung = ten
     return (ra, tenchung) if co else (None, None)
