@@ -496,6 +496,28 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > mục; `.sv` = vốn hoá / KỲ CÔNG BỐ; `.tdp` = vốn hoá / phần quỹ đang nắm. Dấu `·` ngăn mẩu
   > cũng vậy: đặt sau mọi mẩu TRỪ MẨU CUỐI, mà mẩu cuối hai bảng khác nhau (tập đoàn kết ở
   > `.sn2`, quỹ kết ở `.sv`) — dùng chung là lòi ra một dấu `·` lơ lửng, đọc như câu bỏ dở.
+  **CHIP LỌC THEO HẠNG** (`tdLoc`, 17/08/2026): `[Tất cả 164][Tư nhân 81][Nhà nước 57]
+  [Cơ quan 17][Cá nhân 9]` — chỉ GIẤU BỚT KHỐI, không đổi cách gom nhóm hay thứ tự bên trong.
+  Ba luật dùng chung với chip mức rơi của Về bờ:
+  · **Đếm trên rổ ĐẦY ĐỦ, không đếm theo phần đang hiện** — đếm sau khi lọc thì mọi chip khác
+    tụt về 0, không còn đường đọc trước xem bấm sang được bao nhiêu, mà cũng không còn đường
+    quay ra.
+  · **Tiêu đề khối / ô tìm / hàng chip PHẢI Ở LẠI kể cả nhánh RỖNG.** Chọn phải rổ 0 mã mà
+    hàng chip biến mất thì hết đường bấm về, phải tải lại trang (đúng lỗi đã vá cho `#vbQ`).
+    Và câu giải thích dưới tiêu đề khối mới là thứ nói "cơ quan" khác "nhà nước" ở chỗ nào —
+    đúng lúc người ta vừa chủ động bấm vào khối ấy nên đang cần đọc nhất.
+  · **Chip nằm RIÊNG một hàng, đừng nhét vào `.ph` cùng nút xếp** — hàng đó ở màn hẹp đã phải
+    bẻ tiêu đề xuống ba dòng để chứa hai nút xếp; và hai thứ khác việc nhau (xếp đổi THỨ TỰ,
+    lọc đổi CÁI GÌ ĐƯỢC HIỆN).
+  > **KÉO MÀN VỀ HÀNG CHIP: THỨ TỰ HAI PHÉP ĐỌC QUYẾT ĐỊNH ĐÚNG SAI.** Lọc 164 → 17 nhóm làm
+  > tài liệu ngắn đi hàng nghìn pixel nên trình duyệt tự KẸP `scrollY` xuống đáy mới. Phải
+  > đọc `getBoundingClientRect()` TRƯỚC (chính nó ép tính lại bố cục, việc kẹp xảy ra trong
+  > lượt tính đó) rồi mới đọc `scrollY`. Đảo lại là cộng toạ độ MỚI với `scrollY` CŨ, ra một
+  > điểm không có thật — đo được nhảy tới 1734 trong khi hàng chip nằm ở 366, lệch 1368px,
+  > bấm lọc xong nhìn như trang trắng.
+  > **ĐỪNG bọc trong `requestAnimationFrame` và đừng dùng `behavior:'smooth'`** — tab ở nền
+  > thì rAF không bao giờ fire và smooth bị bỏ qua (đo tại chỗ: smooth giữ nguyên scrollY=4000
+  > trong khi 'auto' nhảy đúng 311). Đọc rect là đã có số đúng, không cần đợi khung hình nào.
   **TÊN NHÓM BỎ ĐUÔI PHÁP LÝ LÚC HIỆN, KHÔNG CẮT TRONG KHO** (`tenGon` → `shortName`, cùng
   hàm mà hàng công ty con đang dùng nên mở nhóm ra là một lối viết). Đuôi ấy giống hệt nhau ở
   mọi mã cùng loại — mười mấy nhóm ngân hàng đều mở đầu "Ngân hàng Thương mại Cổ phần …",
@@ -520,12 +542,34 @@ giá sai hoặc giá nhảy — đừng đẩy.
   về bờ" rồi nên nhãn ghi **"cần tăng"** — đọc dọc thành "cần tăng ×1,4 để về bờ". Cột tiền
   ghi đủ **"vốn hoá hiện tại"** chứ không phải "vốn hoá" cụt: đứng cạnh cột "để về bờ" thì
   một chữ "vốn hoá" trần bị đọc dính vào cột bên trái.
-- **VỀ BỜ — CỘT NGÀNH: chọn ngành thì BỎ NGƯỠNG −30%, hiện ĐỦ mã của ngành** (user chốt
-  15/08/2026). Hai chế độ khác hẳn nhau về mục đích: `all` là "tìm mã đã rơi sâu" nên giữ
-  ngưỡng (bỏ ngưỡng ở đây là ra cả 1.500 mã, mất hẳn ý nghĩa); chọn MỘT ngành là "soi cả
-  ngành xem ai rơi ai chưa" nên phải có cả mã mới rơi 1% lẫn mã đang đứng ngay đỉnh (0%,
-  cần tăng ×1,0). Cột chọn ngành đếm **`đã rơi quá 30% / tổng mã`** để trước khi bấm đã
-  biết chọn vào sẽ thấy gì. Bốn thứ phải giữ:
+- **VỀ BỜ — BA CHẾ ĐỘ MỨC RƠI, CỘNG DỒN VỚI NGÀNH (`vbChe`, 17/08/2026).**
+  ```
+  [Rơi sâu 1075]  dath ≤ −30   ·  [Gần đỉnh 138]  dath > −10  ·  [Tất cả 1521]
+  ```
+  Trước chỉ có MỘT rổ "đã rơi quá 30%"; rổ ngược lại — mã đang SÁT ĐỈNH — không có đường nào
+  xem, trong khi nó trả lời câu hỏi khác hẳn và cũng chính đáng: giữa lúc thị trường đỏ thì
+  mã nào vẫn chưa rời đỉnh. `dath` luôn ≤ 0 nên "giảm dưới 10%" là `dath > -10`.
+  **Chế độ và ngành nay CỘNG DỒN, không loại trừ nhau** — hỏi được "trong ngành ngân hàng,
+  mã nào còn sát đỉnh?" (đo: 30 mã ngành → 15 rơi sâu / 4 gần đỉnh).
+  > **Luật user chốt 15/08/2026 VẪN GIỮ, chỉ đổi cách cài: chọn ngành thì hiện ĐỦ mã của
+  > ngành.** Nay đó là GIÁ TRỊ MẶC ĐỊNH (`vbBind` đặt `vbChe='het'` khi ngành đổi) chứ không
+  > phải luật cứng trong `vbLoc`, nên trong ngành vẫn lọc tiếp được. Về lại `all` thì tự quay
+  > về `'sau'` — `'het'` ở toàn thị trường là 1.521 dòng vô nghĩa. **Chỉ đặt khi ngành THẬT
+  > SỰ đổi**: bấm lại đúng ngành đang xem mà cũng nhảy về mặc định thì xoá mất bộ lọc người
+  > ta vừa chọn.
+  **HƯỚNG XẾP ĐI THEO CHẾ ĐỘ** (`vbSort.d = vbChe==='gan' ? -1 : 1`, chỉ khi đang xếp theo
+  mức rơi): rổ "Gần đỉnh" mà vẫn xếp rơi-nhiều-nhất-trước thì mở ra thấy ngay mã −9,9% còn mã
+  đang ở đúng đỉnh nằm tận cuối — ngược hẳn thứ vừa bấm vào để tìm.
+  **MÃ ĐANG Ở ĐÚNG ĐỈNH THÔI TÔ ĐỎ** (`.vbd.dinh`/`.vbl.dinh`, ngưỡng `dath > -0.5` xét theo
+  GIÁ TRỊ chứ không xét chuỗi đã in — 0% là số làm tròn). Cột "rơi khỏi đỉnh" luôn đỏ, đúng
+  khi rổ toàn mã rơi sâu; nhưng rổ "Gần đỉnh" có 54/100 dòng đầu là 0%, một màn đỏ rực báo
+  hiệu điều ngược hẳn sự thật. Phụ đề cột `×` cũng đổi "để về bờ" → "đang ở đỉnh".
+  > **Ghi chú cuối bảng PHẢI nói thẳng cái bẫy của rổ mới**: sát đỉnh KHÔNG có nghĩa là khoẻ
+  > hay sắp tăng tiếp — mã thanh khoản mỏng đứng im hàng tháng cũng nằm ở đây, vì giá không
+  > đi đâu thì cũng không rời đỉnh. Đây là phép đo vị trí giá, không hơn. (Cùng lối với câu
+  > "rơi sâu không có nghĩa là sắp hồi" của rổ kia — xem mục Ranh giới pháp lý.)
+  Cột chọn ngành đếm **`đã rơi quá 30% / tổng mã`** để trước khi bấm đã biết chọn vào sẽ thấy
+  gì. Bốn thứ phải giữ:
   1. **`#vbSecBar` và `#vbSecBd` phải được CHUYỂN RA THẲNG `<body>`** (`vbBind`). Tổ tiên
      có `backdrop-filter` (header và mấy thẻ của trang này đều có) trở thành khối chứa của
      `position:fixed` — để nguyên chỗ dựng thì cột không bám mép màn (đo được lệch 28px máy
