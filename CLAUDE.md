@@ -58,11 +58,31 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
-## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
+## Nến vẽ chart — KHO TRƯỚC, nguồn ngoài chỉ là cứu hộ
 
-Luật user chốt 05/08/2026: **trang không tự lưu nến để vẽ và không tự tính điều chỉnh
-cổ tức/chia tách.** `CP.loadDaily(sym)` (core.js) và bản sao `loadDaily` trong
-bubbles.html đi theo chuỗi:
+> **ĐÃ LẬT 17/08/2026 (user chốt). Luật cũ 05/08 — "mượn thẳng của nguồn, đừng lấy trong
+> kho" — KHÔNG còn hiệu lực; đừng dựng lại.** `CP.loadDaily` và bản sao trong bubbles.html
+> nay đi **kho → (VNDirect → VPS) CHỈ KHI kho không có mã đó**.
+> **Vì sao lật:** luật cũ sinh ra để KHÔNG LƯU dữ liệu của họ. Nhưng ở Việt Nam **số liệu là
+> dữ kiện, không được bảo hộ quyền tác giả**, và **không có quyền sui generis cho CSDL**
+> (Điều 22 Luật SHTT chỉ bảo hộ cách chọn lọc/sắp xếp, "không bao hàm chính các tư liệu
+> đó") — nên lưu nến gần như không có rủi ro bản quyền. Đổi lại, cách cũ bắn MỘT lượt sang
+> VNDirect cho **mỗi lần mở mỗi trang mã**, nhân 1.527 trang và mọi lượt crawler quét. Đổi
+> một rủi ro gần bằng 0 lấy một rủi ro có thật — và rủi ro có thật ấy đúng là thứ khiến bên
+> kia có động cơ và có log để gửi công văn.
+> **Hệ quả phải chấp nhận:** trong phiên, chart THIẾU đúng cây nến hôm nay (kho chốt 15:15).
+> Giá sống vẫn hiện to ở đầu trang, và nến chưa đóng cửa thì cũng chưa phải nến thật —
+> **tuyệt đối đừng bịa nến hôm nay từ giá sống**, xem luật "ĐỪNG dựng nến mới cho phiên
+> nguồn chưa có". Luật "chọn nguồn theo phiên mới nhất nó có" (dưới đây) vì thế chỉ còn áp
+> cho nhánh cứu hộ.
+> **KHO ĐÚNG HƠN NGUỒN Ở MỘT SỐ CA — đo được, không phải suy đoán.** SSI phiên 14/08: bảng
+> giá 24.500đ (ref 25.000, trần 26.750), **kho ghi đúng 24.500**, còn `dchart` trả **19.583**
+> — thấp hơn 20%, tức chart cũ vẽ lệch hẳn so với con số hiện ngay đầu trang. Mẫu 70 mã ngẫu
+> nhiên khác khớp nền 70/70, nên đây là ca hiếm; nhưng nó là bằng chứng rằng **mọi lượt bồi
+> kho phải quy về cùng nền trước khi ghép** (xem ba luật ở mục kho `data/hist`).
+
+Bảng dưới là ĐỘ SÂU và CHẤT LƯỢNG của từng nguồn, vẫn đúng — nay dùng để chọn nguồn cho
+nhánh cứu hộ và cho pipeline, không còn là thứ tự client gọi:
 
 | | Nguồn | Sâu | Hồi tố quyền |
 |---|---|---|---|
