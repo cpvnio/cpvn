@@ -140,6 +140,26 @@ giá sai hoặc giá nhảy — đừng đẩy.
 
 ### Luật bất di bất dịch
 
+- **TAB ẨN THÌ KHÔNG GỌI MẠNG — CHẶN TRONG `pollBoard`, ĐỪNG CHỈ CHẶN Ở VÒNG LẶP.**
+  Vòng `setInterval` kiểm `document.hidden` từ lâu, nhưng LƯỢT QUÉT MỞ MÀN thì không — mà
+  nó mới là lượt nặng nhất: chia 1.500 mã thành 11 lô bắn SONG SONG sang VPS (~1,48 MB).
+  Trước 17/08/2026 nó chạy vô điều kiện, nên **mỗi lượt mở trang** đều đẩy chừng ấy sang VPS
+  mang sẵn `Origin: https://cpvn.io` — kể cả tab mở ngầm, trang trình duyệt tự dựng sẵn
+  (prerender), hay máy cào chạy headless. Ai muốn nện VPS chỉ việc mở cpvn.io thật nhiều
+  lần: **CPVN thành cái loa khuếch đại, mà log bên kia thì trỏ về CPVN.** Đây là lớp phòng
+  thủ cho Điều 287 BLHS, cùng họ với `tools/nhipmang.py` ở phía pipeline.
+  Chặn trong `pollBoard` vì mọi đường ra mạng của giá đều đi qua đó (`warmPrices`,
+  `startPolling`, index, cophieu). **Hai bản sao (core.js, bubbles.html) phải sửa cùng lúc**;
+  congcu.js `startLive` vốn đã đúng sẵn. Cờ thoát `?forcelive` (`CP.FORCELIVE`) bắt buộc
+  phải có — khung xem tự động luôn báo `hidden=true` nên không có nó thì không đo được gì.
+  > **HOÃN, KHÔNG PHẢI BỎ.** `visibilitychange` trả nợ ngay khi tab được xem, và phải trả
+  > bằng lượt quét ĐỦ chứ không phải lượt nhanh chỉ lấy mã đang hiện — bằng không thống kê
+  > và xếp hạng đứng nguyên ở số kho mà không có dấu hiệu gì. Cần cờ `daMoMan` RIÊNG, đừng
+  > suy từ `lastPollAt`: tab ẩn thì `pollBoard` trả về ngay mà KHÔNG đặt `lastPollAt`, nên
+  > không phân biệt được "chưa quét bao giờ" với "vừa quét xong".
+  > **GIỚI HẠN:** chỉ chặn được tab nền / prerender / máy cào báo hidden. Puppeteer và
+  > Playwright mặc định báo **visible** — kẻ cố tình không bị chặn ở đây. Lớp chặn cho
+  > trường hợp đó nằm ở Cloudflare (rate limit + Bot Fight Mode), không nằm trong code.
 - **`CP.liveSess` chỉ được đóng dấu sau lượt quét ĐỦ** (`only` rỗng). Lượt nhỏ đóng dấu →
   hệ tưởng xong, bỏ luôn lượt quét đủ → thống kê thiếu 1470 mã.
 - **`applyLive` đếm đủ ≥100 mã TRƯỚC khi ghi đè.** Đếm sau vòng lặp thì đệm thiếu mã
