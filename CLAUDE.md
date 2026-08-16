@@ -461,10 +461,50 @@ giá sai hoặc giá nhảy — đừng đẩy.
   Nhóm do nhà nước hay cá nhân chi phối vẫn giữ nhưng gắn `kieu` để giao diện dán nhãn —
   Ngân hàng Nhà nước nắm cả BID+VCB+CTG nhưng ba ngân hàng đó không cùng một nhà.
   Bảng mặc định xếp VỐN HOÁ cao→thấp (`tdSort`), bấm lại nút đang bật là lật chiều; thứ tự
-  áp cho cả hàng nhóm lẫn công ty con. **Màn hẹp chỉ đủ một cột tiền nên nó phải là cột
-  ĐANG XẾP THEO** (`#tdPanel.xcap` đổi `.sc`↔`.sv`), bằng không xếp theo vốn hoá mà cột hiện
-  ra là GTGD thì bảng trông như không xếp gì. Hàng nhãn cột phải mang **đúng class của từng
-  cột** (`tdp`/`tdv`/`tdg`) — thiếu class thì nhãn canh trái còn số canh phải.
+  áp cho cả hàng nhóm lẫn công ty con. Hàng nhãn cột phải mang **đúng class của từng cột**
+  (`tdp`/`tdv`/`tdg`) — thiếu class thì nhãn canh trái còn số canh phải.
+  **MÁY BÀN LÀ LƯỚI 6 CỘT, MÀN HẸP LÀ THẺ HAI TẦNG — hai bố cục khác hẳn nhau (17/08/2026).**
+  Cột **thanh xanh đỏ đã gỡ** khỏi cả hai (nó chỉ vẽ lại dấu của cột % ngay cạnh, mà ăn 92px
+  trong khi tên nhà đang bị cắt); `.secrow` bên bảng NGÀNH thì GIỮ — ở đó ~25 dòng đọc một
+  lượt nên thanh có việc thật là xếp hạng bằng mắt. Lớp `#tdPanel.xcap`/`.xgtgd` cũng **xoá
+  hẳn**: nó sinh ra chỉ để màn hẹp chọn hiện MỘT cột tiền, nay hẹp không còn chạy lưới cột.
+  Màn hẹp:
+  ```
+  [▸][logo] TCB · Kỹ Thương Việt Nam  [thuộc Masan Group] ········· −0,05%
+  vốn hoá 248.701 tỷ · GTGD 556 tỷ · NN ròng +79,7 tỷ
+  ```
+  Bốn luật, phá cái nào cũng hỏng theo một kiểu ĐÃ ĐO ĐƯỢC:
+  1. **Hai tầng tách bằng TOÁN BỀ NGANG, không thêm thẻ bọc**: ô tên `calc(100% - 72px)` + ô %
+     `66px` + `column-gap:6px` = tròn 100%, nên mấy mẩu số hết chỗ và buộc rơi xuống tầng 2.
+     Đổi bề ngang ô % hay `column-gap` thì **phải đổi số 72 theo** (72 = 66 + 6).
+  2. **Ô tên phải có `max-width:calc(100% - 38px)`.** Flex xét xuống dòng theo bề ngang TỰ
+     NHIÊN của ô, mà tên ngân hàng tự nhiên dài hơn cả dòng → NGUYÊN Ô bị hất xuống, bỏ logo
+     đứng một mình gần hết một dòng trống. Chặn trần đúng phần còn lại sau `[▸]`+logo thì ô
+     luôn vừa dòng một, rồi CHỮ bên trong mới xuống dòng — đó mới là chỗ cần xuống dòng.
+  3. **Nhãn nằm NGANG trước số, chữ thường, mờ — đừng bao giờ xếp nhãn LÊN TRÊN số.** Bản
+     16/08 xếp chồng nhãn-in-hoa thành 4 ô: nhãn nằm trên số nghĩa là bốn nhãn ấy **lặp lại ở
+     mọi hàng — 656 mẩu chữ in hoa giãn cách** phủ kín bảng, mắt bị chúng kéo đi trước cả khi
+     đọc tới con số, và hàng cao **90,8px** (một màn 812px chỉ thấy 8,9/164 nhóm). Nhãn cột
+     chỉ đáng in hoa khi đứng MỘT LẦN trên đầu bảng. Bản một-dòng: **68,3px**, 11,9 nhóm/màn.
+  4. **Ô đếm ▲▼ ẨN ở màn hẹp — CHỈ ở bảng tập đoàn.** Bốn mẩu số cần 387px mà hàng chỉ rộng
+     313px nên phải cắt một; ▲▼ là mẩu ĐÚNG để cắt vì nó là thứ duy nhất người xem tự lấy lại
+     được (bấm mở nhóm ra là thấy % từng công ty con, chi tiết hơn hẳn), còn hướng cả nhóm đã
+     nằm ở ô % cỡ lớn. **Bảng quỹ giữ `.sb`** — cùng ô ấy bên đó lại là "15 mã", một trong ba
+     mẩu duy nhất của hàng quỹ.
+  > **Ô CÙNG TÊN, HAI BẢNG, NGHĨA KHÁC HẲN — mọi luật `order`/`::before`/`::after` phải khai
+  > RIÊNG `#tdPanel` và `#quyPanel`.** `.sb` = đếm ▲▼ / "15 mã"; `.sc` = GTGD / giá trị danh
+  > mục; `.sv` = vốn hoá / KỲ CÔNG BỐ; `.tdp` = vốn hoá / phần quỹ đang nắm. Dấu `·` ngăn mẩu
+  > cũng vậy: đặt sau mọi mẩu TRỪ MẨU CUỐI, mà mẩu cuối hai bảng khác nhau (tập đoàn kết ở
+  > `.sn2`, quỹ kết ở `.sv`) — dùng chung là lòi ra một dấu `·` lơ lửng, đọc như câu bỏ dở.
+  **TÊN NHÓM BỎ ĐUÔI PHÁP LÝ LÚC HIỆN, KHÔNG CẮT TRONG KHO** (`tenGon` → `shortName`, cùng
+  hàm mà hàng công ty con đang dùng nên mở nhóm ra là một lối viết). Đuôi ấy giống hệt nhau ở
+  mọi mã cùng loại — mười mấy nhóm ngân hàng đều mở đầu "Ngân hàng Thương mại Cổ phần …",
+  34 ký tự không phân biệt được nhóm nào với nhóm nào. Tên đầy đủ về `title` (57 nhóm).
+  Đo 164 nhóm: 31,3 → 25,6 ký tự, số tên phải xuống dòng ở màn hẹp **77 → 0**.
+  > Đi kèm: trần tên nhóm trong `build_tapdoan.py` **nới 46 → 72 ký tự**. Mốc 46 đặt hồi cột
+  > tên còn hẹp, khiến 30/164 nhóm cụt ngay giữa tên riêng — mà cắt ở kho thì `shortName`
+  > không cứu lại được ("TCB · Ngân hàng Thương mại Cổ phần Kỹ Thương…" rút gọn vẫn cụt).
+  > Dựng lại xác nhận: 164 nhóm y nguyên, **0 trường nào ngoài `ten` đổi**, 0 tên còn cụt.
 - **VỀ BỜ — HÀNG NHÃN CỘT CŨNG PHẢI MANG CLASS CỦA CỘT, cùng bài học với bảng tập đoàn.**
   Bản cũ để tám thẻ `<span>` TRẦN, trong khi khổ hẹp ẩn ba cột dữ liệu bằng chính class
   (`.vbb`/`.vbp`/`.vbv`) — nhãn không ẩn theo, tám nhãn dồn vào lưới năm cột rồi tràn xuống
