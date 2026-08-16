@@ -19,9 +19,14 @@ const kiem = (ten, thuc, mong) => {
 };
 
 /* Dựng một "trình duyệt" giả với đồng hồ đứng yên tại mốc giờ VN cho trước. */
-function dungCP(gioVN, { dem = null, offline = false } = {}) {
+function dungCP(gioVN, { dem = null, offline = false, an = false } = {}) {
   const moc = new Date(gioVN + '+07:00').getTime();
   const kho = dem ? { cpvn_live: JSON.stringify(dem) } : {};
+  /* `an` = tab đang ẩn. `demFetch` đếm số lượt RA MẠNG — phép kiểm quan trọng nhất của
+     mục "tab ẩn thì không gọi mạng" là con số này bằng 0, chứ không phải giá trị trả về:
+     hàm vẫn trả về false khi mạng hỏng, nên chỉ nhìn kết quả thì không phân biệt được
+     "đã chặn" với "có gọi nhưng gọi hụt". `nghe` giữ listener để bắn visibilitychange. */
+  let demFetch = 0; const nghe = {};
   class FakeDate extends Date {
     constructor(...a) { a.length ? super(...a) : super(moc); }
     static now() { return moc; }
@@ -35,8 +40,9 @@ function dungCP(gioVN, { dem = null, offline = false } = {}) {
       removeItem: k => { delete kho[k]; },
     },
     location: { search: offline ? '?offline' : '' },
-    document: { hidden: false, addEventListener() {} },
-    fetch: () => Promise.reject(new Error('mạng bị chặn trong kiểm thử')),
+    document: { hidden: an,
+      addEventListener(t, f) { (nghe[t] = nghe[t] || []).push(f); } },
+    fetch: () => { demFetch++; return Promise.reject(new Error('mạng bị chặn trong kiểm thử')); },
     window: {},
   };
   ctx.window = ctx; ctx.globalThis = ctx;
@@ -44,7 +50,11 @@ function dungCP(gioVN, { dem = null, offline = false } = {}) {
   vm.runInContext(SRC, ctx);
   // core.js khai báo `const CP={}` ở tầng đầu -> đó là BIẾN TỪ VỰNG, không phải thuộc
   // tính của ngữ cảnh. Phải lấy qua eval, y như trong trình duyệt window.CP là undefined.
-  return { CP: vm.runInContext('CP', ctx), kho, moc };
+  return { CP: vm.runInContext('CP', ctx), kho, moc, ctx,
+    demFetch: () => demFetch,
+    /* giả lập người dùng bấm sang tab: đổi cờ rồi bắn đúng sự kiện trình duyệt bắn */
+    hien: () => { ctx.document.hidden = false;
+      (nghe.visibilitychange || []).forEach(f => f()); } };
 }
 
 /* Bản đệm giả: n mã, đủ 10 phần tử đúng thứ tự hợp đồng */
@@ -244,6 +254,37 @@ console.log('\n── 4. F5 GIỮA PHIÊN KHÔNG ĐƯỢC CHỜ MẠNG ───
       kiem('?offline → nhận diện đúng', CP.OFFLINE, true);
       const ok = await CP.pollBoard();
       kiem('?offline → không gọi mạng lượt nào', ok, false);
+    }
+
+    /* Vì sao mục này quan trọng: lượt quét mở màn chia cả thị trường thành nhiều lô bắn
+       SONG SONG sang bảng giá VPS, và trước 17/08/2026 nó chạy VÔ ĐIỀU KIỆN. Nghĩa là mỗi
+       lượt mở trang — kể cả tab nền, kể cả trang trình duyệt tự dựng sẵn, kể cả máy cào
+       chạy ngầm — đều đẩy chừng ấy lượt sang VPS mang sẵn Origin của CPVN. */
+    console.log('\n── 7. TAB ẨN THÌ KHÔNG GỌI MẠNG ─────────────────────────────');
+    {
+      const A = dungCP('2026-08-04T10:00', { an: true });
+      A.CP.coins.set('AAA', { sym: 'AAA', price: 1, ref: 1, shares: 1 });
+      const ok = await A.CP.pollBoard();
+      kiem('tab ẩn → pollBoard trả về false', ok, false);
+      kiem('tab ẩn → KHÔNG ra mạng lượt nào', A.demFetch(), 0);
+
+      const B = dungCP('2026-08-04T10:00');                 // cùng mốc, tab đang xem
+      B.CP.coins.set('AAA', { sym: 'AAA', price: 1, ref: 1, shares: 1 });
+      await B.CP.pollBoard();
+      kiem('tab đang xem → vẫn ra mạng như cũ', B.demFetch() > 0, true);
+
+      const C = dungCP('2026-08-04T10:00', { an: true });
+      C.CP.coins.set('AAA', { sym: 'AAA', price: 1, ref: 1, shares: 1 });
+      C.CP.startPolling();
+      await new Promise(r => setTimeout(r, 50));
+      kiem('mở trang ở tab NỀN → chưa gọi lượt nào', C.demFetch(), 0);
+      C.hien();                                             // người dùng bấm sang tab
+      await new Promise(r => setTimeout(r, 400));           // chờ qua mốc hoãn 300ms
+      kiem('bấm sang tab → trả nợ lượt quét mở màn', C.demFetch() > 0, true);
+
+      const D = dungCP('2026-08-04T10:00', { an: true, offline: false });
+      D.ctx.location.search = '?forcelive';                 // cờ kiểm thử phải vẫn xuyên qua
+      kiem('?forcelive có mặt để đo được khi tab ẩn', typeof D.CP.FORCELIVE, 'boolean');
     }
 
     console.log(`\n${'─'.repeat(60)}\n  ĐẠT ${pass} · HỎNG ${fail}\n`);

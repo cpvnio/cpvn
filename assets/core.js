@@ -260,8 +260,24 @@ CP.lastFullAt=0;
 /* only = mảng mã cần làm mới NHANH (những mã người dùng đang nhìn); bỏ trống = quét cả thị trường.
    Đang có lượt chạy thì TRẢ VỀ CHÍNH LƯỢT ĐÓ (trước đây trả false rồi thôi — ai gọi trúng
    lúc bận sẽ không bao giờ được báo kết quả, màn hình đứng số cũ). */
+/* CỜ KIỂM THỬ: poll cả khi tab ẩn. Khung xem tự động luôn báo document.hidden=true nên
+   không có cờ này thì không đo được gì. Cùng tên với ?forcelive của congcu.js. */
+CP.FORCELIVE=typeof location!=='undefined'&&/[?&]forcelive/.test(location.search||'');
 CP.pollBoard=function(only){
   if(CP.OFFLINE) return Promise.resolve(false);
+  /* ═══ TAB ẨN THÌ KHÔNG GỌI MẠNG — CHẶN NGAY TẠI ĐÂY, ĐỪNG CHỈ CHẶN Ở VÒNG LẶP ═══
+     Vòng `setInterval` của startPolling đã kiểm document.hidden từ lâu, nhưng LƯỢT QUÉT ĐẦU
+     khi mở trang thì không — mà lượt đầu mới là lượt nặng nhất: nó chia 1.500 mã thành 11 lô
+     bắn song song sang bảng giá VPS. Nghĩa là MỖI LƯỢT MỞ TRANG, kể cả trang mở ngầm ở tab
+     nền, kể cả trình duyệt tự dựng sẵn trang, kể cả máy cào chạy headless, đều đẩy 11 lượt
+     sang VPS mang sẵn `Origin: https://cpvn.io`. Ai muốn nện VPS chỉ việc mở cpvn.io thật
+     nhiều lần — CPVN thành cái loa khuếch đại, mà log bên kia thì trỏ về CPVN.
+     Chặn ở `pollBoard` chứ không chặn ở từng chỗ gọi: mọi đường ra mạng của giá đều đi qua
+     đây (warmPrices, startPolling, index, cophieu), bịt một chỗ là bịt hết.
+     KHÔNG mất gì cho người dùng thật: mở trang bình thường thì hidden=false nên chạy y như
+     cũ; mở ở tab nền thì hoãn lại, và listener `visibilitychange` bên dưới bắn lại ngay khi
+     người ta bấm sang tab đó. */
+  if(typeof document!=='undefined'&&document.hidden&&!CP.FORCELIVE) return Promise.resolve(false);
   if(polling&&inflight) return inflight;
   polling=true;
   inflight=doPoll(only).finally(()=>{ polling=false; });
@@ -450,11 +466,20 @@ CP.startPolling=function(onUpdate,visibleSyms){
      quét cả 1.500 mã (~1,4 giây) -> giá đúng gần như ngay, hết cảnh loé số cũ.
      Quét toàn bộ đẩy lùi lại chút, chạy ngầm cho thống kê và xếp hạng.
      Nhưng nếu giá ĐÃ CHỐT CỨNG phiên gần nhất thì khỏi gọi mạng lượt nào. */
-  if(!CP.pricesFinal()){
+  /* LƯỢT MỞ MÀN đã chạy chưa. Cần cờ riêng chứ không suy từ `lastPollAt`: tab ẩn thì
+     `pollBoard` trả về ngay mà KHÔNG đặt `lastPollAt`, nên lúc người ta bấm sang tab,
+     `lastPollAt` vẫn là 0 và không phân biệt được "chưa quét bao giờ" với "vừa quét xong". */
+  let daMoMan=false;
+  const moMan=()=>{
+    if(daMoMan||CP.pricesFinal()) return;
+    daMoMan=true;
     // vừa hâm nóng xong thì khỏi lấy lại mấy mã đó, đi thẳng tới lượt quét đủ
     const vuaLay=Date.now()-CP.lastPollAt<3000;
     (vuaLay?Promise.resolve():tick(true)).then(()=>setTimeout(()=>tick(false),300));
-  }
+  };
+  /* Mở trang ở tab NỀN thì hoãn cả lượt mở màn — xem chú thích dài ở `CP.pollBoard`.
+     Hoãn chứ KHÔNG bỏ: `visibilitychange` bên dưới gọi lại ngay khi tab được xem. */
+  if(typeof document!=='undefined'&&document.hidden&&!CP.FORCELIVE){} else moMan();
   setInterval(()=>{
     if(document.hidden) return;
     const now=Date.now();
@@ -470,7 +495,12 @@ CP.startPolling=function(onUpdate,visibleSyms){
     else if(now-CP.lastPollAt>=60000) tick(true);
   },5000);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&CP.sessionOpen()&&Date.now()-CP.lastPollAt>=60000) tick(true);
+    if(document.hidden) return;
+    /* Trang mở ở tab nền thì lượt mở màn bị hoãn — trả nợ NGAY khi được xem, bằng không
+       thống kê và xếp hạng đứng nguyên ở số kho mà không có dấu hiệu gì. Phải là lượt mở
+       màn ĐỦ (quét cả thị trường), không phải `tick(true)` chỉ lấy mã đang hiện. */
+    if(!daMoMan){ moMan(); return; }
+    if(CP.sessionOpen()&&Date.now()-CP.lastPollAt>=60000) tick(true);
   });
 };
 
