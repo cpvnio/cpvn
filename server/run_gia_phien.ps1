@@ -30,7 +30,17 @@ if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
 & $git fetch origin main 2>&1 | Add-Content $log
 & $git reset --hard origin/main 2>&1 | Add-Content $log
 
-python 'C:\cpvn\tools\gia_phien.py' 2>&1 | Add-Content $log
+# ĐƯỜNG DẪN ĐẦY ĐỦ, đừng gọi trống `python`. Python cài trong profile Administrator nên
+# SYSTEM KHÔNG có nó trong PATH — gọi trống thì PowerShell ném CommandNotFound, mà với
+# $ErrorActionPreference='Continue' thì $LASTEXITCODE GIỮ NGUYÊN giá trị cũ (0 của git).
+# Kết quả: tác vụ báo `Last Result: 0` trong khi python chưa hề chạy. Đã dính đúng vậy
+# lượt thử thứ hai — cùng họ với bẫy "Last Result 0 vẫn là hỏng" đã ghi ở README.
+$py = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
+if (-not (Test-Path $py)) {
+  "KHONG THAY PYTHON: $py" | Add-Content $log
+  exit 9
+}
+& $py 'C:\cpvn\tools\gia_phien.py' 2>&1 | Add-Content $log
 $ma = $LASTEXITCODE
 if ($ma -ne 0) { "EXIT $ma" | Add-Content $log }
 exit $ma
