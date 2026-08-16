@@ -777,18 +777,12 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .cdtruc{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
 .cdtruc em{font-style:normal;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;
   border:1px solid currentColor}
-.cdssi{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:9px;padding-top:8px;
-  border-top:1px solid var(--line);font-size:11.5px}
+.cdssi{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--mut)}
+.cdssi b{color:var(--txt);font-weight:800}
 .cdssi.trong{color:var(--faint);font-size:10.5px}
-/* KHÔNG dùng color-mix — html2canvas của nút chụp màn hình không hiểu hàm đó */
-.cdkn{font-size:10px;font-weight:900;letter-spacing:.03em;padding:3px 8px;border-radius:20px;
-  background:var(--card2);border:1px solid var(--line2);color:var(--mut)}
-.cdkn.mua{background:rgba(22,199,132,.15);border-color:transparent;color:var(--green)}
-.cdkn.ban{background:rgba(234,57,67,.15);border-color:transparent;color:var(--red)}
-.cdkn.giu{background:rgba(234,179,8,.15);border-color:transparent;color:var(--yellow)}
-.cdtp{color:var(--mut)} .cdtp b{color:var(--txt);font-weight:800}
-.cdch{font-weight:800} .cdch.up{color:var(--green)} .cdch.dn{color:var(--red)}
-.cdd{margin-left:auto;color:var(--faint);font-size:10.5px}
+/* .cdkn (badge MUA/BÁN/TRUNG LẬP), .cdtp (giá mục tiêu), .cdch (chênh % so mục tiêu),
+   .cdd đã XOÁ 16/08/2026 cùng dữ liệu sinh ra chúng — xem cdBadge trong congcu.js. */
 @media(max-width:640px){
   .cdgrid{grid-template-columns:1fr}
   .venn{margin:0 -6px 4px}
@@ -889,6 +883,10 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 #load p{color:var(--mut);font-size:13px;margin:0}
 
 footer{color:var(--faint);font-size:11.5px;text-align:center;padding:30px 18px 44px;line-height:1.9}
+/* MIỄN TRỪ — xem CLAUDE.md mục "Ranh giới pháp lý". Câu công bố vị thế là bắt buộc:
+   chủ trang là nhà đầu tư cá nhân có nắm giữ, nên không dùng được câu "không nắm giữ". */
+.mientru{max-width:70ch;margin:6px auto 0;line-height:1.7;font-size:11px;color:var(--faint)}
+.mientru b{font-weight:800}
 /* chế độ chụp ảnh: bỏ các lớp html2canvas vẽ sai (gradient nền phủ mờ, blur, toast) */
 body.shotmode::before{display:none!important}
 body.shotmode #toast,body.shotmode #htip{display:none!important}
@@ -924,7 +922,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260814a"></script>
+<script defer src="assets/mobi.js?v=20260816m"></script>
 </head>
 <body>
 
@@ -934,7 +932,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
   <a class="brand" href="/"><img src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
-    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="cd">🎯 Chủ điểm đầu tư</a><a data-md="radar" data-t="vb">🛟 Khi nào về bờ</a></span></span>
+    <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a data-m="race">Đường đua</a><span class="dd"><a data-md="race" data-t="dua">🏁 Đường đua vốn hoá</a><a data-md="race" data-t="dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
@@ -971,12 +969,15 @@ document.addEventListener(MO,function(e){
 
 <footer>
   CPVN.IO — mọi con số lấy từ kho dữ liệu CPVN, phiên <span id="fdate">—</span>, tự cập nhật sau mỗi phiên giao dịch.
-  Toàn bộ nội dung là số liệu &amp; thống kê mô tả quá khứ, <b>không phải khuyến nghị đầu tư</b>.
+  <div class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
+    <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không
+    cung cấp dịch vụ tư vấn đầu tư chứng khoán. Người vận hành có thể nắm giữ cổ phiếu xuất
+    hiện trên trang. Người dùng tự chịu trách nhiệm với quyết định của mình.</div>
 </footer>
 
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260815c"></script>
+<script src="assets/congcu.js?v=20260816m"></script>
 </body>
 </html>

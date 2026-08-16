@@ -272,6 +272,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .sect{display:none}
   .sect.on{display:block}
   h3.t{margin:18px 0 8px;font-size:15px}
+  /* #segTip (thẻ rê chuột của biểu đồ cơ cấu lợi nhuận) đã gỡ 16/08/2026 cùng canvas
+     #segCv — cơ cấu lợi nhuận nay là dòng trong bảng KQKD, số đọc thẳng trên bảng. */
   .finlegend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:4px 0 6px;flex-wrap:wrap}
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   canvas.fin{width:100%;height:200px;display:block}
@@ -321,6 +323,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   table.ft td.ngv{color:var(--yellow);font-weight:650}
   table.ft td.ngd{color:var(--red);font-weight:650}
   table.ft tr.ngcap td{border-top:2px solid var(--line)}
+  /* CSS dòng cơ cấu lợi nhuận (tr.ccr) đã xoá 16/08/2026 cùng cả tính năng. */
   table.ft tr.head td{font-weight:800;color:#ffd60a}
   /* VỐN HOÁ theo kỳ: đậm vừa để dò nhanh cạnh dòng LN sau thuế, tách bằng vạch mảnh */
   table.ft tr.mcapRow td{font-weight:700;border-top:1px solid var(--line)}
@@ -395,16 +398,8 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .peer .mc small{display:block;color:var(--muted);font-weight:600;font-size:10px}
 
   /* tài liệu + tin */
-  .rp{padding:10px 0;border-bottom:1px solid var(--rowline)}
-  .rp .rh{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
-  .rp .rec{font-size:10.5px;font-weight:800;border-radius:4px;padding:1.5px 7px}
-  .rp .mt{font-size:12.5px;font-weight:800}
-  .rp .src{font-size:11.5px;color:#7ab7ff;font-weight:700}
-  .rp .dt{font-size:11px;color:var(--muted);margin-left:auto}
-  .rp a.rt{font-size:13px;line-height:1.45}
-  .rp a.rt:hover{color:#fff;text-decoration:underline}
-  .rp a.dl{font-size:11.5px;font-weight:800;color:var(--green);border:1px solid rgba(22,199,132,.4);
-    border-radius:6px;padding:2px 9px;margin-left:8px;white-space:nowrap}
+  /* CSS mục báo cáo phân tích (.rp/.rp1 và trước đó .rec/.mt/.rt/.dl) đã xoá 16/08/2026
+     cùng cả mục — xem ghi chú ở chỗ khai `#reps` trong phần thân. */
   .ni{padding:9px 0;border-bottom:1px solid var(--rowline)}
   .ni a{font-size:13.5px;line-height:1.45;display:block}
   .ni a:hover{color:#fff;text-decoration:underline}
@@ -416,6 +411,10 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 
   footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:16px;color:var(--muted);
     font-size:11.5px;flex-wrap:wrap;text-align:center}
+  /* MIỄN TRỪ — xem CLAUDE.md mục "Ranh giới pháp lý". */
+  .mientru{flex-basis:100%;max-width:70ch;margin:2px auto 0;line-height:1.75;
+    font-size:11px;color:var(--muted);opacity:.92}
+  .mientru b{color:var(--muted);font-weight:800}
   @media(max-width:980px){
     .tabs{margin-left:6px}
     #top{grid-template-columns:1fr}
@@ -426,19 +425,19 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260815c"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260816m"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260814a"></script>
+<script defer src="assets/mobi.js?v=20260816m"></script>
 </head>
 <body>
 <header>
   <a class="brand" href="/"><img class="mark" src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
-    <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=cd">🎯 Chủ điểm đầu tư</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
+    <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a href="congcu.html?m=race">Đường đua</a><span class="dd"><a href="congcu.html?m=race&amp;t=dua">🏁 Đường đua vốn hoá</a><a href="congcu.html?m=race&amp;t=dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
@@ -532,6 +531,8 @@ document.addEventListener(MO,function(e){
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
       </div>
+      <!-- Cơ cấu lợi nhuận (biểu đồ #segBox, rồi dòng bảng tr.ccr) đã bỏ hẳn 16/08/2026 —
+           lý do đầy đủ ở khối chú thích cùng tên trong phần script. -->
       <h3 class="t">Kết quả kinh doanh</h3>
       <div class="finlegend">
         <span><i style="background:#5b6b7a"></i>Doanh thu</span>
@@ -559,11 +560,20 @@ document.addEventListener(MO,function(e){
 
   <div class="sect" id="s-tl">
     <div class="card">
-      <h3 class="t" style="margin-top:0">Báo cáo phân tích của công ty chứng khoán <span class="subnote" id="repN"></span></h3>
-      <div id="reps"></div>
-      <h3 class="t">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
+      <!-- KHO TÀI LIỆU GỐC ĐỨNG TRƯỚC BÁO CÁO CTCK (user chốt 15/08/2026). Vào thẻ này là
+           để đi tải BCTC gốc và hồ sơ doanh nghiệp — mấy cái link đó phải nằm ngay tầm mắt,
+           không phải cuộn qua danh sách báo cáo phân tích dài cả chục mục mới thấy. -->
+      <h3 class="t" style="margin-top:0">Báo cáo tài chính gốc & tài liệu doanh nghiệp</h3>
       <div class="subnote">Số liệu KQKD/CĐKT/LCTT đã có ở thẻ "Báo cáo tài chính". File BCTC gốc (PDF có chữ ký, thuyết minh đầy đủ) tải tại các cổng lưu trữ chính thống:</div>
       <div class="btnrow" id="docLinks"></div>
+      <!-- MỤC "BÁO CÁO PHÂN TÍCH CỦA CTCK" ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.
+           Nguồn (api2.simplize.vn/analysis-report/list) chỉ trả về một đường dẫn duy nhất
+           là FILE PDF trên cdn.simplize.vn — không có URL nào trỏ tới bài báo cáo trên
+           trang của chính CTCK (đã dò `simplize.vn/co-phieu/{MÃ}/bao-cao-phan-tich`,
+           `/bao-cao-phan-tich/{id}` và biến thể: **404 cả ba**). Mà tiêu đề báo cáo thì
+           mang sẵn khuyến nghị trong tên: "CTCP Tập đoàn Hòa Phát (HPG/Mua/GMT:30,000)".
+           User chốt: dẫn thẳng được tới bài báo cáo thì giữ, không thì bỏ — không dẫn được,
+           nên bỏ. Chỉ hiện tên CTCK + ngày mà không mở ra đọc được thì cũng vô dụng. -->
     </div>
   </div>
 
@@ -603,10 +613,16 @@ document.addEventListener(MO,function(e){
     <div id="ptWrap"><canvas id="ptCv"></canvas></div></div>
 </div>
 
-<footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span></footer>
+<footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span>
+  <div class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
+    <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không
+    cung cấp dịch vụ tư vấn đầu tư chứng khoán; mục báo cáo chỉ nêu công ty chứng khoán nào
+    đã phát hành báo cáo và vào ngày nào, không dẫn lại nội dung khuyến nghị. Người vận hành
+    có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
+    định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260815a"></script>
-<script src="assets/chart.js?v=20260813a"></script>
+<script src="assets/core.js?v=20260816m"></script>
+<script src="assets/chart.js?v=20260816m"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1038,7 +1054,33 @@ function renderPeers(){
    chỉ hỏng khi kéo đổi cỡ cửa sổ hoặc bấm đổi giao diện, nên lọt lưới rất lâu.
    Luật: MỌI lượt vẽ lại phải đi qua biến này, đừng bao giờ tự dựng danh sách cột. */
 let finColsVe=null;
+/* Cơ cấu lợi nhuận nay là DÒNG BẢNG, không phải canvas — không cần vẽ lại theo resize
+   hay đổi đèn, chỉ cần dựng lại khi bảng KQKD được dựng lại (veKQKD tự lo). */
 function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
+
+/* ---------- CƠ CẤU LỢI NHUẬN — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI ----------
+   Đi qua ba bản rồi mới bỏ: ① biểu đồ cột chồng riêng (#segBox/#segCv) → ② dòng cuối bảng
+   KQKD có đánh màu (veCoCauRows) → ③ bỏ. `loadCoCau`, `segNgan`, `veCoCauRows`, `segData`,
+   `segNhan`, `segSym` đều xoá.
+
+   LÝ DO — user chốt: *"tốt nhất là không lấy data thế mạnh của họ, chỉ nên lấy những thứ
+   được báo cáo và không xâm phạm quyền"*. Kho này KHÔNG thoả vế đầu. Đối chiếu HPG Q2/26
+   với từng mã dòng KQKD (nguồn VNDirect, đường lấy số độc lập):
+     · Lợi nhuận gộp        = mã 23100  -> CÓ in trong báo cáo
+     · Liên doanh, liên kết = mã 23300  -> CÓ
+     · Khác                 = mã 23900  -> CÓ
+     · **Hoạt động tài chính -> KHÔNG có mã dòng nào.** Simplize tự tính 21500 − 22500
+       (doanh thu tài chính 616,7 − chi phí tài chính 1.925,8 = −1.309,1).
+   Với công ty chứng khoán còn nặng hơn: mẫu B02-CTCK in DOANH THU và CHI PHÍ theo từng
+   nghiệp vụ nhưng KHÔNG in lợi nhuận theo nghiệp vụ, nên "Lợi nhuận từ môi giới" / "từ cho
+   vay ký quỹ" là Simplize PHÂN BỔ chứ không phải trích ra.
+   > Đừng thử "chỉ giữ dòng nào truy được về mã BCTC": chỉ đối chứng được nhóm sản xuất.
+   > VNDirect trả 0 dòng KQKD cho VCB và SSI nên ngân hàng/CTCK không có nguồn để soi —
+   > giữ hay bỏ dòng nào cũng chỉ là đoán. (Suýt kết luận ngược vì phép đo rỗng đó.)
+
+   `data/cocau` VẪN CÒN nhưng chỉ giữ khối `ts` của công ty chứng khoán: `build_nganh.
+   margin_ck()` đọc `ts.bs5` để in dòng "Dư nợ cho vay ký quỹ" ở cuối bảng CĐKT. Đó là
+   khoản mục CÓ in trên bảng cân đối mẫu CTCK, đúng vế "những thứ được báo cáo". */
 function drawFinChart(rows){
   /* vẽ cột THẲNG TÂM với từng cột kỳ của bảng KQKD bên dưới (đo <th> thật) */
   const cvs=$('finCv'), tbl=document.querySelector('#kqkdT table');
@@ -1347,10 +1389,14 @@ function veNganhRows(){
     dong('ROE 4 quý (%)','LNST 4 quý gần nhất / vốn chủ bình quân. Xanh ≥15% · vàng 8–15% · đỏ <8%.',
       'pct',lay('roe'),banRoe);
   }else if(NG.mau==='ck'){
-    // CON SỐ QUAN TRỌNG NHẤT của công ty chứng khoán là TIỀN ĐANG CHO VAY (ký quỹ) —
-    // nguồn đang cào chưa trả dòng này, in hẳn một dòng trống để nói ra chứ không im lặng.
-    rows.push(`<tr class="ngr"><td title="Con số quan trọng nhất của công ty chứng khoán — tiền đang cho khách vay (chủ yếu ký quỹ), nằm bên TÀI SẢN. Nguồn đang cào (24hMoney lẫn VNDirect bản rút gọn) chỉ trả 20 dòng tóm tắt nên chưa có; sẽ bổ sung ngay khi mở được mã dòng mẫu công ty chứng khoán. Tạm soi qua vốn vay và đòn bẩy ở các dòng dưới."><div class="lb">Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung</div></td>`+
-      cols.map(()=>'<td>—</td>').join('')+'<td class="sp"></td></tr>');
+    // CON SỐ QUAN TRỌNG NHẤT của công ty chứng khoán là TIỀN ĐANG CHO VAY (ký quỹ).
+    // Từ 15/08/2026 đã có thật (kho data/cocau, nguồn Simplize) — trước đó in dòng trống
+    // vì hai kho fin/finq đều dùng bản CĐKT mẫu THƯỜNG, không có khoản mục cho vay.
+    // Nguồn chỉ sâu 15 quý nên phần trục trước Q4/22 để `—`, KHÔNG kéo số gần nhất lấp vào.
+    dong('Dư nợ cho vay ký quỹ (tỷ)','Tiền đang cho khách vay, nằm bên TÀI SẢN — với công ty chứng khoán đây mới là con số sinh lãi, khác hẳn vốn vay ở dòng dưới (bên nguồn vốn). Không tô màu: to hay nhỏ không tự nó là tốt hay xấu, phải soi cùng dòng kế tiếp. Nguồn Simplize, chỉ có từ Q4/2022 nên kỳ cũ hơn để trống.',
+      'ty',lay('margin'),null);
+    dong('Cho vay ký quỹ / vốn chủ (%)','Luật cấm cho vay quá 200% vốn chủ sở hữu — nên đây là thước đo còn bao nhiêu dư địa. Xanh ≤100% · vàng 100–160% · đỏ >160% (đã dùng quá 80% hạn mức, gần như hết chỗ để tăng). Đo 15/08/2026 trên 37 công ty chứng khoán có dư nợ >50 tỷ: trung vị 99%, cao nhất 198% (sát trần), thấp nhất 4%.',
+      'pct',lay('marginvc'),banThap(100,160));
     dong('Vay / vốn chủ (lần)','Vốn vay tài trợ cho vay ký quỹ và tự doanh. Xanh ≤0,7 · vàng 0,7–1,3 · đỏ >1,3 lần — tam phân vị 35 công ty chứng khoán (08/2026).',
       'lan',lay('vayvc'),banThap(0.7,1.3));
     dong('Đòn bẩy · tài sản / vốn chủ (lần)','Xanh ≤1,5 · vàng 1,5–2,5 · đỏ >2,5 lần — tam phân vị 42 công ty chứng khoán (08/2026).',
@@ -1407,18 +1453,16 @@ function veNganhRows(){
 /* ---------- tài liệu + tin tức ---------- */
 async function renderDocsNews(){
   const d=await CP.loadNews(C.sym);
-  $('repN').textContent=d.total?`· ${d.total} báo cáo`:'';
-  $('reps').innerHTML=(d.reports&&d.reports.length)?d.reports.map(r=>{
-    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${CP.recStyle(r.rec)}">${CP.esc(r.rec)}</span>`:'';
-    const mt=r.target?`<span class="mt">Mục tiêu ${CP.fmtD(r.target)}đ</span>`:'';
-    const dl=r.pdf?`<a class="dl" href="${CP.esc(r.pdf)}" target="_blank" rel="noopener">⬇ Tải PDF</a>`:'';
-    return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${CP.esc(r.source)}</span><span class="dt">${CP.esc(r.date)}</span></div>`+
-      `<a class="rt" ${r.pdf?`href="${CP.esc(r.pdf)}" target="_blank" rel="noopener"`:''}>${CP.esc(r.title)}${dl}</a></div>`;
-  }).join(''):'<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>';
+  /* Mục báo cáo phân tích CTCK đã bỏ — xem ghi chú ở chỗ khai `#reps` trong phần thân. */
+  /* Vietstock rồi CafeF đứng đầu (user chốt 15/08/2026) — Simplize xuống cuối.
+     Đường dẫn CafeF cố ý giữ nhánh `hastc` cho MỌI mã dù mã đó niêm yết ở đâu: nguồn tự
+     chuyển hướng về đúng sàn kèm slug tên công ty đầy đủ (đo 15/08: VIC -> /du-lieu/hose/
+     vic-tap-doan-vingroup-cong-ty-co-phan, SHS -> /du-lieu/hastc/shs-…). Đừng "sửa" thành
+     tên sàn thật rồi tự ghép slug — trang chỉ có mã, không có tên pháp lý để ghép. */
   $('docLinks').innerHTML=[
-    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
-    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
     [`https://finance.vietstock.vn/${C.sym}/tai-tai-lieu.htm`,'📑 Tài liệu & BCTC (Vietstock)'],
+    [`https://s.cafef.vn/hastc/${C.sym}-cong-ty-co-phan.chn`,'🗂 Hồ sơ doanh nghiệp (CafeF)'],
+    [`https://simplize.vn/co-phieu/${C.sym}/tai-lieu`,'📄 Kho tài liệu & BCTC gốc (Simplize)'],
   ].map(x=>`<a href="${x[0]}" target="_blank" rel="noopener">${x[1]}</a>`).join('');
   const nl=$('newsL');
   nl.innerHTML=(d.news&&d.news.length)?d.news.slice(0,30).map((n,i)=>
@@ -1487,6 +1531,42 @@ function vnName(nm,c){   // việt hoá gọn phía client (bản đầy đủ n
   if(n!==nm) return 'Công ty TNHH '+n.trim();
   return nm;
 }
+/* BẢN SAO của tools/codong.py — SỬA MỘT CHỖ PHẢI SỬA CẢ HAI, bằng không mã kho chưa có
+   hiện một rổ cổ đông khác hẳn mọi mã khác mà người xem không có cách nào biết.
+   Ba kiểu khớp, mỗi kiểu chữa một lỗi đã đo được trên kho thật:
+     CHUA — từ khoá dài, khớp chuỗi con ở bất kỳ đâu
+     DAU  — từ tiếng Việt chỉ cơ quan, CHỈ khi đứng đầu ("Quỹ …", "Bộ …", "Viện …").
+            Khớp ở cuối là bắt nhầm tên người: "Nguyen Van Quy", "Le Thanh Vien",
+            "Lim Young So" — riêng "quy" dính 48 bản ghi.
+     DUOI — hậu tố pháp lý Latin, CHỈ trong hai từ cuối ("… Pte. Ltd.", "Tundra Fonder AB") */
+const SH_CHUA=['cong ty','cty','ctcp','tnhh','co phan','tap doan','tong cong ty','doanh nghiep',
+ 'xi nghiep','nong truong','lam truong','hop tac xa','chi nhanh','van phong dai dien',
+ 'fund','fonder','fondi','ngan hang','bank','bao hiem','insurance','chung khoan','securities',
+ 'dau tu','investment','capital','asset','holding','financ','credit','trust','pension','sicav',
+ 'portfolio','partners','advisor','adviser','associates','management','managers','co., ltd',
+ 'co.,ltd','co ltd','limited','corporation','company','incorporated','enterprise','group',
+ 'gmbh','sarl','kgaa','ubnd','uy ban','tinh uy','thanh uy','hoc vien','truong dai hoc',
+ 'university','ministry','commission','committee','authority','agency','government',
+ "people's committee",'peoples committee','province','treasury','central bank','federation',
+ 'association','hiep hoi','lien doan','cong doan','to chuc','organization','foundation',
+ 'institute','scic','vsd'];
+const SH_DAU=['quy','bo','so','cuc','vien','ban','hoi','lien','tong','trung'];
+const SH_DUOI=['ab','abp','as','a/s','oyj','plc','inc','inc.','corp','corp.','ltd','ltd.',
+ 'llc','l.l.c','lp','l.p','jsc','j.s.c','pte','pte.','nv','n.v','bv','b.v','sa','s.a',
+ 'spa','s.p.a','ag','se'];
+function laToChuc(x){
+  if(!x) return false;
+  if((x.t||'').trim()) return true;
+  const t=String(x.n||'').replace(/Đ/g,'D').replace(/đ/g,'d')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+  if(!t) return true;                       // không có tên thì không dám coi là cá nhân
+  if(SH_CHUA.some(k=>t.indexOf(k)>=0)) return true;
+  const tu=t.split(/[^a-z0-9./]+/).filter(Boolean);
+  if(!tu.length) return true;
+  if(SH_DAU.indexOf(tu[0])>=0) return true;
+  return tu.slice(-2).some(w=>SH_DUOI.indexOf(w)>=0);
+}
+const locCoDong=arr=>(arr||[]).filter(x=>laToChuc(x)||(x.p||0)>=5);
 async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho chưa có (fallback)
   try{
     const j=await fetch(`https://api2.simplize.vn/api/company/ownership/shareholder-fund-details/${C.sym}?page=0&size=100`).then(r=>r.json());
@@ -1496,7 +1576,12 @@ async function liveOwnership(d){   // cào sống cổ đông/cty con khi kho ch
       if(!nm||seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
       out.push({n:vnName(nm,r.countryOfInvestor),p:r.pctOfSharesOutHeld,s:r.sharesHeld,c:r.countryOfInvestor});
     }
-    if(out.length) d.sh=out.slice(0,40);
+    /* CÙNG LUẬT LỌC VỚI KHO — bản sao của tools/codong.py, sửa một chỗ phải sửa cả hai.
+       Nhánh này chỉ chạy cho mã kho CHƯA có; nếu không lọc thì mã mới hiện đủ cổ đông cá
+       nhân 0,01% trong khi mọi mã khác đã cắt từ 5% — người xem không có cách nào biết
+       mình đang xem rổ nào. Giữ MỌI tổ chức, cắt cá nhân dưới 5%. */
+    d.sh=locCoDong(out).slice(0,40);
+    if(!d.sh.length) delete d.sh;
     const fh=((j.data&&j.data.fundHoldings)||[]).filter(f=>f.sharesHeld);
     if(fh.length) d.funds=fh.sort((a,b)=>(b.sharesHeldValueVnd||0)-(a.sharesHeldValueVnd||0)).slice(0,12)
       .map(f=>({n:f.fundCode,fn:f.fundName,s:f.sharesHeld,v:f.sharesHeldValueVnd,d:f.fillingDate}));

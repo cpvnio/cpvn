@@ -47,6 +47,7 @@ import json, os, re, sys, collections
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIN  = os.path.join(BASE, "data", "fin")
 FINQ = os.path.join(BASE, "data", "finq")
+COCAU = os.path.join(BASE, "data", "cocau")
 OUT  = os.path.join(BASE, "data", "nganh")
 
 # TÊN THÔ CỦA NGUỒN, KHÔNG PHẢI TÊN HIỂN THỊ. Web đổi tên cho gọn ("Chứng khoán",
@@ -128,6 +129,38 @@ def lan4(vals, so=1):
     return ra
 
 
+def margin_ck(sym, ky):
+    """Dư nợ cho vay ký quỹ của công ty chứng khoán, khớp lên trục kỳ của data/nganh.
+
+    Lấy `ts.bs5` ("Các khoản cho vay") trong `data/cocau` — kho DUY NHẤT có dòng này, vì
+    `data/fin` và `data/finq` đều dùng bản CĐKT mẫu THƯỜNG không có khoản mục cho vay
+    (xem tools/cao_cocau.py). Đọc file có sẵn, KHÔNG gọi mạng, nên `build_nganh` vẫn giữ
+    đúng tính chất "chạy offline" của nó — chỉ cần pipeline gọi cào trước bước này.
+
+    CHUỖI NGẮN HƠN HẲN TRỤC KỲ và đó là chuyện bình thường: nguồn chỉ trả 15 quý (từ
+    Q4/2022) trong khi trục của data/nganh dài tới 79 quý. Kỳ nào không có thì để None —
+    client in `—`, đúng như mọi ô thiếu số khác. ĐỪNG kéo giá trị gần nhất lấp vào chỗ
+    trống: dư nợ ký quỹ đổi từng quý, bịa một số cho ô 2015 là nói sai một cách rất khó
+    phát hiện.
+    """
+    p = os.path.join(COCAU, f"{sym}.json")
+    if not os.path.exists(p):
+        return None
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return None
+    if d.get("nhom") != "INVESTMENT":
+        return None
+    day_q = ((d.get("Q") or {}).get("ts") or {}).get("bs5")
+    lb_q = (d.get("ky") or {}).get("Q") or []
+    if not day_q or len(day_q) != len(lb_q):
+        return None
+    m = {lb: v for lb, v in zip(lb_q, day_q) if v is not None}
+    ra = [m.get(lb) for lb in ky]
+    return ra if any(v is not None for v in ra) else None
+
+
 def ngay_vong(ts, dong, ky):
     """số ngày một vòng (tồn kho theo giá vốn, phải thu theo doanh thu):
     bình quân đầu-cuối kỳ / dòng chảy quý × 90. Thiếu vế nào ra None vế đó."""
@@ -176,6 +209,10 @@ def dung_mot_ma(fin, finq, sector):
         d["roe"]     = roe4(np4, vcsh, ky)
     elif sector == SEC_CK:
         mau = "ck"
+        mg = margin_ck(fin.get("sym"), ky)
+        if mg:
+            d["margin"]   = mg
+            d["marginvc"] = chia(mg, vcsh, 100, 1)   # % vốn chủ — cách ngành tự nói về nó
         d["vay"]    = cong(b("bsa56"), b("bsa71"))
         d["vayvc"]  = chia(d["vay"], vcsh, 1, 2)
         d["donbay"] = chia(tts, vcsh, 1, 2)

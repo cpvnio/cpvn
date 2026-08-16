@@ -312,14 +312,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #detNews .ni .meta{color:var(--muted);font-size:11px;margin-top:2px}
 
   /* báo cáo phân tích CTCK */
-  #detReports .rp{padding:7px 0;border-top:1px solid var(--line)}
-  #detReports .rp .rh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
-  #detReports .rp .rec{font-size:10px;font-weight:800;border-radius:4px;padding:1px 6px}
-  #detReports .rp .mt{font-size:11.5px;font-weight:700;color:var(--txt)}
-  #detReports .rp .src{font-size:10.5px;color:#7ab7ff;font-weight:600}
-  #detReports .rp .dt{font-size:10.5px;color:var(--muted);margin-left:auto}
-  #detReports .rp a.rt{color:var(--txt);text-decoration:none;font-size:12px;line-height:1.4;display:block}
-  #detReports .rp a.rt:hover{color:#fff;text-decoration:underline}
+  /* CSS #detReports đã xoá 16/08/2026 cùng cả mục báo cáo phân tích. */
+
+  /* MIỄN TRỪ ở chân trang. ĐỪNG thêm padding-bottom cho thanh tab đáy: `mobi.css` đã đặt
+     `body{padding-bottom:calc(var(--mbar)+safe-area)}` — chừa hai lần là hở một khoảng
+     trống to ở đáy, và thành hai chỗ phải nhớ sửa khi đổi chiều cao thanh tab. */
+  footer.mientru{max-width:70ch;margin:0 auto;padding:18px 18px 26px;text-align:center;
+    font-size:11px;line-height:1.7;color:var(--muted)}
+  footer.mientru b{font-weight:800}
 
   .legend{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);
     background:var(--legendbg);padding:6px 12px;border-radius:20px;border:1px solid var(--line);flex-wrap:wrap;z-index:4}
@@ -367,12 +367,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260815c"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260816m"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260814a"></script>
+<script defer src="assets/mobi.js?v=20260816m"></script>
 </head>
 <body>
 <div id="app">
@@ -380,7 +380,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     <div class="brand"><img class="mark" src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b><span class="full">.IO</span></span></div>
   <nav class="tabs">
     <span class="tw"><a href="/" class="on">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
-    <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=cd">🎯 Chủ điểm đầu tư</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
+    <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a href="congcu.html?m=race">Đường đua</a><span class="dd"><a href="congcu.html?m=race&amp;t=dua">🏁 Đường đua vốn hoá</a><a href="congcu.html?m=race&amp;t=dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
@@ -528,16 +528,22 @@ document.addEventListener(MO,function(e){
       <div class="sect"><span>Tin tức liên quan</span><span class="subnote" id="newsSrc"></span></div>
       <div id="detNews"></div>
 
-      <div class="sect"><span>Báo cáo phân tích (CTCK)</span><span class="subnote" id="repSrc"></span></div>
-      <div id="detReports"></div>
+      <!-- Mục "Báo cáo phân tích (CTCK)" đã bỏ 16/08/2026 — xem ghi chú ở `repCache`. -->
 
-      <a class="btn" id="detLink" target="_blank" rel="noopener">Xem trên Simplize ↗</a>
+      <!-- Nút "Xem trên Simplize ↗" (#detLink) đã bỏ 16/08/2026: không đẩy người xem
+           sang một sản phẩm cùng phân khúc từ ngay trong thẻ chi tiết của mình. -->
     </div>
   </main>
   </div>
 </div>
 
-<script src="assets/chart.js?v=20260813a"></script>
+<!-- MIỄN TRỪ — trang này trước không có footer. Xem CLAUDE.md mục "Ranh giới pháp lý". -->
+<footer class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
+  <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không cung
+  cấp dịch vụ tư vấn đầu tư chứng khoán. Người vận hành có thể nắm giữ cổ phiếu xuất hiện
+  trên trang. Người dùng tự chịu trách nhiệm với quyết định của mình.</footer>
+
+<script src="assets/chart.js?v=20260816m"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -1713,7 +1719,6 @@ function showDetail(c){
   document.body.classList.add('detailopen');
   $('detSym').textContent=c.sym;
   $('detName').textContent=`${c.name} · ${c.ex} · ${c.sector}`;
-  $('detLink').href=`https://simplize.vn/co-phieu/${c.sym}`;
   $('detMore').href=`/cophieu/${c.sym}`;      // trang cổ phiếu đầy đủ của chính CPVN
   const im=$('detImg');                       // kho repo trước -> CDN nguồn -> ẩn
   im.style.display='block'; delete im.dataset.cdn;
@@ -1727,7 +1732,6 @@ function showDetail(c){
   renderProfit(c.sym);
   renderPeers();
   renderNews(c.sym,true);
-  renderReports(c.sym,true);
   loadFlow(c.sym);
   loadFund(c.sym);
   clearInterval(newsTimer);
@@ -2030,40 +2034,17 @@ function paintNews(items){
     `<div class="ni"><a href="#" data-i="${i}">${esc(n.title)}</a>`+
     `<div class="meta">${esc(n.source)}${n.source&&n.ts?' · ':''}${n.ts?timeAgo(n.ts):''}</div></div>`).join('');
   box.querySelectorAll('a[data-i]').forEach(a=>a.onclick=e=>{ e.preventDefault();
-    const n=items[+a.dataset.i]; if(n.url) window.open(n.url,'_blank','noopener'); else if(n.slug) openNews(n.slug); });
+    const n=items[+a.dataset.i]; if(n&&n.url) window.open(n.url,'_blank','noopener'); });
 }
 
 /* ---- BÁO CÁO PHÂN TÍCH của CTCK (Simplize, theo mã) ---- */
-const repCache=new Map();
-function recStyle(r){
-  r=(r||'').toUpperCase();
-  if(/MUA|KHẢ QUAN|TÍCH LŨY|TĂNG|OUTPERFORM|BUY|ADD/.test(r)) return 'background:var(--green);color:#04240f';
-  if(/BÁN|KÉM|SELL|UNDERPERFORM|REDUCE/.test(r))              return 'background:var(--red);color:#fff';
-  if(/TRUNG LẬP|NẮM GIỮ|NEUTRAL|HOLD/.test(r))                return 'background:var(--yellow);color:#332703';
-  return 'background:#3a3a44;color:#c9c9d2';
-}
-async function renderReports(sym,showLoading){
-  const box=$('detReports'), src=$('repSrc');
-  if(showLoading) box.innerHTML='<div class="subnote">Đang tải báo cáo…</div>';
-  let data=repCache.get(sym);
-  if(!data){
-    if(!SRC.reports){ box.innerHTML='<div class="subnote">Nguồn báo cáo không khả dụng.</div>'; return; }
-    try{ data=await SRC.reports(sym); repCache.set(sym,data); }catch(e){ data=null; }
-  }
-  if(sym!==detailSym) return;
-  if(!data){ box.innerHTML='<div class="subnote">Không lấy được báo cáo.</div>'; return; }
-  if(!data.items.length){ src.textContent=''; box.innerHTML='<div class="subnote">Chưa có báo cáo phân tích cho mã này.</div>'; return; }
-  src.textContent=`${data.total} báo cáo`;
-  const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  box.innerHTML=data.items.slice(0,8).map(r=>{
-    const rec=r.rec&&r.rec!=='KHÁC'?`<span class="rec" style="${recStyle(r.rec)}">${esc(r.rec)}</span>`:'';
-    const mt=r.target?`<span class="mt">MT ${fmtD(r.target)}</span>`:'';
-    const link=r.pdf?`href="${esc(r.pdf)}" target="_blank" rel="noopener"`:'href="#" onclick="return false"';
-    return `<div class="rp"><div class="rh">${rec}${mt}<span class="src">${esc(r.source)}</span>`+
-      `<span class="dt">${esc(r.date)}</span></div>`+
-      `<a class="rt" ${link}>${esc(r.title)}</a></div>`;
-  }).join('')+`<div class="subnote" style="margin-top:6px">Nguồn: tổng hợp CTCK qua Simplize · bấm để mở PDF</div>`;
-}
+/* MỤC "BÁO CÁO PHÂN TÍCH (CTCK)" ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.
+   `repCache`, `CTCK_WEB`, `ctckLink`, `renderReports` và bản sao ở cophieu.html đều gỡ
+   cùng lúc (hai trang hiện CÙNG nội dung nên bỏ một nơi mà giữ nơi kia là vô nghĩa).
+   Lý do: nguồn chỉ trả về đúng một đường dẫn — FILE PDF trên cdn.simplize.vn — chứ không
+   có URL nào tới bài báo cáo trên trang của chính CTCK; đã dò ba dạng trang riêng của
+   Simplize, 404 cả ba. Chỉ hiện tên CTCK + ngày mà không mở ra đọc được thì vô dụng, còn
+   dẫn thẳng file PDF thì quay lại đúng vấn đề bản quyền đã gỡ ở lượt trước. */
 
 /* ---- chips & refresher ---- */
 document.querySelectorAll('#candleTf button').forEach(b=>b.onclick=()=>{
@@ -2195,22 +2176,27 @@ function wireSources(){
     }).filter(d=>d.value>0);
   };
 
-  // (2) TIN TỨC theo mã — GỘP Simplize + VNDirect (link gốc, mới hơn), sắp mới nhất trước
+  // (2) TIN TỨC theo mã — CHỈ VNDirect finfo. Nguồn Simplize news-event/list đã bỏ
+  //     16/08/2026: nó không trả url thật của bài, chỉ có `slug` nội bộ nên muốn mở bài
+  //     phải gọi thêm một lượt tới Simplize, hỏng thì đẩy người xem sang simplize.vn.
+  //     Ba cổng lọc phải GIỐNG HỆT core.js và refresh_daily.work_news, bằng không nguồn
+  //     sống trả một rổ còn kho trả rổ khác.
   SRC.news=async(sym)=>{
-    const [sim,vnd]=await Promise.all([
-      fetch(`https://api2.simplize.vn/api/company/news-event/list?ticker=${sym}&page=0&size=15`).then(r=>r.json()).catch(()=>null),
-      fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsId,newsDate,newsTime,newsTitle,newsSource,newsUrl`).then(r=>r.json()).catch(()=>null),
-    ]);
+    const vnd=await fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsId,newsDate,newsTime,newsTitle,newsSource,newsUrl`)
+      .then(r=>r.json()).catch(()=>null);
     const items=[];
-    for(const n of (sim&&sim.data)||[])
-      items.push({title:n.title, source:n.sourceNameDisplay||n.sourceName||'', ts:n.ts||0, slug:n.slug, url:null});
     for(const n of (vnd&&vnd.data)||[]){
       const ts=Date.parse((n.newsDate||'')+'T'+(n.newsTime||'00:00:00')+'+07:00')||0;
-      items.push({title:n.newsTitle, source:n.newsSource||'', ts, slug:null, url:n.newsUrl});
+      items.push({title:n.newsTitle, source:n.newsSource||'', ts, url:n.newsUrl});
     }
     items.sort((a,b)=>b.ts-a.ts);
+    const HAN=Date.now()-30*86400*1000;
     const seen=new Set(), out=[];   // khử trùng theo tiêu đề
-    for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45); if(!k||seen.has(k))continue; seen.add(k); out.push(it); }
+    for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45);
+      if(!k||seen.has(k)) continue;
+      if((it.ts||0)<HAN) continue;
+      if(!it.url||/simplize/i.test(it.url)) continue;
+      seen.add(k); out.push(it); }
     return out;
   };
 
@@ -2243,15 +2229,8 @@ function wireSources(){
     return {Y:y, Q:q};
   };
 
-  // (4) BÁO CÁO PHÂN TÍCH theo mã — Simplize analysis-report (CORS *, không token).
-  //     Báo cáo của CTCK: nguồn (SSI/HSC/VND...), khuyến nghị, giá mục tiêu, link PDF.
-  SRC.reports=async(sym)=>{
-    const j=await fetch(`https://api2.simplize.vn/api/company/analysis-report/list?ticker=${sym}&page=0&size=12`).then(r=>r.json());
-    return { total:j.total||0, items:(j.data||[]).map(r=>({
-      source:r.source||'', rec:r.recommend||'', target:r.targetPrice||null,
-      date:r.issueDate||'', ago:r.issueDateTimeAgo||'', title:r.title||'', pdf:r.attachedLink||'',
-    })) };
-  };
+  // (4) SRC.reports ĐÃ GỠ 16/08/2026 cùng cả mục báo cáo phân tích — xem ghi chú ở chỗ
+  //     `repCache` phía trên. Đừng gọi lại endpoint analysis-report/list ở client.
 
   // (5) LỊCH SỬ NN + TỔNG KLGD theo ngày — 24hMoney iOS (CORS *, không token, 30 phiên)
   //     ghép foreign-trading-history + trading-history theo trading_date
@@ -2301,13 +2280,8 @@ function wireSources(){
   };
 }
 /* mở bài báo gốc: gọi detail lấy sourceUrl rồi mở tab (list không có link) */
-async function openNews(slug){
-  try{
-    const j=await fetch(`https://api2.simplize.vn/api/company/news-event/detail/${slug}`).then(r=>r.json());
-    const u=j.data&&(j.data.sourceUrl||j.data.sourceWebsite);
-    window.open(u||`https://simplize.vn/tin-tuc`,'_blank','noopener');
-  }catch(e){ window.open('https://simplize.vn','_blank','noopener'); }
-}
+/* openNews(slug) ĐÃ XOÁ 16/08/2026: mọi tin nay đều có url thật nên mở thẳng, không còn
+   đường vòng hỏi Simplize lấy sourceUrl rồi rơi về simplize.vn khi hỏng. */
 
 /* ---------- KHỞI ĐỘNG ----------------------------------------------------- */
 (async function init(){

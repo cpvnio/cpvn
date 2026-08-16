@@ -41,7 +41,6 @@
   /* "Toàn cầu" đã GỘP vào Nhịp phiên (13/08/2026) nên không còn là một lối rẽ riêng. */
   var CON=[
     ['bong','Bong bóng',  '/bubbles',                 null],
-    ['cd',  'Chủ điểm',   'congcu.html?m=radar&t=cd', 'cd'],
     ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan',    null],
     ['vb',  'Về bờ',      'congcu.html?m=radar&t=vb', 'vb']
   ];

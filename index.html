@@ -283,12 +283,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   /* CHIP PRO: hàng riêng phía trên vì nó không cùng loại với các chip một-điều-kiện.
      Viền vàng đậm + chữ đậm để đọc ra ngay là "cái này khác", nhưng vẫn giữ đúng
      hình dạng và chiều cao chip chung — không đẻ ra một ngôn ngữ thứ hai. */
-  .chipbar button.chippro{color:#f5b40a;border-color:#f5b40a;background:transparent;font-weight:800}
-  .chipbar button.chippro:hover{color:#f5b40a;background:rgba(245,180,10,.10)}
-  .chipbar button.chippro.on{background:#f5b40a;border-color:#f5b40a;color:#1a1205}
-  .chipbar button.chippro i{font-style:normal;opacity:.72;font-weight:700;margin-left:5px}
-  #scrPro{flex:0 1 auto}
-  .scrPromo{font-size:11.5px;color:var(--muted);line-height:1.45;padding:1px 0 0}
+  /* CSS chip Pro (.chippro, #scrPro, .scrPromo) đã xoá 16/08/2026 cùng cả bộ lọc. */
   /* CHIP CÓ THAM SỐ: ô chọn số kỳ nằm NGAY TRONG viên chip, đọc liền mạch thành câu
      "Lỗ [3] năm nhưng thu hẹp". Bấm phần chữ = bật/tắt, bấm ô số = đổi số kỳ. */
   .chipbar .chipn{display:inline-flex;align-items:center;gap:4px;background:var(--panel);color:var(--muted);
@@ -372,9 +367,20 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #pager button:disabled{opacity:.35;cursor:default}
 
+  /* Ghi nguồn dữ liệu — đứng ngay dưới bảng, trước chân trang. Nhạt, một dòng, không
+     tranh chỗ với số liệu; nhưng KHÔNG được bỏ đi cho gọn. */
+  .nguon{text-align:center;padding:10px 14px 0;font-size:12px;color:var(--muted);line-height:1.6}
+  .nguon a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+  .nguon a:hover{color:var(--text,#e7ecf3)}
   footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 14px 22px;
     color:var(--muted);font-size:11.5px;flex-wrap:wrap;text-align:center}
   #kho.ok{color:var(--green)} #kho.bad{color:var(--yellow)}
+  /* MIỄN TRỪ — bắt buộc, xem CLAUDE.md mục "Ranh giới pháp lý". Ba câu, đủ cả ba mới có
+     tác dụng: (1) đây là mô tả quá khứ, (2) CPVN không phải CTCK, (3) người vận hành có
+     nắm giữ cổ phiếu. Câu (3) là công bố vị thế — chủ trang là nhà đầu tư cá nhân thật. */
+  .mientru{flex-basis:100%;max-width:70ch;margin:2px auto 0;line-height:1.75;
+    font-size:11px;color:var(--muted);opacity:.92}
+  .mientru b{color:var(--muted);font-weight:800}
 
   @media(max-width:760px){
     /* ── BỐ CỤC MOBILE 4 HÀNG, mỗi hàng một nhiệm vụ rõ ràng ──────────────────
@@ -583,19 +589,19 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260815c"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260816m"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260814a"></script>
+<script defer src="assets/mobi.js?v=20260816m"></script>
 </head>
 <body>
 <header>
   <a class="brand" href="/"><img class="mark" src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
     <span class="tw"><a href="/" class="on">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
-    <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=cd">🎯 Chủ điểm đầu tư</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
+    <span class="tw"><a href="congcu.html?m=radar">Radar</a><span class="dd"><a href="congcu.html?m=radar&amp;t=phien">📡 Nhịp phiên</a><a href="congcu.html?m=radar&amp;t=vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a href="congcu.html?m=race">Đường đua</a><span class="dd"><a href="congcu.html?m=race&amp;t=dua">🏁 Đường đua vốn hoá</a><a href="congcu.html?m=race&amp;t=dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
@@ -651,8 +657,7 @@ document.addEventListener(MO,function(e){
 </div>
 
 <div id="scrPanel">
-  <div class="scrRow"><span class="scrLb">Pro</span><div class="chipbar" id="scrPro"></div>
-    <span class="scrPromo" id="scrProMo"></span></div>
+  <!-- Hàng chip "Pro" đã bỏ 16/08/2026 — xem ghi chú ở đầu assets/screener.js. -->
   <div class="scrRow"><span class="scrLb">Lọc nhanh</span><div class="chipbar" id="scrChips"></div>
     <button id="scrClear">✕ Xoá hết lọc</button></div>
   <div id="scrDesc"></div>
@@ -688,13 +693,25 @@ document.addEventListener(MO,function(e){
 </div>
 </div>
 
+<!-- GHI NGUỒN ĐẶT NGAY DƯỚI BẢNG GIÁ, không nhét xuống chân trang (16/08/2026).
+     Giá sống của cả site do bgapidatafeed.vps.com.vn cấp — endpoint công khai, CORS mở
+     sẵn `Access-Control-Allow-Origin: *`. Ghi nguồn ở đúng chỗ dữ liệu của họ đang chạy
+     vừa là phép lịch sự tối thiểu, vừa là cách xin phép ngầm: tên họ hiện công khai, họ
+     nhìn thấy, không phản đối — đó là đồng thuận trên thực tế mà không cần ai ký gì. -->
+<div class="nguon">Giá trực tiếp &amp; chỉ số: <a href="https://www.vps.com.vn" target="_blank" rel="noopener">Chứng khoán VPS</a>
+  · Nến lịch sử, khối ngoại &amp; tin: <a href="https://www.vndirect.com.vn" target="_blank" rel="noopener">VNDIRECT</a></div>
 <footer>
   <span id="kho">kho dữ liệu: đang kiểm tra…</span>
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
+  <div class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
+    <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không
+    cung cấp dịch vụ tư vấn đầu tư chứng khoán. Bộ lọc là công cụ đo theo tiêu chí người
+    dùng chọn, không phải danh mục gợi ý. Người vận hành có thể nắm giữ cổ phiếu xuất hiện
+    trong kết quả lọc. Người dùng tự chịu trách nhiệm với quyết định của mình.</div>
 </footer>
 
-<script src="assets/core.js?v=20260815a"></script>
-<script src="assets/screener.js?v=20260813b"></script>
+<script src="assets/core.js?v=20260816m"></script>
+<script src="assets/screener.js?v=20260816m"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -859,11 +876,9 @@ function filterRows(){
       }
     });
   }
-  /* Bộ lọc Pro xếp hạng SO VỚI CẢ THỊ TRƯỜNG, không phải so trong phần đang lọc dở —
-     nên phải dựng lại từ CP.coins đầy đủ mỗi lượt vẽ (giá sống đổi thì vốn hoá, E/P,
-     khoảng cách đỉnh đổi theo). Dựng lại tốn ~2ms cho 1.520 mã. Chọn Pro cùng một ngành
-     thì thấy phần giao — đúng như vậy, "Pro" luôn là cùng 30 mã của toàn sàn. */
-  if(SCR.on&&CPScreen.loaded){ CPScreen.proReset(); list=list.filter(scrPass); }
+  /* Mọi chip nay đều là điều kiện của RIÊNG một mã nên lọc thẳng từng dòng, không còn
+     bước dựng danh sách trước (proReset/proBuild đã bỏ cùng bộ lọc Pro 16/08/2026). */
+  if(SCR.on&&CPScreen.loaded) list=list.filter(scrPass);
   const dir=ST.dir, k=ST.sort==='rank'?'mcap':ST.sort;
   /* Mã THIẾU DỮ LIỆU luôn nằm CUỐI dù sắp xếp tăng hay giảm — bấm P/E mà một loạt
      dấu "—" nhảy lên đầu bảng thì coi như cột đó vô dụng. */
@@ -1306,20 +1321,11 @@ function scrBuild(){
       `<option value="${v}"${v===SCR.num[x.id]?' selected':''}>${v}</option>`).join('')+'</select>';
     return `<span class="chipn" data-id="${x.id}" title="${x.g}">${x.nm.replace('{n}',sel)}</span>`;
   }).join('');
-  /* HÀNG PRO — một chip duy nhất, dựng riêng khỏi hàng "Lọc nhanh" */
-  const P=CPScreen.pro;
-  $('scrPro').innerHTML=`<button data-id="${P.id}" class="chippro" title="${CP.esc(P.mo)}">`
-    +`${P.nm}<i>${CPScreen.PRO_N} mã</i></button>`;
-  /* Lời mô tả nằm NGOÀI .chipbar: ở khổ hẹp .chipbar biến thành lưới 2 hàng cuộn ngang,
-     nhét câu chữ vào đó là nó thành một "chip" dài ngoằng chiếm nguyên hàng thứ hai. */
-  $('scrProMo').textContent='biến động thấp · vốn hoá lớn · E/P cao · gần đỉnh 52 tuần'
-    +' — trừ mã đang lỗ và nhóm phải thu phình';
   const bat=(el,id)=>{                              // bật/tắt một chip rồi vẽ lại bảng
     SCR.chips.has(id)?SCR.chips.delete(id):SCR.chips.add(id);
     el.classList.toggle('on',SCR.chips.has(id));
     ST.page=1; render();
   };
-  document.querySelectorAll('#scrPro [data-id]').forEach(b=>b.onclick=()=>bat(b,b.dataset.id));
   document.querySelectorAll('#scrChips [data-id]').forEach(b=>b.onclick=e=>{
     if(e.target.tagName==='SELECT') return;         // bấm vào ô số thì đừng tắt chip
     bat(b,b.dataset.id);
@@ -1350,7 +1356,7 @@ $('scrClear').onclick=()=>{
   SCR.chips.clear();
   // phải quét CẢ hàng Pro: SCR.chips.clear() đã tắt nó về mặt logic, quên bỏ class `on`
   // thì chip vẫn sáng vàng trong khi bảng đã hết lọc — người dùng đọc ra là nút hỏng.
-  document.querySelectorAll('#scrChips [data-id],#scrPro [data-id]').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('#scrChips [data-id]').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('#scrChips select[data-num]').forEach(s=>{   // số kỳ về mặc định
     SCR.num[s.dataset.num]=CPScreen.def(s.dataset.num); s.value=SCR.num[s.dataset.num];
   });

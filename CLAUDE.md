@@ -23,7 +23,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 
 | Tệp | Dòng | Vai trò |
 |---|---|---|
-| `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc pro |
+| `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc nhanh |
 | `cophieu.html` | 1169 | Trang một mã: hero giá · thống kê · nến · PTKT toàn màn hình · 5 thẻ nội dung |
 | `bubbles.html` | 2185 | Bong bóng (canvas vật lý) + bản đồ nhiệt (treemap DOM). **Tự chứa bản sao lõi giá** |
 | `congcu.html` + `assets/congcu.js` | 384+676 | 3 module: Radar phiên · **Danh mục tập đoàn** (kèm tab quỹ) · Đường đua vốn hoá |
@@ -35,6 +35,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
 | `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
+| `tools/cao_cocau.py` | 200 | Cào `data/cocau/{MÃ}.json` — cơ cấu lợi nhuận theo mảng + dư nợ cho vay ký quỹ (Simplize). Bước 6c2 |
 | `tools/soi_nguon.py` | 150 | Soi nguồn vẽ chart: đối chiếu VNDirect · VPS · kho · bảng giá cho từng mã. Chạy tay khi nghi nguồn sai |
 
 ## Kho dữ liệu `data/` (~130MB)
@@ -47,13 +48,14 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
-| `data/news/` `data/profile/` | Tin + báo cáo CTCK · hồ sơ DN, cổ đông, công ty con |
+| `data/cocau/{MÃ}.json` | **CHỈ CÒN dư nợ cho vay ký quỹ của công ty chứng khoán** (42 mã, 61KB) — khối lợi nhuận theo mảng đã thôi lấy 16/08/2026, xem mục *Cơ cấu lợi nhuận*. Nguồn chỉ sâu **15 quý / 10 năm** |
+| `data/news/{MÃ}.json` | Tin theo mã — **BA CỔNG: trong 30 ngày · có url thật · không trỏ Simplize** (16/08/2026). 4.894 tin / 1.435 mã, nguồn hnx.vn + hsx.vn + báo có link |
+| `data/profile/` | Hồ sơ DN, cổ đông, công ty con |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
 | `data/quy.json` | Danh mục các quỹ: quỹ → mã đang nắm + giá trị + **kỳ công bố**. Cùng script |
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
-| `data/chudiem.json` | Chủ điểm đầu tư **dẫn nguồn SSI** — sơ đồ 3 trục nhập tay + khuyến nghị/giá mục tiêu SSI tự cào. `tools/build_chudiem.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
 ## Nến vẽ chart — MƯỢN THẲNG CỦA NGUỒN, đừng lấy trong kho
@@ -284,19 +286,51 @@ giá sai hoặc giá nhảy — đừng đẩy.
      cáo mẫu thường → rơi về `sx`; EVF/TIN có đủ dòng ngân hàng nhưng LDR ~770% vì là CÔNG
      TY TÀI CHÍNH (vốn từ vay/trái phiếu, tiền gửi không đáng kể) → client thấy LDR>300%
      là dán nhãn đúng bản chất và để XÁM, đừng tô đỏ như thể ngân hàng vỡ trận.
-  4. **CTCK KHÔNG có dòng "cho vay ký quỹ"** — cả 24hMoney lẫn finq chỉ giữ 20 dòng tóm
-     tắt mẫu THƯỜNG cho CTCK (margin của SSI ~20 nghìn tỷ, còn "phải thu ngắn hạn" chỉ 1,1
-     nghìn tỷ — đừng bịa từ dòng khác). User nhấn lại 14/08/2026: với CTCK thì **số tiền
-     ĐANG CHO VAY (bên tài sản) mới là con số quan trọng**, không phải vốn vay — nên bảng
-     in hẳn một dòng "Dư nợ cho vay ký quỹ — nguồn chưa mở, sẽ bổ sung" toàn `—` kèm
-     tooltip giải thích, thay vì im lặng. Muốn có thật phải mở thêm mã dòng mẫu CTCK ở
-     `kho_sau` (cần mạng để dò + chấm điểm như `va_quy` — session hiện bị chặn egress).
+  4. **CTCK: dòng "cho vay ký quỹ" NAY ĐÃ CÓ, lấy từ `data/cocau` (15/08/2026).** Cả
+     24hMoney lẫn finq chỉ giữ 20 dòng tóm tắt mẫu THƯỜNG cho CTCK nên không dòng nào chứa
+     nó — bảng từng phải in "nguồn chưa mở, sẽ bổ sung" toàn `—`. Đường ra KHÔNG phải mở
+     thêm mã dòng ở `kho_sau` như dự tính, mà là một nguồn khác hẳn: Simplize có sẵn bảng
+     phân rã theo đúng loại hình (xem mục CƠ CẤU LỢI NHUẬN). `build_nganh.margin_ck()` đọc
+     `ts.bs5` của kho đó, khớp theo NHÃN kỳ. Hai dòng in ra: **Dư nợ cho vay ký quỹ (tỷ)**
+     không tô màu (to hay nhỏ không tự nó là tốt xấu) và **Cho vay ký quỹ / vốn chủ (%)**
+     tô theo trần pháp lý 200% — xanh ≤100 · vàng 100–160 · đỏ >160.
+     User nhấn 14/08/2026: với CTCK thì **số tiền ĐANG CHO VAY (bên tài sản) mới là con số
+     quan trọng**, không phải vốn vay ở bên nguồn vốn — hai dòng này vì thế đứng TRÊN dòng
+     "Vay / vốn chủ". Nguồn chỉ sâu 15 quý nên phần trục trước Q4/22 để `—`; **tuyệt đối
+     đừng kéo giá trị gần nhất lấp vào**, dư nợ đổi từng quý.
   **Ngưỡng màu nằm ở CLIENT, tooltip ghi nguồn gốc từng ngưỡng**: cái đo từ phân bố thật
   ghi rõ mẫu đo (LDR 100/120 và đòn bẩy 10/13 = tam phân vị 29 ngân hàng · CTCK vay/VCSH
   0,7/1,3 trên 35 mã, đòn bẩy 1,5/2,5 trên 42 · bảo hiểm 3/5 trên 13 — đều đo 14/08/2026);
   cái là mốc quy ước thì nói là quy ước (ROE 8/15 · D/E 0,5/1,5 · BĐS 0,5/1). Tồn kho và
   phải thu so với CHÍNH MÃ ĐÓ 12 quý (xếp hạng ngày tồn/ngày thu), không so chéo ngành.
   Xám = tham khảo, không áp ngưỡng. Mọi câu chữ là mô tả quá khứ, không phải khuyến nghị.
+- **`data/cocau` (bước 6c2) — NAY CHỈ CÒN MỘT VIỆC: DƯ NỢ CHO VAY KÝ QUỸ CỦA CTCK.**
+  Khối lợi nhuận theo mảng (`pvalue`) **đã thôi lấy 16/08/2026** — user chốt nguyên tắc
+  *"tốt nhất là không lấy data thế mạnh của họ, chỉ nên lấy những thứ được báo cáo và không
+  xâm phạm quyền"*, mà khối đó là phần Simplize **tự tính**, không phải trích từ báo cáo:
+  đối chiếu HPG Q2/26 với mã dòng KQKD của VNDirect thì lợi nhuận gộp = `23100`, liên doanh
+  liên kết = `23300`, khác = `23900` đều CÓ in trong báo cáo, nhưng **"Lợi nhuận hoạt động
+  tài chính" không có mã dòng nào** — Simplize lấy `21500 − 22500`. Với CTCK còn nặng hơn:
+  mẫu B02-CTCK in doanh thu và chi phí theo từng nghiệp vụ nhưng KHÔNG in lợi nhuận theo
+  nghiệp vụ, nên "lợi nhuận từ môi giới" là **phân bổ**. Kho co từ 1.526 file / 1,14MB
+  xuống **42 file / 61KB** (chỉ nhóm `INVESTMENT`), `_nhan.json` chỉ còn nhãn khối `ts`.
+  > **ĐỪNG mở lại `pvalue`,** và cũng đừng thử "chỉ giữ dòng nào truy được về mã BCTC":
+  > chỉ đối chứng được nhóm sản xuất — VNDirect trả **0 dòng KQKD** cho VCB và SSI nên ngân
+  > hàng/CTCK không có nguồn để soi, giữ hay bỏ dòng nào cũng là đoán. (Phép đo rỗng đó suýt
+  > làm kết luận ngược: 0/6 "không tìm ra" trông như bằng chứng Simplize bịa cả.)
+  **Thứ CÒN GIỮ** là dòng `ts.bs5` "Các khoản cho vay" — khoản mục **CÓ in trên bảng cân đối
+  mẫu CTCK**, đúng vế "những thứ được báo cáo", mà cả `data/fin` lẫn `data/finq` đều không
+  có (hai kho đó lấy bản CĐKT mẫu THƯỜNG: với CTCK thì bảng hiện "Hàng tồn kho = None, TSCĐ
+  176 tỷ" trong khi **40.473 tỷ đang cho khách vay không nằm ở dòng nào**).
+  `build_nganh.margin_ck()` là nơi DUY NHẤT đọc kho này. Nguồn:
+  `api2.simplize.vn/api/company/fi/structure/overview/{MÃ}?period=Q|Y`, ACAO `*`.
+  **Độ tin đã đối chiếu độc lập**: luật cấm CTCK cho vay quá 200% vốn chủ — đo 42/42 CTCK
+  thì 0 mã vượt trần, HCM 198,3% sát trần, SSI 99,4%. Nguồn trả ĐỒNG, kho ghi TỶ.
+  Hai thứ vẫn phải nhớ: **nguồn chỉ trả 15 quý (từ Q4/2022), không có cách xin thêm** (đã
+  thử `size` `limit` `page` `periodDate` `numberOfPeriod` — luôn đúng 15 kỳ) nên kỳ cũ hơn
+  để `—`, **tuyệt đối đừng kéo giá trị gần nhất lấp vào**; và **đây KHÔNG phải kho vĩnh
+  viễn** — mất là cào lại được, không cần guard "giữ số cũ" như `data/fin`.
+
 - **KHỐI NGOẠI `fb`/`fs`: lịch sử lấy ở VNDirect, đừng tin mỗi nguồn hằng ngày.** Pipeline chỉ
   biết khối ngoại của PHIÊN HÔM ĐÓ (bảng giá VPS) + bù 30 phiên (24hMoney), nên trước 6/2026
   hai trường này **toàn số 0** — 290/500 mã mẫu không có lấy một số khác 0, mọi phép đo dòng
@@ -512,28 +546,30 @@ giá sai hoặc giá nhảy — đừng đẩy.
   170/170 ngày**. Ngày hiện ra phải là `effectiveDate` = **ngày giao dịch không hưởng
   quyền**, không phải `actualDate` (ngày tiền về, thường sau cả tháng). Nguồn trả CẢ bản EN
   lẫn VN nên phải lọc `locale=='VN'`, bằng không mọi sự kiện nhân đôi.
-- **CHỦ ĐIỂM ĐẦU TƯ: KHÔNG có nguồn SSI nào lấy được tự động cho phần SƠ ĐỒ.** Đã dò hết:
-  `iboard-api.ssi.com.vn/research/*` → **401** (đòi đăng nhập), `api.ssi.com.vn/research/*` →
-  **404**, `ssi.com.vn/.../bao-cao-phan-tich` chặn máy, và API báo cáo của Simplize **bắt buộc
-  có `ticker=`** (để rỗng trả 0 bản ghi) nên không có cửa lấy báo cáo chiến lược toàn thị
-  trường. Sơ đồ ba trục nằm trong slide báo cáo chiến lược → **nhập tay** ở bảng `SO_DO` của
-  `tools/build_chudiem.py`, SSI ra kỳ mới thì sửa đúng bảng đó và cập nhật trường `ky`.
-  **Phần TỰ CẬP NHẬT được** là khuyến nghị + giá mục tiêu từng mã của SSI: đã nằm sẵn trong
-  `data/news/{MÃ}.json` (bước 7 cào từ Simplize, 97 báo cáo SSI trên 61 mã) — build_chudiem
-  rút bản mới nhất mỗi mã nên chạy SAU bước 7.
-  > **GHI NGUỒN LÀ RÀNG BUỘC, KHÔNG PHẢI TRANG TRÍ** — đây là khuyến nghị đầu tư của một đơn
-  > vị có giấy phép, chủ trang thì không. Tên nguồn phải nằm ở đầu mục, lời miễn trừ nằm ngay
-  > dưới, và ngày ra báo cáo phải đi kèm từng mã (báo cáo cũ thì giá mục tiêu hết giá trị
-  > tham chiếu). Đừng rút gọn mấy thứ đó cho gọn mắt.
-  > **Giá mục tiêu tính bằng ĐỒNG/cổ phiếu** — nhét vào `ty()` (đơn vị tỷ) thì 105.900 đ hiện
-  > thành "0 tỷ", đọc như đang khuyên mua một mã vô giá trị.
+- **CHỦ ĐIỂM ĐẦU TƯ ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.** `data/chudiem.json`,
+  `tools/build_chudiem.py`, `chuDiemPanel()`, `cdBadge()`, sơ đồ Venn, tab `?t=cd`, mục trong
+  menu thả xuống của cả 4 trang và lối rẽ "Chủ điểm" trong dải Radar mobile đều xoá.
+  Đường dẫn cũ `?t=cd` **rơi về Nhịp phiên** chứ không trắng trang.
+  Lý do: cả mục là quan điểm của SSI Research dẫn lại — danh sách 16 mã do họ chọn, cách chia
+  ba trục do họ đặt. Sau khi gỡ khuyến nghị + giá mục tiêu (cùng ngày) thì phần còn lại chỉ là
+  "SSI xếp mấy mã này vào ba nhóm": vừa mất gần hết giá trị, vừa vẫn là ý kiến của một đơn vị
+  CÓ giấy phép tư vấn đầu tư mà CPVN dẫn lại. User chốt bỏ.
+  > **Sơ đồ ba trục vốn NHẬP TAY nên cũng không có gì để tự động hoá lại.** Đã dò hết cửa và
+  > đều đóng: `iboard-api.ssi.com.vn/research/*` → **401**, `api.ssi.com.vn/research/*` →
+  > **404**, `ssi.com.vn/.../bao-cao-phan-tich` chặn máy, API báo cáo Simplize **bắt buộc có
+  > `ticker=`** nên không lấy được báo cáo chiến lược toàn thị trường. Ghi lại để lần sau
+  > không ai mất công dò lại.
+  > **Hệ quả dây chuyền:** build_chudiem là hộ tiêu thụ CUỐI CÙNG của mảng `reports` trong
+  > `data/news`. Bỏ nó xong thì pipeline **thôi gọi `analysis-report/list`** luôn — bớt
+  > ~1.500 lượt tới Simplize mỗi lượt `--full` — và mảng `reports` đã gỡ khỏi 1.527 file kho.
+
 - **ĐIỀU HƯỚNG: MENU THẢ XUỐNG KHI RÊ CHUỘT (10/08/2026) — nay CHỈ CÒN CHO MÁY BÀN.**
   Từ 11/08/2026 khổ ≤760px ẩn hẳn dải này (`header .tabs{display:none!important}` trong
   `mobi.css`) và dùng thanh tab đáy — xem mục **Giao diện mobile** bên dưới. Mọi luật rê
   chuột/chạm dưới đây vẫn đúng, nhưng chỉ còn chạy ở khổ rộng (kể cả tablet cảm ứng >760px).
   Bảng giá · Radar · Đường đua, mỗi mục có menu con hiện khi rê chuột (`.tw:hover>.dd`).
   Bảng giá → 3 trang (`index.html` · `bubbles.html` · `congcu.html?m=tapdoan`);
-  Radar → Nhịp phiên · Chủ điểm đầu tư; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
+  Radar → Nhịp phiên · Khi nào về bờ; Đường đua → Đường đua vốn hoá · Đầu tư bền vững.
   Bản trước để mục con thành dải LUÔN HIỆN dưới header + dải tab riêng trong Radar — ăn
   một hàng cố định trên mọi trang chỉ để chờ người ta bấm. Cả hai dải đã gỡ.
   Năm thứ phải giữ, thiếu cái nào là menu hỏng:
@@ -567,7 +603,7 @@ giá sai hoặc giá nhảy — đừng đẩy.
   `?t=` trên URL chọn sẵn tab bên trong (`t=cd`, `t=dca`…) để trang khác trỏ thẳng vào.
   "Danh mục tập đoàn" chạy trên congcu.html nhưng THUỘC nhóm Bảng giá — `renderNav` phải tự
   tay bật `.on` cho mục cha đầu tiên khi `cur==='tapdoan'`.
-  Radar nay chỉ còn **Nhịp phiên · Chủ điểm đầu tư**; tập đoàn và quỹ đã dọn sang module
+  Radar nay chỉ còn **Nhịp phiên · Khi nào về bờ**; tập đoàn và quỹ đã dọn sang module
   riêng vì khác nhịp hẳn: radar soi TRONG PHIÊN, còn cấu trúc sở hữu cả tháng mới nhúc nhích.
 - **BỨC TRANH TOÀN CẦU (radar `?t=tg`) — bản đồ thế giới tô theo chỉ số từng nước.**
   Màu theo luật CK Việt Nam: **xanh = tăng, đỏ = giảm**, đậm dần tới ±3%. Cố ý khác
@@ -656,7 +692,7 @@ giá sai hoặc giá nhảy — đừng đẩy.
   màn hẹp: nó ăn hơn 400px chiều cao chỉ để lặp lại thứ bản đồ đã nói. Hệ quả phải chấp
   nhận: màn hẹp chỉ đặt nổi ~18 nhãn nên phần còn lại chỉ có MÀU; muốn biết tên và số thì
   **chạm vào nước đó** để bung thẻ. Đừng đề xuất dựng lại bảng.
-  **HAI CHỈ SỐ SỨC MẠNH nằm trong GÓC DƯỚI-TRÁI bản đồ** (Nam Thái Bình Dương — trống ở
+  **CHỈ SỐ SỨC MẠNH THỊ TRƯỜNG nằm trong GÓC DƯỚI-TRÁI bản đồ** (từ 16/08/2026 chỉ còn MỘT ô — ô "Sức mạnh TOÀN CẦU" lấy CNN Fear & Greed đã bỏ, xem mục *Gọi mạng*) (Nam Thái Bình Dương — trống ở
   mọi phép chiếu, không nước nào có sàn). Trước ở cụm ba thẻ đầu trang, cụm đó đã bỏ.
   Dựng bằng **HTML phủ lên**, không phải `<text>` trong SVG: chữ trong SVG co theo viewBox
   nên màn hẹp teo còn 3px. Ba thứ đi kèm:
@@ -854,7 +890,7 @@ vùng dưới, hai góc TRÊN là chỗ khó với nhất — mà menu cũ nằm
 chuột*, thao tác không tồn tại trên điện thoại.
 
 **Bảng giá SẠCH HOÀN TOÀN** — không dải mục con nào, mở ra là thấy mã ngay.
-**Radar là cửa vào bốn góc soi thị trường**: Bong bóng · Chủ điểm · Tập đoàn · Về bờ. Dải hiện
+**Radar là cửa vào ba góc soi thị trường**: Bong bóng · Tập đoàn · Về bờ. Dải hiện
 ở cả ba trang của nhóm và thanh đáy sáng ở Radar trên cả ba, bằng không vào Bong bóng là mất
 đường quay lại.
 
@@ -975,6 +1011,67 @@ Mép vùng cuộn ngang phải có **dải mờ** (`.mfade`) — cắt phẳng g
 Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó là khung cuộn nên
 `::after` sẽ trôi theo nội dung thay vì đứng yên ở mép.
 
+## Tin tức — BA CỔNG LỌC, giống hệt ở CẢ BA NƠI
+
+User chốt 16/08/2026: *"tin chỉ nên đăng trong 30 ngày gần nhất … chỉ đưa tin có link dẫn
+qua bên các trang báo chính thống, nếu dẫn tới simplize thì bỏ luôn"*. Ba cổng:
+
+1. **Trong 30 ngày** — mục tin của trang mã là "gần đây có gì", không phải kho lưu trữ.
+2. **Phải có `url` thật** — không mở được bài tại nguồn thì lý do duy nhất để dẫn tin của
+   người khác cũng mất.
+3. **Không trỏ Simplize.**
+
+> **NGUỒN `api2.simplize.vn/news-event/list` ĐÃ BỎ HẲN — ĐỪNG GỌI LẠI.** Nó KHÔNG trả url
+> thật của bài, chỉ có `slug` nội bộ; muốn mở bài phải gọi THÊM một lượt tới Simplize hỏi
+> `sourceUrl`, lượt đó hỏng thì người dùng bị đẩy thẳng sang simplize.vn. Đo 16/08:
+> **8.966/9.847** tin báo chí trong kho ở đúng tình trạng đó — tức "dẫn nguồn rõ ràng, bấm
+> là sang trang họ" chỉ đúng với **9%** số tin. Nay chỉ còn VNDirect finfo (có url thật).
+> `openNews(slug)` của bubbles và nhánh `slug` trong `CP.openNewsItem` đã xoá theo.
+
+**BA NƠI PHẢI GIỐNG NHAU**: `refresh_daily.work_news` · `CP.loadNews` (core.js) ·
+`SRC.news` (bubbles.html). Lệch một chỗ là nguồn sống trả một rổ còn kho trả rổ khác, mà
+người dùng không có cách nào biết mình đang xem rổ nào.
+
+Kết quả lượt dọn: **27.633 → 4.894 tin**, 1.527 → 1.435 file, kho 5,6MB. Nguồn còn lại:
+hnx.vn 3.287 · hsx.vn 1.324 · tapchicongthuong.vn 193 · vndirect.com.vn 90.
+> Tin cũ **vẫn nằm trong lịch sử git** nếu sau này cần lấy lại.
+
+## Cổ đông — LỌC CÁ NHÂN DƯỚI 5%, TỔ CHỨC GIỮ HẾT
+
+`tools/codong.py` là bản gốc; `cophieu.html` giữ **bản sao JS** cho nhánh `liveOwnership`
+(mã kho chưa có) — **sửa một chỗ phải sửa cả hai**, bằng không mã mới hiện một rổ cổ đông
+khác hẳn mọi mã khác mà người xem không có cách nào biết.
+
+Tên người thật + tỉ lệ sở hữu là **dữ liệu cá nhân** theo Luật 91/2025 (hiệu lực
+01/01/2026) — nhóm có trần phạt cao nhất trong hồ sơ. Lập luận bảo vệ là *"đã công khai
+theo nghĩa vụ pháp luật"*, mà nghĩa vụ ấy chỉ áp cho **cổ đông lớn ≥5%**. Kết quả:
+**15.318 → 5.435 bản ghi**.
+
+> **TỔ CHỨC KHÔNG CÓ SÀN %** — cắt là vỡ ÂM THẦM `build_tapdoan.py`: nhãn doanh nghiệp
+> nhà nước tính bằng cách **cộng dồn mọi cổ đông nhà nước, không có sàn**. Một Bộ nắm 3%
+> cộng SCIC 48% = 51% → nhà nước; bỏ ô 3% là còn 48%, cả nhóm mất nhãn, không lỗi nào báo.
+> Phép thử hồi quy sau khi lọc: **164 nhóm → 164, 0 nhãn hạng đổi, 0 mã con đổi.**
+
+**BA KIỂU KHỚP, mỗi kiểu chữa một lỗi ĐO ĐƯỢC — đừng gộp làm một:**
+- `CHUA` — từ khoá dài, khớp chuỗi con bất kỳ đâu.
+- `DAU` — từ tiếng Việt chỉ cơ quan (`quy`,`bo`,`so`,`cuc`,`vien`…), **CHỈ khi đứng đầu**.
+  Khớp ở cuối là bắt nhầm TÊN NGƯỜI: "Nguyen Van Quy", "La Thi Quy", "Le Thanh Vien",
+  "Lim Young So" — riêng `quy` dính **48 bản ghi**.
+- `DUOI` — hậu tố pháp lý Latin (`ltd`,`jsc`,`llc`,`ab`,`sa`…), **CHỈ trong hai từ cuối**.
+  Cho lùi một nấc vì có tên đính đuôi trong ngoặc: "T. Rowe Price International Ltd.
+  (Australia)". Bản đầu để `ab` vào nhóm chuỗi con còn bản JS quên khai → "Tundra Fonder
+  AB" ra hai kết quả khác nhau ở hai bên.
+
+> **GIỚI HẠN ĐÃ BIẾT: KHÔNG NHẬN RA NGƯỜI NỘI BỘ.** Người nội bộ (HĐQT, BKS, TGĐ, Kế toán
+> trưởng…) phải công bố sở hữu **bất kể tỉ lệ** (Điều 127 Luật CK 2019, Thông tư 96/2020)
+> nên họ VẪN thuộc diện "đã công khai" — nhưng nguồn Simplize
+> `ownership/shareholder-fund-details` **không trả trường chức vụ** (chỉ tên, %, số CP,
+> giá trị, quốc tịch) và **không có endpoint ban lãnh đạo** (đã dò 5 dạng, 404 cả 5).
+> Nên sếp nắm dưới 5% bị cắt cùng nhà đầu tư nhỏ lẻ. Muốn giữ họ thì phải lấy nguồn có
+> NHÃN CHỨC VỤ — báo cáo quản trị công ty của HOSE/HNX — chứ đừng hạ ngưỡng xuống 1%:
+> ngưỡng đó không có căn cứ pháp lý nào, chỉ là đoán.
+> Tỉ trọng sở hữu tổng thể vẫn còn ở trường `own` (cổ đông chiến lược / thông thường / quỹ).
+
 ## Quy ước toàn site
 
 - **Đơn vị**: kho để **ĐỒNG**. VPS trả nghìn đồng (**×1000**) và lô 10 cp (**×10**).
@@ -998,7 +1095,80 @@ Nhưng ở `#stats` phải dùng **`mask`, không dùng `::after`**: chính nó 
 - **Gộp ngành** (`SECTOR_EXPLICIT` + ngành <4 mã dồn về "Khác") phải **y hệt** giữa
   `core.js` và `bubbles.html`, nếu không cùng tên ngành ra số mã khác nhau.
 - Mọi `innerHTML` từ nguồn ngoài phải qua `CP.esc`; HTML thô của Simplize qua `sanHTML()`.
-- Nội dung là **thống kê mô tả quá khứ, không khuyến nghị mua bán**.
+- Nội dung là **thống kê mô tả quá khứ, không khuyến nghị mua bán** — xem mục dưới.
+
+## Ranh giới pháp lý — ĐỌC TRƯỚC KHI THÊM BẤT KỲ TÍNH NĂNG NÀO
+
+Rà soát 16/08/2026. Luật nền: **khoản 32 Điều 4 Luật CK 2019** định nghĩa *tư vấn đầu tư
+chứng khoán* = "cung cấp cho khách hàng kết quả phân tích, báo cáo phân tích **và đưa ra
+khuyến nghị** liên quan đến việc mua, bán, nắm giữ chứng khoán"; **khoản 4 Điều 12** cấm làm
+việc đó khi chưa được UBCKNN cấp phép. CPVN không phải công ty chứng khoán.
+
+> **ĐIỀU LUẬT KHÔNG ĐÒI PHÂN TÍCH PHẢI DO MÌNH VIẾT RA.** Dẫn lại khuyến nghị của một đơn vị
+> CÓ giấy phép vẫn là "cung cấp cho khách hàng … khuyến nghị". Ghi nguồn không miễn trách.
+> Án lệ sát nhất: **CTCP Đầu tư ITP, QĐ 197/QĐ-XPHC ngày 17/4/2026** — đăng báo cáo phân tích
+> và khuyến nghị mua/bán/nắm giữ lên website riêng, **phạt 225 triệu + đình chỉ 4 nhóm hoạt
+> động chứng khoán trong 2 năm**. Không thu phí, không hợp đồng, chỉ đăng lên web là đủ.
+
+**BỐN THỨ ĐÃ GỠ, ĐỪNG DỰNG LẠI DÙ CÓ VẺ "THIẾU THÔNG TIN":**
+
+| Đã gỡ | Ở đâu | Vì sao |
+|---|---|---|
+| `rec` / `target` / `title` / `pdf` của báo cáo CTCK | `refresh_daily.work_news` · `core.js loadNews` · `bubbles.SRC.reports` · 282 file `data/news` (7.696 trường) | khuyến nghị + giá mục tiêu + PDF có bản quyền |
+| **CẢ MỤC Chủ điểm đầu tư** (trước đó đã gỡ `kn`/`tp`/`ch`/`pdf`/`knSSI`) | `build_chudiem.py` và `data/chudiem.json` **đã xoá** · `congcu.js` · menu 4 trang · dải Radar mobile | quan điểm của SSI dẫn lại; `ch` là lời khuyên mua viết bằng % |
+| `riskLevel` | `refresh_daily.work_prof` · `backfill_profiles.py` · 1.458 file `data/profile` | xếp hạng rủi ro của bên thứ ba về một mã cụ thể; chưa từng hiển thị |
+| `recStyle` / `CP.recStyle` / `cdBadge` + CSS `.rec .mt .rt .dl .cdkn .cdtp .cdch` | 4 trang | hàm tô xanh chữ "MUA", đỏ chữ "BÁN" |
+| **CẢ MỤC báo cáo phân tích CTCK** — `#reps`/`#repN` (cophieu), `#detReports`/`repSrc` + `renderReports` + `repCache` (bubbles), `SRC.reports`, `CP.reportRow`, `CP.CTCK_WEB`, `CP.ctckLink`, lượt gọi `analysis-report/list` trong `loadNews` | cophieu.html · bubbles.html · core.js | **không dẫn được tới bài báo cáo** — xem ngay dưới |
+
+**VÌ SAO BỎ HẲN MỤC BÁO CÁO CTCK (16/08/2026) — ĐỪNG DỰNG LẠI DÙ CHỈ "HIỆN TÊN CHO ĐỦ":**
+đi qua ba bản rồi mới bỏ, đừng lặp lại vòng đó. ① Bản đầu: badge MUA/BÁN + giá mục tiêu +
+nút ⬇ Tải PDF → gỡ vì khoản 32 Điều 4 Luật CK và vì phát tán PDF của CTCK là xâm phạm quyền
+tác giả. ② Bản hai: rút còn *"Báo cáo của **MAS** — **12/08/2026**"* link về **trang chủ**
+hãng → user bác: *"nên dẫn nguồn đến thẳng link bài báo cáo, không phải chỉ đưa mỗi website
+trang chủ của họ; nếu không làm đc thì nên bỏ luôn"*. ③ Dò đường dẫn tới bài báo cáo: API
+`api2.simplize.vn/api/company/analysis-report/list` trả về **đúng một** đường dẫn —
+`attachedLink` = file PDF trên `cdn.simplize.vn` — cùng một `id` nội bộ; đã thử
+`simplize.vn/co-phieu/{MÃ}/bao-cao-phan-tich`, `/bao-cao-phan-tich/{id}` và biến thể:
+**404 cả ba**. Không có URL nào tới bài báo cáo trên trang của chính CTCK. Thêm nữa `title`
+mang sẵn khuyến nghị trong tên (*"CTCP Tập đoàn Hòa Phát (HPG/Mua/GMT:30,000)"*) nên cũng
+không hiện được. Hiện tên + ngày mà không mở ra đọc được thì vô dụng → bỏ.
+> **Mảng `reports` trong `data/news` cũng đã xoá hẳn** (1.527 file) và pipeline THÔI gọi
+> `analysis-report/list`: hộ tiêu thụ cuối cùng là `build_chudiem.py`, mà Chủ điểm đầu tư
+> nay bỏ nốt. Bớt ~1.500 lượt tới Simplize mỗi lượt `--full`.
+
+**BỐN LUẬT KHÔNG ĐƯỢC PHÁ:**
+1. **Không có chữ mua / bán / giá mục tiêu / khuyến nghị** ở bất kỳ đâu — của mình hay dẫn
+   lại đều như nhau. Cũng đừng dùng "tiềm năng", "hấp dẫn", "mã tốt", "đáng mua", "hưởng lợi".
+   Thay bằng: *đạt tiêu chí*, *thống kê mô tả*, *xếp theo chỉ số*.
+2. **Bộ lọc là CÔNG CỤ ĐO, không phải danh mục gợi ý.** Pro hiện là danh sách 30 mã chốt sẵn
+   theo tiêu chí của chủ trang — **việc còn nợ**: đưa `PRO_N`/`PRO_LIQ`/`PRO_FLAT` và bốn
+   trọng số lên giao diện cho người dùng tự chỉnh, hiện điểm thành phần từng mã. Khi người
+   dùng tự chọn tiêu chí thì kết quả là của họ.
+3. **Không lưu văn bản hay file của người khác.** Con số là dữ kiện, không được bảo hộ quyền
+   tác giả; câu chữ và tài liệu thì có. Bồi thường dân sự do toà ấn định tới **1 tỷ**
+   (Điều 205 Luật SHTT sửa đổi, hiệu lực 01/04/2026) — cao hơn hẳn phạt hành chính 10–35tr.
+   **Việc còn nợ**: `data/profile` còn 1.526 hồ sơ chứa văn bản biên tập của nguồn
+   (`overview`/`services`/`strategy`/`risk`, markup còn nguyên `FONT-FAMILY: Arial`).
+4. **Thu ít dữ liệu người dùng nhất có thể.** Hiện site **không có form, không cookie, không
+   analytics, không tài nguyên ngoài** — chỉ localStorage nằm trên máy người dùng. Giữ
+   nguyên trạng thái đó: Luật BVDLCN 91/2025 có trần **3 tỷ / 5% doanh thu**, cao nhất trong
+   cả hồ sơ, và hiện đang bằng 0.
+
+**MIỄN TRỪ (`.mientru`) ở chân CẢ BỐN TRANG** — ba câu, thiếu câu nào cũng mất tác dụng:
+mô tả quá khứ · không phải CTCK · **người vận hành có thể nắm giữ cổ phiếu xuất hiện trên
+trang**. Câu ba là **công bố vị thế**, không phải câu khách sáo: chủ trang là nhà đầu tư cá
+nhân có nắm giữ thật, nên **tuyệt đối không được viết "không nắm giữ"**. Nó cũng là lá chắn
+cho luật thao túng — khoản thao túng của Luật CK sửa đổi 2024 bắt vào hành vi *"đưa ra ý
+kiến … sau khi đã nắm giữ vị thế"*, mà yếu tố cấu thành là **lợi thế ẩn**; công khai thì
+không còn ẩn. Hệ quả trực tiếp: **đừng bao giờ thêm một danh sách mã do chủ trang chọn** —
+đó là chỗ biến vi phạm hành chính thành trách nhiệm hình sự (Điều 211 BLHS).
+
+**CÒN NỢ, chưa làm trong đợt này** (xếp theo mức rủi ro giảm dần): mở khoá bộ lọc Pro · viết
+lại 1.526 hồ sơ doanh nghiệp từ nguồn gốc · lọc ~5.800 tin nguồn **báo chí** khỏi `data/news`
+và nhánh live `core.js:626` (giữ 17.786 tin CBTT của HOSE/HNX — NĐ 147/2024 coi việc **đăng
+đường dẫn** tới tin báo chí là dấu hiệu của trang TTĐT tổng hợp phải xin phép) · chỉ hiện cổ
+đông ≥5% · User-Agent tự định danh + rate limit cho crawler · xin thoả thuận dữ liệu với
+VNDirect · pháp nhân + Điều khoản + Chính sách bảo mật trước khi thu phí.
 
 ## Ghi chú từng trang
 
@@ -1010,27 +1180,22 @@ theo đúng `.n` để khoá bề rộng cột (dùng `Range.getBoundingClientRe
 canvas `measureText` — nó trả sai font). Đổi bề ngang là phải gọi lại `fitNumCols`.
 Mã thiếu dữ liệu luôn nằm **cuối** dù sort tăng hay giảm.
 
-**BỘ LỌC PRO (hàng riêng trên cùng panel lọc, 12/08/2026)** — khác mọi chip còn lại ở chỗ
-nó là điều kiện **so với cả rổ**, không phải điều kiện của riêng một mã: phải xếp hạng
-toàn thị trường rồi mới biết mã nào lọt. Vì thế `render()` gọi `CPScreen.proReset()` TRƯỚC
-khi lọc, và `proBuild` dựng từ **`CP.coins` đầy đủ** chứ không từ danh sách đang lọc dở —
-chọn Pro cùng lúc với một ngành thì thấy phần giao, "Pro" luôn là cùng 30 mã của toàn sàn.
-Bốn yếu tố (biến động 60 phiên thấp · vốn hoá lớn · E/P cao · gần đỉnh 52 tuần) chọn theo
-IC 12 tháng đo trên 97.794 dòng mã-tháng, chỉ giữ yếu tố **giữ nguyên dấu ở cả hai giai
-đoạn** 2020-22 và 2023-26; danh mục thử nghiệm 20,2% trong mẫu / 20,4% ngoài mẫu.
-Ba cổng loại trừ, mỗi cổng có lý do đo được:
-- **đang lỗ** (IC −5,5%) và **20% phải thu/doanh thu cao nhất** (chỉ số cơ bản mạnh nhất
-  tìm được, IC −14,3%; thêm cổng này nâng 20,3% → 21,6%/năm). **Thiếu dữ liệu thì CHO QUA**
-  — ngân hàng không có khoản mục này mà lại chiếm phần lớn danh mục, loại vì thiếu số là
-  tự tay vứt đi thứ đã đo ra là tốt.
-- **`flat60` > 30%** — bộ lọc "biến động thấp" không phân biệt được mã ổn định THẬT với mã
-  KHÔNG CHẠY: TLD khớp 1,86 tỷ/phiên nhưng đứng giá 21/59 phiên nên độ lệch chuẩn 0,28%,
-  thấp nhất bảng, lọt top 30 vì lý do sai. Đo ba ngưỡng: không chặn 20,3% · >40% 20,2% ·
-  **>30% 20,6%** · >20% 19,0% (bắt đầu cắt nhầm mã ổn định thật).
-Hai trường mới trong kho lọc phục vụ nó: `vol60`+`flat60` (screen.json), `recRevL`
-(fund.json — **MỨC** phải thu/doanh thu, khác `recRev` đã có là ĐỘ LỆCH TĂNG TRƯỞNG).
-Nút "✕ Xoá hết lọc" phải quét cả `#scrPro`, quên là chip vẫn sáng vàng trong khi bảng đã
-hết lọc. Nội dung nghiên cứu đứng sau: xem memory `nghien-cuu-chu-ky-2026-08`.
+**BỘ LỌC PRO ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI.** `PRO_N`/`PRO_LIQ`/`PRO_FLAT`,
+`_pro`, `proReset()`, `proBuild()`, `CPScreen.pro`, nhánh `case 'pro'`, hàng chip riêng
+trong `index.html` và CSS `.chippro`/`#scrPro`/`.scrPromo` đều xoá. Panel lọc nay chỉ còn
+một hàng "Lọc nhanh" với 22 chip thường.
+
+Vì sao bỏ: nó là chip DUY NHẤT không phải một điều kiện đo được của riêng một mã (P/E<10,
+RSI<30…) mà là **một danh sách 30 mã do chủ trang chọn ra** — bốn yếu tố, ba cổng loại, rồi
+cắt top 30. Dù từng yếu tố đều đo được và nhãn ghi rõ "thống kê mô tả quá khứ", thứ người
+dùng nhận về vẫn là *"đây là 30 mã"*, tức một danh mục gợi ý. Cộng thêm việc chủ trang **có
+nắm giữ cổ phiếu Việt Nam**, đó đúng là hình dạng mà khoản 32 Điều 4 Luật CK và điều khoản
+thao túng (Luật CK sửa đổi 2024 — *đưa ra ý kiến sau khi đã nắm giữ vị thế*) cùng nhắm tới.
+> **`vol60` / `flat60` / `recRevL` trong `screen.json` và `fund.json` VẪN GIỮ** dù nay không
+> chip nào đọc: chúng là con số ĐO ĐƯỢC từ dữ liệu công khai (độ lệch chuẩn lợi suất 60
+> phiên, tỉ lệ phiên đứng giá, phải thu trên doanh thu 4 quý), không phải ý kiến — và là
+> nguyên liệu sẵn nếu sau này làm chip THƯỜNG cho từng chỉ số, loại chip mà **người dùng tự
+> đặt ngưỡng**. Nội dung nghiên cứu đứng sau: memory `nghien-cuu-chu-ky-2026-08`.
 
 **`cophieu.html`** — Biểu đồ nhỏ và PTKT toàn màn hình dùng **chung** `CPChart`, chung
 `dailyRows`, chung kho hình vẽ; chỉ khác palette (`'gon'` 10 nút vs `'full'` 14 nút).
@@ -1050,6 +1215,15 @@ hình, đường biên ròng chạy suốt bề ngang với một chữ V cắm 
 > `resize`: iOS bắn liên tục suốt lúc vuốt.
 Cách chặn: `kqkdTable` ghi lại danh sách cột vừa vẽ vào `finColsVe`, mọi lượt vẽ lại đi
 qua `veLaiFinChart()`. Bất biến nằm ở CẤU TRÚC chứ không phải ở việc nhớ truyền đúng.
+
+**"LỢI NHUẬN ĐẾN TỪ ĐÂU" — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI.** Đi qua ba bản trong hai
+ngày rồi mới bỏ, đừng lặp lại vòng đó: ① biểu đồ cột chồng riêng `#segBox`/`#segCv` đứng
+trên bảng KQKD (15/08) → ② dòng cuối bảng KQKD có đánh màu `veCoCauRows` (16/08, user chốt
+*"bỏ biểu đồ đi, đưa xuống dữ liệu báo cáo tài chính và đánh màu"*) → ③ **bỏ hẳn** khi hoá
+ra phần lõi của nó là số Simplize tự tính chứ không phải khoản mục có in trong báo cáo
+(xem mục `data/cocau` ở trên để biết phép đối chiếu). Đã xoá: `#segBox`, `#segCv`, `#segTip`,
+`SEG_MAU`, `segHover`, `drawSegChart`, listener rê chuột, `veCoCauRows`, `loadCoCau`,
+`segNgan`, CSS `tr.ccr`.
 
 Bảng Cân đối kế toán kết thúc bằng nhóm dòng **Chỉ số đặc thù ngành** (`veNganhRows`,
 đọc `data/nganh/{MÃ}.json`, thiếu file thì không chèn gì) — trình bày y hệt dòng bảng,
@@ -1136,12 +1310,66 @@ Nhãn đầu đường (kể cả "vốn đã bỏ") phải nằm chung mảng `
 tách ra vẽ riêng là chồng chữ; vòng đẩy ngược lên khi tràn đáy phải **cascade**, bản cũ
 chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thành một mớ.
 
+> ⚠️ **"VPS" TRONG TÀI LIỆU NÀY LUÔN LÀ CÔNG TY CỔ PHẦN CHỨNG KHOÁN VPS** (`vps.com.vn`) —
+> nguồn bảng giá trực tiếp, chỉ số và nến dự phòng. **Máy chủ tự thuê để chạy pipeline gọi
+> là `ASTERBOX`** (cũng là một VPS theo nghĩa máy ảo, nhưng đừng gọi tắt như vậy nữa —
+> đã có lần đọc nhầm thành một). Xem `server/README.md`.
+
+## Gọi mạng — trần theo host + lùi dần (`tools/nhipmang.py`, 16/08/2026)
+
+Mọi lượt gọi của pipeline đi qua `nhipmang.get()`. **Đừng gọi thẳng `urllib` nữa.**
+
+| Cơ chế | Làm gì |
+|---|---|
+| **Trần theo host** | khoảng cách tối thiểu giữa hai lượt tới CÙNG một host, đo bằng đồng hồ chung có khoá nên đúng cả khi nhiều luồng |
+| **Lùi dần** | 429/5xx/timeout → chờ 1s, 2s, 4s rồi thử lại; tôn trọng `Retry-After` nếu nguồn gửi. 400/403/404 thì ném ra ngay, thử lại vô ích |
+| **Tự chậm lại vĩnh viễn** | bị 429 → **nhân đôi trần của host đó cho hết lượt chạy** (trần tối đa 5s). Đây mới là phần quan trọng: chờ rồi thử lại với tốc độ cũ là vẫn nện |
+
+Trần đang khai: Simplize 8 lượt/giây · VNDirect 12 · 24hMoney 8 · VPS 5 · SSI 2 · mặc định 5.
+> **ĐỪNG nới trần để pipeline nhanh hơn.** Nó chạy 15h15 không ai ngồi đợi; chậm thêm vài
+> phút không mất gì, bị chặn IP là mất cả nguồn. Trước khi có lớp này, bước kho nến chạy 12
+> luồng × ~200ms = đỉnh **~60 lượt/giây** dội vào VNDirect — con số của một cuộc tấn công
+> nhẹ chứ không phải của một trang tử tế. Đây là lớp phòng thủ cho **Điều 287 BLHS**.
+
+**USER-AGENT: `CPVN.IO/1.0 (+https://cpvn.io)` — ĐỪNG QUAY LẠI CHUỖI GIẢ TRÌNH DUYỆT.**
+Bản cũ gửi `Mozilla/5.0 … Chrome/120`. Giả UA không cấu thành Điều 289 (không vượt cảnh báo
+hay mã truy cập nào) nhưng là chi tiết DUY NHẤT trong cả hệ thống mang hình dạng lảng tránh.
+Mà giấu cũng vô nghĩa: mọi lượt gọi **từ trình duyệt người xem** đều mang sẵn
+`Origin: https://cpvn.io` (CORS bắt buộc, không tắt được) — và đó mới là gần hết khối lượng.
+Đã đo 16/08: **9/9 nguồn trả 200** với UA thật thà.
+> **Chưa đưa email vào UA** — chờ có pháp nhân rồi mới thêm địa chỉ của công ty. Đừng phơi
+> liên hệ cá nhân vào log của bên thứ ba khi chưa có lớp bảo vệ nào.
+
+**GHI NGUỒN đặt NGAY DƯỚI BẢNG GIÁ** (`.nguon` trong index.html), không nhét xuống chân
+trang: *"Giá trực tiếp & chỉ số: Chứng khoán VPS · Nến lịch sử, khối ngoại & tin: VNDIRECT"*.
+Vừa là phép lịch sự tối thiểu, vừa là **cách xin phép ngầm** — tên họ hiện công khai, họ
+nhìn thấy, không phản đối; đó là đồng thuận trên thực tế mà không cần ai ký gì.
+> ⚠️ **Chưa gửi email xin phép VPS, và cân nhắc kỹ trước khi gửi.** Endpoint của họ công
+> khai, CORS mở sẵn `Access-Control-Allow-Origin: *` (cấu hình có chủ ý). Hỏi xin phép có
+> thể biến vùng xám ĐANG CÓ LỢI thành một chữ "không" bằng văn bản — mà "tiếp tục sau khi
+> bị yêu cầu dừng" thì xấu hơn hẳn mọi luận điểm hiện có. Nếu hỏi thì hỏi câu THƯƠNG MẠI
+> ("quý công ty có chương trình dữ liệu cho trang thông tin không?") chứ đừng hỏi câu xin
+> phán quyết.
+
+> **CNN FEAR & GREED ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI, KỂ CẢ BẰNG VIX.**
+> Bước 10b của pipeline, khối `_cnn`/`_vix` trong `build_screen.py`, ô "Sức mạnh TOÀN CẦU"
+> trong `tgSucManh()` và hai trường `global`/`usfg` của `market.json` đều gỡ.
+> Lý do **không phải chuyện cào** (1 lượt/ngày, chẳng ai bận tâm) mà là: trang **trưng tên
+> thương hiệu "CNN Fear & Greed"** kèm con số ở panel Radar. Con số là dữ kiện; **cái tên
+> và cách tính là sản phẩm có thương hiệu của CNN**. Giấu User-Agent không che được thứ
+> hiện trên mặt tiền — ai ở CNN mở `cpvn.io/radar` là thấy trong năm giây.
+> Nhánh dự phòng VIX cùng vấn đề (chỉ số thương hiệu của CBOE) và Yahoo đã trả 429 từ lâu.
+> **Ô "Sức mạnh thị trường" trong nước giữ nguyên** — CPVN tự tính từ dữ liệu của mình.
+
 ## Pipeline
 
 11 bước, thứ tự bắt buộc: **bảng giá (bước 2) phải chạy TRƯỚC kho nến (bước 3)** vì
 `fetch_hist` dò hệ số đơn vị bằng cách đối chiếu với `ref` của bảng giá. **Bước 6d
 (`build_nganh`) phải đứng SAU 6c (`kho_sau`)** vì nó chỉ tin dấu lưu chuyển tiền tệ
-của `finq`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
+của `finq`, **và SAU 6c2 (`cao_cocau`)** vì dòng ký quỹ của mẫu CTCK đọc thẳng
+`data/cocau`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
+**6c2 dùng `--moi --ngay 20`**, không phải hằng ngày: báo cáo quý ra mỗi 3 tháng, hỏi lại
+mỗi phiên là phí ~3.000 lượt gọi cho một con số cả quý mới nhúc nhích một lần.
 Mọi JSON ghi qua `jdump()` (compact, `ensure_ascii=False`, atomic `.tmp`+`os.replace`).
 Chỉ cập nhật universe bằng giá trị **khác None** — đó là cách giữ số cũ khi API lỗi.
 Song song đã cân theo giới hạn nguồn (Simplize 4 luồng + sleep 0.15, hist 12, fin 5,
@@ -1175,13 +1403,14 @@ news 6, profile 5) — tăng lên dễ bị chặn IP.
 > **`fetched:0` nhiều phiên liền TRONG KHI `missing` không giảm nghĩa là mấy url đó đang 404 ở
 > nguồn** — đừng đọc thành "chưa chạy tới". 10 mã nhóm A hiện đúng trạng thái ấy.
 
-**Lịch chạy**: VPS Windows Scheduled Task 15:15 chạy `server/run_refresh.ps1` (commit
+**Lịch chạy**: máy cào `ASTERBOX` (VPS Windows — *máy thuê của mình*, KHÔNG liên quan
+Chứng khoán VPS) chạy Scheduled Task 15:15 gọi `server/run_refresh.ps1` (commit
 `EOD <phiên> (server)`) — **đường chính**. GitHub Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN,
 so `data/health.json['date']` với **phiên gần nhất đã đóng sổ**, bằng nhau thì tự thoát.
 Toàn bộ cấu hình máy chủ nằm trong **`server/`** (script chạy + script dựng tác vụ + cách
 dựng lại từ số 0). Tác vụ trỏ thẳng vào file TRONG kho nên sửa ở repo là lượt sau tự lấy.
 
-> **`Last Result: 0` của Scheduled Task KHÔNG có nghĩa là đã đẩy được lên GitHub** — nó chỉ
+> **`Last Result: 0` của Scheduled Task trên `ASTERBOX` KHÔNG có nghĩa là đã đẩy được lên GitHub** — nó chỉ
 > nói PowerShell thoát sạch. Ngày 04/08/2026 tác vụ chạy đúng giờ, cào đủ 1522 mã, commit tại
 > chỗ, rồi `git push` bị từ chối "fetch first" vì có commit khác đẩy lên trong 8 phút pipeline
 > chạy — cả phiên nằm lại trong máy suốt buổi tối mà không ai biết. Nay script kéo lại ngay

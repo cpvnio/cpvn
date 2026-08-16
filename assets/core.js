@@ -642,62 +642,62 @@ CP.tinDungMa=function(sym,tieu){
 };
 CP.loadNews=async function(sym){
   if(newsCache.has(sym)&&Date.now()-newsCache.get(sym).at<300000) return newsCache.get(sym).d;
-  let news=null, reports=null, total=0;
+  let news=null;
   if(!CP.OFFLINE){
+    /* NGUỒN SIMPLIZE news-event/list ĐÃ BỎ 16/08/2026 — ĐỪNG GỌI LẠI. Nó không trả url
+       thật của bài báo, chỉ có `slug` nội bộ; mở bài phải gọi THÊM một lượt tới Simplize,
+       hỏng thì đẩy người dùng sang simplize.vn. Đo 16/08: 8.966/9.847 tin báo chí trong
+       kho ở đúng tình trạng đó. Nay chỉ còn VNDirect finfo — nguồn có url thật. */
     try{
-      const [sim,vnd]=await Promise.all([
-        fetch(`https://api2.simplize.vn/api/company/news-event/list?ticker=${sym}&page=0&size=15`).then(r=>r.json()).catch(()=>null),
-        fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl`).then(r=>r.json()).catch(()=>null),
-      ]);
+      const vnd=await fetch(`https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:${sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl`)
+        .then(r=>r.json()).catch(()=>null);
       const items=[];
-      for(const n of (sim&&sim.data)||[])
-        items.push({title:n.title,source:n.sourceNameDisplay||n.sourceName||'',ts:n.ts||0,slug:n.slug,url:null});
       for(const n of (vnd&&vnd.data)||[]){
         const ts=Date.parse((n.newsDate||'')+'T'+(n.newsTime||'00:00:00')+'+07:00')||0;
-        items.push({title:n.newsTitle,source:n.newsSource||'',ts,slug:null,url:n.newsUrl});
+        items.push({title:n.newsTitle,source:n.newsSource||'',ts,url:n.newsUrl});
       }
       if(items.length){
         items.sort((a,b)=>b.ts-a.ts);
+        /* BA CỔNG, y hệt refresh_daily.work_news — client và kho phải cùng luật, bằng
+           không nguồn sống trả về một rổ còn kho trả về rổ khác. */
+        const HAN=Date.now()-30*86400*1000;
         const seen=new Set(); news=[];
         for(const it of items){ const k=(it.title||'').toLowerCase().slice(0,45);
-          if(!k||seen.has(k)||!CP.tinDungMa(sym,it.title))continue; seen.add(k); news.push(it); }
+          if(!k||seen.has(k)||!CP.tinDungMa(sym,it.title)) continue;
+          if((it.ts||0)<HAN) continue;
+          if(!it.url||/simplize/i.test(it.url)) continue;
+          seen.add(k); news.push(it); }
       }
     }catch(e){}
-    try{
-      const j=await fetch(`https://api2.simplize.vn/api/company/analysis-report/list?ticker=${sym}&page=0&size=12`).then(r=>r.json());
-      total=j.total||0;
-      reports=(j.data||[]).map(r=>({source:r.source||'',rec:r.recommend||'',target:r.targetPrice||null,
-        date:r.issueDate||'',title:r.title||'',pdf:r.attachedLink||''}));
-    }catch(e){}
+    /* KHÔNG còn gọi analysis-report/list: cả mục báo cáo phân tích CTCK đã bỏ 16/08/2026
+       (xem ghi chú dài ở cuối file). Bớt luôn một lượt gọi Simplize mỗi lần mở trang mã. */
   }
-  if(!news||!reports){   // nguồn sống chết -> kho tin tức
+  if(!news){   // nguồn sống chết -> kho tin tức
     try{
       const f=await fetch(`data/news/${sym}.json`).then(r=>r.ok?r.json():null);
-      if(f){ if(!news&&f.news&&f.news.length) news=f.news;
-             if(!reports&&f.reports&&f.reports.length){ reports=f.reports; total=f.total_reports||f.reports.length; } }
+      if(f&&f.news&&f.news.length) news=f.news;
     }catch(e){}
   }
-  const d={news:news||[],reports:reports||[],total};
+  const d={news:news||[]};
   newsCache.set(sym,{at:Date.now(),d}); return d;
 };
-CP.openNewsItem=async function(n){
-  if(n.url){ window.open(n.url,'_blank','noopener'); return; }
-  if(n.slug&&!CP.OFFLINE){
-    try{
-      const j=await fetch(`https://api2.simplize.vn/api/company/news-event/detail/${n.slug}`).then(r=>r.json());
-      const u=j.data&&(j.data.sourceUrl||j.data.sourceWebsite);
-      window.open(u||'https://simplize.vn/tin-tuc','_blank','noopener'); return;
-    }catch(e){}
-  }
-  window.open('https://simplize.vn','_blank','noopener');
-};
-CP.recStyle=function(r){
-  r=(r||'').toUpperCase();
-  if(/MUA|KHẢ QUAN|TÍCH LŨY|TĂNG|OUTPERFORM|BUY|ADD/.test(r)) return 'background:var(--green);color:#04240f';
-  if(/BÁN|KÉM|SELL|UNDERPERFORM|REDUCE/.test(r))              return 'background:var(--red);color:#fff';
-  if(/TRUNG LẬP|NẮM GIỮ|NEUTRAL|HOLD/.test(r))                return 'background:var(--yellow);color:#332703';
-  return 'background:#3a3a44;color:#c9c9d2';
-};
+/* Mọi tin trong kho nay đều CÓ url thật (ba cổng lọc ở loadNews), nên mở thẳng.
+   Nhánh cũ dò `slug` rồi hỏi Simplize lấy sourceUrl, hỏng thì mở simplize.vn — đã bỏ
+   16/08/2026 cùng nguồn sinh ra slug. Không có url thì không làm gì, đừng đoán. */
+CP.openNewsItem=function(n){ if(n&&n.url) window.open(n.url,'_blank','noopener'); };
+;
+/* BÁO CÁO PHÂN TÍCH CTCK ĐÃ BỎ HẲN 16/08/2026 — CP.recStyle, CP.CTCK_WEB, CP.ctckLink,
+   CP.reportRow đều xoá, cùng cả mục hiển thị ở cophieu.html và bubbles.html.
+   Chặng đường đã đi, đừng lặp lại: bản đầu hiện badge MUA/BÁN + giá mục tiêu + nút tải
+   PDF -> gỡ vì khoản 32 Điều 4 Luật CK (dẫn lại khuyến nghị vẫn là tư vấn đầu tư) và vì
+   phát tán PDF của CTCK là xâm phạm quyền tác giả. Bản thứ hai rút còn "Báo cáo của <CTCK>
+   — <ngày>" link về TRANG CHỦ hãng -> user bác: phải dẫn thẳng bài báo cáo, không thì bỏ.
+   Mà nguồn (api2.simplize.vn/api/company/analysis-report/list) chỉ trả về đúng một đường
+   dẫn là file PDF trên cdn.simplize.vn; đã dò trang riêng từng báo cáo của Simplize theo
+   `id` và theo mã, 404 cả ba dạng. Không dẫn được -> bỏ.
+   Từ 16/08/2026 kho `data/news` cũng THÔI lưu mảng `reports`: hộ tiêu thụ cuối cùng là
+   tools/build_chudiem.py, mà Chủ điểm đầu tư nay đã bỏ nốt. Pipeline không gọi endpoint
+   analysis-report/list nữa — bớt ~1.500 lượt tới Simplize mỗi lượt --full. */
 
 /* ---------- watchlist (⭐ localStorage) ------------------------------------ */
 CP.watch={

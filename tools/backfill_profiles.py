@@ -188,7 +188,9 @@ def work(sym):
        "freeFloat":d.get("freeFloatRate"),"bookValue":d.get("bookValue"),
        "eps":rnd(d.get("epsRatio")),"evEbitda":rnd(d.get("evEbitdaRatio")),
        "revLtmGrowth":rnd(d.get("revenueLtmGrowth")),"npLtmGrowth":rnd(d.get("netIncomeLtmGrowth")),
-       "riskLevel":d.get("overallRiskLevel"),"shares":d.get("outstandingSharesValue")}
+       # `overallRiskLevel` đã bỏ 16/08/2026 — xếp hạng rủi ro của bên thứ ba về một mã cụ
+       # thể là nhận định, không phải dữ kiện. Giữ đồng bộ với refresh_daily.work_prof.
+       "shares":d.get("outstandingSharesValue")}
     _learn(o.get("nameVi"),sym); _learn(o.get("nameEn"),sym)
     fetch_ownership(sym,o)
     o={k:v for k,v in o.items() if v not in (None,"")}

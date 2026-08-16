@@ -1,11 +1,16 @@
-# Máy chủ cào dữ liệu
+# Máy chủ cào dữ liệu — `ASTERBOX`
+
+> ⚠️ **Máy này là VPS theo nghĩa MÁY ẢO THUÊ, không liên quan gì tới Công ty Chứng khoán
+> VPS (`vps.com.vn`)** — bên đó là NGUỒN dữ liệu bảng giá mà máy này gọi tới. Trùng chữ
+> viết tắt thôi. Trong tài liệu dự án, "VPS" trần luôn có nghĩa là công ty chứng khoán;
+> máy cào thì gọi tên riêng `ASTERBOX`.
 
 **Đường chính** dựng kho EOD cho CPVN.IO. GitHub Actions (`.github/workflows/daily.yml`)
 chỉ là lưới an toàn: nó tự thoát khi thấy `data/health.json` đã có phiên gần nhất.
 
 | | |
 |---|---|
-| Máy | VPS Windows `ASTERBOX` · `103.165.144.161` · **hạn dùng ~12/2026** |
+| Máy | máy ảo Windows `ASTERBOX` · `103.165.144.161` · **hạn dùng ~12/2026** |
 | Thư mục | `C:\cpvn` (clone của kho này) |
 | Lịch | Scheduled Task `CPVN EOD refresh` — 15:15 T2–T6, chạy dưới SYSTEM |
 | Chạy gì | `run_refresh.ps1` → `refresh_daily.py` (thứ Hai thêm `--full`) → commit → push |
@@ -14,10 +19,10 @@ chỉ là lưới an toàn: nó tự thoát khi thấy `data/health.json` đã c
 
 Tác vụ chạy thẳng `C:\cpvn\server\run_refresh.ps1` — tức **chính file trong kho này**.
 Sửa ở đây, `git push`, lượt chạy kế tiếp tự lấy bản mới về (script `git pull` ở đầu).
-Không phải chép tay lên máy chủ. Đừng sửa thẳng trên VPS — trước đây cấu hình chỉ nằm
+Không phải chép tay lên máy chủ. Đừng sửa thẳng trên `ASTERBOX` — trước đây cấu hình chỉ nằm
 trên máy đó nên không ai xem lại được, và đó là lý do sự cố dưới đây âm thầm cả buổi.
 
-## Hết hạn VPS thì làm gì
+## Hết hạn máy `ASTERBOX` thì làm gì
 
 Chép thư mục `server/` sang máy mới, cài Git + Python 3.12 + Pillow, clone kho về `C:\cpvn`,
 đặt deploy key **có quyền ghi**, rồi chạy `setup_task.ps1` một lần. Không có gì khác cần mang theo —

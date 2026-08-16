@@ -27,13 +27,28 @@ NEWS_DIR=os.path.join(BASE,"data","news")
 PROF_DIR=os.path.join(BASE,"data","profile")
 SPARK=os.path.join(BASE,"data","spark.json"); HEALTH=os.path.join(BASE,"data","health.json")
 HL={}   # health: kết quả từng bước của lượt chạy này -> data/health.json
-UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120"}
 FULL="--full" in sys.argv; NOW=int(time.time())
 BACKFILL_D=2400; DAILY_D=260          # backfill ~6.5 năm; ngày thường chỉ cần 260 ngày (mốc m3/m6)
 VNTZ=datetime.timezone(datetime.timedelta(hours=7))
+
+# ---------------------------------------------------------------------------
+# GỌI MẠNG: trần tốc độ theo host + lùi dần khi nguồn kêu -> tools/nhipmang.py
+#
+# UA CŨ LÀ CHUỖI GIẢ TRÌNH DUYỆT ("Mozilla/5.0 … Chrome/120") — ĐÃ BỎ 16/08/2026.
+# Giả UA không cấu thành Điều 289 BLHS (không vượt cảnh báo hay mã truy cập nào), nhưng nó
+# là chi tiết DUY NHẤT trong cả hệ thống mang hình dạng lảng tránh — soi lại thì "giả mạo
+# User-Agent trình duyệt" đọc rất khác "dùng thư viện mặc định". Mà giấu cũng chẳng để làm
+# gì: mọi lượt gọi TỪ TRÌNH DUYỆT người xem đều mang sẵn `Origin: https://cpvn.io` (CORS
+# bắt buộc, không tắt được), và phần đó mới là gần hết khối lượng. Nguồn đã biết là ai rồi.
+# Đã đo 16/08: 9/9 nguồn trả 200 với UA thật thà, không nguồn nào đòi UA trình duyệt.
+#   Chưa đưa EMAIL vào UA — chờ có pháp nhân rồi mới thêm địa chỉ của công ty, đừng phơi
+#   liên hệ cá nhân ra log của bên thứ ba.
+# ---------------------------------------------------------------------------
+sys.path.insert(0,os.path.join(BASE,"tools"))
+import nhipmang
+UA={"User-Agent":nhipmang.UA}          # vài chỗ còn dựng Request riêng thì dùng chung UA này
 def get(url,timeout=20):
-    with urllib.request.urlopen(urllib.request.Request(url,headers=UA),timeout=timeout) as r:
-        return json.loads(r.read().decode())
+    return json.loads(nhipmang.get(url,timeout=timeout))
 def jdump(obj,path):                   # ghi JSON gọn (không khoảng trắng) + atomic
     tmp=path+".tmp"
     json.dump(obj,open(tmp,"w",encoding="utf-8"),ensure_ascii=False,separators=(",",":"))
@@ -662,8 +677,24 @@ except Exception as e:
     print(f"kho sâu LỖI (không chặn pipeline): {e}",flush=True)
     HL["finq"]={"err":str(e)[:120]}
 
-# 6d) CHỈ SỐ ĐẶC THÙ NGÀNH data/nganh/{MÃ}.json — tính từ fin + finq, KHÔNG gọi mạng.
+# 6c2) CƠ CẤU LỢI NHUẬN + DƯ NỢ CHO VAY KÝ QUỸ data/cocau/{MÃ}.json — cào Simplize.
+#      Thứ DUY NHẤT ở đây mà hai kho kia không có: bảng phân rã theo ĐÚNG loại hình doanh
+#      nghiệp. fin/finq đều lấy bản báo cáo mẫu THƯỜNG nên với công ty chứng khoán thì
+#      40 nghìn tỷ đang cho khách vay không nằm ở dòng nào (xem tools/cao_cocau.py).
+#      `--moi` với ngưỡng 20 ngày: báo cáo quý ra mỗi 3 tháng, hỏi lại hằng ngày là phí
+#      3.000 lượt gọi mỗi phiên cho một con số cả quý mới nhúc nhích. Nguồn chỉ trả 15 quý
+#      nên đây KHÔNG phải kho vĩnh viễn — mất là cào lại được, không cần bảo toàn như fin.
+try:
+    sys.path.insert(0,os.path.join(BASE,"tools"))
+    import cao_cocau as _cc
+    HL["cocau"]=_cc.main(moi=True, ngay=20)
+except Exception as e:
+    print(f"cơ cấu lợi nhuận LỖI (không chặn pipeline): {e}",flush=True)
+    HL["cocau"]={"err":str(e)[:120]}
+
+# 6d) CHỈ SỐ ĐẶC THÙ NGÀNH data/nganh/{MÃ}.json — tính từ fin + finq + cocau, KHÔNG gọi mạng.
 #     Phải đứng SAU 6c: lưu chuyển tiền tệ chỉ tin dấu của finq (kho fin sai dấu 60% số ô).
+#     Và SAU 6c2: dòng "Dư nợ cho vay ký quỹ" của mẫu CTCK đọc thẳng data/cocau.
 #     `--moi` so mtime nên ngày thường chỉ dựng lại mã vừa có báo cáo mới, vài giây là xong.
 try:
     import build_nganh as _bn
@@ -681,14 +712,13 @@ else:
                     key=lambda s:-(board.get(s,{}).get("gtgd") or 0))[:200]
 nlock=threading.Lock(); ndone=[0,0]
 def work_news(sym):
-    o={"sym":sym,"updated":sess_date,"news":[],"reports":[]}
-    try:
-        j=get(f"https://api2.simplize.vn/api/company/news-event/list?ticker={sym}&page=0&size=15")
-        for n in j.get("data") or []:
-            o["news"].append({"title":n.get("title"),"source":n.get("sourceNameDisplay") or n.get("sourceName") or "",
-                              "ts":n.get("ts") or 0,"slug":n.get("slug"),"url":None})
-    except Exception: pass
-    time.sleep(0.08)
+    o={"sym":sym,"updated":sess_date,"news":[]}
+    # NGUỒN SIMPLIZE news-event/list ĐÃ BỎ 16/08/2026 — ĐỪNG GỌI LẠI.
+    # Nó KHÔNG trả về url thật của bài báo, chỉ có `slug` nội bộ; muốn mở bài phải gọi
+    # THÊM một lượt tới Simplize để hỏi sourceUrl, lượt đó hỏng thì người dùng bị đẩy
+    # thẳng sang simplize.vn. Đo 16/08: 8.966/9.847 tin báo chí trong kho ở đúng tình
+    # trạng này — tức "dẫn nguồn rõ ràng, bấm là sang trang họ" chỉ đúng với 9% số tin.
+    # User chốt: chỉ đưa tin có link thẳng tới trang báo, dẫn tới Simplize thì bỏ.
     try:
         j=get(f"https://api-finfo.vndirect.com.vn/v4/news?q=tagCodes:{sym}&sort=newsDate:desc&size=15&fields=newsDate,newsTime,newsTitle,newsSource,newsUrl")
         for n in j.get("data") or []:
@@ -700,24 +730,32 @@ def work_news(sym):
             o["news"].append({"title":n.get("newsTitle"),"source":n.get("newsSource") or "","ts":ts,
                               "slug":None,"url":n.get("newsUrl")})
     except Exception: pass
-    time.sleep(0.08)
-    try:
-        j=get(f"https://api2.simplize.vn/api/company/analysis-report/list?ticker={sym}&page=0&size=12")
-        o["total_reports"]=j.get("total") or 0
-        for r in j.get("data") or []:
-            o["reports"].append({"source":r.get("source") or "","rec":r.get("recommend") or "",
-                "target":r.get("targetPrice"),"date":r.get("issueDate") or "",
-                "title":r.get("title") or "","pdf":r.get("attachedLink") or ""})
-    except Exception: pass
+    # BÁO CÁO PHÂN TÍCH CTCK: THÔI CÀO HẲN 16/08/2026.
+    # Trước đó rút dần: bỏ recommend/targetPrice/title/attachedLink (giữ mỗi source+date),
+    # rồi gỡ cả mục hiển thị vì nguồn không đưa được link tới bài báo cáo trên trang CTCK.
+    # Hộ tiêu thụ cuối cùng của mảng `reports` là tools/build_chudiem.py (lấy NGÀY báo cáo
+    # SSI gần nhất), mà Chủ điểm đầu tư nay cũng bỏ nốt -> không còn ai đọc.
+    # Bớt được ~1.500 lượt gọi api2.simplize.vn mỗi lượt --full.
     seen=set(); dedup=[]
+    # BA CỔNG LỌC (user chốt 16/08/2026), theo thứ tự rẻ tới đắt:
+    #   · TRONG 30 NGÀY — tin cũ hơn thì không thêm vào kho nữa. Mục tin của trang mã là
+    #     "gần đây có gì", không phải kho lưu trữ; giữ vô hạn chỉ phình repo.
+    #   · PHẢI CÓ URL THẬT — không có link thì người đọc không mở được bài tại nguồn,
+    #     mà đó chính là lý do duy nhất để dẫn tin của người khác.
+    #   · KHÔNG TRỎ VỀ SIMPLIZE — dẫn người xem sang một sản phẩm cùng phân khúc thì
+    #     thà đừng đưa tin đó.
+    HAN = NOW*1000 - 30*86400*1000
     for it in sorted(o["news"],key=lambda x:-(x.get("ts") or 0)):
         k=(it.get("title") or "").lower()[:45]
         if not k or k in seen or not tin_dung_ma(sym,it.get("title")): continue
+        if (it.get("ts") or 0) < HAN: continue
+        u=(it.get("url") or "")
+        if not u or "simplize" in u.lower(): continue
         seen.add(k); dedup.append(it)
     o["news"]=dedup[:20]
     with nlock:
         ndone[0]+=1
-        if o["news"] or o["reports"]: ndone[1]+=1
+        if o["news"]: ndone[1]+=1
         else: return
         if ndone[0]%200==0: print(f"  tin tức {ndone[0]}/{len(ntargets)}",flush=True)
     jdump(o,os.path.join(NEWS_DIR,f"{sym}.json"))
@@ -841,6 +879,14 @@ def fetch_ownership(sym,o):
                "p":rnd(r.get("pctOfSharesOutHeld")),"s":r.get("sharesHeld"),"c":r.get("countryOfInvestor")}
             if t: e["t"]=t
             out.append({k:v for k,v in e.items() if v is not None})
+        # LỌC CỔ ĐÔNG CÁ NHÂN DƯỚI 5% (16/08/2026) — xem tools/codong.py để biết vì sao.
+        # Tóm tắt: tên người thật + tỉ lệ sở hữu là dữ liệu cá nhân theo Luật 91/2025;
+        # lập luận "đã công khai theo nghĩa vụ pháp luật" chỉ đứng vững với cổ đông lớn
+        # từ 5%. TỔ CHỨC GIỮ HẾT, KHÔNG CÓ SÀN — cắt tổ chức là vỡ ÂM THẦM build_tapdoan
+        # (nhãn doanh nghiệp nhà nước cộng dồn mọi cổ đông nhà nước, không có sàn %).
+        sys.path.insert(0,os.path.join(BASE,"tools"))
+        import codong as _cd
+        out=_cd.loc(out)
         if out: o["sh"]=out[:40]
         ff=[{"n":f.get("fundCode"),"fn":f.get("fundName"),"s":f.get("sharesHeld"),
              "v":f.get("sharesHeldValueVnd"),"d":f.get("fillingDate")}
@@ -890,7 +936,11 @@ def work_prof(sym):
        "freeFloat":d.get("freeFloatRate"),"bookValue":d.get("bookValue"),
        "eps":rnd(d.get("epsRatio")),"evEbitda":rnd(d.get("evEbitdaRatio")),
        "revLtmGrowth":rnd(d.get("revenueLtmGrowth")),"npLtmGrowth":rnd(d.get("netIncomeLtmGrowth")),
-       "riskLevel":d.get("overallRiskLevel"),"shares":d.get("outstandingSharesValue")}
+       # KHÔNG lưu `overallRiskLevel` (16/08/2026): đó là XẾP HẠNG RỦI RO của bên thứ ba đối
+       # với từng mã cụ thể — một nhận định về chứng khoán, không phải dữ kiện. Trường này
+       # chưa bao giờ được trang nào hiển thị, chỉ nằm im trong kho; thứ đo được tương đương
+       # là `vol60` do chính CPVN tính trong build_screen.py.
+       "shares":d.get("outstandingSharesValue")}
     _learn(o.get("nameVi"),sym); _learn(o.get("nameEn"),sym)
     fetch_ownership(sym,o)
     # GIỮ SỐ CŨ KHI LƯỢT NÀY CÀO HỤT. fetch_ownership nuốt mọi lỗi rồi trả về lặng thinh,
@@ -976,37 +1026,21 @@ try:
     except Exception as e3:
         print(f"cotuc.json LỖI (không chặn pipeline): {e3}",flush=True)
         HL["cotuc"]={"ok":0,"err":str(e3)[:120]}
-    # CHỦ ĐIỂM ĐẦU TƯ (dẫn nguồn SSI) -> data/chudiem.json. Sơ đồ ba trục nhập tay trong
-    # chính script đó; phần chạy ở đây là bồi khuyến nghị + giá mục tiêu MỚI NHẤT của SSI
-    # rút từ kho tin/báo cáo vừa cào ở bước 7 — nên phải đứng SAU bước ấy.
-    try:
-        import build_chudiem as _bcd
-        _bcd.main()
-        HL["chudiem"]={"ok":1}
-    except Exception as e4:
-        print(f"chudiem.json LỖI (không chặn pipeline): {e4}",flush=True)
-        HL["chudiem"]={"ok":0,"err":str(e4)[:120]}
+    # CHỦ ĐIỂM ĐẦU TƯ đã BỎ HẲN 16/08/2026 — bước dựng data/chudiem.json và
+    # tools/build_chudiem.py đều gỡ. Cả mục là quan điểm của SSI Research dẫn lại; sau khi
+    # gỡ khuyến nghị và giá mục tiêu thì phần còn lại chỉ là cách phân nhóm của họ.
 except Exception as e:
     print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
     HL["screen"]={"ok":0,"err":str(e)[:120]}
 
-# 10b) NHỊP SỢ HÃI TOÀN CẦU (CNN Fear & Greed — thị trường Mỹ, không có CORS nên server
-#      cào rồi ghi vào kho; CNN 418 với UA Chrome -> phải giả Safari + Referer)
-try:
-    _rq=urllib.request.Request("https://production.dataviz.cnn.io/index/fearandgreed/graphdata",
-        headers={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
-                 "Accept":"application/json","Referer":"https://edition.cnn.com/markets/fear-and-greed"})
-    with urllib.request.urlopen(_rq,timeout=20) as _r:
-        _fg=json.loads(_r.read().decode()).get("fear_and_greed") or {}
-    _mkp=os.path.join(BASE,"data","market.json")
-    if _fg.get("score") is not None and os.path.exists(_mkp):
-        _mk=json.load(open(_mkp,encoding="utf-8"))
-        _mk["usfg"]={"v":rnd(_fg["score"],1),"rating":_fg.get("rating"),"at":sess_date}
-        jdump(_mk,_mkp)
-        print(f"nhịp toàn cầu (CNN): {_mk['usfg']['v']} ({_mk['usfg']['rating']})",flush=True)
-        HL["usfg"]=1
-except Exception as e:
-    print(f"nhịp toàn cầu CNN lỗi (bỏ qua): {e}",flush=True); HL["usfg"]=0
+# 10b) NHỊP SỢ HÃI TOÀN CẦU (CNN Fear & Greed) — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI.
+#      Cào thì không đáng lo (1 lượt/ngày), nhưng trang ĐANG TRƯNG tên thương hiệu
+#      "CNN Fear & Greed" kèm con số ở panel Radar. Số 67 là dữ kiện; CÁI TÊN và cách tính
+#      là sản phẩm có thương hiệu của họ — đó mới là phần đáng nói. Giấu User-Agent không
+#      che được thứ hiện trên mặt tiền: ai ở CNN mở cpvn.io/radar là thấy trong năm giây.
+#      Nhánh dự phòng VIX (Yahoo) cũng bỏ theo: VIX là chỉ số có thương hiệu của CBOE, và
+#      Yahoo đã trả 429 từ lâu nên nhánh đó chết sẵn.
+#      Khối lấy CNN trong tools/build_screen.py cũng đã gỡ cùng lượt.
 
 # 11) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
 runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")

@@ -637,28 +637,22 @@ function vennSVG(){
         <i style="width:10px;height:10px;border-radius:50%;background:${t.mau};
           display:inline-block"></i>${esc(t.ten)}</span>`).join('')}</div>`;
 }
+/* GỠ 16/08/2026: badge MUA/BÁN, tiêu đề báo cáo (`td`), giá mục tiêu (`tp`) và phần trăm
+   chênh so với giá mục tiêu. Bốn trường đó không còn trong data/chudiem.json — xem ghi chú
+   ở tools/build_chudiem.bao_cao_ssi. Còn lại: mã nào có báo cáo SSI, ngày nào. */
 function mCd(){
-  const kn=k=>k==='MUA'?'up':k==='KHẢ QUAN'?'up':k==='TRUNG LẬP'?'fl':'dn';
   return `<div class="h2">Chủ điểm đầu tư<span>Sơ đồ ba trục · ${D.cd.ma.length} mã</span></div>
     <div class="card"><div class="b" style="padding:var(--s1) var(--s2) var(--s2)">${vennSVG()}</div></div>
-    <div class="src">${ic('nguon')}<span>Nguồn sơ đồ: <b>${esc(D.cd.nguon)}</b>.
-      Trang này chỉ dẫn lại, không tự đưa ra khuyến nghị mua bán.</span></div>
-    ${D.cd.ma.filter(m=>m.ssi).slice(0,7).map(m=>{
-      const up=(m.ssi.tp&&D.board.find(b=>b.s===m.s))
-        ? m.ssi.tp/D.board.find(b=>b.s===m.s).c*100-100 : null;
-      return `<div class="card"><div class="b" style="display:flex;gap:var(--s3);align-items:flex-start">
+    <div class="src">${ic('nguon')}<span>Cách phân nhóm theo <b>${esc(D.cd.nguon)}</b>.
+      Trang này không dẫn lại khuyến nghị hay giá mục tiêu, và không tự đưa ra khuyến nghị mua bán.</span></div>
+    ${D.cd.ma.filter(m=>m.ssi&&m.ssi.d).slice(0,7).map(m=>
+      `<div class="card"><div class="b" style="display:flex;gap:var(--s3);align-items:center">
         ${logo(m.s)}
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:var(--s2)">
-            <b style="font-size:var(--f4);font-weight:800">${m.s}</b>
-            <span class="tag ${kn(m.ssi.kn)}" style="background:var(--pan2)">${esc(m.ssi.kn)}</span>
-            <span style="margin-left:auto;font-size:var(--f2);color:var(--mut2)">${esc(m.ssi.d)}</span>
-          </div>
-          <div style="font-size:var(--f3);color:var(--mut);margin-top:6px;line-height:1.5">${esc(m.ssi.td)}</div>
-          <div style="font-size:var(--f2);margin-top:8px;color:var(--mut2)">Giá mục tiêu SSI
-            <b style="font-size:var(--f4);color:var(--txt)">${nf(m.ssi.tp)}</b> đ${
-            up==null?'':` · <span class="${cls(up)}">${pc(up)}</span> so với giá hiện tại`}</div>
-        </div></div></div>`;}).join('')}`;
+          <b style="font-size:var(--f4);font-weight:800">${m.s}</b>
+          <div style="font-size:var(--f2);color:var(--mut2);margin-top:3px">
+            ${esc(D.cd.nguon)} có báo cáo ${esc(m.ssi.d.split('-').reverse().join('/'))}</div>
+        </div></div></div>`).join('')}`;
 }
 
 function mVb(){
