@@ -589,12 +589,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260817m"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260817n"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260817m"></script>
+<script defer src="assets/mobi.js?v=20260817n"></script>
 </head>
 <body>
 <header>
@@ -710,8 +710,8 @@ document.addEventListener(MO,function(e){
     trong kết quả lọc. Người dùng tự chịu trách nhiệm với quyết định của mình.</div>
 </footer>
 
-<script src="assets/core.js?v=20260817m"></script>
-<script src="assets/screener.js?v=20260817m"></script>
+<script src="assets/core.js?v=20260817n"></script>
+<script src="assets/screener.js?v=20260817n"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1061,9 +1061,13 @@ function renderStats(){
 }
 function renderKho(){
   const el=$('kho'), h=CP.health;
-  if(!h){ el.textContent='kho dữ liệu: phiên '+(CP.eodDate||'—'); return; }
-  el.className=h.ok?'ok':'bad';
-  el.textContent=`kho dữ liệu: phiên ${h.date} · ${h.ok?'đầy đủ ✓':'thiếu một phần — dùng bản gần nhất'}`;
+  /* NHÃN GIÁ đứng trước, vì nó là thứ ĐANG SỐNG. Hai máy cào cùng chết thì trang vẫn hiện
+     giá bình thường, chỉ là số của mấy tiếng trước — nhãn này là chỗ duy nhất lộ ra. */
+  const g=CP.nhanGia&&CP.nhanGia();
+  const gchu=g?(g.cu?`⚠ giá lúc ${g.chu} (đã ${g.phut} phút) · `:`giá lúc ${g.chu} · `):'';
+  if(!h){ el.textContent=gchu+'kho dữ liệu: phiên '+(CP.eodDate||'—'); return; }
+  el.className=(g&&g.cu)?'bad':(h.ok?'ok':'bad');
+  el.textContent=gchu+`kho dữ liệu: phiên ${h.date} · ${h.ok?'đầy đủ ✓':'thiếu một phần — dùng bản gần nhất'}`;
 }
 
 /* flash giá khi poll về */

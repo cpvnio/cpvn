@@ -274,6 +274,8 @@ function sessionOpenVN(){
   return d>=1&&d<=5&&m>=540&&m<900;
 }
 let liveAt=0, livePolling=false;
+/* mốc giờ của data/board.json — nuôi nhãn "giá lúc HH:MM", xem CP.nhanGia trong core.js */
+let boardAt=0;
 /* áp bộ nhớ giá sống chung (do bong bóng/bảng giá/chính trang này ghi) — mở là có ngay */
 const dayVN=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
 function applyLiveCache(){
@@ -333,7 +335,7 @@ async function pollLive(){
     let rows=null;
     try{
       const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
-      if(j&&j.rows&&j.rows.length) rows=j.rows.filter(Boolean);
+      if(j&&j.rows&&j.rows.length){ rows=j.rows.filter(Boolean); boardAt=j.at||0; }
     }catch(e){}
     if(!rows){       // chỉ khi kho KHÔNG CÓ file
       const syms=[...ST.map.keys()]; rows=[];
@@ -400,9 +402,18 @@ function updateHeadChips(){
   if(hm&&md!=null) hm.innerHTML='Nhịp đập <b style="color:'+moodCol(md)+'">'+Math.round(md)+'</b> · '+
     '<span style="color:'+moodCol(md)+';font-weight:700">'+moodWord(md)+'</span>';
   const hd=$('#hDate');
-  if(hd) hd.innerHTML=liveAt>0
-    ? 'trực tiếp <b>'+dayVN().split('-').reverse().join('/')+'</b>'
-    : 'phiên <b>'+esc(ST.date)+'</b>';
+  /* In thẳng mốc giờ của `data/board.json`. Không có nhãn này thì cả hai máy cào chết vẫn
+     trông như đang chạy — xem chú thích CP.nhanGia trong core.js. */
+  if(hd){
+    const p=boardAt?Math.round((Date.now()-boardAt)/60000):null;
+    const gio=boardAt?new Date(boardAt):null;
+    const hhmm=gio?String(gio.getHours()).padStart(2,'0')+':'+String(gio.getMinutes()).padStart(2,'0'):'';
+    hd.innerHTML=boardAt
+      ? (sessionOpenVN()&&p>45
+          ? '<b style="color:var(--red)">⚠ giá lúc '+hhmm+'</b> · đã '+p+' phút'
+          : 'giá lúc <b>'+hhmm+'</b>')
+      : 'phiên <b>'+esc(ST.date)+'</b>';
+  }
 }
 function startLive(){
   const tick=async()=>{

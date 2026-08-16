@@ -666,7 +666,13 @@ def main():
     if races:
         allm = set()
         for mm in races.values(): allm.update(mm.keys())
-        months = sorted(allm)[-78:]
+        # TRẦN SỐ THÁNG của đường đua. 78 tháng (6,5 năm) là mốc đặt hồi kho chỉ có từ
+        # 2020 — giữ nguyên thì bồi kho về 2013 xong đường đua VẪN chỉ chạy 6,5 năm, tức
+        # công bồi đổ sông. Nâng lên 168 tháng (14 năm) để phủ trọn kho.
+        # ĐÂY LÀ ĐÁNH ĐỔI CÓ THẬT: market.json phình gấp ~2 lần (client tải nó ở trang công
+        # cụ). Muốn gọn lại thì hạ số này, KHÔNG phải cắt kho — kho còn nuôi MA/RSI, đỉnh
+        # 52T, độ rộng, bộ lọc.
+        months = sorted(allm)[-168:]
         lab = ['%d/%s' % (m % 12 + 1, str(m // 12)[2:]) for m in months]
         ser = {}
         for sym2, mm in races.items():

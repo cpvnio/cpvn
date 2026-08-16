@@ -487,6 +487,21 @@ CP.applyLive=function(){
    NGOÀI GIỜ: hỏi lại mỗi 1 PHÚT cho tới khi chốt được phiên gần nhất, chốt xong thì
    NGỪNG HẲN — không phải "30 phút/lần" như ghi chú cũ, giá đã cứng thì hỏi thêm vô nghĩa.
    Ngày nghỉ lễ (trong giờ mà bảng trống trơn): giãn còn 5 phút/lần. */
+/* ═══ NHÃN "GIÁ LÚC HH:MM" — để SỰ CỐ TỰ LỘ RA ═══
+   Từ 17/08/2026 giá không còn do trình duyệt tự gọi VPS mà đọc `data/board.json` do máy cào
+   ghi mỗi 30 phút. Hệ quả: hai máy cào (ASTERBOX + lưới Actions) cùng chết thì trang VẪN
+   HIỆN GIÁ BÌNH THƯỜNG — chỉ là số của mấy tiếng trước, không dấu hiệu gì. Đó là kiểu hỏng
+   tệ nhất: im lặng và trông như đang chạy.
+   Nhãn này in thẳng mốc `at` của file. `cu=true` khi số đã quá 45 phút trong phiên (hơn
+   một nhịp rưỡi) — giao diện tô cảnh báo, và người xem biết mà không cần ai đi soi log.
+   Ngoài phiên KHÔNG bao giờ báo cũ: giá đã chốt cứng thì để nguyên là đúng. */
+CP.nhanGia=function(){
+  if(!CP.boardAt) return null;
+  const phut=(Date.now()-CP.boardAt)/60000;
+  const d=new Date(CP.boardAt);
+  const hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  return {chu:hh, phut:Math.round(phut), cu:CP.sessionOpen()&&phut>45};
+};
 CP.startPolling=function(onUpdate,visibleSyms){
   const tick=async(fast)=>{
     const only=fast&&typeof visibleSyms==='function'?visibleSyms():null;
@@ -599,30 +614,6 @@ const ngayNen=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
    nhất thì dùng luôn và dừng; chưa có thì giữ lại làm dự phòng rồi hỏi tiếp nguồn sau,
    cuối cùng lấy nguồn có nến MỚI NHẤT. Thứ tự ưu tiên khi hoà vẫn là VNDirect (hồi tố
    quyền đầy đủ nhất) -> VPS -> kho. */
-/* ═══ KHO CÓ ĐANG Ở NỀN GIÁ CŨ KHÔNG? ═══
-   Kho chốt 15:15 mỗi phiên, nên trong khoảng từ lúc mở cửa NGÀY GDKHQ tới lượt cào kế tiếp,
-   nó vẫn giữ nền TRƯỚC khi hạ. Chuyện này có thật và đo được: SSI ngày 17/08/2026 chốt quyền
-   cùng lúc cổ tức tiền 1.000đ và cổ phiếu thưởng 100:20 -> nền mới = (24.500 − 1.000) ÷ 1,2
-   = 19.583đ, đúng bằng số VNDirect trả, trong khi kho vẫn ghi 24.500. Lấy kho lúc đó là
-   chart mang nền cũ còn giá sống đã sang nền mới — bung ra một cú sập giả 20%.
-   Không đoán bằng cách so số: `tham chiếu` của UPCOM là BÌNH QUÂN phiên trước chứ không phải
-   giá đóng cửa, nên so giá sẽ báo động giả hàng loạt. Hỏi thẳng LỊCH CHỐT QUYỀN — trang đã
-   có sẵn `data/cotuc.json` (32KB, `d` = ngày GDKHQ). Có sự kiện nào rơi vào khoảng
-   (nến cuối của kho, hôm nay] thì kho chắc chắn chưa biết, phải đi mượn nguồn ngoài.
-   Giá phải trả: đúng mấy mã chốt quyền trong ngày mới tốn một lượt gọi (263 sự kiện rải
-   8 tháng ≈ 1-2 mã mỗi phiên), thay vì cả 1.527 mã mỗi lượt mở trang. */
-let cotucP=null;
-CP.khoLoiThoi=async function(sym,tCuoi){
-  try{
-    if(!cotucP) cotucP=fetch('data/cotuc.json').then(r=>r.ok?r.json():null).catch(()=>null);
-    const j=await cotucP; if(!j||!j.sk) return false;
-    const ngay=ms=>new Date(ms+25200000).toISOString().slice(0,10);     // -> ngày theo giờ VN
-    const tu=ngay(tCuoi*1000), den=ngay(Date.now());
-    /* MỌI loại sự kiện đều hạ nền — kể cả cổ tức TIỀN: nguồn VN hồi tố cả cổ tức tiền,
-       khác thông lệ thế giới (đã đo, xem CLAUDE.md). Đừng lọc bớt theo `k`. */
-    return j.sk.some(x=>x&&x.s===sym&&x.d>tu&&x.d<=den);
-  }catch(e){ return false; }
-};
 CP.loadDaily=function(sym){
   if(dayCache.has(sym)) return dayCache.get(sym);
   const p=(async()=>{
@@ -635,26 +626,27 @@ CP.loadDaily=function(sym){
       if(!tot||d>ngayNen(tot.rows[tot.rows.length-1].t)) tot=r;
       return d>=phien;
     };
-    /* ═══ KHO TRƯỚC, NGUỒN NGOÀI CHỈ LÀ CỨU HỘ (17/08/2026 — user chốt, LẬT quyết định
-       05/08 "mượn thẳng của nguồn, đừng lấy trong kho") ═══
-       Lý do lật: quyết định cũ sinh ra để KHÔNG LƯU dữ liệu của họ. Nhưng ở Việt Nam **số
-       liệu là dữ kiện, không được bảo hộ quyền tác giả**, và **không có quyền sui generis
-       cho cơ sở dữ liệu** (Điều 22 Luật SHTT chỉ bảo hộ cách chọn lọc/sắp xếp, "không bao
-       hàm chính các tư liệu đó") — nên lưu nến trong kho gần như không có rủi ro bản quyền.
-       Đổi lại, cách cũ bắn MỘT lượt sang VNDirect cho MỖI LẦN MỞ MỖI TRANG MÃ, nhân với
-       1.527 trang và với mọi lượt crawler quét — đó mới là thứ khiến bên kia có động cơ và
-       có log để gửi công văn. Đổi một rủi ro gần bằng 0 lấy một rủi ro có thật.
-       CHUỖI NAY: kho -> (VNDirect -> VPS) chỉ khi kho KHÔNG CÓ mã đó.
-       Luật "chọn nguồn theo phiên mới nhất nó có" vì thế KHÔNG còn áp cho đường chính —
-       kho là nguồn chuẩn, và trong phiên nó thiếu đúng cây nến hôm nay (kho chốt 15:15).
-       Chấp nhận được: giá sống hiện to ở đầu trang, và nến hôm nay chưa đóng cửa thì cũng
-       chưa phải một cây nến thật. TUYỆT ĐỐI đừng bịa nến hôm nay từ giá sống — xem luật
-       "ĐỪNG dựng nến mới cho phiên nguồn chưa có" trong CLAUDE.md. */
-    const f=await CP.loadHistFile(sym);
-    if(f&&f.t&&f.t.length>=2&&!(await CP.khoLoiThoi(sym,f.t[f.t.length-1])))
-      return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
-    /* Kho không có mã này (mã mới niêm yết, hoặc lượt cào gần nhất trượt) — lúc đó mới đi
-       mượn, và vẫn giữ luật cũ: nguồn nào có phiên mới nhất thì lấy nguồn đó. */
+    /* ═══ NẾN VẼ CHART: NGUỒN NGOÀI TRƯỚC, KHO CHỈ LÀ CỨU HỘ CUỐI ═══
+       (Sáng 17/08 tao đảo thành kho-trước để bớt lượt gọi; user bác NGAY TRONG NGÀY và
+       bác đúng — chuỗi đã trả về như cũ. Ghi lại để đừng ai đảo lần nữa.)
+
+       LÝ DO KHÔNG THỂ LẤY KHO LÀM NGUỒN CHÍNH: **CPVN không có cơ chế TỰ HẠ NỀN.** Trang
+       không tự tính điều chỉnh cổ tức/chia tách — nó ăn theo nền mà NGUỒN đã hạ sẵn. Kho
+       vì thế chỉ mang đúng cái nền của lúc nó được cào (15:15 phiên trước), nên từ lúc mở
+       cửa NGÀY GDKHQ tới lượt cào kế tiếp, kho ở nền CŨ trong khi giá sống đã sang nền MỚI.
+       Đo được 17/08/2026: SSI chốt quyền cổ tức tiền 1.000đ + cổ phiếu thưởng 100:20 ->
+       nền mới (24.500 − 1.000) ÷ 1,2 = 19.583đ, đúng bằng số VNDirect trả, trong khi kho
+       vẫn ghi 24.500. Lấy kho lúc đó là chart bung một cú sập giả 20%.
+       Tao từng vá bằng cách dò `data/cotuc.json` xem mã có GDKHQ trong khoảng trống không.
+       Nó CHẠY ĐÚNG (8/1527 mã hôm đó tự rơi về nguồn), nhưng nó chỉ là lớp DÒ: lịch sót một
+       sự kiện là chart sai mà không có dấu hiệu gì. Với thứ dễ sai âm thầm như nền giá thì
+       lấy thẳng nguồn — nơi việc hạ nền là của họ và luôn đúng — mới là chỗ dừng đúng.
+       Bớt lượt gọi đã lấy ở chỗ khác rồi: bảng giá (11 lượt/lần, phần nặng nhất) nay đọc
+       `data/board.json`, còn tin đọc kho. Chart là 1 lượt/lần mở trang mã — trả giá đó để
+       nền giá luôn đúng là đổi hời.
+
+       Vẫn giữ luật "CHỌN NGUỒN THEO PHIÊN MỚI NHẤT NÓ CÓ": nguồn nào đã có phiên gần nhất
+       thì dùng luôn và dừng; chưa có thì giữ làm dự phòng rồi hỏi tiếp. */
     if(!CP.OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
       try{
         const j=await fetch(`${url}?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`)
@@ -662,6 +654,10 @@ CP.loadDaily=function(sym){
         if(j&&j.s==='ok'&&j.t&&j.t.length>=2&&nhan({rows:chuanDonVi(sym,j),src:ten})) return tot;
       }catch(e){}
     }
+    /* CỨU HỘ CUỐI: cả hai nguồn tắt. Kho có thể đang ở nền cũ (xem chú thích trên) nhưng
+       một chart hơi lệch vẫn hơn không có chart nào — và nhãn `src` nói rõ nó từ kho. */
+    const f=await CP.loadHistFile(sym);
+    if(f&&f.t&&f.t.length>=2) nhan({rows:chuanDonVi(sym,f),src:'kho CPVN'});
     return tot;
   })();
   dayCache.set(sym,p); return p;
