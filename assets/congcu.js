@@ -610,7 +610,6 @@ function tapDoanPanel(){
   }).filter(x=>x.ma.length>=2);
   ds.sort((a,b)=>((tdSort.k==='cap'?a.cap-b.cap:a.gtgd-b.gtgd))*tdSort.d);
   if(!ds.length) return '<div class="empty">Chưa có bản đồ tập đoàn — chạy tools/build_tapdoan.py</div>';
-  const mx=Math.max.apply(null,ds.map(x=>Math.abs(x.d)))||1;
   const hang=x=>{
     const g=x.g, mo=tdMo.has(g.id);
     /* LOGO CỦA NHÀ: lấy logo mã MẸ khi mẹ có niêm yết (80/164 nhóm). Mẹ không lên sàn
@@ -638,8 +637,10 @@ function tapDoanPanel(){
     return '<div class="tdrow'+(mo?' on':'')+'" data-td="'+esc(g.id)+'">'
       +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+dau+'<em class="nm">'+esc(g.ten)+'</em>'
       +nhan+'</span>'
-      +'<span class="sbr"><i class="z"></i><i class="b '+(x.d>=0?'pos':'neg')
-      +'" style="width:'+(Math.abs(x.d)/mx*50)+'%"></i></span>'
+      /* KHÔNG có thanh xanh đỏ ở đây (bỏ 17/08/2026). Bảng này đã có % ngay bên cạnh và
+         ô đếm ▲/▼ — thanh chỉ nói lại đúng dấu của con số đó, mà ăn nguyên một cột 92px
+         trong khi tên nhà lại đang bị cắt bằng dấu ba chấm. Trả chỗ đó cho cột tên.
+         Bảng NGÀNH (.secrow) vẫn giữ thanh: ở đó nó xếp hạng ~25 dòng đọc một lượt. */
       +'<span class="sp '+cls(x.d)+'">'+pct(x.d)+'</span>'
       +'<span class="sb"><b class="up">▲'+x.up+'</b> <b class="dn">▼'+x.dn+'</b>'
       +'<u>/'+x.ma.length+'</u></span>'
@@ -652,10 +653,12 @@ function tapDoanPanel(){
       /* HÀNG CON PHẢI ĂN KHỚP CỘT VỚI HÀNG NHÓM. Trước đây nó có lưới riêng (5 cột) lồng
          trong khung thụt lề 26px nên mọi con số lệch hẳn khỏi cột của hàng nhóm ngay phía
          trên — mắt vừa đọc "GTGD" ở một chỗ, bung ra lại thấy nó nhảy sang chỗ khác. Nay
-         dùng CHUNG lưới `--tdc`, mấy ô `sp0` là chỗ trống giữ đúng cột của thanh xanh đỏ
-         và ô đếm tăng giảm; màn hẹp giấu chúng đi thì cột tự dồn y hệt hàng nhóm. */
+         dùng CHUNG lưới `--tdc`, ô `sp0` là chỗ trống giữ đúng cột của ô đếm tăng giảm
+         (hàng con không đếm ▲/▼); màn hẹp giấu nó đi thì cột tự dồn y hệt hàng nhóm.
+         GỠ THANH XANH ĐỎ thì phải gỡ luôn ô `sp0` từng giữ cột ấy — bằng không hàng con
+         thừa một ô, mọi con số bên trong trượt sang phải một cột so với hàng nhóm. */
       +(mo?'<div class="tdcon"><div class="rw hd">'
-          +'<span class="c1">công ty<i> · % nhà mẹ nắm</i></span><span class="sp0"></span>'
+          +'<span class="c1">công ty<i> · % nhà mẹ nắm</i></span>'
           +'<span class="tdv">hôm nay</span><span class="sp0"></span>'
           +'<span class="tdg">GTGD</span><span class="tdn">NN ròng</span>'
           +'<span class="tdp">vốn hoá</span></div>'
@@ -663,7 +666,6 @@ function tapDoanPanel(){
           return '<div class="rw" data-sym="'+c.sym+'">'
           +'<span class="c1">'+logoHTML(c)
           +'<span class="idn"><b>'+c.sym+soHuu(o)+'</b><i>'+esc(shortName(c.name||''))+'</i></span></span>'
-          +'<span class="sp0"></span>'
           +'<span class="tdv '+cls(c.chg)+'">'+pct(c.chg)+'</span>'
           +'<span class="sp0"></span>'
           +'<span class="tdg">'+ty(c.gtgd)+'</span>'
