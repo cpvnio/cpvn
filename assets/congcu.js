@@ -828,6 +828,16 @@ const TG_MOC=2;
    chứ không đọc ngược từ DOM: panel bị dựng lại mỗi lần đổi giao diện sáng/tối, đọc từ
    DOM là mất mức phóng người dùng vừa đặt. */
 let TG={map:null,rows:null,at:0,loi:null,dang:false,hen:null,view:null,keoLuc:0};
+/* NHỊP LÀM MỚI BẢN ĐỒ TOÀN CẦU — 30 PHÚT (user chốt 17/08/2026, trước là 2 phút).
+   Đây là lượt gọi DUY NHẤT còn tỉ lệ thuận với người xem theo THỜI GIAN MỞ TAB, chứ không
+   theo số trang mở: chart gọi một lần rồi đệm lại, còn bản đồ gọi lại đều đặn suốt thời
+   gian tab còn mở. Đo ở quy mô 1.000 người: nhịp 2 phút, mỗi người mở radar 2 tiếng ->
+   60.000 lượt · 2 GB sang CNBC, VƯỢT cả VNDirect. Nhịp 30 phút cắt còn 1/15.
+   Chỉ số chứng khoán nước ngoài không nhảy nhanh tới mức cần 2 phút, mà đây lại đúng là
+   bên đã phải gỡ Fear & Greed vì ngại rủi ro — càng không nên nện.
+   MỘT hằng số cho cả ba chỗ: hạn đệm mỗi nước, hạn hỏi lại, và hạn coi số là cũ khi vẽ.
+   Ba chỗ đó mà lệch nhau là có lượt gọi mạng xong vứt đi, hoặc số đứng im không ai hiểu. */
+const TG_HAN=30*60*1000;
 const TG_ZMAX=8;                                        // phóng tối đa 8 lần
 const tgHep=()=>window.matchMedia('(max-width:640px)').matches;
 /* ═══ RỔ CỔ PHIẾU TRỤ CỘT TỪNG NƯỚC — bấm vào bản đồ thì bung ra ═══
@@ -1000,7 +1010,7 @@ async function tgLoad(){
 
 /* ═══ BẤM VÀO MỘT NƯỚC -> BUNG BẢNG CỔ PHIẾU TRỤ CỘT ═══ */
 async function tgLayCo(iso){
-  if(TGC[iso]&&Date.now()-TGC[iso].at<120000) return TGC[iso];
+  if(TGC[iso]&&Date.now()-TGC[iso].at<TG_HAN) return TGC[iso];
   if(iso==='VN'){
     /* Việt Nam xếp ĐÚNG theo vốn hoá — kho của chính trang có SLCP và giá sống.
        Ưu tiên mcapLive (giá trong phiên) rồi mới tới mcap của kho. */
@@ -1385,7 +1395,7 @@ function tgNhip(){
     if(cur!=='radar'||radarTab!=='phien'){ clearInterval(TG.hen); TG.hen=null; return; }
     /* Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích — trừ khi có cờ kiểm thử ?forcelive,
        dùng chung với startLive vì khung xem tự động luôn báo document.hidden=true. */
-    if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<120000) return;
+    if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<TG_HAN) return;
     /* 'phien' chứ KHÔNG phải 'tg': bản đồ đã gộp vào Nhịp phiên 13/08/2026 nên radarTab
        không bao giờ còn mang giá trị 'tg'. Để sót một chữ ở đây là mỗi 2 phút vẫn tải số
        mới về đàng hoàng rồi VỨT ĐI — bản đồ đứng im, đúng cái cảnh "mở lúc 9 giờ tối xem
@@ -1579,7 +1589,7 @@ function renderRadar(){
        thay ruột. Số cũ quá 2 phút thì lấy lại — chợ nước ngoài không nhảy nhanh tới mức
        phải hỏi mỗi phút. */
     const ve=()=>{ const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } };
-    if(!TG.rows||Date.now()-TG.at>120000){
+    if(!TG.rows||Date.now()-TG.at>TG_HAN){
       tgLoad().then(()=>{ if(radarTab==='phien') ve(); });
       const el=$('#rdTg'); if(el) el.innerHTML='<div class="panel"><div class="pb tgce">Đang lấy bản đồ thế giới…</div></div>';
     } else ve();
