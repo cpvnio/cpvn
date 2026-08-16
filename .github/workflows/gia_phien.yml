@@ -1,0 +1,84 @@
+name: CPVN gia phien (du phong)
+
+# DỰ PHÒNG cho tác vụ 'CPVN gia phien' trên ASTERBOX (nhịp 15 phút, 9:00-15:00 giờ VN).
+#
+# VÌ SAO VẪN CẦN, DÙ ACTIONS KHÔNG ĐÚNG GIỜ:
+#   Lịch Actions từng bị đẩy trễ hơn 8 tiếng, có ngày không chạy — nên nó KHÔNG thay được
+#   nhịp 15 phút. Nhưng làm LƯỚI AN TOÀN thì hợp: việc duy nhất nó phải làm là "sớm muộn gì
+#   cũng chạy". ASTERBOX chết hẳn (hết hạn ~12/2026, mất điện, Windows Update khởi động lại
+#   đúng 9:00) thì trước đây là mất giá CẢ NGÀY và im lặng; nay chậm nhất khoảng một tiếng
+#   là có lượt vá.
+#
+# KHÔNG BAO GIỜ ĐỤNG MÁY CHÍNH: bước kiểm tra đọc `at` trong data/board.json — máy chính vừa
+# ghi trong vòng 40 phút thì thoát ngay, không cào, không push, không tốn gì. Ngưỡng 40 phút
+# = hơn 2 nhịp của máy chính, đủ để một lượt lỡ nhịp không bị coi là hỏng.
+on:
+  schedule:
+    # giờ UTC; VN = UTC+7. Rải quanh phiên, KHÔNG đặt đúng phút :00 — đó là lúc Actions
+    # đông nhất và hay bị đẩy trễ nhất.
+    - cron: "17 3 * * 1-5"    # 10:17 giờ VN
+    - cron: "17 5 * * 1-5"    # 12:17 giờ VN
+    - cron: "47 7 * * 1-5"    # 14:47 giờ VN — sát giờ đóng cửa
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:                  # hai lượt chồng nhau là hai commit đá nhau
+  group: gia-phien
+  cancel-in-progress: false
+
+jobs:
+  va:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # MỘT bước quyết định duy nhất: có cần vá không. Gộp "còn trong phiên" và "máy chính
+      # đã chết chưa" vào một chỗ để không có khe nào hai điều kiện hiểu khác nhau.
+      - name: Co can va khong
+        id: kiem
+        run: |
+          set -euo pipefail
+          GIO=$(TZ=Asia/Ho_Chi_Minh date +%H%M)
+          # mốc 9:00-15:05 phải khớp gia_phien.py VÀ sessionOpen của client
+          if [ "$GIO" -lt 900 ] || [ "$GIO" -ge 1505 ]; then
+            echo "gio VN $GIO — ngoai phien, thoi"; echo "can=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          CU=$(python3 -c "import json,os,time;p='data/board.json';print(int((time.time()-(json.load(open(p)).get('at',0)/1000))/60) if os.path.exists(p) else 99999)")
+          echo "gio VN $GIO · board.json cu $CU phut"
+          if [ "$CU" -ge 40 ]; then
+            echo "may chinh co ve da chet -> va"; echo "can=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "may chinh con song -> thoi"; echo "can=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cao thay may chinh
+        if: steps.kiem.outputs.can == '1'
+        run: |
+          set -euo pipefail
+          python3 tools/gia_phien.py --khong-day --bat-buoc
+          if [ -z "$(git status --porcelain data/board.json)" ]; then
+            echo "file khong doi -> thoi"; exit 0
+          fi
+          git config user.name  'github-actions'
+          git config user.email 'actions@users.noreply.github.com'
+          git add data/board.json
+          git commit -q -m "Gia phien $(TZ=Asia/Ho_Chi_Minh date '+%Y-%m-%d %H:%M') (Actions du phong)"
+          # ĐẨY HỎNG THÌ BỎ CUỘC, ĐỪNG CỐ HOÀ GIẢI. Push bị từ chối nghĩa là vừa có commit
+          # khác chen vào — mà ở đây chỉ có một nguồn commit khác duy nhất: ASTERBOX. Tức
+          # máy chính CÒN SỐNG, và số của nó mới hơn số vừa cào. Lúc đó việc đúng là rút
+          # lui. (Cố `-X ours/theirs` là chỗ rất dễ sai: khi rebase thì nghĩa hai chữ đó
+          # ĐẢO NGƯỢC — `theirs` mới là commit đang được replay của mình.)
+          for i in 1 2 3; do
+            if git push -q origin HEAD:main; then echo "da day (vong $i)"; exit 0; fi
+            git fetch -q origin main
+            if ! git merge-base --is-ancestor HEAD origin/main; then
+              MOI=$(git show origin/main:data/board.json | python3 -c "import json,sys,time;print(int((time.time()-(json.load(sys.stdin).get('at',0)/1000))/60))" || echo 99999)
+              if [ "$MOI" -lt 40 ]; then
+                echo "may chinh vua push (file moi $MOI phut) -> rut lui"; exit 0
+              fi
+            fi
+            git rebase -q origin/main || { git rebase --abort || true; exit 0; }
+          done
+          echo "day hong 3 vong"; exit 1

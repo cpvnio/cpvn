@@ -27,10 +27,22 @@ $t.Repetition = (New-ScheduledTaskTrigger -Once -At '09:00' `
      -RepetitionInterval (New-TimeSpan -Minutes 15) `
      -RepetitionDuration (New-TimeSpan -Hours 6)).Repetition
 
-# KHÔNG StartWhenAvailable: khác hẳn tác vụ EOD. Giá trong phiên mà chạy bù lúc 20h là ghi
-# một file mang nhãn giờ sai lên kho — thà bỏ hẳn lượt đó.
-$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) `
-     -MultipleInstances IgnoreNew
+# -StartWhenAvailable LÀ BẮT BUỘC, đừng bỏ vì sợ "chạy bù sai giờ".
+#   Bản đầu tao cố ý bỏ nó, và đó là một lỗ hổng cả ngày: trigger là Weekly-lúc-09:00 kèm
+#   Repetition, nên máy mà tắt/khởi động lại ĐÚNG lúc 09:00 thì trigger trượt hẳn, và
+#   REPETITION KHÔNG BAO GIỜ BẮT ĐẦU -> mất giá trong phiên NGUYÊN NGÀY, im lặng.
+#   Nỗi lo "chạy bù lúc 20h ghi file sai giờ" đã được chặn ở chỗ khác rồi: gia_phien.py tự
+#   kiểm `trong_phien()` (9:00-15:05) và thoát. Chặn hai lần cùng một chuyện là thừa, mà
+#   cái giá phải trả lại là mất cả ngày.
+# -RestartCount: lượt hỏng vì mạng chớp thì thử lại sau 3 phút, khỏi đợi hết nhịp 15 phút.
+# -AllowStartIfOnBatteries + -DontStopIfGoingOnBatteries: máy ảo không có pin, nhưng mặc
+#   định của Task Scheduler là TỪ CHỐI chạy khi hệ báo dùng pin — một trong những kiểu
+#   không-chạy-mà-không-báo-lỗi hay gặp nhất trên máy ảo.
+$s = New-ScheduledTaskSettingsSet -StartWhenAvailable `
+     -ExecutionTimeLimit (New-TimeSpan -Minutes 10) `
+     -MultipleInstances IgnoreNew `
+     -RestartCount 2 -RestartInterval (New-TimeSpan -Minutes 3) `
+     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName 'CPVN gia phien' -Action $a -Trigger $t `
      -Settings $s -User 'SYSTEM' -RunLevel Highest -Force
 
