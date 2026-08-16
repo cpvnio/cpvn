@@ -49,6 +49,10 @@ FIN  = os.path.join(BASE, "data", "fin")
 FINQ = os.path.join(BASE, "data", "finq")
 OUT  = os.path.join(BASE, "data", "nganh")
 
+# TÊN THÔ CỦA NGUỒN, KHÔNG PHẢI TÊN HIỂN THỊ. Web đổi tên cho gọn ("Chứng khoán",
+# "Ngân hàng", "Bất động sản") bằng bảng SECTOR_EXPLICIT trong assets/core.js, nhưng
+# `sector` trong universe.json vẫn giữ nguyên chuỗi thô — file này đọc thẳng chuỗi thô đó.
+# Đừng "sửa cho khớp giao diện": khớp tên đẹp là không mã nào nhận được mẫu nữa.
 SEC_NH  = "Tài chính ngân hàng"
 SEC_CK  = "Chứng khoán và Ngân hàng đầu tư"
 SEC_BH  = "Bảo hiểm"

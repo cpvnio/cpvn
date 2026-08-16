@@ -168,6 +168,24 @@ const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], 
    đã gộp làm một từ lâu — cùng một cái tên ngành mà hai trang ra hai rổ mã khác nhau.
    Sửa ở đây thì PHẢI sửa cả hai file kia cho khớp. */
 const SECTOR_EXPLICIT={
+  /* ĐỔI TÊN CHO ĐÚNG CÁCH GỌI CỦA THỊ TRƯỜNG VN (user chốt 15/08/2026). Nguồn dịch máy
+     nên đẻ ra "Chứng khoán và Ngân hàng đầu tư", "Tiện ích điện và sản xuất điện",
+     "Quản lý và phát triển bất động sản" — dài, lặp và không ai gọi thế. Đây CHỈ đổi
+     TÊN HIỂN THỊ; `sector` thô trong universe.json giữ nguyên vì tools/build_nganh.py
+     chọn mẫu chỉ số đặc thù NGÀNH theo tên thô đó. */
+  'Chứng khoán và Ngân hàng đầu tư':'Chứng khoán',
+  'Tài chính ngân hàng':'Ngân hàng',
+  'Quản lý và phát triển bất động sản':'Bất động sản',
+  'Tiện ích điện và sản xuất điện':'Điện',
+  'Cơ sở hạ tầng giao thông vận tải':'Hạ tầng giao thông',
+  'Vận chuyển hàng hóa và Giao nhận':'Vận tải & Logistics',
+  'Ô tô và Phụ tùng ô tô':'Ô tô & Phụ tùng',
+  'Nước & Tiện ích liên quan':'Nước & Môi trường',
+  // rổ này gồm cả nông nghiệp, thuỷ sản, mía đường, chăn nuôi (nguồn không có ngành
+  // "Nông nghiệp" riêng) — gọi "thuốc lá" là lấy phần bé nhất đặt tên cho cả rổ
+  'Thực phẩm và thuốc lá':'Thực phẩm & Nông sản',
+  // GEE, TBD, RAL, PAC, VEA: thiết bị điện và cơ khí chế tạo, không phải "đóng tàu"
+  'Máy móc, thiết bị nặng và đóng tàu':'Cơ khí & Thiết bị điện',
   // bán lẻ (3 nhánh -> 1)
   'Bán lẻ chuyên dụng':'Bán lẻ','Bán lẻ thực phẩm và thuốc':'Bán lẻ','Bán lẻ tổng hợp':'Bán lẻ',
   // y tế & dược
@@ -177,16 +195,20 @@ const SECTOR_EXPLICIT={
   'Thiết bị & Phụ tùng điện tử':'Công nghệ & Viễn thông','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Viễn thông',
   'Thiết bị văn phòng':'Công nghệ & Viễn thông','Dịch vụ Viễn thông':'Công nghệ & Viễn thông',
   'Truyền thông & Mạng':'Công nghệ & Viễn thông','Truyền thông và Xuất bản':'Công nghệ & Viễn thông',
-  // dầu khí: thượng nguồn và dịch vụ khoan/thiết bị chạy chung một chu kỳ giá dầu
-  'Dầu và Khí đốt':'Dầu khí','Dịch vụ và Thiết bị Dầu khí':'Dầu khí',
+  // dầu khí: thượng nguồn và dịch vụ khoan/thiết bị chạy chung một chu kỳ giá dầu.
+  // CNG (phân phối khí) nguồn xếp riêng thành "tiện ích khí" một mình -> về đúng nhà.
+  'Dầu và Khí đốt':'Dầu khí','Dịch vụ và Thiết bị Dầu khí':'Dầu khí','Tiện ích khí tự nhiên':'Dầu khí',
   // xây dựng dân dụng vốn là một nhánh của xây dựng
   'Xây dựng và vật liệu xây dựng dân dụng':'Xây dựng',
-  // than là khai khoáng, nguồn để riêng nên còn đúng 1 mã đủ lớn
-  'Kim loại và Khai khoáng':'Khai khoáng & Kim loại','Than':'Khai khoáng & Kim loại',
+  // HPG, HSG, NKG, GDA là THÉP — chiếm gần hết vốn hoá rổ này, nên tên phải nói ra.
+  // Than là khai khoáng, nguồn để riêng nên còn đúng 1 mã đủ lớn.
+  'Kim loại và Khai khoáng':'Thép & Khoáng sản','Than':'Thép & Khoáng sản',
   // giấy -> bao bì: DHC, HHP làm cả hai thứ trong cùng một nhà máy
   'Hộp đựng và Bao bì':'Giấy & Bao bì','Giấy và Lâm sản':'Giấy & Bao bì',
   // hàng không đi cùng khách sạn: cùng nhịp mùa du lịch, cùng cú sốc dịch bệnh
   'Khách sạn và Giải trí':'Du lịch & Giải trí','Vận chuyển hành khách':'Du lịch & Giải trí',
+  // thuỷ điện/điện tái tạo là nhà máy điện, để riêng thì 3 mã rơi hết vào "Khác"
+  'Năng lượng tái tạo':'Điện',
   // ba rổ "đa ngành / thương mại tổng hợp" của nguồn vốn dĩ là một
   'Dịch vụ công nghiệp và Thương mại':'Đa ngành & Thương mại',
   'Bán buôn hàng công nghiệp tổng hợp':'Đa ngành & Thương mại',
@@ -1805,7 +1827,7 @@ const GRAD={up:'linear-gradient(90deg,rgba(22,199,132,.45),var(--green))',
             nh:'linear-gradient(90deg,rgba(245,180,10,.3),#f5b40a)',
             ro:'linear-gradient(90deg,rgba(45,212,191,.35),#2dd4bf)'};
 /* TÊN CỦA RỔ = thứ người dùng vừa chọn, không phải "rổ 12 mã": trên biểu đồ đang chạy thì
-   "Tài chính ngân hàng" nói đúng ngay cái đang xem, còn số mã đã có ở dòng phụ. */
+   "Thực phẩm & Nông sản" nói đúng ngay cái đang xem, còn số mã đã có ở dòng phụ. */
 function tenRo(C2){
   if(C2.laMa){ const m=C2.rows.map(r=>r.s);
     return m.length<=3?m.join(' · '):m.length+' mã đã chọn'; }
@@ -1884,7 +1906,7 @@ function drawDCA(lerp){
   const gopRo=DCA.gop&&C2.ro;
   let padR=mob?110:210, nhanRo=[];
   if(gopRo&&!mob){
-    /* Tên NGÀNH dài không đoán trước được ("Quản lý và phát triển bất động sản"): thay vì
+    /* Tên NGÀNH dài không đoán trước được ("Hoá chất & Hàng gia dụng"): thay vì
        cắt cụt cho vừa một dòng, BẺ XUỐNG TỐI ĐA 2 DÒNG rồi số tiền nằm dòng dưới cùng.
        Chốt trần padR trước (34% bề ngang) rồi mới bẻ theo chỗ đó — làm ngược lại thì tên
        dài hơn trần là tràn khỏi khung. */

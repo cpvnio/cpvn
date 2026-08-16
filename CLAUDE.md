@@ -813,9 +813,23 @@ giá sai hoặc giá nhảy — đừng đẩy.
   + dịch vụ dầu khí, xây dựng dân dụng về xây dựng, than về khai khoáng, giấy về bao bì,
   hàng không về cùng khách sạn (Du lịch & Giải trí), ba rổ "đa ngành/thương mại" nhập một,
   công nghệ + viễn thông nhập một, hoá chất + hàng gia dụng nhập một.
-  **Nguồn KHÔNG có ngành "Nông nghiệp"** — nông nghiệp/thuỷ sản/mía đường nằm trong "Thực
-  phẩm và thuốc lá". Tách ra được nhưng phải viết tay danh sách mã, `SECTOR_EXPLICIT` chỉ
-  ánh xạ ngành→ngành nên không tách nổi một ngành làm đôi.
+  **Nguồn KHÔNG có ngành "Nông nghiệp"** — nông nghiệp/thuỷ sản/mía đường nằm chung rổ với
+  thực phẩm (nên rổ đó nay gọi là **"Thực phẩm & Nông sản"**). Tách ra được nhưng phải viết
+  tay danh sách mã, `SECTOR_EXPLICIT` chỉ ánh xạ ngành→ngành nên không tách nổi một ngành
+  làm đôi.
+  > **TÊN NGÀNH LÀ TÊN HIỂN THỊ — `sector` thô trong `universe.json` KHÔNG ĐỔI.** Nguồn dịch
+  > máy nên đẻ ra "Chứng khoán và Ngân hàng đầu tư", "Tiện ích điện và sản xuất điện",
+  > "Quản lý và phát triển bất động sản", "Máy móc, thiết bị nặng và đóng tàu" — dài, lặp,
+  > và không ai gọi thế. Lượt đổi tên 15/08/2026 (user chốt) đưa về cách gọi của thị trường:
+  > Chứng khoán · Ngân hàng · Bất động sản · Điện · Hạ tầng giao thông · Vận tải & Logistics
+  > · Ô tô & Phụ tùng · Nước & Môi trường · Thực phẩm & Nông sản · Cơ khí & Thiết bị điện ·
+  > **Thép & Khoáng sản** (HPG/HSG/NKG/GDA chiếm gần hết vốn hoá rổ, tên phải nói ra).
+  > Kèm hai mã lẻ về đúng nhà: "Năng lượng tái tạo" (3 mã thuỷ điện) → Điện, "Tiện ích khí
+  > tự nhiên" (CNG) → Dầu khí, nên "Khác" từ 15 xuống 11 mã.
+  > **`tools/build_nganh.py` chọn mẫu chỉ số theo TÊN THÔ** (`SEC_NH`/`SEC_CK`/`SEC_BDS`) —
+  > sửa mấy hằng số đó "cho khớp giao diện" là không mã nào nhận được mẫu nữa. Đã kiểm:
+  > dựng lại `data/nganh` sau khi đổi tên ra **0 file thay đổi**.
+  > `tools/build_demo_mobi.py` giữ một bản sao thứ tư của bảng này (chỉ để dựng demo).
 - **Đường đua lấy MỌI mã có SLCP**, không cắt bớt. Bản cũ chỉ lấy top 40 toàn thị trường +
   top 10 mỗi ngành (401 mã) nên chọn ngành ngân hàng ra đua chỉ thấy 14/30 mã, gõ TPB/ABB
   vào ô mã thì báo "không có trong dữ liệu đua" — người dùng không có cách nào biết rổ bị

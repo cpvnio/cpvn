@@ -367,7 +367,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260815b"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260815c"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
@@ -573,6 +573,24 @@ const state={ tf:'1d', sizeBy:'signif', floor:'all', sector:'all', cluster:false
 /* Gộp ngành cho gọn: (1) hợp nhất các nhánh bán lẻ; (2) ngành <4 mã dồn về nhóm cha
    (bcEconomicSectorName) để bớt phân mảnh/ngành 1 mã. Vẫn giữ chi tiết cho nhóm đủ lớn. */
 const SECTOR_EXPLICIT={
+  /* ĐỔI TÊN CHO ĐÚNG CÁCH GỌI CỦA THỊ TRƯỜNG VN (user chốt 15/08/2026). Nguồn dịch máy
+     nên đẻ ra "Chứng khoán và Ngân hàng đầu tư", "Tiện ích điện và sản xuất điện",
+     "Quản lý và phát triển bất động sản" — dài, lặp và không ai gọi thế. Đây CHỈ đổi
+     TÊN HIỂN THỊ; `sector` thô trong universe.json giữ nguyên vì tools/build_nganh.py
+     chọn mẫu chỉ số đặc thù NGÀNH theo tên thô đó. */
+  'Chứng khoán và Ngân hàng đầu tư':'Chứng khoán',
+  'Tài chính ngân hàng':'Ngân hàng',
+  'Quản lý và phát triển bất động sản':'Bất động sản',
+  'Tiện ích điện và sản xuất điện':'Điện',
+  'Cơ sở hạ tầng giao thông vận tải':'Hạ tầng giao thông',
+  'Vận chuyển hàng hóa và Giao nhận':'Vận tải & Logistics',
+  'Ô tô và Phụ tùng ô tô':'Ô tô & Phụ tùng',
+  'Nước & Tiện ích liên quan':'Nước & Môi trường',
+  // rổ này gồm cả nông nghiệp, thuỷ sản, mía đường, chăn nuôi (nguồn không có ngành
+  // "Nông nghiệp" riêng) — gọi "thuốc lá" là lấy phần bé nhất đặt tên cho cả rổ
+  'Thực phẩm và thuốc lá':'Thực phẩm & Nông sản',
+  // GEE, TBD, RAL, PAC, VEA: thiết bị điện và cơ khí chế tạo, không phải "đóng tàu"
+  'Máy móc, thiết bị nặng và đóng tàu':'Cơ khí & Thiết bị điện',
   // bán lẻ (3 nhánh -> 1)
   'Bán lẻ chuyên dụng':'Bán lẻ','Bán lẻ thực phẩm và thuốc':'Bán lẻ','Bán lẻ tổng hợp':'Bán lẻ',
   // y tế & dược
@@ -582,16 +600,20 @@ const SECTOR_EXPLICIT={
   'Thiết bị & Phụ tùng điện tử':'Công nghệ & Viễn thông','Máy tính, điện thoại & điện tử gia dụng':'Công nghệ & Viễn thông',
   'Thiết bị văn phòng':'Công nghệ & Viễn thông','Dịch vụ Viễn thông':'Công nghệ & Viễn thông',
   'Truyền thông & Mạng':'Công nghệ & Viễn thông','Truyền thông và Xuất bản':'Công nghệ & Viễn thông',
-  // dầu khí: thượng nguồn và dịch vụ khoan/thiết bị chạy chung một chu kỳ giá dầu
-  'Dầu và Khí đốt':'Dầu khí','Dịch vụ và Thiết bị Dầu khí':'Dầu khí',
+  // dầu khí: thượng nguồn và dịch vụ khoan/thiết bị chạy chung một chu kỳ giá dầu.
+  // CNG (phân phối khí) nguồn xếp riêng thành "tiện ích khí" một mình -> về đúng nhà.
+  'Dầu và Khí đốt':'Dầu khí','Dịch vụ và Thiết bị Dầu khí':'Dầu khí','Tiện ích khí tự nhiên':'Dầu khí',
   // xây dựng dân dụng vốn là một nhánh của xây dựng
   'Xây dựng và vật liệu xây dựng dân dụng':'Xây dựng',
-  // than là khai khoáng, nguồn để riêng nên còn đúng 1 mã đủ lớn
-  'Kim loại và Khai khoáng':'Khai khoáng & Kim loại','Than':'Khai khoáng & Kim loại',
+  // HPG, HSG, NKG, GDA là THÉP — chiếm gần hết vốn hoá rổ này, nên tên phải nói ra.
+  // Than là khai khoáng, nguồn để riêng nên còn đúng 1 mã đủ lớn.
+  'Kim loại và Khai khoáng':'Thép & Khoáng sản','Than':'Thép & Khoáng sản',
   // giấy -> bao bì: DHC, HHP làm cả hai thứ trong cùng một nhà máy
   'Hộp đựng và Bao bì':'Giấy & Bao bì','Giấy và Lâm sản':'Giấy & Bao bì',
   // hàng không đi cùng khách sạn: cùng nhịp mùa du lịch, cùng cú sốc dịch bệnh
   'Khách sạn và Giải trí':'Du lịch & Giải trí','Vận chuyển hành khách':'Du lịch & Giải trí',
+  // thuỷ điện/điện tái tạo là nhà máy điện, để riêng thì 3 mã rơi hết vào "Khác"
+  'Năng lượng tái tạo':'Điện',
   // ba rổ "đa ngành / thương mại tổng hợp" của nguồn vốn dĩ là một
   'Dịch vụ công nghiệp và Thương mại':'Đa ngành & Thương mại',
   'Bán buôn hàng công nghiệp tổng hợp':'Đa ngành & Thương mại',
