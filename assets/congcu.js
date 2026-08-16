@@ -591,6 +591,10 @@ const soHuu=o=>{
    một lựa chọn áp cho cả hàng nhóm lẫn danh sách công ty con bên trong — xếp nhóm theo vốn
    hoá mà con bên trong vẫn xếp theo thứ khác thì mắt phải đổi hệ quy chiếu giữa chừng. */
 let tdSort={k:'cap',d:-1};                       // d=-1: cao→thấp
+/* LỌC THEO HẠNG (17/08/2026). Bảng vốn đã chia bốn khối, nhưng 164 nhóm nghĩa là muốn xem
+   khối "Cá nhân chi phối" phải cuộn qua gần hết bảng mới tới — trên điện thoại là hơn 8.000px.
+   Chip lọc chỉ giấu bớt khối, KHÔNG đổi cách gom nhóm hay thứ tự bên trong. */
+let tdLoc='all';                                 // 'all' | 'tt' | 'nn' | 'cq' | 'cn'
 const tdKhoa={cap:o=>o.c.mcapLive||o.c.mcap||0, gtgd:o=>o.c.gtgd||0};
 const tdXep=ma=>ma.slice().sort((a,b)=>(tdKhoa[tdSort.k](a)-tdKhoa[tdSort.k](b))*tdSort.d);
 /* TÊN NHÓM BỎ ĐUÔI PHÁP LÝ trước khi hiện (17/08/2026). Kho ghi "MÃ · tên pháp lý đầy đủ",
@@ -697,31 +701,53 @@ function tapDoanPanel(){
      ngang hàng Ngân hàng Nhà nước, mà "Ngân hàng Nhà nước" không phải một NHÀ — VCB, BID,
      CTG là đối thủ của nhau. Tách khối kèm một câu giải thích ngay dưới tiêu đề thì mỗi
      dòng đọc ra đúng nghĩa của nó, khỏi phải suy. */
+  /* Cột thứ 5 là NHÃN NGẮN cho chip lọc. Chip phải ngắn hơn tiêu đề khối: năm chip nằm chung
+     một hàng 313px, để nguyên "Cơ quan nắm vốn nhà nước" là mỗi chip chiếm trọn một dòng.
+     Tên đầy đủ vẫn còn nguyên ở tiêu đề khối ngay bên dưới, nên không mất nghĩa. */
   const HANG=[
-    ['tt','🏢','Tập đoàn tư nhân',''],
+    ['tt','🏢','Tập đoàn tư nhân','','Tư nhân'],
     ['nn','🏛️','Doanh nghiệp nhà nước',
      'Nhà nước sở hữu quá bán công ty mẹ. Đây là MỘT NHÀ thật: mẹ con hợp nhất báo cáo, '
-     +'chung một ban điều hành.'],
+     +'chung một ban điều hành.','Nhà nước'],
     ['cq','📋','Cơ quan nắm vốn nhà nước',
      '<b>Không phải một nhà</b> — đây là DANH MỤC CỔ PHẦN của một cơ quan. Ngân hàng Nhà '
      +'nước nắm cả VCB, BID và CTG nhưng ba ngân hàng đó là đối thủ của nhau; SCIC cũng vậy '
-     +'với 82 mã. Muốn xem từng nhà thì mở khối bên trên.'],
+     +'với 82 mã. Muốn xem từng nhà thì mở khối bên trên.','Cơ quan'],
     ['cn','👤','Cá nhân chi phối',
      'Một người (thường là cả gia đình) nắm chi phối từ hai mã trở lên. Vẫn đáng theo dõi, '
-     +'nhưng gọi đúng tên chứ không phải tập đoàn.'],
+     +'nhưng gọi đúng tên chứ không phải tập đoàn.','Cá nhân'],
   ];
   const khoi=HANG.map(([k,ic,ten,mo])=>{
+    if(tdLoc!=='all'&&tdLoc!==k) return '';       // đang lọc thì chỉ dựng khối được chọn
     const p=ds.filter(x=>(x.g.kieu||'tt')===k);
     if(!p.length) return '';
     const con=p.filter(x=>x.g.cha).length;
+    /* TIÊU ĐỀ KHỐI Ở LẠI KỂ CẢ KHI ĐANG LỌC — nó không thừa: câu giải thích dán ngay dưới
+       mới là thứ nói cho biết "cơ quan" khác "nhà nước" ở chỗ nào, mà đó đúng là lúc người
+       ta vừa chủ động bấm vào khối ấy nên đang cần đọc nhất. */
     return '<div class="tdhang">'+ic+' '+ten
       +'<em>'+p.length+' nhóm'+(con?' · '+con+' nhánh con':'')+'</em></div>'
       +(mo?'<div class="tdghi">'+mo+'</div>':'')
       +p.map(hang).join('');
   }).join('');
+  /* ═══ CHIP LỌC ═══ Đếm trên ds ĐẦY ĐỦ, không phải trên phần đang hiện — chip mà đếm theo
+     kết quả đã lọc thì bấm vào "Tư nhân" xong mọi chip khác tụt về 0, không còn đường quay ra. */
+  const demHang={};
+  for(const x of ds){ const k=x.g.kieu||'tt'; demHang[k]=(demHang[k]||0)+1; }
+  const nutLoc=(k,ten,ttl)=>{
+    const n=k==='all'?ds.length:(demHang[k]||0);
+    if(!n) return '';                             // hạng rỗng thì không bày chip chết
+    return '<button class="locb'+(tdLoc===k?' on':'')+'" data-loc="'+k+'"'
+      +(ttl?' title="'+esc(ttl)+'"':'')+'>'+esc(ten)+'<i>'+n+'</i></button>';
+  };
+  const thanhLoc='<div class="tdloc" id="tdLoc">'
+    +nutLoc('all','Tất cả','Hiện cả bốn hạng')
+    +HANG.map(([k,ic,ten,mo,ngan])=>nutLoc(k,ngan,ten)).join('')+'</div>';
+  const soHien=tdLoc==='all'?ds.length:(demHang[tdLoc]||0);
   return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn'
     +'<span class="tdsrt">xếp theo'+nutXep('cap','vốn hoá')+nutXep('gtgd','GTGD')+'</span>'
-    +'<span class="cnt">'+ds.length+' nhóm</span></div>'
+    +'<span class="cnt">'+soHien+' nhóm</span></div>'
+    +thanhLoc
     /* Bỏ lớp x<khoá> (17/08/2026). Nó sinh ra chỉ để màn hẹp chọn hiện ĐÚNG MỘT cột tiền —
        cột đang xếp theo. Nay màn hẹp xếp hàng thành thẻ hai tầng nên hiện được cả GTGD lẫn
        vốn hoá cùng lúc, không còn phải chọn, và mấy luật CSS đọc lớp này đã xoá theo. */
@@ -2601,6 +2627,29 @@ async function init(){
     if(sx){ const k=sx.dataset.srt;
       if(tdSort.k===k) tdSort.d=-tdSort.d; else { tdSort.k=k; tdSort.d=-1; }
       renderTapDoan(); return; }
+    /* CHIP LỌC HẠNG — cũng phải bắt trước hàng nhóm, cùng lý do với nút xếp. Đổi bộ lọc là
+       cả danh sách bên dưới thay mới, nên phải kéo màn về đúng hàng chip: đang cuộn sâu
+       trong khối "Cơ quan" mà bấm "Tư nhân" thì tại chỗ cũ chẳng còn gì, nhìn như trang lỗi.
+       Trừ đi chiều cao header ĐO THẬT chứ đừng viết cứng — máy bàn ~44px, màn hẹp có thêm
+       dải tab nên gấp đôi; viết cứng một số là một trong hai khổ bị header che mất hàng chip. */
+    const lc=e.target.closest('[data-loc]');
+    if(lc){ tdLoc=lc.dataset.loc; renderTapDoan();
+      /* KÉO MÀN VỀ HÀNG CHIP. Lọc 164 -> 17 nhóm làm tài liệu ngắn đi hàng nghìn pixel nên
+         trình duyệt tự KẸP scrollY xuống đáy mới; không kéo về thì chỗ đang đứng chẳng còn
+         gì, nhìn như trang lỗi.
+         THỨ TỰ HAI PHÉP ĐỌC LÀ QUAN TRỌNG: đọc `getBoundingClientRect()` TRƯỚC — chính nó
+         ép trình duyệt tính lại bố cục, và việc kẹp scrollY xảy ra trong lượt tính đó — rồi
+         mới đọc `scrollY`. Đảo lại là cộng toạ độ MỚI với scrollY CŨ, ra một điểm không có
+         thật (đo được: nhảy tới 1734 trong khi hàng chip nằm ở 366, lệch 1368px).
+         ĐỪNG bọc trong requestAnimationFrame: rAF KHÔNG chạy khi tab ở nền, mà hàm này cũng
+         không cần đợi khung hình nào — đọc rect là đã có số đúng rồi.
+         Nhảy thẳng, không `behavior:'smooth'`: cả danh sách vừa bị thay mới nên chạy hoạt
+         ảnh qua mấy nghìn pixel nội dung sắp biến mất chỉ là nhiễu. */
+      const b=$('#tdLoc'), hd=document.querySelector('header');
+      if(b){ const dinh=b.getBoundingClientRect().top;         // đọc rect TRƯỚC
+        scrollTo({top:Math.max(0,dinh+scrollY                  // rồi mới tới scrollY
+          -((hd?hd.getBoundingClientRect().height:0)+10)),behavior:'auto'}); }
+      return; }
     const tq=e.target.closest('.tdrow[data-quy]');
     if(tq){ const id=tq.dataset.quy;
       quyMo.has(id)?quyMo.delete(id):quyMo.add(id);

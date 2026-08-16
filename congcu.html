@@ -594,6 +594,21 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .panel>.ph .srtb:hover{color:var(--txt);border-color:var(--line2)}
 .panel>.ph .srtb.on{color:var(--rose);border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.09)}
 .panel>.ph .srtb i{font-style:normal;font-weight:900;margin-left:4px}
+/* ---------- LỌC THEO HẠNG: hàng chip ngay TRÊN danh sách ----------
+   Đứng RIÊNG một hàng chứ không nhét vào `.ph` cùng nút xếp: hàng đó ở màn hẹp đã phải bẻ
+   tiêu đề "Dòng tiền theo tập đoàn" xuống ba dòng để chứa hai nút xếp, thêm năm chip nữa là
+   vỡ hẳn. Và hai thứ khác việc nhau — xếp đổi THỨ TỰ, lọc đổi CÁI GÌ ĐƯỢC HIỆN.
+   Đặt trong `.panel` nhưng NGOÀI `.pb` để nó không bị cuốn theo phần đệm của danh sách. */
+.tdloc{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px}
+.tdloc .locb{display:inline-flex;align-items:center;gap:5px;background:var(--card2);
+  border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12px;
+  font-weight:800;color:var(--mut);cursor:pointer;transition:.14s;white-space:nowrap}
+.tdloc .locb:hover{color:var(--txt);border-color:var(--line2)}
+.tdloc .locb.on{color:var(--rose);border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.09)}
+/* ô đếm phải MỜ HƠN tên hạng — nó là số phụ, để cùng độ đậm thì chip đọc thành "Tư nhân 81"
+   như một cụm từ, mắt vấp lại ở con số trước khi nhận ra tên hạng */
+.tdloc .locb i{font-style:normal;font-size:10.5px;font-weight:700;color:var(--faint)}
+.tdloc .locb.on i{color:var(--rose);opacity:.7}
 /* ---------- VỀ BỜ: CỘT NGÀNH (ngăn kéo) ----------
    Cùng lối với cột ngành của bảng giá: bấm nút là trượt ra một cột, chạm vào ngành là lọc.
    Ở đây dùng NGĂN KÉO cho CẢ máy bàn lẫn điện thoại — khác bảng giá, nơi cột ngành là một
@@ -825,6 +840,11 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .tdghi{font-size:11px;line-height:1.55;margin-bottom:8px}
   /* màn hẹp giấu chữ "xếp theo", giữ nguyên hai nút — chữ đó ăn mất chỗ của tên bảng */
   .panel>.ph .tdsrt{font-size:0;gap:5px}
+  /* năm chip lọc trên 313px thì xuống hai hàng — chấp nhận, vì rút chữ nữa ("TN"/"NN"/"CQ")
+     là thành mật mã. Bóp nhẹ đệm và cỡ chữ cho vừa ba chip một hàng. */
+  .tdloc{gap:5px;padding:0 14px 10px}
+  .tdloc .locb{padding:6px 10px;font-size:11.5px;gap:4px}
+  .tdloc .locb i{font-size:10px}
 }
 
 /* ---------- CHỦ ĐIỂM ĐẦU TƯ (dẫn nguồn bên thứ ba) ---------- */
@@ -1008,7 +1028,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260817c"></script>
+<script defer src="assets/mobi.js?v=20260817e"></script>
 </head>
 <body>
 
@@ -1064,6 +1084,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260817c"></script>
+<script src="assets/congcu.js?v=20260817e"></script>
 </body>
 </html>
