@@ -285,14 +285,44 @@ CP.pollBoard=function(only){
 };
 async function doPoll(only){
   try{
-    const syms=(only&&only.length)?only.filter(s=>CP.coins.has(s)):[...CP.coins.keys()];
-    /* CÁC LƯỢT CHẠY SONG SONG. Trước đây chờ nhau nối đuôi: quét cả thị trường
-       mất ~2,8 giây, đúng bằng khoảng thời gian giá "loé số cũ" khi mới mở trang. */
-    const parts=[];
-    for(let i=0;i<syms.length;i+=150) parts.push(syms.slice(i,i+150));
-    const rows=(await Promise.all(parts.map(p=>
-      fetch(BG+'/getliststockdata/'+p.join(',')).then(r=>r.json()).catch(()=>[])
-    ))).flat().filter(Boolean);
+    /* ═══ GIÁ ĐỌC TỪ KHO, KHÔNG GỌI THẲNG VPS NỮA (17/08/2026 — user chốt) ═══
+       `data/board.json` do `tools/gia_phien.py` ghi mỗi 15 phút trong phiên, chứa NGUYÊN
+       VĂN mảng bảng giá VPS trả về. Vì sao đổi (đo thật):
+         1 tab mở 1 giờ trong phiên  =    180 lượt ·   24 MB  -> VPS
+         100 người xem cùng lúc, 6h  = 108.000 lượt · 14,5 GB  (gấp 28× cả pipeline)
+         1000 người xem cùng lúc, 6h =  1,08 triệu ·  145 GB  (gấp 277×)
+       Tải lên VPS TỈ LỆ THUẬN với lượng truy cập — tự lớn theo thành công của trang, không
+       cần ai tấn công; mà mọi lượt gọi lại mang sẵn `Origin: https://cpvn.io`. Nay máy cào
+       lấy 11 lượt mỗi nhịp cho cả thị trường -> tải thành HẰNG SỐ.
+       Khách cũng nhẹ hơn: 1 lượt · 150 KB (Cloudflare nén) thay vì 11 lượt · 1,48 MB.
+       ĐỌC NGUYÊN VĂN rồi chạy tiếp đúng mạch phân tích bên dưới — tuyệt đối đừng phân tích
+       ở phía máy cào. Quy đổi ×1000/×10, cờ `nt`, lưới chặn biên độ, nhận diện bảng rỗng
+       đều là luật đã trả giá đắt; đẻ thêm một bản sao nữa là hai bên trôi khỏi nhau. */
+    let rows=null;
+    if(!CP.OFFLINE){
+      try{
+        const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
+        if(j&&j.rows&&j.rows.length){ rows=j.rows.filter(Boolean); CP.boardAt=j.at||0; }
+      }catch(e){}
+    }
+    /* CHỈ rơi về VPS khi kho KHÔNG CÓ file (chưa kịp triển khai lần đầu, hoặc Cloudflare
+       hỏng hẳn). KHÔNG rơi về vì file CŨ: file cũ nghĩa là máy cào đang trục trặc, mà đó
+       đúng là lúc cả nghìn khách cùng rơi về VPS một lượt — thành ra chính cái cảnh vừa
+       bỏ công tránh. Thà giá đứng ở nhịp gần nhất, và nhãn phiên đã nói ra ngày giờ. */
+    if(!rows){
+      const syms=(only&&only.length)?only.filter(s=>CP.coins.has(s)):[...CP.coins.keys()];
+      const parts=[];
+      for(let i=0;i<syms.length;i+=150) parts.push(syms.slice(i,i+150));
+      rows=(await Promise.all(parts.map(p=>
+        fetch(BG+'/getliststockdata/'+p.join(',')).then(r=>r.json()).catch(()=>[])
+      ))).flat().filter(Boolean);
+      only=null;                       // đường dự phòng luôn quét đủ
+    }else{
+      /* File luôn chứa CẢ THỊ TRƯỜNG nên mọi lượt đọc kho đều là lượt quét ĐỦ — phải xoá
+         `only`, bằng không lượt nhanh 1 phút sẽ không bao giờ đóng dấu được `liveSess`
+         và bộ đệm không bao giờ được ghi. */
+      only=null;
+    }
     if(!rows.length) throw new Error('bảng giá rỗng');
     /* đêm reset bảng: VPS trả 0 cả thị trường -> chỉ nhận TC/trần/sàn, giữ số phiên gần nhất.
        Lượt nhỏ (1 mã) không xét được tỷ lệ nên thêm điều kiện: KHÔNG mã nào có giao dịch. */

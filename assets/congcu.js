@@ -328,11 +328,20 @@ const FORCE_LIVE=/[?&]forcelive/.test(location.search);   // cờ kiểm thử: 
 async function pollLive(){
   if(livePolling) return false; livePolling=true;
   try{
-    const syms=[...ST.map.keys()], rows=[];
-    for(let i=0;i<syms.length;i+=150){
-      const arr=await fetch('https://bgapidatafeed.vps.com.vn/getliststockdata/'+syms.slice(i,i+150).join(','))
-        .then(r=>r.json());
-      for(const t of arr) rows.push(t);
+    /* GIÁ ĐỌC TỪ KHO — bản sao thứ ba của luật trong core.js `doPoll`, xem chú thích đầy
+       đủ ở đó. Bản này trước đây còn tệ hơn hai bản kia: nó gọi 11 lô NỐI ĐUÔI nhau. */
+    let rows=null;
+    try{
+      const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
+      if(j&&j.rows&&j.rows.length) rows=j.rows.filter(Boolean);
+    }catch(e){}
+    if(!rows){       // chỉ khi kho KHÔNG CÓ file
+      const syms=[...ST.map.keys()]; rows=[];
+      for(let i=0;i<syms.length;i+=150){
+        const arr=await fetch('https://bgapidatafeed.vps.com.vn/getliststockdata/'+syms.slice(i,i+150).join(','))
+          .then(r=>r.json());
+        for(const t of arr) rows.push(t);
+      }
     }
     const active=rows.filter(t=>((+t.lastPrice||0)>0)||((+t.lot||0)>0)).length;
     if(rows.length<50||active<rows.length*0.1) return false;   // bảng đêm rỗng -> giữ kho
