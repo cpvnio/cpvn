@@ -2298,6 +2298,13 @@ function vbMau(i){
   return ['hsl('+h+','+s+'%,'+fit(lum([238,240,244]),false)+'%)',
           'hsl('+h+','+s+'%,'+fit(lum([27,33,48]),true)+'%)'];
 }
+/* KHÔI PHỤC 16/08/2026 — dòng này bị CẮT LẸM khi gỡ Chủ điểm (commit c0647e49).
+   Khối xoá chạy từ `function chuDiemPanel(){` tới hàm kế tiếp, mà `let tdTab` lại nằm
+   lọt giữa hai thứ đó nên bị nuốt theo. Hậu quả: `ReferenceError: tdTab is not defined`
+   -> renderTapDoan ném lỗi -> mục Tập đoàn ĐỨNG VĨNH VIỄN ở trạng thái loading.
+   Bài học: xoá theo KHOẢNG DÒNG thì phải soi lại danh sách khai báo cấp cao trước/sau,
+   đừng tin mỗi cú `node --check` — thiếu một biến toàn cục vẫn qua được kiểm cú pháp. */
+let tdTab='td';                          // 'td' = tập đoàn · 'quy' = quỹ
 function renderTapDoan(){
   const m=MODULES.find(x=>x.id==='tapdoan');
   $('#m-tapdoan').innerHTML=head(m)
