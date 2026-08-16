@@ -614,10 +614,24 @@ const ngayNen=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
    nhất thì dùng luôn và dừng; chưa có thì giữ lại làm dự phòng rồi hỏi tiếp nguồn sau,
    cuối cùng lấy nguồn có nến MỚI NHẤT. Thứ tự ưu tiên khi hoà vẫn là VNDirect (hồi tố
    quyền đầy đủ nhất) -> VPS -> kho. */
-CP.loadDaily=function(sym){
-  if(dayCache.has(sym)) return dayCache.get(sym);
+/* ═══ XIN ÍT LẠI: mặc định 5 NĂM, chỉ xin đủ 15 năm khi thật sự cần ═══
+   Bản cũ xin 15 năm ở MỌI lượt mở trang mã, dù chart mặc định là khung NGÀY và gần như
+   không ai kéo về 2013. Đo trên VIC, cùng endpoint chỉ đổi tham số `from`:
+       15 năm  3.395 nến  166 KB      5 năm  1.245 nến  58 KB      3 năm  745 nến  35 KB
+   Nhân với 1.527 trang mã × mọi lượt crawler quét thì đó là ~70% dung lượng đổ sang
+   VNDirect cho thứ chưa ai nhìn tới. Nay 5 năm trước, phần cũ hơn xin sau — và người thật
+   cũng thấy trang mã mở nhanh hơn.
+   `sau` = số năm muốn lấy. ĐỆM THEO SỐ NĂM, không đệm theo mã: xin 5 năm rồi xin tiếp 15
+   năm mà dùng chung khoá đệm thì lượt sau nhận lại đúng chuỗi 5 năm cũ, người dùng bấm
+   "Năm" xong chart vẫn cụt mà không hiểu vì sao. */
+CP.loadDaily=function(sym,sau){
+  const nam=sau||5;
+  const khoa=sym+'|'+nam;
+  if(dayCache.has(khoa)) return dayCache.get(khoa);
+  /* đã có bản SÂU HƠN thì dùng luôn, đừng gọi mạng lần nữa cho một khoảng hẹp hơn */
+  for(const [k,v] of dayCache) if(k.startsWith(sym+'|')&&+k.split('|')[1]>=nam) return v;
   const p=(async()=>{
-    const to=Math.floor(Date.now()/1e3), from=to-15*365*86400;
+    const to=Math.floor(Date.now()/1e3), from=to-nam*365*86400;
     const phien=CP.lastSessionDate();
     let tot=null;
     const nhan=r=>{                       // -> true nghĩa là đã đủ mới, khỏi hỏi nguồn sau
@@ -660,7 +674,7 @@ CP.loadDaily=function(sym){
     if(f&&f.t&&f.t.length>=2) nhan({rows:chuanDonVi(sym,f),src:'kho CPVN'});
     return tot;
   })();
-  dayCache.set(sym,p); return p;
+  dayCache.set(khoa,p); return p;
 };
 
 /* rows nến {t,o,h,l,c,v}[] — res '5'|'30'|'1D'; fallback = nến ngày từ kho */
