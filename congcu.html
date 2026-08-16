@@ -699,25 +699,31 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
    một trong hai cột tiền) — mà tên nhà VẪN cụt: "TCB · Ngân hàng T…". Lại tốn thêm nguyên
    một dòng gần như trống, vì tên bị ép chiếm trọn bề ngang nên logo văng ra đứng một mình.
 
-   Nay xếp thành THẺ HAI TẦNG:
-       tầng 1   [▸][logo] tên nhà (được xuống dòng) ················· %
-       tầng 2   TĂNG·GIẢM │ GTGD │ NN RÒNG │ VỐN HOÁ
-   MẤU CHỐT LÀ NHÃN NẰM TRÊN, SỐ NẰM DƯỚI. "VỐN HOÁ 1.793.562 tỷ" viết nằm ngang cần
-   ~128px, xếp chồng chỉ cần ~72px — vừa đủ cho cả bốn ô trên cùng một tầng. Vẫn chừng ấy
-   chiều cao mà hiện đủ 6 con số thay vì 3, và tên thôi bị cắt.
+   Nay mỗi hàng là THẺ HAI TẦNG, tầng dưới đọc như một dòng chữ chứ không phải một bảng con:
+       tầng 1   [▸][logo] tên nhà ································· %
+       tầng 2   vốn hoá 1.793.562 tỷ · GTGD 2.712 tỷ · NN −658 tỷ · ▲1 ▼5
+
+   BẢN TRƯỚC XẾP TẦNG 2 THÀNH BỐN Ô CÓ NHÃN IN HOA — hỏng theo hai đường cùng lúc:
+   ① mỗi hàng cao 90,8px (trước khi sửa là 62px) nên một màn 812px chỉ còn thấy ~9 nhóm
+     trong tổng số 164;
+   ② nhãn nằm trên số nghĩa là bốn cái nhãn ấy LẶP LẠI Ở MỌI HÀNG — 656 mẩu chữ IN HOA
+     giãn cách trải khắp bảng, mắt bị chúng kéo đi trước cả khi đọc tới con số. Nhãn cột
+   chỉ đáng in hoa khi nó đứng MỘT LẦN trên đầu bảng; lặp 164 lần thì nó là nhiễu.
+   Nay nhãn về đúng chỗ: nằm NGANG ngay trước số nó chú thích, chữ thường, nhỏ và mờ —
+   đọc thành "vốn hoá 1.793.562 tỷ" như lời nói, không còn là tiêu đề cột.
 
    Hai tầng tự tách nhau bằng TOÁN BỀ NGANG, không cần thêm thẻ bọc: ô tên ăn
-   calc(100% - 74px), ô % ăn đúng 66px, cộng 8px khoảng cách là tròn 100% — bốn ô còn lại
-   hết chỗ ở tầng 1 nên buộc phải rơi xuống tầng 2 rồi tự chia đều bằng flex:1 1 0.
-   ĐỔI BỀ NGANG Ô % THÌ PHẢI ĐỔI SỐ 74 THEO, bằng không tầng 1 hụt chỗ và ô đầu của tầng 2
-   bị hút ngược lên nằm cạnh ô %. */
+   calc(100% - 72px), ô % ăn đúng 66px, cộng 6px khoảng cách là tròn 100% — mấy ô số còn
+   lại hết chỗ ở tầng 1 nên buộc phải rơi xuống tầng 2 rồi chảy thành một dòng.
+   ĐỔI BỀ NGANG Ô % HAY `column-gap` THÌ PHẢI ĐỔI SỐ 72 THEO (72 = 66 + 6), bằng không tầng
+   1 dôi chỗ và mẩu đầu của tầng 2 bị hút ngược lên nằm cạnh ô %. */
 @media(max-width:640px){
   /* --tdc không còn dùng ở đây nữa: màn hẹp chạy flex chứ không chạy lưới cột */
-  .tdrow,.tdcon .rw{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:6px}
-  .tdrow{padding:11px 2px;font-size:13px}
+  .tdrow,.tdcon .rw{display:flex;flex-wrap:wrap;align-items:center;column-gap:6px;row-gap:3px}
+  .tdrow{padding:9px 2px;font-size:13px}
 
   /* ---------- tầng 1: tên + % ---------- */
-  .tdrow .sn{flex:1 1 calc(100% - 74px);flex-wrap:wrap;gap:6px;row-gap:4px;min-width:0}
+  .tdrow .sn{flex:1 1 calc(100% - 72px);flex-wrap:wrap;gap:6px;row-gap:4px;min-width:0}
   .tdrow .sn .lgw,.tdrow .sn .gini,.tdrow .sn .noimg{width:20px;height:20px;border-radius:6px;font-size:8.5px}
   /* TÊN ĐƯỢC XUỐNG DÒNG chứ không cụt bằng dấu ba chấm — hai dòng chữ đọc được vẫn hơn
      một dòng mất chữ, mà thẻ này thừa chiều cao để gánh. Dùng flex:0 1 auto (KHÔNG phải
@@ -737,23 +743,48 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
     overflow:hidden;text-overflow:ellipsis}
   .tdrow .sp{flex:0 0 66px;text-align:right;font-size:14px}
 
-  /* ---------- tầng 2: bốn ô số, nhãn trên · số dưới ---------- */
-  .tdrow .sb,.tdrow .sc,.tdrow .sn2,.tdrow .sv{display:block;flex:1 1 0;min-width:0;
-    text-align:left;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tdrow .sc i,.tdrow .sv i,.tdrow .sn2 i,.tdrow .sb::before{display:block;
-    margin:0 0 1px;font-size:8.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
-    color:var(--faint);opacity:.8;font-style:normal}
-  /* Ô đếm ▲▼ không có sẵn thẻ nhãn trong HTML nên nhãn vẽ bằng ::before — và phải TÁCH
-     RIÊNG cho hai bảng: cùng là ô .sb nhưng bên tập đoàn đếm mã tăng/giảm, bên quỹ lại là
-     "6 mã". Dán chung một chữ là một nửa số bảng đọc ra nghĩa khác hẳn. */
-  #tdPanel .tdrow .sb::before{content:'tăng·giảm'}
-  #quyPanel .tdrow .sb::before{content:'số mã'}
-  /* BỐN Ô KHÔNG CHIA ĐỀU. Chia đều thì mỗi ô 71px, mà "1.793.562 tỷ" cần ~70px — sát quá,
-     Vingroup ra ngay "1,793,562…". Vốn hoá là số dài nhất bảng nên cho nó rộng nhất; ô
-     đếm "▲1 ▼5 /6" ngắn nhất nên nhường bớt. Chỉ áp cho bảng tập đoàn: bảng quỹ dùng
-     chung mấy tên ô này nhưng đựng thứ khác hẳn (số mã · giá trị · kỳ). */
-  #tdPanel .tdrow .sb{flex-grow:.85}
-  #tdPanel .tdrow .sv{flex-grow:1.35}
+  /* ---------- tầng 2: ĐÚNG MỘT DÒNG, ba mẩu "nhãn thường + số" ----------
+     Đã đo cả ba kiểu trên máy, đây là số thật:
+       · bốn ô nhãn-in-hoa xếp chồng  -> 90,8px/hàng, cả bảng 15.254px, một màn thấy 8,9 nhóm
+       · bốn mẩu chảy tự do           -> 82,2px, nhưng gãy dòng ở chỗ NGẪU NHIÊN, mỗi hàng
+                                         một kiểu, và mẩu bị đẩy xuống bỏ lại dấu "·" lơ lửng
+       · hai cột chia đôi bề ngang    -> 85,6px, thẳng hàng đẹp NHƯNG hàng nào cũng CỨNG hai
+                                         dòng nên còn cao hơn kiểu chảy tự do
+     Bốn con số không có cách nào nhét vừa 313px (đo: cần 387px). Nên cắt còn BA, và mẩu bị
+     cắt là ô đếm ▲▼ — xem lý do ở luật `#tdPanel .tdrow .sb` ngay dưới. Ba mẩu ở cỡ 10,5px
+     cần ~297px, vừa một dòng với chỗ dư an toàn. */
+  .tdrow .sb,.tdrow .sc,.tdrow .sn2,.tdrow .sv{display:block;flex:0 0 auto;
+    text-align:left;font-size:10.5px;white-space:nowrap;font-weight:600}
+  /* Ô ĐẾM ▲▼ ẨN Ở MÀN HẸP — và nó là mẩu ĐÚNG để cắt, không phải cắt bừa cho vừa chỗ:
+     nó là thứ DUY NHẤT trong bốn mẩu mà người xem tự lấy lại được, chỉ cần bấm mở nhóm ra
+     là thấy % của từng công ty con, chi tiết hơn hẳn một cặp số đếm. Ba mẩu kia (vốn hoá,
+     GTGD, NN ròng của CẢ NHÓM) thì không cộng lại được bằng mắt từ danh sách con. Chưa kể
+     hướng của nhóm đã nằm ngay ở ô % cỡ lớn bên phải tên.
+     CHỈ ẩn ở bảng tập đoàn: bên bảng quỹ cùng ô .sb ấy lại là "15 mã" — một trong ba mẩu
+     duy nhất của hàng quỹ, ẩn đi là hàng đó trống một phần ba. */
+  #tdPanel .tdrow .sb{display:none}
+  /* Thứ tự đọc: VỐN HOÁ trước (nó là khoá xếp bảng, và là thứ nói lên nhà này to cỡ nào),
+     rồi GTGD, NN ròng, cuối cùng là ô đếm ▲▼. Thứ tự trong HTML giữ nguyên cho khớp bản
+     máy bàn — chỉ đảo bằng `order` ở riêng màn hẹp.
+     BẢNG QUỸ CÓ THỨ TỰ RIÊNG vì mấy ô cùng tên lại đựng thứ khác: .sb là "15 mã",
+     .sc là giá trị danh mục, .sv là KỲ CÔNG BỐ. Kỳ phải đứng cuối — nó là chú thích cho
+     cả dòng, không phải một con số ngang hàng. */
+  #tdPanel .tdrow .sv{order:1} #tdPanel .tdrow .sc{order:2}
+  #tdPanel .tdrow .sn2{order:3} #tdPanel .tdrow .sb{order:4}
+  #quyPanel .tdrow .sb{order:1} #quyPanel .tdrow .sc{order:2} #quyPanel .tdrow .sv{order:3}
+  /* NHÃN: nằm NGANG trước số, chữ thường, KHÔNG in hoa và KHÔNG giãn chữ. Đây là chỗ bản
+     trước sai: nhãn cột in hoa lặp lại 164 lần thì nó thôi làm nhiệm vụ chú thích và trở
+     thành hoa văn phủ kín bảng. */
+  .tdrow .sc i,.tdrow .sv i,.tdrow .sn2 i{display:inline;margin:0 3px 0 0;
+    font-size:9.5px;font-weight:600;letter-spacing:0;text-transform:none;
+    color:var(--faint);opacity:.85;font-style:normal}
+  /* Dấu chấm ngăn ba mẩu — đặt sau MỌI mẩu TRỪ MẨU CUỐI của từng bảng, nên phải khai riêng
+     hai bảng (tập đoàn kết ở .sn2, quỹ kết ở .sv); dùng chung là lòi ra một dấu "·" lơ lửng
+     cuối dòng, đọc như câu bỏ dở. Khoảng cách để 6px chứ không 8px: ba mẩu đã sát trần
+     bề ngang, mỗi dấu ngăn ăn hai lần khoảng cách nên đây là chỗ tiết kiệm rẻ nhất. */
+  #tdPanel .tdrow .sv::after,#tdPanel .tdrow .sc::after,
+  #quyPanel .tdrow .sb::after,#quyPanel .tdrow .sc::after{content:'·';
+    margin-left:6px;color:var(--line2);font-weight:400}
 
   /* ---------- hàng công ty con: cùng khuôn thẻ, thụt vào cho thấy nó thuộc nhóm trên ----------
      Thụt lề chuyển từ ô tên (.c1) ra cả hàng (.rw): tầng 2 nằm ở hàng khác nên thụt riêng ô
@@ -763,15 +794,21 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
   .tdcon .rw{padding:6px 2px 6px 15px;font-size:13px}
   .tdcon .rw.hd{display:none}        /* nhãn cột đã vào từng ô, khỏi cần hàng tiêu đề */
   .tdcon .rw .sp0{display:none}      /* ô đệm chỉ để giữ cột — hết lưới thì hết việc */
-  .tdcon .rw .c1{flex:1 1 calc(100% - 74px);padding-left:0;gap:7px}
+  .tdcon .rw .c1{flex:1 1 calc(100% - 72px);padding-left:0;gap:7px}
   .tdcon .rw .c1 .lgw,.tdcon .rw .c1 .noimg{width:22px;height:22px;border-radius:6px}
   .tdcon .idn em.own{font-size:9.5px;margin-left:4px}
   .tdcon .rw .tdv{flex:0 0 66px;text-align:right}
-  .tdcon .rw .tdg,.tdcon .rw .tdn,.tdcon .rw .tdp{display:block;flex:1 1 0;min-width:0;
-    text-align:left;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tdcon .rw .tdg::before,.tdcon .rw .tdn::before,.tdcon .rw .tdp::before{display:block;
-    margin-bottom:1px;font-size:8.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
-    color:var(--faint);opacity:.8}
+  /* hàng con đi theo ĐÚNG khuôn của hàng nhóm: một dòng, nhãn nằm ngang, chữ thường */
+  .tdcon .rw .tdg,.tdcon .rw .tdn,.tdcon .rw .tdp{display:block;flex:0 0 auto;
+    text-align:left;font-size:10.5px;white-space:nowrap;font-weight:600}
+  .tdcon .rw .tdp{order:1} .tdcon .rw .tdg{order:2} .tdcon .rw .tdn{order:3}
+  .tdcon .rw .tdg::before,.tdcon .rw .tdn::before,.tdcon .rw .tdp::before{
+    margin-right:3px;font-size:9.5px;font-weight:600;letter-spacing:0;text-transform:none;
+    color:var(--faint);opacity:.85}
+  /* cùng luật "trừ mẩu cuối": tập đoàn kết ở .tdn, hàng quỹ chỉ hai mẩu nên kết ở .tdg */
+  #tdPanel .tdcon .rw .tdp::after,#tdPanel .tdcon .rw .tdg::after,
+  #quyPanel .tdcon .rw .tdp::after{content:'·';
+    margin-left:6px;color:var(--line2);font-weight:400}
   /* Nhãn hàng con cũng phải theo BẢNG: ô .tdp bên tập đoàn là VỐN HOÁ, bên quỹ lại là phần
      quỹ ĐANG NẮM — dùng chung một chữ là sai nghĩa hẳn một bảng. */
   #tdPanel .tdcon .rw .tdg::before{content:'GTGD'}
@@ -971,7 +1008,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260817b"></script>
+<script defer src="assets/mobi.js?v=20260817c"></script>
 </head>
 <body>
 
@@ -1027,6 +1064,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260817b"></script>
+<script src="assets/congcu.js?v=20260817c"></script>
 </body>
 </html>

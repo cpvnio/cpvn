@@ -593,6 +593,17 @@ const soHuu=o=>{
 let tdSort={k:'cap',d:-1};                       // d=-1: cao→thấp
 const tdKhoa={cap:o=>o.c.mcapLive||o.c.mcap||0, gtgd:o=>o.c.gtgd||0};
 const tdXep=ma=>ma.slice().sort((a,b)=>(tdKhoa[tdSort.k](a)-tdKhoa[tdSort.k](b))*tdSort.d);
+/* TÊN NHÓM BỎ ĐUÔI PHÁP LÝ trước khi hiện (17/08/2026). Kho ghi "MÃ · tên pháp lý đầy đủ",
+   mà đuôi ấy giống hệt nhau ở mọi mã cùng loại: mười mấy nhóm ngân hàng đều mở đầu bằng
+   "Ngân hàng Thương mại Cổ phần …" — 34 ký tự KHÔNG phân biệt được nhóm nào với nhóm nào,
+   trong khi nó đẩy tên xuống ba dòng trên điện thoại. Đo trên 164 nhóm: trung bình 31,3 ->
+   25,6 ký tự, số tên buộc phải xuống dòng ở màn hẹp 77 -> 48.
+   Dùng lại `shortName` — CHÍNH hàm mà hàng công ty con bên trong đang dùng, nên mở một nhóm
+   ra thì tên nhóm và tên con cùng một lối viết. Tên pháp lý đầy đủ chuyển sang `title`.
+   Cắt Ở ĐÂY chứ không cắt trong kho: kho giữ tên đầy đủ thì đổi cách rút gọn là sửa một
+   dòng, khỏi dựng lại `data/tapdoan.json`. */
+const tenGon=t=>{ const i=String(t||'').indexOf(' · ');
+  return i<0?t:t.slice(0,i+3)+shortName(t.slice(i+3)); };
 function tapDoanPanel(){
   const ds=(ST.tapdoan||[]).map(g=>{      // g.me = mã công ty mẹ nếu mẹ cũng niêm yết
     const ma=g.syms.map(x=>({p:x.p,gt:x.gt,qua:x.qua,c:ST.map.get(x.s)})).filter(x=>x.c&&x.c.close>0);
@@ -634,8 +645,12 @@ function tapDoanPanel(){
       : g.kieu==='nn' ? '<b class="nn">nhà nước</b>'
       : g.kieu==='cq' ? '<b class="nn cq">cơ quan</b>'
       : g.kieu==='cn' ? '<b class="nn cn">cá nhân</b>' : '';
+    const gon=tenGon(g.ten);
     return '<div class="tdrow'+(mo?' on':'')+'" data-td="'+esc(g.id)+'">'
-      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+dau+'<em class="nm">'+esc(g.ten)+'</em>'
+      +'<span class="sn"><i class="cr">'+(mo?'▾':'▸')+'</i>'+dau
+      /* title chỉ gắn khi CÓ cắt bớt — gắn cả khi tên không đổi thì rê chuột vào đâu cũng
+         bung một khung nhắc lại đúng dòng chữ đang nhìn, phiền chứ chẳng nói thêm gì */
+      +'<em class="nm"'+(gon!==g.ten?' title="'+esc(g.ten)+'"':'')+'>'+esc(gon)+'</em>'
       +nhan+'</span>'
       /* KHÔNG có thanh xanh đỏ ở đây (bỏ 17/08/2026). Bảng này đã có % ngay bên cạnh và
          ô đếm ▲/▼ — thanh chỉ nói lại đúng dấu của con số đó, mà ăn nguyên một cột 92px
