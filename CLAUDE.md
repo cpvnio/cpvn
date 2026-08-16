@@ -446,6 +446,28 @@ giá sai hoặc giá nhảy — đừng đẩy.
   về bờ" rồi nên nhãn ghi **"cần tăng"** — đọc dọc thành "cần tăng ×1,4 để về bờ". Cột tiền
   ghi đủ **"vốn hoá hiện tại"** chứ không phải "vốn hoá" cụt: đứng cạnh cột "để về bờ" thì
   một chữ "vốn hoá" trần bị đọc dính vào cột bên trái.
+- **VỀ BỜ — CỘT NGÀNH: chọn ngành thì BỎ NGƯỠNG −30%, hiện ĐỦ mã của ngành** (user chốt
+  15/08/2026). Hai chế độ khác hẳn nhau về mục đích: `all` là "tìm mã đã rơi sâu" nên giữ
+  ngưỡng (bỏ ngưỡng ở đây là ra cả 1.500 mã, mất hẳn ý nghĩa); chọn MỘT ngành là "soi cả
+  ngành xem ai rơi ai chưa" nên phải có cả mã mới rơi 1% lẫn mã đang đứng ngay đỉnh (0%,
+  cần tăng ×1,0). Cột chọn ngành đếm **`đã rơi quá 30% / tổng mã`** để trước khi bấm đã
+  biết chọn vào sẽ thấy gì. Bốn thứ phải giữ:
+  1. **`#vbSecBar` và `#vbSecBd` phải được CHUYỂN RA THẲNG `<body>`** (`vbBind`). Tổ tiên
+     có `backdrop-filter` (header và mấy thẻ của trang này đều có) trở thành khối chứa của
+     `position:fixed` — để nguyên chỗ dựng thì cột không bám mép màn (đo được lệch 28px máy
+     bàn, 14px màn hẹp) và chiều cao bị cắt theo tổ tiên đó. Cùng họ với luật "`#tgPops`
+     phải đứng SAU `<svg>`" của bản đồ thế giới.
+  2. **Chuyển ra body thì phải TỰ DỌN bản cũ**: `renderRadar` dựng lại panel mỗi lượt bơm
+     giá sống (~1 phút), không gỡ bản trước là mỗi phút chồng thêm một cột chết trong body.
+     Giữ tham chiếu ở `vbBarEl`/`vbBdEl`, và nhớ trạng thái đang mở (`vbSecMo`) để lượt vẽ
+     lại không đóng sập cột người dùng vừa mở.
+  3. **Nút "☰ Ngành" phải `flex:none`** — hàng `.ph` là flex, để nút co thì khổ hẹp nó teo
+     còn "☰…" (đo 43px trong khi chữ cần 73px). Thứ được phép bị bóp là TIÊU ĐỀ.
+  4. **Khổ hẹp cho `.ph` xuống dòng** (`.panel.vbpan>.ph{flex-wrap:wrap}`, tiêu đề
+     `flex:1 1 100%`): nhồi tiêu đề + ba nút vào một hàng 390px thì tên ngành bị cắt còn
+     "T…" — mất đúng thứ cho biết đang xem ngành nào. Thà cao thêm một dòng.
+  Nút giữ nhãn NGẮN CỐ ĐỊNH ("☰ Ngành"), tên ngành để tiêu đề nói — nhét tên ngành vào nút
+  là vừa lặp vừa làm nút phình theo độ dài tên.
 - **HÀNG CON DÙNG CHUNG LƯỚI CỘT VỚI HÀNG NHÓM** — biến `--tdc` khai một chỗ cho cả `.tdrow`
   lẫn `.tdcon .rw` (`#quyPanel` có `--tdc` riêng vì hàng quỹ chỉ 5 ô). Hai lưới riêng là mọi
   con số của hàng con lệch khỏi cột của hàng nhóm ngay phía trên, bấm mở ra đọc rất khó chịu.

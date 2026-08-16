@@ -1467,6 +1467,7 @@ function renderRadar(){
   $$('#m-radar [data-vbs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vbs;
     if(vbSort.k===k) vbSort.d=-vbSort.d; else { vbSort.k=k; vbSort.d=(k==='roi'?1:-1); }
     vbTop=100; renderRadar(); });
+  vbBind();
   if(radarTab==='phien') drawSparks($('#m-radar'));
   if(radarTab==='phien'&&!tgGiu){
     /* Bản đồ nạp qua mạng nên KHÔNG chặn lượt vẽ: hiện "đang lấy…" trước, có số rồi mới
@@ -2132,10 +2133,19 @@ let vbTop=100;
    Với vốn hoá thì d=-1 là to→nhỏ, cùng một quy ước "bấm lại là lật chiều". */
 let vbSort={k:'roi',d:1};
 const VBK={roi:c=>c.dath, von:c=>c.mcapLive||c.mcap||0};
+/* NGÀNH ĐANG CHỌN. 'all' = toàn thị trường, giữ nguyên ngưỡng -30% (nếu không thì danh
+   sách là cả 1.500 mã, mất hẳn ý nghĩa "đã rơi sâu"). Chọn MỘT ngành thì BỎ ngưỡng và
+   hiện đủ mọi mã của ngành đó — kể cả mã mới rơi 1% hay đang ở đỉnh (0%), vì lúc đó
+   người xem không còn tìm "mã rơi sâu" nữa mà đang soi CẢ NGÀNH xem ai rơi ai chưa. */
+let vbSec='all';
+const vbLoc=()=>ST.list.filter(c=>c.close>0&&c.dath!=null
+  &&(vbSec==='all' ? c.dath<=VB_NGUONG : c.sector===vbSec));
 function veBoPanel(){
-  const ds=ST.list.filter(c=>c.close>0&&c.dath!=null&&c.dath<=VB_NGUONG)
-    .sort((a,b)=>(VBK[vbSort.k](a)-VBK[vbSort.k](b))*vbSort.d);
-  if(!ds.length) return '<div class="empty">Chưa có dữ liệu — chạy lại tools/build_screen.py</div>';
+  const ds=vbLoc().sort((a,b)=>(VBK[vbSort.k](a)-VBK[vbSort.k](b))*vbSort.d);
+  if(!ds.length) return '<div class="empty">'
+    +(vbSec==='all'?'Chưa có dữ liệu — chạy lại tools/build_screen.py'
+      :'Ngành “'+esc(vbSec)+'” chưa có mã nào đủ dữ liệu đỉnh.')
+    +'</div>'+vbSecBarHTML();
   /* CẦN BAO NHIÊU LẦN để về bờ: rơi 50% thì phải tăng 100% mới hoà vốn. Đây mới là con
      số người cầm hàng cần, chứ "-50%" nghe nhẹ hơn thực tế rất nhiều. */
   const lai=d=>(100/(100+d)-1)*100;
@@ -2163,7 +2173,15 @@ function veBoPanel(){
       +'<u>đỉnh '+Math.round(c.athP||0).toLocaleString('en-US')+'</u></span>'
     +'<span class="vbm">'+ty(c.mcapLive||c.mcap||0)+'</span>'
     +'<span class="vbv '+cls(c.chg)+'">'+pct(c.chg)+'</span></div>';
-  return '<div class="panel"><div class="ph">Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh'
+  /* TIÊU ĐỀ NGẮN, đừng nhồi cả câu giải thích vào: hàng này là flex nên ở khổ hẹp một
+     tiêu đề dài bị bóp thành bảy dòng dọc, còn nút ngành teo lại thành "☰…". Tên ngành
+     đứng một mình là đủ (câu "tất cả mã của ngành" đã nằm ở ghi chú cuối bảng), và nút
+     giữ nhãn NGẮN CỐ ĐỊNH — không lặp lại tên ngành mà tiêu đề vừa nói. */
+  const tieu=vbSec==='all'?'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh':esc(vbSec);
+  return '<div class="panel vbpan"><div class="ph"><span class="vbti">'+tieu+'</span>'
+    +'<button class="secbtn'+(vbSec==='all'?'':' on')+'" id="vbSecBtn" '
+      +'title="Chọn nhóm ngành — chọn rồi thì hiện ĐỦ mã của ngành, kể cả mã chưa rơi">'
+      +'☰ Ngành</button>'
     +'<span class="tdsrt">xếp theo'+nut('roi','mức rơi')+nut('von','vốn hoá')+'</span>'
     +'<span class="cnt">'+ds.length+' mã</span></div>'
     +'<div class="pb" style="padding:8px 14px" id="vbPanel">'
@@ -2174,9 +2192,82 @@ function veBoPanel(){
     +'đỉnh 52 tuần — phần lớn mã sập từ 2021-2022, đo bằng đỉnh 52 tuần thì mã mất 80% bốn năm '
     +'nay lại hiện ra như chỉ mới giảm nhẹ. Cột <b>×</b> là số lần giá phải tăng để về lại đỉnh cũ: '
     +'rơi 50% thì phải tăng gấp đôi mới hoà vốn, rơi 80% thì phải gấp năm. '
+    +(vbSec==='all'
+      ? 'Danh sách toàn thị trường chỉ lấy mã đã rơi quá '+(-VB_NGUONG)+'%; <b>chọn một ngành</b> '
+        +'thì hiện ĐỦ mã của ngành đó, kể cả mã mới rơi 1% hay đang đứng ngay đỉnh (0%). '
+      : 'Đang xem <b>đủ mã</b> của ngành này nên có cả mã chưa rơi — mã ở ngay đỉnh hiện 0% và '
+        +'cần tăng ×1,0. ')
     +'Mục này KHÔNG lọc theo vốn hoá — mã nhỏ mới là phần đông trong nhóm rơi sâu, mà cũng là nhóm '
     +'thanh khoản mỏng nhất. Rơi sâu KHÔNG có nghĩa là sắp hồi: nhiều mã rơi vì doanh nghiệp hỏng '
-    +'thật. Đây là danh sách để soi, không phải danh sách để mua.</div>';
+    +'thật. Đây là danh sách để soi, không phải danh sách để mua.</div>'
+    +vbSecBarHTML();
+}
+/* CỘT NGÀNH — dựng cùng lúc với panel rồi để CSS trượt ra/vào, không dựng lại mỗi lần mở.
+   Đếm "rơi/tổng": số mã của ngành đã rơi quá ngưỡng trên TỔNG số mã ngành đó, để trước
+   khi bấm đã biết chọn vào sẽ thấy gì. Màu tên ngành lấy theo góc vàng 137,5° y như cột
+   ngành bảng giá — hai dòng cạnh nhau luôn khác tông rõ. */
+function vbSecBarHTML(){
+  const G={};
+  for(const c of ST.list){
+    if(!(c.close>0)||c.dath==null) continue;
+    const s=c.sector||'Khác', g=G[s]=G[s]||{n:0,roi:0,cap:0};
+    g.n++; g.cap+=c.mcapLive||c.mcap||0;
+    if(c.dath<=VB_NGUONG) g.roi++;
+  }
+  const secs=Object.keys(G).sort((a,b)=>G[b].cap-G[a].cap);
+  const tongRoi=secs.reduce((s,k)=>s+G[k].roi,0);
+  const si=(val,ten,dem,big,mau)=>'<div class="si'+(vbSec===val?' on':'')+(big?' big':'')
+    +'" data-vbsec="'+esc(val)+'"'+(mau?' style="--cl:'+mau[0]+';--cd:'+mau[1]+'"':'')+'>'
+    +'<span class="n">'+esc(ten)+'</span><span class="c">'+dem+'</span></div>';
+  return '<div id="vbSecBd"></div><div id="vbSecBar">'
+    +'<div class="sbh"><b>Nhóm ngành</b>'
+    +'<em>Chọn một ngành để xem <b>đủ mã</b> của ngành đó — kể cả mã chưa rơi. '
+    +'Số bên phải là <b>đã rơi quá '+(-VB_NGUONG)+'% / tổng mã</b>.</em></div>'
+    +si('all','Tất cả ngành',tongRoi,false,null)
+    +secs.map((s,i)=>si(s,s,G[s].roi+'/'+G[s].n,G[s].cap>=1e14,vbMau(i))).join('')
+    +'</div>';
+}
+/* CỘT NGÀNH PHẢI ĐƯỢC CHUYỂN RA THẲNG <body>. `position:fixed` bị TỔ TIÊN CÓ
+   `backdrop-filter` bắt làm khối chứa (header và mấy thẻ của trang này đều có), nên để
+   nguyên chỗ dựng ra thì cột không bám mép màn hình và chiều cao bị cắt theo tổ tiên đó —
+   đo được lệch 28px ở máy bàn, 14px ở màn hẹp. Cùng họ với luật `#tgPops phải đứng SAU
+   <svg>` của bản đồ thế giới: thứ neo tuyệt đối rất nhạy với chỗ nó nằm trong cây DOM.
+   Vì `renderRadar` dựng lại panel mỗi lượt bơm giá sống, phải TỰ DỌN bản cũ đã chuyển ra
+   body trước khi chuyển bản mới, bằng không mỗi phút lại chồng thêm một cột chết. */
+let vbBarEl=null, vbBdEl=null, vbSecMo=false;
+function vbBind(){
+  if(vbBarEl){ vbBarEl.remove(); vbBarEl=null; }
+  if(vbBdEl){ vbBdEl.remove(); vbBdEl=null; }
+  const bar=$('#m-radar #vbSecBar'), bd=$('#m-radar #vbSecBd'), btn=$('#vbSecBtn');
+  if(!bar||!bd||!btn) return;
+  document.body.appendChild(bd); document.body.appendChild(bar);
+  vbBarEl=bar; vbBdEl=bd;
+  const dat=mo=>{ vbSecMo=mo; bar.classList.toggle('on',mo); bd.classList.toggle('on',mo); };
+  btn.onclick=()=>dat(!bar.classList.contains('on'));
+  bd.onclick=()=>dat(false);
+  $$('#vbSecBar [data-vbsec]').forEach(e=>e.onclick=()=>{
+    vbSec=e.dataset.vbsec; vbTop=100; dat(false); renderRadar();
+    const p=$('#m-radar .panel'); if(p) p.scrollIntoView({block:'start',behavior:'smooth'}); });
+  /* giữ trạng thái đang mở qua các lượt vẽ lại (vòng giá sống dựng lại module mỗi phút) */
+  if(vbSecMo) dat(true);
+}
+/* Bản sao rút gọn của bộ màu cột ngành bên bảng giá (index.html `sectorColor`): xoay tông
+   theo góc vàng rồi dò độ sáng tới khi tương phản >=4.6 trên nền của CẢ HAI giao diện.
+   Sửa bảng màu ở một bên thì bên kia lệch tông — chỉ là chuyện thẩm mỹ, không phải dữ liệu. */
+function vbMau(i){
+  const h=Math.round((i*137.508)%360), s=74;
+  const hsl2=(hh,ss,ll)=>{ ss/=100; ll/=100;
+    const k=n=>(n+hh/30)%12, a=ss*Math.min(ll,1-ll);
+    const f=n=>ll-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));
+    return [f(0),f(8),f(4)].map(v=>v*255); };
+  const lum=rgb=>{ const c=rgb.map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});
+    return .2126*c[0]+.7152*c[1]+.0722*c[2]; };
+  const ti=(a,b)=>(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+  const fit=(bg,up)=>{ let l=up?64:38;
+    for(let k=0;k<30&&l>10&&l<94;k++){ if(ti(lum(hsl2(h,s,l)),bg)>=4.6) break; l+=up?2:-2; }
+    return l; };
+  return ['hsl('+h+','+s+'%,'+fit(lum([238,240,244]),false)+'%)',
+          'hsl('+h+','+s+'%,'+fit(lum([27,33,48]),true)+'%)'];
 }
 function chuDiemPanel(){
   const D=ST.chudiem;
