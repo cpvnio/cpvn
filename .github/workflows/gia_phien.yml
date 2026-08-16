@@ -12,13 +12,21 @@ name: CPVN gia phien (du phong)
 # KHÔNG BAO GIỜ ĐỤNG MÁY CHÍNH: bước kiểm tra đọc `at` trong data/board.json — máy chính vừa
 # ghi trong vòng 40 phút thì thoát ngay, không cào, không push, không tốn gì. Ngưỡng 40 phút
 # = hơn 2 nhịp của máy chính, đủ để một lượt lỡ nhịp không bị coi là hỏng.
+# ĐỘ TRỄ ĐO ĐƯỢC TRÊN CHÍNH KHO NÀY (27 lượt của daily.yml, 08/2026):
+#     trễ ít nhất 7 phút · TRUNG VỊ 150 phút · nhiều nhất 287 phút
+#     KHÔNG lượt nào chạy đúng giờ.
+# Nên KHÔNG được đặt vài mốc "quanh giờ cần" như trực giác mách — bản đầu tao đặt 10:17,
+# 12:17, 14:47 giờ VN, cộng trung vị 150 phút là ra 12:47 / 14:47 / 17:17, mốc cuối rơi
+# hẳn ra ngoài phiên và mốc giữa thì sát nút. Gặp lượt trễ 287 phút là trượt cả ba.
+#
+# Cách đúng: RẢI DÀY VÀ ĐẶT SỚM, rồi để bước kiểm tra tự lọc. Phiên là 2:00-8:05 UTC, độ
+# trễ 0-287 phút, nên mốc hẹn phải trải từ ~22:00 UTC hôm trước tới 8:00 UTC. Lượt nào rơi
+# ngoài phiên thì thoát trong ~10 giây, mà kho này CÔNG KHAI nên Actions miễn phí không
+# giới hạn — rải dày không tốn gì, còn rải thưa thì lưới an toàn thành hình thức.
 on:
   schedule:
-    # giờ UTC; VN = UTC+7. Rải quanh phiên, KHÔNG đặt đúng phút :00 — đó là lúc Actions
-    # đông nhất và hay bị đẩy trễ nhất.
-    - cron: "17 3 * * 1-5"    # 10:17 giờ VN
-    - cron: "17 5 * * 1-5"    # 12:17 giờ VN
-    - cron: "47 7 * * 1-5"    # 14:47 giờ VN — sát giờ đóng cửa
+    - cron: "0 22,23 * * 0-4"   # 05:00-06:00 VN hôm sau — đón lượt trễ 3-5 tiếng
+    - cron: "0 0-8 * * 1-5"     # 07:00-15:00 VN — đón lượt trễ 0-3 tiếng
   workflow_dispatch: {}
 
 permissions:
