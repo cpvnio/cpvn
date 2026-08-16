@@ -44,7 +44,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 |---|---|
 | `universe.json` | 1522 mã: tên, sàn, ngành, SLCP, mcap, PE/PB, eps, cash, np, mốc %, vn30/hnx30 |
 | `data/eod/latest.json` | **File client luôn tải** (~100KB): giá đóng cửa phiên gần nhất + 4 chỉ số |
-| `data/hist/{MÃ}.json` | Nến ngày từ 2020: 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
+| `data/hist/{MÃ}.json` | Nến ngày **từ 2013** (bồi 17/08/2026, xem `tools/boi_nen.py`): 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
@@ -91,6 +91,14 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 > tức 0,5%; 99,5% còn lại vẫn đọc kho. Bản sao trong `bubbles.html` phải sửa cùng lúc.
 > Đây cũng là bằng chứng rằng **mọi lượt bồi kho phải quy về cùng nền trước khi ghép**
 > (xem ba luật ở mục kho `data/hist`).
+
+**XIN ÍT LẠI: mặc định 5 NĂM, 15 năm chỉ khi bấm Tháng/Năm** (17/08/2026). Bản cũ xin 15
+năm ở MỌI lượt mở trang mã dù chart mặc định là khung NGÀY — đo trên VIC cùng endpoint chỉ
+đổi `from`: 15 năm 3.395 nến 166 KB · 5 năm 1.245 nến 58 KB · 3 năm 745 nến 35 KB. Nhân 1.527
+trang mã × mọi lượt crawler quét thì đó là ~70% dung lượng đổ sang VNDirect cho thứ chưa ai
+nhìn. **ĐỆM THEO KHOÁ `sym|năm`, không theo mã** — dùng chung khoá thì lượt xin 15 năm sau khi
+đã xin 5 năm nhận lại đúng chuỗi cũ, bấm "Năm" xong chart vẫn cụt mà không hiểu vì sao;
+`dailyNam` bên `cophieu.html` nhớ đang giữ mấy năm để bấm lần hai khỏi gọi mạng.
 
 Bảng dưới là ĐỘ SÂU và CHẤT LƯỢNG của từng nguồn, vẫn đúng — nay dùng để chọn nguồn cho
 nhánh cứu hộ và cho pipeline, không còn là thứ tự client gọi:
@@ -935,7 +943,12 @@ giá sai hoặc giá nhảy — đừng đẩy.
   kéo nhớ theo **tỉ lệ khung** chứ không phải px, để đổi cỡ cửa sổ thẻ không trôi ra ngoài.
   Thanh tiêu đề phải `user-select:none` + `touch-action:none`, bằng không kéo một cái là bôi
   đen chữ. Màn hẹp không kéo (thẻ xếp cột).
-  **NHỊP LÀM MỚI RIÊNG, KHÔNG ĂN THEO PHIÊN VIỆT NAM.** `startLive()` của trang khoá theo
+  **NHỊP 30 PHÚT (17/08/2026, trước là 2 phút), một hằng số `TG_HAN` cho cả ba chỗ.** Đây là
+lượt gọi DUY NHẤT còn tỉ lệ thuận với người xem theo THỜI GIAN MỞ TAB chứ không theo số trang
+mở — đo ở quy mô 1.000 người, nhịp 2 phút mà mỗi người mở radar 2 tiếng là 60.000 lượt · 2 GB
+sang CNBC, VƯỢT cả VNDirect. Ba chỗ từng viết cứng 120000 (hạn đệm mỗi nước · hạn hỏi lại ·
+hạn coi số là cũ khi vẽ) mà lệch nhau là có lượt gọi mạng xong vứt đi.
+**NHỊP LÀM MỚI RIÊNG, KHÔNG ĂN THEO PHIÊN VIỆT NAM.** `startLive()` của trang khoá theo
   `sessionOpenVN()` (9:00–15:00 T2–T6) vì nó sinh ra để bơm giá cổ phiếu trong nước — nhưng
   thế giới giao dịch đúng lúc VN đã nghỉ: **Mỹ mở 20:30 giờ VN, châu Âu chạy tới nửa đêm**.
   Ăn theo nhịp đó thì mở bản đồ lúc 9 giờ tối để xem Mỹ là số đứng im. Nên mục này có
@@ -1001,7 +1014,13 @@ giá sai hoặc giá nhảy — đừng đẩy.
   > sửa mấy hằng số đó "cho khớp giao diện" là không mã nào nhận được mẫu nữa. Đã kiểm:
   > dựng lại `data/nganh` sau khi đổi tên ra **0 file thay đổi**.
   > `tools/build_demo_mobi.py` giữ một bản sao thứ tư của bảng này (chỉ để dựng demo).
-- **Đường đua lấy MỌI mã có SLCP**, không cắt bớt. Bản cũ chỉ lấy top 40 toàn thị trường +
+- ****TRẦN THÁNG CỦA ĐƯỜNG ĐUA nằm ở `build_screen.py` (`sorted(allm)[-168:]`), KHÔNG suy ra từ
+kho.** Bồi kho về 2013 xong mà quên nâng số này thì đường đua VẪN chỉ chạy 6,5 năm — công bồi
+đổ sông. Nâng 78 -> 168 cho ra 164 tháng (1/2013 -> 8/2026), 1.520 mã; đánh đổi có thật:
+`market.json` 612 -> 1.247 KB thô, **132 -> 216 KB nén** (client tải ở trang công cụ). Muốn
+gọn lại thì hạ số này, KHÔNG phải cắt kho — kho còn nuôi MA/RSI, đỉnh 52T, độ rộng, bộ lọc.
+
+Đường đua lấy MỌI mã có SLCP**, không cắt bớt. Bản cũ chỉ lấy top 40 toàn thị trường +
   top 10 mỗi ngành (401 mã) nên chọn ngành ngân hàng ra đua chỉ thấy 14/30 mã, gõ TPB/ABB
   vào ô mã thì báo "không có trong dữ liệu đua" — người dùng không có cách nào biết rổ bị
   cắt. `data/market.json` vì thế nặng 612KB (nén còn 132KB), chấp nhận được.
@@ -1449,6 +1468,57 @@ chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thà
 > nguồn bảng giá trực tiếp, chỉ số và nến dự phòng. **Máy chủ tự thuê để chạy pipeline gọi
 > là `ASTERBOX`** (cũng là một VPS theo nghĩa máy ảo, nhưng đừng gọi tắt như vậy nữa —
 > đã có lần đọc nhầm thành một). Xem `server/README.md`.
+
+## Giá trong phiên — KHÁCH ĐỌC KHO, KHÔNG GỌI THẲNG VPS (17/08/2026)
+
+`tools/gia_phien.py` chạy trên ASTERBOX **mỗi 30 phút trong phiên** (tác vụ `CPVN gia
+phien`, xem `server/setup_gia_phien.ps1`), lấy bảng giá VPS đúng 11 lượt cho cả thị trường,
+ghi **nguyên văn** mảng VPS trả về vào `data/board.json` rồi commit + push. Client đọc file
+đó thay vì tự gọi VPS. Số chốt sổ vẫn do tác vụ EOD 15:15 lo.
+
+**Vì sao đổi** (đo thật trước khi sửa):
+
+| | lượt gọi VPS | dung lượng |
+|---|---|---|
+| 1 tab mở 1 giờ trong phiên | 180 | 24 MB |
+| 100 người xem cùng lúc, 6h | 108.000 | 14,5 GB (gấp 28× cả pipeline) |
+| 1000 người xem cùng lúc, 6h | 1,08 triệu | 145 GB (gấp 277×) |
+| **nay, mọi quy mô** | **143/phiên** | **hằng số** |
+
+Tải lên VPS TỈ LỆ THUẬN với lượng truy cập — tự lớn theo thành công của trang, không cần ai
+tấn công; mà mọi lượt gọi lại mang sẵn `Origin: https://cpvn.io`. Khách cũng nhẹ hơn 10 lần:
+1 lượt · 150 KB (Cloudflare nén) thay vì 11 lượt · 1,48 MB.
+
+- **GHI NGUYÊN VĂN, ĐỪNG PHÂN TÍCH Ở PHÍA MÁY CÀO.** Client đã có `doPoll` với toàn bộ luật
+  đã trả giá đắt (quy đổi ×1000/×10, cờ `nt`, lưới chặn biên độ, bảng đêm rỗng). Đẻ thêm bản
+  sao thứ tư ở máy cào là hai bên trôi khỏi nhau ngay lần sửa sau.
+- **CHỈ rơi về VPS khi kho KHÔNG CÓ file**, không rơi về vì file CŨ: file cũ nghĩa là máy cào
+  đang trục trặc, mà đó đúng là lúc cả nghìn khách cùng đổ về VPS một lượt.
+- **Ba bản sao** (`core.js`, `bubbles.html`, `congcu.js`) phải sửa cùng lúc.
+- `_headers` cho `board.json` cache **60s** (ngắn hơn `/data/*`) để độ trễ không cộng dồn.
+- **NHÃN "giá lúc HH:MM"** (`CP.nhanGia`) là thứ DUY NHẤT lộ ra khi cả hai máy cào chết —
+  không có nó thì trang vẫn hiện giá bình thường, chỉ là số của mấy tiếng trước. Quá 45 phút
+  trong phiên thì tô đỏ. Ngoài phiên không bao giờ báo cũ.
+
+> **ĐỔI NHỊP THÌ PHẢI ĐỔI NGƯỠNG "MÁY CHÍNH ĐÃ CHẾT" THEO.** Lưới dự phòng
+> `.github/workflows/gia_phien.yml` coi `board.json` cũ quá **75 phút** (hơn 2 nhịp) là máy
+> chính chết rồi tự cào thay. Giữ ngưỡng cũ khi đổi nhịp là chỉ cần lỡ MỘT lượt đã bị kết
+> luận nhầm, rồi hai máy cùng ghi đè nhau.
+> **Lịch Actions KHÔNG phải "giờ hẹn" mà là "sớm nhất có thể"** — đo 27 lượt trên chính kho
+> này: trễ ít nhất 7 phút, **trung vị 150**, nhiều nhất 287, không lượt nào đúng giờ. Nên
+> workflow rải **11 mốc** từ 22:00 UTC hôm trước tới 8:00 UTC; mô phỏng với mọi độ trễ đã đo
+> thì luôn còn 6-7 mốc rơi trong phiên. Đặt vài mốc "quanh giờ cần" là lưới thành hình thức.
+> **Actions CHƯA TỪNG đẩy commit nào** — nó luôn thoát sớm vì ASTERBOX đã làm xong. Đúng
+> nghĩa lưới an toàn chưa phải dùng tới.
+
+> **BẪY MÁY CHỦ — cả ba chỉ lộ ra khi chạy THẬT trên ASTERBOX dưới tài khoản SYSTEM:**
+> ① thiếu `GIT_SSH_COMMAND` -> `Host key verification failed` (SYSTEM không có ssh config,
+> không có known_hosts, khoá deploy tên không mặc định); ② gọi trống `python` -> SYSTEM không
+> có nó trong PATH, PowerShell ném CommandNotFound mà `$LASTEXITCODE` GIỮ NGUYÊN 0 nên tác vụ
+> **báo thành công giả**; ③ console cp1252 -> `UnicodeEncodeError` ở dòng print tiếng Việt đầu
+> tiên. Phải dùng đường dẫn đầy đủ tới python, `Test-Path` trước, và ép stdout sang UTF-8.
+> **`-StartWhenAvailable` là BẮT BUỘC**: trigger Weekly-09:00 kèm Repetition, máy tắt đúng
+> 09:00 là trigger trượt và **repetition không bao giờ bắt đầu** -> mất giá cả ngày, im lặng.
 
 ## Gọi mạng — trần theo host + lùi dần (`tools/nhipmang.py`, 16/08/2026)
 
