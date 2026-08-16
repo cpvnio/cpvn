@@ -1033,23 +1033,14 @@ except Exception as e:
     print(f"screen.json LỖI (không chặn pipeline): {e}",flush=True)
     HL["screen"]={"ok":0,"err":str(e)[:120]}
 
-# 10b) NHỊP SỢ HÃI TOÀN CẦU (CNN Fear & Greed — thị trường Mỹ, không có CORS nên server
-#      cào rồi ghi vào kho; CNN 418 với UA Chrome -> phải giả Safari + Referer)
-try:
-    _rq=urllib.request.Request("https://production.dataviz.cnn.io/index/fearandgreed/graphdata",
-        headers={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
-                 "Accept":"application/json","Referer":"https://edition.cnn.com/markets/fear-and-greed"})
-    with urllib.request.urlopen(_rq,timeout=20) as _r:
-        _fg=json.loads(_r.read().decode()).get("fear_and_greed") or {}
-    _mkp=os.path.join(BASE,"data","market.json")
-    if _fg.get("score") is not None and os.path.exists(_mkp):
-        _mk=json.load(open(_mkp,encoding="utf-8"))
-        _mk["usfg"]={"v":rnd(_fg["score"],1),"rating":_fg.get("rating"),"at":sess_date}
-        jdump(_mk,_mkp)
-        print(f"nhịp toàn cầu (CNN): {_mk['usfg']['v']} ({_mk['usfg']['rating']})",flush=True)
-        HL["usfg"]=1
-except Exception as e:
-    print(f"nhịp toàn cầu CNN lỗi (bỏ qua): {e}",flush=True); HL["usfg"]=0
+# 10b) NHỊP SỢ HÃI TOÀN CẦU (CNN Fear & Greed) — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI.
+#      Cào thì không đáng lo (1 lượt/ngày), nhưng trang ĐANG TRƯNG tên thương hiệu
+#      "CNN Fear & Greed" kèm con số ở panel Radar. Số 67 là dữ kiện; CÁI TÊN và cách tính
+#      là sản phẩm có thương hiệu của họ — đó mới là phần đáng nói. Giấu User-Agent không
+#      che được thứ hiện trên mặt tiền: ai ở CNN mở cpvn.io/radar là thấy trong năm giây.
+#      Nhánh dự phòng VIX (Yahoo) cũng bỏ theo: VIX là chỉ số có thương hiệu của CBOE, và
+#      Yahoo đã trả 429 từ lâu nên nhánh đó chết sẵn.
+#      Khối lấy CNN trong tools/build_screen.py cũng đã gỡ cùng lượt.
 
 # 11) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
 runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")

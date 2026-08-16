@@ -1329,14 +1329,16 @@ function toanCauPanel(){
    phải <text> trong SVG: chữ trong SVG co theo viewBox nên màn hẹp là teo còn 3px. */
 function tgSucManh(){
   const md=moodLive(), st=marketStats(), tot=Math.max(1,st.up+st.dn+st.fl);
-  const G=ST.market&&ST.market.global;
+  /* Ô "Sức mạnh TOÀN CẦU" ĐÃ BỎ 16/08/2026 — nó hiện chỉ số CNN Fear & Greed kèm đúng tên
+     thương hiệu của họ. Con số là dữ kiện, nhưng cái tên và cách tính là sản phẩm của CNN.
+     Chỉ còn ô TRONG NƯỚC — thứ CPVN tự tính từ dữ liệu của chính mình. Xem ghi chú dài ở
+     tools/build_screen.py. Đừng dựng lại bằng VIX: cùng vấn đề (chỉ số thương hiệu CBOE). */
   const o=(nhan,v,phu)=>'<div class="tgsm1"><span class="tgsmn">'+nhan+'</span>'
     +'<b style="color:'+moodCol(v)+'">'+(v==null?'—':Math.round(v))+'<i>/100</i></b>'
     +'<span class="tgsmw" style="color:'+moodCol(v)+'">'+moodWord(v)+'</span>'
     +(phu?'<span class="tgsmp">'+phu+'</span>':'')+'</div>';
   return '<div id="tgSM">'
-    +o('Sức mạnh TRONG NƯỚC',md,'▲'+st.up+' · –'+st.fl+' · ▼'+st.dn)
-    +o('Sức mạnh TOÀN CẦU',G?G.v:null,G?esc(G.src||''):'chưa có số liệu')
+    +o('Sức mạnh thị trường',md,'▲'+st.up+' · –'+st.fl+' · ▼'+st.dn)
     +'</div>';
 }
 function tgKhung(M,path,cham,tang,giam,nhan){
@@ -1430,7 +1432,6 @@ function renderRadar(){
       top(c=>c.vol>0&&liq(c)>0&&liq(c)<3e8,(a,b)=>a.avgval20-b.avgval20).map(c=>row(c,ty(c.avgval20),'')),'illq'),
   ];
 
-  const G=ST.market&&ST.market.global;
   const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
   const nnNet=ST.nnBuy-ST.nnSell;
   /* THANH KHOẢN lấy số CHÍNH THỨC của cả sàn (VPS trả kèm chỉ số), KHÔNG cộng gtgd từng

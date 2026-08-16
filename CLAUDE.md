@@ -637,7 +637,7 @@ giá sai hoặc giá nhảy — đừng đẩy.
   màn hẹp: nó ăn hơn 400px chiều cao chỉ để lặp lại thứ bản đồ đã nói. Hệ quả phải chấp
   nhận: màn hẹp chỉ đặt nổi ~18 nhãn nên phần còn lại chỉ có MÀU; muốn biết tên và số thì
   **chạm vào nước đó** để bung thẻ. Đừng đề xuất dựng lại bảng.
-  **HAI CHỈ SỐ SỨC MẠNH nằm trong GÓC DƯỚI-TRÁI bản đồ** (Nam Thái Bình Dương — trống ở
+  **CHỈ SỐ SỨC MẠNH THỊ TRƯỜNG nằm trong GÓC DƯỚI-TRÁI bản đồ** (từ 16/08/2026 chỉ còn MỘT ô — ô "Sức mạnh TOÀN CẦU" lấy CNN Fear & Greed đã bỏ, xem mục *Gọi mạng*) (Nam Thái Bình Dương — trống ở
   mọi phép chiếu, không nước nào có sàn). Trước ở cụm ba thẻ đầu trang, cụm đó đã bỏ.
   Dựng bằng **HTML phủ lên**, không phải `<text>` trong SVG: chữ trong SVG co theo viewBox
   nên màn hẹp teo còn 3px. Ba thứ đi kèm:
@@ -1281,6 +1281,16 @@ nhìn thấy, không phản đối; đó là đồng thuận trên thực tế m
 > bị yêu cầu dừng" thì xấu hơn hẳn mọi luận điểm hiện có. Nếu hỏi thì hỏi câu THƯƠNG MẠI
 > ("quý công ty có chương trình dữ liệu cho trang thông tin không?") chứ đừng hỏi câu xin
 > phán quyết.
+
+> **CNN FEAR & GREED ĐÃ BỎ HẲN 16/08/2026 — ĐỪNG DỰNG LẠI, KỂ CẢ BẰNG VIX.**
+> Bước 10b của pipeline, khối `_cnn`/`_vix` trong `build_screen.py`, ô "Sức mạnh TOÀN CẦU"
+> trong `tgSucManh()` và hai trường `global`/`usfg` của `market.json` đều gỡ.
+> Lý do **không phải chuyện cào** (1 lượt/ngày, chẳng ai bận tâm) mà là: trang **trưng tên
+> thương hiệu "CNN Fear & Greed"** kèm con số ở panel Radar. Con số là dữ kiện; **cái tên
+> và cách tính là sản phẩm có thương hiệu của CNN**. Giấu User-Agent không che được thứ
+> hiện trên mặt tiền — ai ở CNN mở `cpvn.io/radar` là thấy trong năm giây.
+> Nhánh dự phòng VIX cùng vấn đề (chỉ số thương hiệu của CBOE) và Yahoo đã trả 429 từ lâu.
+> **Ô "Sức mạnh thị trường" trong nước giữ nguyên** — CPVN tự tính từ dữ liệu của mình.
 
 ## Pipeline
 

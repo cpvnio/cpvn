@@ -653,27 +653,16 @@ def main():
         B['hl'].append(round(hl, 1)); B['ud'].append(round(ud2, 1)); B['mom'].append(round(mom, 1))
         B['nh'].append(nh); B['nl'].append(nl); B['nn'].append(round(nn2 / 1e9, 1))
     out2['breadth'] = B
-    # ---- nhịp sợ hãi THỊ TRƯỜNG TOÀN CẦU: CNN Fear&Greed (TT Mỹ); hỏng thì quy đổi VIX Yahoo
-    import urllib.request as _ur
-    def _cnn():
-        req=_ur.Request('https://production.dataviz.cnn.io/index/fearandgreed/graphdata',
-            headers={'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.4 Safari/605.1.15',
-                     'Accept':'application/json','Accept-Language':'en-US,en;q=0.9',
-                     'Referer':'https://edition.cnn.com/markets/fear-and-greed','Origin':'https://edition.cnn.com'})
-        with _ur.urlopen(req,timeout=12) as r:
-            fg=json.loads(r.read().decode())['fear_and_greed']
-        return dict(v=int(round(float(fg['score']))), src='CNN Fear & Greed — thị trường Mỹ')
-    def _vix():
-        req=_ur.Request('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?range=2d&interval=1d',
-            headers={'User-Agent':'Mozilla/5.0'})
-        with _ur.urlopen(req,timeout=12) as r:
-            m=json.loads(r.read().decode())['chart']['result'][0]['meta']
-        vix=float(m['regularMarketPrice'])
-        return dict(v=max(0,min(100,int(round(100-(vix-10)*4)))), src='quy đổi từ VIX %.1f'%vix)
-    for fn in (_cnn,_vix):
-        try:
-            out2['global']=fn(); break
-        except Exception: pass
+    # ---- "SỨC MẠNH TOÀN CẦU" ĐÃ BỎ 16/08/2026 — ĐỪNG DỰNG LẠI ----
+    # Trước đây lấy CNN Fear & Greed (dự phòng: quy đổi từ VIX của Yahoo).
+    # Bỏ vì hai lẽ, và lẽ thứ hai mới là chính:
+    #   · Cào thì không đáng lo (1 lượt/ngày) — nhưng trang ĐANG TRƯNG tên thương hiệu
+    #     "CNN Fear & Greed" kèm con số. Số 67 là dữ kiện, còn CÁI TÊN và cách tính là
+    #     sản phẩm có thương hiệu của họ. Giấu User-Agent không che được thứ hiện trên
+    #     mặt tiền — ai ở CNN mở cpvn.io/radar là thấy ngay.
+    #   · Nhánh dự phòng VIX cũng cùng vấn đề: VIX là chỉ số có thương hiệu của CBOE, và
+    #     Yahoo đã trả 429 từ lâu nên nhánh đó chết sẵn.
+    # "Sức mạnh TRONG NƯỚC" giữ nguyên — CPVN tự tính từ dữ liệu của chính mình.
     if races:
         allm = set()
         for mm in races.values(): allm.update(mm.keys())
