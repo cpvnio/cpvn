@@ -50,6 +50,9 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nhipmang   # trần tốc độ theo host + lùi dần khi nguồn kêu (16/08/2026)
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(BASE, "data", "cocau")
@@ -110,10 +113,9 @@ def nhan_ky(ten, ky_loai):
 def goi(url, thu=3):
     for i in range(thu):
         try:
-            r = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0", "Referer": "https://simplize.vn/"})
-            with urllib.request.urlopen(r, timeout=30) as f:
-                return json.load(f)
+            # đi qua nhipmang: trần 8 lượt/giây tới Simplize, tự giãn khi bị 429
+            return json.loads(nhipmang.get(url, timeout=30,
+                                           headers={"Referer": "https://simplize.vn/"}))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
             if i == thu - 1:
                 return None

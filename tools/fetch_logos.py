@@ -12,6 +12,9 @@ là mất sạch logo. Sau khi kho hoá: ~1.6KB/mã, phục vụ từ cpvn.io, c
 Cần Pillow: pip install Pillow
 """
 import json, os, sys, io, time, urllib.request, concurrent.futures, threading
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nhipmang   # trần tốc độ theo host + lùi dần khi nguồn kêu (16/08/2026)
 from PIL import Image
 
 BASE=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,8 +40,7 @@ def to_webp(raw):
 def fetch_one(sym,url,dest):
     for att in range(3):
         try:
-            with urllib.request.urlopen(urllib.request.Request(url,headers=UA),timeout=25) as r:
-                raw=r.read()
+            raw = nhipmang.get(url, timeout=25, doc=True)   # ảnh -> bytes thô
             data=to_webp(raw)
             tmp=dest+".tmp"
             open(tmp,"wb").write(data); os.replace(tmp,dest)

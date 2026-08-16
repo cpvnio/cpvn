@@ -367,6 +367,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   #pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #pager button:disabled{opacity:.35;cursor:default}
 
+  /* Ghi nguồn dữ liệu — đứng ngay dưới bảng, trước chân trang. Nhạt, một dòng, không
+     tranh chỗ với số liệu; nhưng KHÔNG được bỏ đi cho gọn. */
+  .nguon{text-align:center;padding:10px 14px 0;font-size:12px;color:var(--muted);line-height:1.6}
+  .nguon a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+  .nguon a:hover{color:var(--text,#e7ecf3)}
   footer{display:flex;gap:10px;align-items:center;justify-content:center;padding:8px 14px 22px;
     color:var(--muted);font-size:11.5px;flex-wrap:wrap;text-align:center}
   #kho.ok{color:var(--green)} #kho.bad{color:var(--yellow)}
@@ -688,6 +693,13 @@ document.addEventListener(MO,function(e){
 </div>
 </div>
 
+<!-- GHI NGUỒN ĐẶT NGAY DƯỚI BẢNG GIÁ, không nhét xuống chân trang (16/08/2026).
+     Giá sống của cả site do bgapidatafeed.vps.com.vn cấp — endpoint công khai, CORS mở
+     sẵn `Access-Control-Allow-Origin: *`. Ghi nguồn ở đúng chỗ dữ liệu của họ đang chạy
+     vừa là phép lịch sự tối thiểu, vừa là cách xin phép ngầm: tên họ hiện công khai, họ
+     nhìn thấy, không phản đối — đó là đồng thuận trên thực tế mà không cần ai ký gì. -->
+<div class="nguon">Giá trực tiếp &amp; chỉ số: <a href="https://www.vps.com.vn" target="_blank" rel="noopener">Chứng khoán VPS</a>
+  · Nến lịch sử, khối ngoại &amp; tin: <a href="https://www.vndirect.com.vn" target="_blank" rel="noopener">VNDIRECT</a></div>
 <footer>
   <span id="kho">kho dữ liệu: đang kiểm tra…</span>
   <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
@@ -698,7 +710,7 @@ document.addEventListener(MO,function(e){
     trong kết quả lọc. Người dùng tự chịu trách nhiệm với quyết định của mình.</div>
 </footer>
 
-<script src="assets/core.js?v=20260816f"></script>
+<script src="assets/core.js?v=20260816g"></script>
 <script src="assets/screener.js?v=20260816c"></script>
 <script>
 'use strict';

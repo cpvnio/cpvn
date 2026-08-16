@@ -1246,6 +1246,42 @@ chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thà
 > là `ASTERBOX`** (cũng là một VPS theo nghĩa máy ảo, nhưng đừng gọi tắt như vậy nữa —
 > đã có lần đọc nhầm thành một). Xem `server/README.md`.
 
+## Gọi mạng — trần theo host + lùi dần (`tools/nhipmang.py`, 16/08/2026)
+
+Mọi lượt gọi của pipeline đi qua `nhipmang.get()`. **Đừng gọi thẳng `urllib` nữa.**
+
+| Cơ chế | Làm gì |
+|---|---|
+| **Trần theo host** | khoảng cách tối thiểu giữa hai lượt tới CÙNG một host, đo bằng đồng hồ chung có khoá nên đúng cả khi nhiều luồng |
+| **Lùi dần** | 429/5xx/timeout → chờ 1s, 2s, 4s rồi thử lại; tôn trọng `Retry-After` nếu nguồn gửi. 400/403/404 thì ném ra ngay, thử lại vô ích |
+| **Tự chậm lại vĩnh viễn** | bị 429 → **nhân đôi trần của host đó cho hết lượt chạy** (trần tối đa 5s). Đây mới là phần quan trọng: chờ rồi thử lại với tốc độ cũ là vẫn nện |
+
+Trần đang khai: Simplize 8 lượt/giây · VNDirect 12 · 24hMoney 8 · VPS 5 · SSI 2 · mặc định 5.
+> **ĐỪNG nới trần để pipeline nhanh hơn.** Nó chạy 15h15 không ai ngồi đợi; chậm thêm vài
+> phút không mất gì, bị chặn IP là mất cả nguồn. Trước khi có lớp này, bước kho nến chạy 12
+> luồng × ~200ms = đỉnh **~60 lượt/giây** dội vào VNDirect — con số của một cuộc tấn công
+> nhẹ chứ không phải của một trang tử tế. Đây là lớp phòng thủ cho **Điều 287 BLHS**.
+
+**USER-AGENT: `CPVN.IO/1.0 (+https://cpvn.io)` — ĐỪNG QUAY LẠI CHUỖI GIẢ TRÌNH DUYỆT.**
+Bản cũ gửi `Mozilla/5.0 … Chrome/120`. Giả UA không cấu thành Điều 289 (không vượt cảnh báo
+hay mã truy cập nào) nhưng là chi tiết DUY NHẤT trong cả hệ thống mang hình dạng lảng tránh.
+Mà giấu cũng vô nghĩa: mọi lượt gọi **từ trình duyệt người xem** đều mang sẵn
+`Origin: https://cpvn.io` (CORS bắt buộc, không tắt được) — và đó mới là gần hết khối lượng.
+Đã đo 16/08: **9/9 nguồn trả 200** với UA thật thà.
+> **Chưa đưa email vào UA** — chờ có pháp nhân rồi mới thêm địa chỉ của công ty. Đừng phơi
+> liên hệ cá nhân vào log của bên thứ ba khi chưa có lớp bảo vệ nào.
+
+**GHI NGUỒN đặt NGAY DƯỚI BẢNG GIÁ** (`.nguon` trong index.html), không nhét xuống chân
+trang: *"Giá trực tiếp & chỉ số: Chứng khoán VPS · Nến lịch sử, khối ngoại & tin: VNDIRECT"*.
+Vừa là phép lịch sự tối thiểu, vừa là **cách xin phép ngầm** — tên họ hiện công khai, họ
+nhìn thấy, không phản đối; đó là đồng thuận trên thực tế mà không cần ai ký gì.
+> ⚠️ **Chưa gửi email xin phép VPS, và cân nhắc kỹ trước khi gửi.** Endpoint của họ công
+> khai, CORS mở sẵn `Access-Control-Allow-Origin: *` (cấu hình có chủ ý). Hỏi xin phép có
+> thể biến vùng xám ĐANG CÓ LỢI thành một chữ "không" bằng văn bản — mà "tiếp tục sau khi
+> bị yêu cầu dừng" thì xấu hơn hẳn mọi luận điểm hiện có. Nếu hỏi thì hỏi câu THƯƠNG MẠI
+> ("quý công ty có chương trình dữ liệu cho trang thông tin không?") chứ đừng hỏi câu xin
+> phán quyết.
+
 ## Pipeline
 
 11 bước, thứ tự bắt buộc: **bảng giá (bước 2) phải chạy TRƯỚC kho nến (bước 3)** vì

@@ -38,6 +38,9 @@ dương) nên vẫn ưu tiên số kho.
   python3 tools/kho_sau.py --va-fin        # dựng, ĐỒNG THỜI sửa dấu cfQ/cfY trong data/fin
 """
 import json, os, re, sys, time, urllib.request, concurrent.futures, threading, collections
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nhipmang   # trần tốc độ theo host + lùi dần khi nguồn kêu (16/08/2026)
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIN  = os.path.join(BASE, "data", "fin")
@@ -71,6 +74,9 @@ for a in sys.argv:
         CHI = {x.strip().upper() for x in a.split("=",1)[-1].replace("--ma","").split(",") if x.strip()}
 
 def get(url, timeout=45):
+    # đi qua nhipmang (trần theo host + lùi dần) — xem tools/nhipmang.py
+    return json.loads(nhipmang.get(url, timeout=timeout))
+def _get_cu(url, timeout=45):
     with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
         return json.loads(r.read().decode())
 

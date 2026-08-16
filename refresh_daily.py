@@ -27,13 +27,28 @@ NEWS_DIR=os.path.join(BASE,"data","news")
 PROF_DIR=os.path.join(BASE,"data","profile")
 SPARK=os.path.join(BASE,"data","spark.json"); HEALTH=os.path.join(BASE,"data","health.json")
 HL={}   # health: kết quả từng bước của lượt chạy này -> data/health.json
-UA={"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120"}
 FULL="--full" in sys.argv; NOW=int(time.time())
 BACKFILL_D=2400; DAILY_D=260          # backfill ~6.5 năm; ngày thường chỉ cần 260 ngày (mốc m3/m6)
 VNTZ=datetime.timezone(datetime.timedelta(hours=7))
+
+# ---------------------------------------------------------------------------
+# GỌI MẠNG: trần tốc độ theo host + lùi dần khi nguồn kêu -> tools/nhipmang.py
+#
+# UA CŨ LÀ CHUỖI GIẢ TRÌNH DUYỆT ("Mozilla/5.0 … Chrome/120") — ĐÃ BỎ 16/08/2026.
+# Giả UA không cấu thành Điều 289 BLHS (không vượt cảnh báo hay mã truy cập nào), nhưng nó
+# là chi tiết DUY NHẤT trong cả hệ thống mang hình dạng lảng tránh — soi lại thì "giả mạo
+# User-Agent trình duyệt" đọc rất khác "dùng thư viện mặc định". Mà giấu cũng chẳng để làm
+# gì: mọi lượt gọi TỪ TRÌNH DUYỆT người xem đều mang sẵn `Origin: https://cpvn.io` (CORS
+# bắt buộc, không tắt được), và phần đó mới là gần hết khối lượng. Nguồn đã biết là ai rồi.
+# Đã đo 16/08: 9/9 nguồn trả 200 với UA thật thà, không nguồn nào đòi UA trình duyệt.
+#   Chưa đưa EMAIL vào UA — chờ có pháp nhân rồi mới thêm địa chỉ của công ty, đừng phơi
+#   liên hệ cá nhân ra log của bên thứ ba.
+# ---------------------------------------------------------------------------
+sys.path.insert(0,os.path.join(BASE,"tools"))
+import nhipmang
+UA={"User-Agent":nhipmang.UA}          # vài chỗ còn dựng Request riêng thì dùng chung UA này
 def get(url,timeout=20):
-    with urllib.request.urlopen(urllib.request.Request(url,headers=UA),timeout=timeout) as r:
-        return json.loads(r.read().decode())
+    return json.loads(nhipmang.get(url,timeout=timeout))
 def jdump(obj,path):                   # ghi JSON gọn (không khoảng trắng) + atomic
     tmp=path+".tmp"
     json.dump(obj,open(tmp,"w",encoding="utf-8"),ensure_ascii=False,separators=(",",":"))
