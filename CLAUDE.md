@@ -75,11 +75,22 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 > **tuyệt đối đừng bịa nến hôm nay từ giá sống**, xem luật "ĐỪNG dựng nến mới cho phiên
 > nguồn chưa có". Luật "chọn nguồn theo phiên mới nhất nó có" (dưới đây) vì thế chỉ còn áp
 > cho nhánh cứu hộ.
-> **KHO ĐÚNG HƠN NGUỒN Ở MỘT SỐ CA — đo được, không phải suy đoán.** SSI phiên 14/08: bảng
-> giá 24.500đ (ref 25.000, trần 26.750), **kho ghi đúng 24.500**, còn `dchart` trả **19.583**
-> — thấp hơn 20%, tức chart cũ vẽ lệch hẳn so với con số hiện ngay đầu trang. Mẫu 70 mã ngẫu
-> nhiên khác khớp nền 70/70, nên đây là ca hiếm; nhưng nó là bằng chứng rằng **mọi lượt bồi
-> kho phải quy về cùng nền trước khi ghép** (xem ba luật ở mục kho `data/hist`).
+> **KHO LỖI THỜI TRONG NGÀY CHỐT QUYỀN — PHẢI TỰ PHÁT HIỆN, BẰNG KHÔNG CHART BUNG CÚ SẬP GIẢ.**
+> Kho chốt 15:15 nên từ lúc mở cửa NGÀY GDKHQ tới lượt cào kế tiếp, nó vẫn giữ nền TRƯỚC khi
+> hạ, trong khi giá sống đã sang nền mới. Ca đo được: **SSI ngày 17/08/2026** chốt quyền cùng
+> lúc **cổ tức tiền 1.000đ + cổ phiếu thưởng 100:20** → nền mới `(24.500 − 1.000) ÷ 1,2 =
+> 19.583đ`, **đúng bằng số `dchart` trả**, còn kho vẫn ghi 24.500 (tỉ lệ 1,2511).
+> **`dchart` KHÔNG sai — nó hạ nền đúng lịch; kho mới là bản cũ.** (Đừng lặp lại nhầm lẫn
+> này: lần đầu đọc số 19.583 rất dễ kết luận ngược, phải mở `data/cotuc.json` ra soi ngày `d`
+> trước khi phán.) Mẫu 70 mã ngẫu nhiên khác khớp nền 70/70 — chỉ mã đang chốt quyền mới lệch.
+> **Cách phát hiện: `CP.khoLoiThoi(sym, tNếnCuối)` hỏi `data/cotuc.json`** — có sự kiện nào
+> rơi vào khoảng `(nến cuối của kho, hôm nay]` thì kho chắc chắn chưa biết → đi mượn nguồn
+> ngoài cho riêng mã đó. **ĐỪNG dò bằng cách so số**: tham chiếu của UPCOM là BÌNH QUÂN phiên
+> trước chứ không phải giá đóng cửa, so giá sẽ báo động giả hàng loạt.
+> Giá phải trả rất nhỏ — đo 17/08: **8/1.527 mã** (BID, CTI, GMX, KTL, MBS, SEB, SSI, TMW),
+> tức 0,5%; 99,5% còn lại vẫn đọc kho. Bản sao trong `bubbles.html` phải sửa cùng lúc.
+> Đây cũng là bằng chứng rằng **mọi lượt bồi kho phải quy về cùng nền trước khi ghép**
+> (xem ba luật ở mục kho `data/hist`).
 
 Bảng dưới là ĐỘ SÂU và CHẤT LƯỢNG của từng nguồn, vẫn đúng — nay dùng để chọn nguồn cho
 nhánh cứu hộ và cho pipeline, không còn là thứ tự client gọi:

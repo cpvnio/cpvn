@@ -569,6 +569,30 @@ const ngayNen=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
    nhất thì dùng luôn và dừng; chưa có thì giữ lại làm dự phòng rồi hỏi tiếp nguồn sau,
    cuối cùng lấy nguồn có nến MỚI NHẤT. Thứ tự ưu tiên khi hoà vẫn là VNDirect (hồi tố
    quyền đầy đủ nhất) -> VPS -> kho. */
+/* ═══ KHO CÓ ĐANG Ở NỀN GIÁ CŨ KHÔNG? ═══
+   Kho chốt 15:15 mỗi phiên, nên trong khoảng từ lúc mở cửa NGÀY GDKHQ tới lượt cào kế tiếp,
+   nó vẫn giữ nền TRƯỚC khi hạ. Chuyện này có thật và đo được: SSI ngày 17/08/2026 chốt quyền
+   cùng lúc cổ tức tiền 1.000đ và cổ phiếu thưởng 100:20 -> nền mới = (24.500 − 1.000) ÷ 1,2
+   = 19.583đ, đúng bằng số VNDirect trả, trong khi kho vẫn ghi 24.500. Lấy kho lúc đó là
+   chart mang nền cũ còn giá sống đã sang nền mới — bung ra một cú sập giả 20%.
+   Không đoán bằng cách so số: `tham chiếu` của UPCOM là BÌNH QUÂN phiên trước chứ không phải
+   giá đóng cửa, nên so giá sẽ báo động giả hàng loạt. Hỏi thẳng LỊCH CHỐT QUYỀN — trang đã
+   có sẵn `data/cotuc.json` (32KB, `d` = ngày GDKHQ). Có sự kiện nào rơi vào khoảng
+   (nến cuối của kho, hôm nay] thì kho chắc chắn chưa biết, phải đi mượn nguồn ngoài.
+   Giá phải trả: đúng mấy mã chốt quyền trong ngày mới tốn một lượt gọi (263 sự kiện rải
+   8 tháng ≈ 1-2 mã mỗi phiên), thay vì cả 1.527 mã mỗi lượt mở trang. */
+let cotucP=null;
+CP.khoLoiThoi=async function(sym,tCuoi){
+  try{
+    if(!cotucP) cotucP=fetch('data/cotuc.json').then(r=>r.ok?r.json():null).catch(()=>null);
+    const j=await cotucP; if(!j||!j.sk) return false;
+    const ngay=ms=>new Date(ms+25200000).toISOString().slice(0,10);     // -> ngày theo giờ VN
+    const tu=ngay(tCuoi*1000), den=ngay(Date.now());
+    /* MỌI loại sự kiện đều hạ nền — kể cả cổ tức TIỀN: nguồn VN hồi tố cả cổ tức tiền,
+       khác thông lệ thế giới (đã đo, xem CLAUDE.md). Đừng lọc bớt theo `k`. */
+    return j.sk.some(x=>x&&x.s===sym&&x.d>tu&&x.d<=den);
+  }catch(e){ return false; }
+};
 CP.loadDaily=function(sym){
   if(dayCache.has(sym)) return dayCache.get(sym);
   const p=(async()=>{
@@ -597,7 +621,8 @@ CP.loadDaily=function(sym){
        chưa phải một cây nến thật. TUYỆT ĐỐI đừng bịa nến hôm nay từ giá sống — xem luật
        "ĐỪNG dựng nến mới cho phiên nguồn chưa có" trong CLAUDE.md. */
     const f=await CP.loadHistFile(sym);
-    if(f&&f.t&&f.t.length>=2) return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+    if(f&&f.t&&f.t.length>=2&&!(await CP.khoLoiThoi(sym,f.t[f.t.length-1])))
+      return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
     /* Kho không có mã này (mã mới niêm yết, hoặc lượt cào gần nhất trượt) — lúc đó mới đi
        mượn, và vẫn giữ luật cũ: nguồn nào có phiên mới nhất thì lấy nguồn đó. */
     if(!CP.OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
