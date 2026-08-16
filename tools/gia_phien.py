@@ -35,6 +35,17 @@ sau. Ghi thô thì client chạy y hệt như khi tự gọi mạng, chỉ khác
 """
 import json, os, sys, subprocess, datetime, urllib.error
 
+# CONSOLE WINDOWS DÙNG CP1252 — không ép UTF-8 là script CHẾT NGAY dòng print đầu tiên có
+# dấu tiếng Việt: `UnicodeEncodeError: 'charmap' codec can't encode character 'ỉ'`
+# (chữ "chỉ"). Đã dính đúng vậy lượt chạy thật đầu tiên trên ASTERBOX. Nguy hiểm ở chỗ nó
+# không hỏng lúc viết mà hỏng lúc CHẠY TRÊN MÁY CHỦ, và chỉ hỏng với máy chủ tiếng Anh.
+# `errors="replace"` để dù ngôn ngữ hệ thống có lạ tới đâu thì cũng chỉ mất dấu, không chết.
+for _s in ("stdout", "stderr"):
+    try:
+        getattr(sys, _s).reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nhipmang
 
