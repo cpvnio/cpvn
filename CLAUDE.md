@@ -1241,6 +1241,11 @@ Nhãn đầu đường (kể cả "vốn đã bỏ") phải nằm chung mảng `
 tách ra vẽ riêng là chồng chữ; vòng đẩy ngược lên khi tràn đáy phải **cascade**, bản cũ
 chỉ nhích được đúng một nhãn nên 5 nhãn dồn đáy là dính thành một mớ.
 
+> ⚠️ **"VPS" TRONG TÀI LIỆU NÀY LUÔN LÀ CÔNG TY CỔ PHẦN CHỨNG KHOÁN VPS** (`vps.com.vn`) —
+> nguồn bảng giá trực tiếp, chỉ số và nến dự phòng. **Máy chủ tự thuê để chạy pipeline gọi
+> là `ASTERBOX`** (cũng là một VPS theo nghĩa máy ảo, nhưng đừng gọi tắt như vậy nữa —
+> đã có lần đọc nhầm thành một). Xem `server/README.md`.
+
 ## Pipeline
 
 11 bước, thứ tự bắt buộc: **bảng giá (bước 2) phải chạy TRƯỚC kho nến (bước 3)** vì
@@ -1283,13 +1288,14 @@ news 6, profile 5) — tăng lên dễ bị chặn IP.
 > **`fetched:0` nhiều phiên liền TRONG KHI `missing` không giảm nghĩa là mấy url đó đang 404 ở
 > nguồn** — đừng đọc thành "chưa chạy tới". 10 mã nhóm A hiện đúng trạng thái ấy.
 
-**Lịch chạy**: VPS Windows Scheduled Task 15:15 chạy `server/run_refresh.ps1` (commit
+**Lịch chạy**: máy cào `ASTERBOX` (VPS Windows — *máy thuê của mình*, KHÔNG liên quan
+Chứng khoán VPS) chạy Scheduled Task 15:15 gọi `server/run_refresh.ps1` (commit
 `EOD <phiên> (server)`) — **đường chính**. GitHub Actions dự phòng 16:05 / 19:05 / 23:05 giờ VN,
 so `data/health.json['date']` với **phiên gần nhất đã đóng sổ**, bằng nhau thì tự thoát.
 Toàn bộ cấu hình máy chủ nằm trong **`server/`** (script chạy + script dựng tác vụ + cách
 dựng lại từ số 0). Tác vụ trỏ thẳng vào file TRONG kho nên sửa ở repo là lượt sau tự lấy.
 
-> **`Last Result: 0` của Scheduled Task KHÔNG có nghĩa là đã đẩy được lên GitHub** — nó chỉ
+> **`Last Result: 0` của Scheduled Task trên `ASTERBOX` KHÔNG có nghĩa là đã đẩy được lên GitHub** — nó chỉ
 > nói PowerShell thoát sạch. Ngày 04/08/2026 tác vụ chạy đúng giờ, cào đủ 1522 mã, commit tại
 > chỗ, rồi `git push` bị từ chối "fetch first" vì có commit khác đẩy lên trong 8 phút pipeline
 > chạy — cả phiên nằm lại trong máy suốt buổi tối mà không ai biết. Nay script kéo lại ngay
