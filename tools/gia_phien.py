@@ -126,25 +126,39 @@ def main():
 
 
 def day():
-    """Commit + push. KÉO LẠI TRƯỚC KHI ĐẨY — cùng bài học với run_refresh.ps1: pipeline
-       chạy 8 phút mà có commit khác chen vào là `git push` bị từ chối im lặng, cả phiên
-       nằm lại trong máy mà không ai biết."""
+    """Commit + push. KÉO LẠI TRƯỚC MỖI LƯỢT ĐẨY — cùng bài học với run_refresh.ps1: có
+       commit khác chen vào giữa chừng là `git push` bị từ chối IM LẶNG, cả lượt nằm lại
+       trong máy mà không ai biết (`Last Result: 0` vẫn là hỏng).
+       `-X theirs` = đụng nhau thì lấy BẢN VỪA CÀO. An toàn tuyệt đối ở đây vì file này
+       dựng lại từ đầu mỗi lượt, không có gì để mất; thiếu nó là rebase dừng giữa chừng và
+       máy kẹt vĩnh viễn — ở nhịp 15 phút thì kẹt cả phiên chứ không phải một ngày.
+       KHÔNG đặt GIT_SSH_COMMAND ở đây: run_gia_phien.ps1 đặt sẵn cho cả lượt chạy, giữ
+       một chỗ duy nhất phải nhớ (khoá deploy tên không mặc định + known_hosts của SYSTEM)."""
     def g(*a):
         return subprocess.run(["git", "-C", BASE, *a], capture_output=True, text=True)
+
+    def ket():
+        return any(os.path.exists(os.path.join(BASE, ".git", x))
+                   for x in ("rebase-merge", "rebase-apply"))
+
     if not g("status", "--porcelain", "data/board.json").stdout.strip():
         print("file không đổi -> khỏi commit", flush=True)
         return 0
     g("add", "data/board.json")
     g("commit", "-q", "-m", f"Giá phiên {gio_vn():%Y-%m-%d %H:%M}")
-    for lan in range(1, 6):
-        g("pull", "--rebase", "-q", "origin", "main")
+    for lan in range(1, 5):
+        g("pull", "--rebase", "-X", "theirs", "-q", "origin", "main")
+        if ket():
+            print(f"  rebase kẹt vòng {lan} -> huỷ để lượt sau còn chạy", flush=True)
+            g("rebase", "--abort")
+            continue
         r = g("push", "-q", "origin", "HEAD:main")
         if r.returncode == 0:
-            print(f"đã đẩy (lần {lan})", flush=True)
+            print(f"đã đẩy (vòng {lan})", flush=True)
             return 0
-        print(f"  đẩy hỏng lần {lan}: {r.stderr.strip()[:120]}", flush=True)
-    open(os.path.join(BASE, "PUSH_FAILED.txt"), "w").write(
-        f"gia_phien đẩy hỏng {gio_vn():%Y-%m-%d %H:%M}\n")
+        print(f"  đẩy hỏng vòng {lan}: {r.stderr.strip()[:120]}", flush=True)
+    open(os.path.join(BASE, "PUSH_FAILED.txt"), "w", encoding="utf-8").write(
+        f"gia_phien day hong {gio_vn():%Y-%m-%d %H:%M}\n")
     return 1
 
 
