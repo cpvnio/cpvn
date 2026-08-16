@@ -1,17 +1,19 @@
 name: CPVN gia phien (du phong)
 
-# DỰ PHÒNG cho tác vụ 'CPVN gia phien' trên ASTERBOX (nhịp 15 phút, 9:00-15:00 giờ VN).
+# DỰ PHÒNG cho tác vụ 'CPVN gia phien' trên ASTERBOX (nhịp 30 phút, 9:00-15:00 giờ VN).
 #
 # VÌ SAO VẪN CẦN, DÙ ACTIONS KHÔNG ĐÚNG GIỜ:
 #   Lịch Actions từng bị đẩy trễ hơn 8 tiếng, có ngày không chạy — nên nó KHÔNG thay được
-#   nhịp 15 phút. Nhưng làm LƯỚI AN TOÀN thì hợp: việc duy nhất nó phải làm là "sớm muộn gì
+#   nhịp 30 phút. Nhưng làm LƯỚI AN TOÀN thì hợp: việc duy nhất nó phải làm là "sớm muộn gì
 #   cũng chạy". ASTERBOX chết hẳn (hết hạn ~12/2026, mất điện, Windows Update khởi động lại
 #   đúng 9:00) thì trước đây là mất giá CẢ NGÀY và im lặng; nay chậm nhất khoảng một tiếng
 #   là có lượt vá.
 #
 # KHÔNG BAO GIỜ ĐỤNG MÁY CHÍNH: bước kiểm tra đọc `at` trong data/board.json — máy chính vừa
-# ghi trong vòng 40 phút thì thoát ngay, không cào, không push, không tốn gì. Ngưỡng 40 phút
-# = hơn 2 nhịp của máy chính, đủ để một lượt lỡ nhịp không bị coi là hỏng.
+# ghi trong vòng 75 phút thì thoát ngay, không cào, không push, không tốn gì. Ngưỡng 75 phút
+# = hơn 2 nhịp của máy chính (30 phút), đủ để một lượt lỡ nhịp không bị coi là hỏng. ĐỔI NHỊP
+# THÌ PHẢI ĐỔI NGƯỠNG NÀY THEO — để 40 phút như hồi nhịp 15 là chỉ cần lỡ MỘT lượt đã bị
+# kết luận nhầm là máy chính chết, rồi hai máy cùng ghi đè nhau.
 # ĐỘ TRỄ ĐO ĐƯỢC TRÊN CHÍNH KHO NÀY (27 lượt của daily.yml, 08/2026):
 #     trễ ít nhất 7 phút · TRUNG VỊ 150 phút · nhiều nhất 287 phút
 #     KHÔNG lượt nào chạy đúng giờ.
@@ -55,7 +57,7 @@ jobs:
           fi
           CU=$(python3 -c "import json,os,time;p='data/board.json';print(int((time.time()-(json.load(open(p)).get('at',0)/1000))/60) if os.path.exists(p) else 99999)")
           echo "gio VN $GIO · board.json cu $CU phut"
-          if [ "$CU" -ge 40 ]; then
+          if [ "$CU" -ge 75 ]; then
             echo "may chinh co ve da chet -> va"; echo "can=1" >> "$GITHUB_OUTPUT"
           else
             echo "may chinh con song -> thoi"; echo "can=0" >> "$GITHUB_OUTPUT"
@@ -83,7 +85,7 @@ jobs:
             git fetch -q origin main
             if ! git merge-base --is-ancestor HEAD origin/main; then
               MOI=$(git show origin/main:data/board.json | python3 -c "import json,sys,time;print(int((time.time()-(json.load(sys.stdin).get('at',0)/1000))/60))" || echo 99999)
-              if [ "$MOI" -lt 40 ]; then
+              if [ "$MOI" -lt 75 ]; then
                 echo "may chinh vua push (file moi $MOI phut) -> rut lui"; exit 0
               fi
             fi

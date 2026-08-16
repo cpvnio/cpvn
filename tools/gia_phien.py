@@ -18,7 +18,7 @@ log bên kia trỏ thẳng về mình.
 Script này lấy đúng 11 lượt mỗi nhịp, ghi vào kho, đẩy lên Cloudflare. Từ đó tải lên VPS
 là HẰNG SỐ — 1 người xem hay 1 triệu đều như nhau.
 
-    nhịp 15 phút · phiên 9:00-15:05  ->  ~25 lượt chạy = 275 lượt gọi/phiên
+    nhịp 30 phút · phiên 9:00-15:00  ->  13 lượt chạy = 143 lượt gọi/phiên
     (so với 108.000 lượt của kịch bản 100 người xem)
 
 GHI NGUYÊN VĂN, ĐỪNG TỰ PHÂN TÍCH
@@ -142,7 +142,7 @@ def day():
        trong máy mà không ai biết (`Last Result: 0` vẫn là hỏng).
        `-X theirs` = đụng nhau thì lấy BẢN VỪA CÀO. An toàn tuyệt đối ở đây vì file này
        dựng lại từ đầu mỗi lượt, không có gì để mất; thiếu nó là rebase dừng giữa chừng và
-       máy kẹt vĩnh viễn — ở nhịp 15 phút thì kẹt cả phiên chứ không phải một ngày.
+       máy kẹt vĩnh viễn — ở nhịp 30 phút thì kẹt cả phiên chứ không phải một ngày.
        KHÔNG đặt GIT_SSH_COMMAND ở đây: run_gia_phien.ps1 đặt sẵn cho cả lượt chạy, giữ
        một chỗ duy nhất phải nhớ (khoá deploy tên không mặc định + known_hosts của SYSTEM)."""
     def g(*a):

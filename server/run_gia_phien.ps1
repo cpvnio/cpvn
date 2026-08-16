@@ -1,4 +1,4 @@
-# Một lượt lấy giá trong phiên. Tác vụ 'CPVN gia phien' gọi file này mỗi 15 phút.
+# Một lượt lấy giá trong phiên. Tác vụ 'CPVN gia phien' gọi file này mỗi 30 phút.
 # File nằm TRONG kho nên bước đồng bộ dưới đây tự mang bản mới về — sửa ở repo là lượt
 # sau máy chủ tự dùng bản mới, không phải chép tay lên máy chủ.
 
@@ -13,7 +13,7 @@ $log = 'C:\cpvn\server\gia_phien.log'
 # "Host key verification failed" — đã dính đúng vậy lượt chạy thử đầu tiên.
 $env:GIT_SSH_COMMAND = 'ssh -i C:/Users/Administrator/.ssh/github_deploy -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=C:/cpvn/.known_hosts'
 
-# Giữ log gọn: quá 2 MB thì cắt còn 500 dòng cuối. 25 lượt/ngày × nhiều tháng thì file
+# Giữ log gọn: quá 2 MB thì cắt còn 500 dòng cuối. 13 lượt/ngày × nhiều tháng thì file
 # log tự phình ra hàng trăm MB nếu không dọn.
 if ((Test-Path $log) -and ((Get-Item $log).Length -gt 2MB)) {
   Get-Content $log -Tail 500 | Set-Content "$log.tmp"; Move-Item "$log.tmp" $log -Force
@@ -21,7 +21,7 @@ if ((Test-Path $log) -and ((Get-Item $log).Length -gt 2MB)) {
 "--- $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ---" | Add-Content $log
 
 # TỰ GỠ KẸT trước khi làm gì — cùng bài học với run_refresh: một cuộc rebase dở dang từ
-# lượt trước làm máy KẸT VĨNH VIỄN, mà ở nhịp 15 phút thì nó kẹt cả phiên chứ không phải
+# lượt trước làm máy KẸT VĨNH VIỄN, mà ở nhịp 30 phút thì nó kẹt cả phiên chứ không phải
 # một ngày. Máy chủ chỉ là bản sao, data/ dựng lại được, nên cứ bám thẳng theo remote.
 if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
   'Rebase do dang tu luot truoc - huy va bam lai theo remote.' | Add-Content $log

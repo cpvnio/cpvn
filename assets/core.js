@@ -286,7 +286,7 @@ CP.pollBoard=function(only){
 async function doPoll(only){
   try{
     /* ═══ GIÁ ĐỌC TỪ KHO, KHÔNG GỌI THẲNG VPS NỮA (17/08/2026 — user chốt) ═══
-       `data/board.json` do `tools/gia_phien.py` ghi mỗi 15 phút trong phiên, chứa NGUYÊN
+       `data/board.json` do `tools/gia_phien.py` ghi mỗi 30 phút trong phiên, chứa NGUYÊN
        VĂN mảng bảng giá VPS trả về. Vì sao đổi (đo thật):
          1 tab mở 1 giờ trong phiên  =    180 lượt ·   24 MB  -> VPS
          100 người xem cùng lúc, 6h  = 108.000 lượt · 14,5 GB  (gấp 28× cả pipeline)
