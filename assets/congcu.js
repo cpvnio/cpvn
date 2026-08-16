@@ -1536,6 +1536,22 @@ function renderRadar(){
   $$('#m-radar [data-vbs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vbs;
     if(vbSort.k===k) vbSort.d=-vbSort.d; else { vbSort.k=k; vbSort.d=(k==='roi'?1:-1); }
     vbTop=100; renderRadar(); });
+  /* chip chế độ — về đầu danh sách vì rổ đổi hẳn; `vbTop` phải reset, bằng không đang mở
+     300 mã của rổ cũ thì rổ mới cũng bung sẵn 300 dòng */
+  $$('#m-radar [data-vbc]').forEach(b=>b.onclick=()=>{
+    if(tachMa(vbQ).length) return;                // đang gõ mã thì chip vô hiệu, đúng như vẻ mờ của nó
+    vbChe=b.dataset.vbc; vbTop=100;
+    /* HƯỚNG XẾP ĐI THEO CHẾ ĐỘ. Rổ "Gần đỉnh" mà vẫn xếp rơi-nhiều-nhất-trước thì mở ra
+       thấy ngay mã −9,9% còn mã đang ở đúng đỉnh nằm tận cuối — ngược hẳn thứ vừa bấm vào
+       để tìm. Chỉ chỉnh khi đang xếp theo MỨC RƠI; ai đã chuyển sang vốn hoá thì để yên,
+       và chiều vẫn lật tay được như cũ. */
+    if(vbSort.k==='roi') vbSort.d=(vbChe==='gan'?-1:1);
+    renderRadar();
+    const el=$('#vbChe'), hd=document.querySelector('header');
+    /* đọc rect TRƯỚC rồi mới tới scrollY — xem chú thích dài ở chip lọc bảng tập đoàn */
+    if(el){ const dinh=el.getBoundingClientRect().top;
+      scrollTo({top:Math.max(0,dinh+scrollY
+        -((hd?hd.getBoundingClientRect().height:0)+10)),behavior:'auto'}); } });
   vbBind();
   if(radarTab==='phien') drawSparks($('#m-radar'));
   if(radarTab==='phien'&&!tgGiu){
@@ -2151,15 +2167,32 @@ function tapDoanNote(){
    ra như chỉ mới giảm nhẹ — đúng cái nhóm người ta muốn tìm thì lọt lưới.
    KHÔNG lọc vốn hoá: đây là chỗ để soi mã đã rơi, mã nhỏ mới là phần đông. */
 const VB_NGUONG=-30;
+const VB_GAN=-10;
+/* ═══ LỌC THEO MỨC RƠI (17/08/2026) ═══
+   Trước chỉ có MỘT rổ: "đã rơi quá 30%". Rổ ngược lại — mã ĐANG SÁT ĐỈNH — không có đường
+   nào xem được, trong khi nó trả lời một câu hỏi khác hẳn và cũng chính đáng: giữa lúc thị
+   trường đỏ thì mã nào vẫn chưa rời đỉnh. Nay là ba chế độ, và chế độ ĐỘC LẬP với ngành
+   (chọn ngành rồi vẫn lọc tiếp được trong ngành đó).
+   `dath` là % lệch khỏi đỉnh, luôn ≤ 0 — nên "giảm dưới 10%" là `dath > -10`. */
+const VB_CHE={
+  sau:{ten:'Rơi sâu',  ttl:'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh của cả chuỗi giá',
+       tieu:'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh', hop:c=>c.dath<=VB_NGUONG},
+  gan:{ten:'Gần đỉnh', ttl:'Còn cách đỉnh dưới '+(-VB_GAN)+'% — nhóm chưa hề rời đỉnh bao xa',
+       tieu:'Còn cách đỉnh dưới '+(-VB_GAN)+'%',      hop:c=>c.dath>VB_GAN},
+  het:{ten:'Tất cả',   ttl:'Không lọc theo mức rơi',
+       tieu:'Mọi mã có đủ dữ liệu đỉnh',              hop:()=>true},
+};
+let vbChe='sau';
 let vbTop=100;
 /* d=1: rơi NHIỀU nhất trước (dath âm sâu nhất) · d=-1: rơi ít nhất trước.
    Với vốn hoá thì d=-1 là to→nhỏ, cùng một quy ước "bấm lại là lật chiều". */
 let vbSort={k:'roi',d:1};
 const VBK={roi:c=>c.dath, von:c=>c.mcapLive||c.mcap||0};
-/* NGÀNH ĐANG CHỌN. 'all' = toàn thị trường, giữ nguyên ngưỡng -30% (nếu không thì danh
-   sách là cả 1.500 mã, mất hẳn ý nghĩa "đã rơi sâu"). Chọn MỘT ngành thì BỎ ngưỡng và
-   hiện đủ mọi mã của ngành đó — kể cả mã mới rơi 1% hay đang ở đỉnh (0%), vì lúc đó
-   người xem không còn tìm "mã rơi sâu" nữa mà đang soi CẢ NGÀNH xem ai rơi ai chưa. */
+/* NGÀNH ĐANG CHỌN. 'all' = toàn thị trường.
+   CHỌN MỘT NGÀNH THÌ TỰ CHUYỂN CHẾ ĐỘ SANG 'het' (xem `vbBind`), giữ đúng luật user chốt
+   15/08/2026: chọn ngành là để soi CẢ NGÀNH xem ai rơi ai chưa, nên phải hiện đủ mã kể cả
+   mã mới rơi 1% hay đang ở đỉnh. Khác bản trước ở chỗ đó nay là GIÁ TRỊ MẶC ĐỊNH chứ không
+   phải luật cứng — trong ngành vẫn bấm tiếp "Rơi sâu"/"Gần đỉnh" để thu hẹp được. */
 let vbSec='all';
 /* Ô TÌM MÃ — gõ được NHIỀU mã một lúc ("VIC HPG, FPT"), dùng chung bộ tách `tachMa` với
    hai ô gõ mã của Đường đua nên một kiểu gõ chạy được ở cả ba chỗ.
@@ -2167,11 +2200,14 @@ let vbSec='all';
    một mã cụ thể là muốn thấy ĐÚNG mã đó, không phải "mã đó nếu nó tình cờ thoả điều kiện
    đang bật" — im lặng bỏ qua là ngồi gõ lại mấy lần mà không hiểu vì sao trắng bảng. */
 let vbQ='';
+/* Ngành và chế độ nay CỘNG DỒN chứ không loại trừ nhau — hai câu hỏi khác nhau, hỏi cùng
+   lúc được: "trong ngành thép, mã nào còn sát đỉnh?" */
+const vbHop=()=>ST.list.filter(c=>c.close>0&&c.dath!=null
+  &&(vbSec==='all'||c.sector===vbSec)&&VB_CHE[vbChe].hop(c));
 const vbLoc=()=>{
   const go=tachMa(vbQ);
   if(go.length) return go.map(s=>ST.map.get(s)).filter(c=>c&&c.close>0&&c.dath!=null);
-  return ST.list.filter(c=>c.close>0&&c.dath!=null
-    &&(vbSec==='all' ? c.dath<=VB_NGUONG : c.sector===vbSec));
+  return vbHop();
 };
 /* mã gõ vào mà không hiện được -> phải NÓI RA mã nào và vì sao, đừng lặng lẽ bỏ qua */
 const vbThieu=()=>tachMa(vbQ).filter(s=>{ const c=ST.map.get(s);
@@ -2188,13 +2224,26 @@ function veBoPanel(){
     +(go.length?'<button class="pickbtn" id="vbXoa" style="margin:0">✕ xoá tìm</button>':'')
     +(thieu.length?'<span class="vbmiss">không có: <b>'+thieu.map(esc).join(', ')
       +'</b> — sai mã, hoặc kho chưa có đủ giá để tính đỉnh</span>':'')+'</div>';
+  /* ═══ CHIP CHẾ ĐỘ ═══ Đếm trên rổ ĐANG XÉT (đã lọc ngành, CHƯA lọc chế độ) — đếm sau khi
+     lọc chế độ thì hai chip kia luôn bằng 0, hết đường đọc xem bấm sang sẽ được bao nhiêu mã.
+     Gõ mã thì chip mờ đi và thôi đếm: ô tìm đã thay thế mọi bộ lọc, để chip sáng là nói dối
+     về thứ đang hiện — cùng lối đã dùng cho nút "☰ Ngành". */
+  const nen=go.length?[]:ST.list.filter(c=>c.close>0&&c.dath!=null&&(vbSec==='all'||c.sector===vbSec));
+  const nutChe=k=>'<button class="locb'+(!go.length&&vbChe===k?' on':'')+'" data-vbc="'+k+'"'
+    +' title="'+esc(VB_CHE[k].ttl)+'">'+VB_CHE[k].ten
+    +(go.length?'':'<i>'+nen.filter(VB_CHE[k].hop).length+'</i>')+'</button>';
+  const thanhChe='<div class="tdloc" id="vbChe"'+(go.length?' style="opacity:.45"':'')+'>'
+    +Object.keys(VB_CHE).map(nutChe).join('')+'</div>';
+  /* NHÁNH RỖNG PHẢI GIỮ LẠI CẢ Ô TÌM LẪN HÀNG CHIP. Cùng bài học đã trả giá với ô tìm: chọn
+     một chế độ ra 0 mã mà hàng chip biến mất thì không còn đường bấm về, phải tải lại trang. */
   if(!ds.length) return '<div class="panel vbpan"><div class="ph"><span class="vbti">'
-    +(go.length?'Không tìm thấy mã nào':'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh')+'</span>'
+    +(go.length?'Không tìm thấy mã nào':VB_CHE[vbChe].tieu)+'</span>'
     +'<button class="secbtn'+(vbSec==='all'?'':' on')+'" id="vbSecBtn">☰ Ngành</button></div>'
-    +oTim+'<div class="pb"><div class="empty" style="padding:14px">'
+    +oTim+thanhChe+'<div class="pb"><div class="empty" style="padding:14px">'
     +(go.length?'Không có mã nào khớp — kiểm lại mã vừa gõ.'
-      :vbSec==='all'?'Chưa có dữ liệu — chạy lại tools/build_screen.py'
-      :'Ngành “'+esc(vbSec)+'” chưa có mã nào đủ dữ liệu đỉnh.')
+      :'Không mã nào thoả “'+esc(VB_CHE[vbChe].ten)+'”'
+       +(vbSec==='all'?' trên toàn thị trường':' trong ngành “'+esc(vbSec)+'”')
+       +' — bấm chip khác để đổi rổ.')
     +'</div></div></div>'+vbSecBarHTML();
   /* CẦN BAO NHIÊU LẦN để về bờ: rơi 50% thì phải tăng 100% mới hoà vốn. Đây mới là con
      số người cầm hàng cần, chứ "-50%" nghe nhẹ hơn thực tế rất nhiều. */
@@ -2214,9 +2263,15 @@ function veBoPanel(){
     +'<span class="vbm">vốn hoá hiện tại</span><span class="vbv">hôm nay</span></div>';
   const hang=c=>'<div class="rw" data-sym="'+c.sym+'" title="Bấm mở trang '+c.sym+'">'+logoHTML(c)
     +'<span class="idn"><b>'+c.sym+'</b><i>'+esc(shortName(c.name||''))+'</i></span>'
-    +'<span class="vbd">'+c.dath.toFixed(0)+'%</span>'
+    /* MÃ ĐANG Ở ĐÚNG ĐỈNH KHÔNG ĐƯỢC TÔ ĐỎ. Cột này luôn đỏ vì nó là "mức rơi", đúng khi
+       rổ toàn mã rơi sâu; nhưng rổ "Gần đỉnh" thì gần cả bảng là 0% — một màn đỏ rực báo
+       hiệu điều ngược hẳn sự thật. Số 0 làm tròn từ khoảng (-0,5%, 0] nên xét theo giá trị
+       thật chứ không xét chuỗi đã in ra. Cột "×1,0 để về bờ" cũng thôi tô vàng: không phải
+       chờ tăng thêm gì thì cảnh báo màu là thừa. */
+    +'<span class="vbd'+(c.dath>-0.5?' dinh':'')+'">'+c.dath.toFixed(0)+'%</span>'
     +'<span class="vbb"><i class="z"></i><i class="b" style="width:'+Math.min(100,-c.dath)+'%"></i></span>'
-    +'<span class="vbl">×'+(100/(100+c.dath)).toFixed(1)+'<u>để về bờ</u></span>'
+    +'<span class="vbl'+(c.dath>-0.5?' dinh':'')+'">×'+(100/(100+c.dath)).toFixed(1)
+      +'<u>'+(c.dath>-0.5?'đang ở đỉnh':'để về bờ')+'</u></span>'
     /* GIÁ MỘT CỔ PHIẾU tính bằng ĐỒNG — nhét vào ty() (đơn vị tỷ) là ra "0 tỷ" hết,
        đúng cái bẫy đã dính ở giá mục tiêu bên Chủ điểm đầu tư */
     +'<span class="vbp">'+Math.round(c.close).toLocaleString('en-US')
@@ -2228,7 +2283,7 @@ function veBoPanel(){
      đứng một mình là đủ (câu "tất cả mã của ngành" đã nằm ở ghi chú cuối bảng), và nút
      giữ nhãn NGẮN CỐ ĐỊNH — không lặp lại tên ngành mà tiêu đề vừa nói. */
   const tieu=go.length?'Mã đang tìm'
-    :vbSec==='all'?'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh':esc(vbSec);
+    :vbSec==='all'?VB_CHE[vbChe].tieu:esc(vbSec);
   return '<div class="panel vbpan"><div class="ph"><span class="vbti">'+tieu+'</span>'
     /* đang gõ mã thì ô ngành hết tác dụng — làm mờ đi cho khỏi tưởng vẫn đang lọc theo
        ngành, đúng lối đã dùng cho ô nhóm ngành của Đầu tư bền vững */
@@ -2237,7 +2292,7 @@ function veBoPanel(){
       +'title="Chọn nhóm ngành — chọn rồi thì hiện ĐỦ mã của ngành, kể cả mã chưa rơi">'
       +'☰ Ngành</button>'
     +'<span class="tdsrt">xếp theo'+nut('roi','mức rơi')+nut('von','vốn hoá')+'</span>'
-    +'<span class="cnt">'+ds.length+' mã</span></div>'+oTim
+    +'<span class="cnt">'+ds.length+' mã</span></div>'+oTim+thanhChe
     +'<div class="pb" style="padding:8px 14px" id="vbPanel">'
     +hd+ds.slice(0,vbTop).map(hang).join('')+'</div></div>'
     +(ds.length>vbTop?'<div class="note" style="text-align:center"><button class="pickbtn" id="vbThem" '
@@ -2249,11 +2304,19 @@ function veBoPanel(){
     +(go.length
       ? 'Đang hiện <b>đúng '+go.length+' mã bạn gõ</b> — bỏ mọi bộ lọc khác, nên có cả mã chưa '
         +'rơi. Mã đang đứng ngay đỉnh hiện 0% và cần tăng ×1,0. Xoá ô tìm để về danh sách cũ. '
-      : vbSec==='all'
-      ? 'Danh sách toàn thị trường chỉ lấy mã đã rơi quá '+(-VB_NGUONG)+'%; <b>chọn một ngành</b> '
-        +'hoặc <b>gõ mã vào ô tìm</b> thì hiện đủ mã, kể cả mã mới rơi 1% hay đang đứng ngay đỉnh (0%). '
-      : 'Đang xem <b>đủ mã</b> của ngành này nên có cả mã chưa rơi — mã ở ngay đỉnh hiện 0% và '
-        +'cần tăng ×1,0. ')
+      : vbChe==='gan'
+      /* Câu này phải NÓI THẲNG cái bẫy: "gần đỉnh" rất dễ đọc thành "mã khoẻ, nên mua" —
+         đúng kiểu suy diễn mà cả trang đang tránh. Nó chỉ là một phép đo vị trí giá. */
+      ? 'Đang hiện mã <b>còn cách đỉnh dưới '+(-VB_GAN)+'%</b>'
+        +(vbSec==='all'?' trên toàn thị trường':' trong ngành này')+'. Sát đỉnh KHÔNG có nghĩa '
+        +'là khoẻ hay sắp tăng tiếp — mã thanh khoản mỏng đứng im hàng tháng cũng nằm ở đây, '
+        +'vì giá không đi đâu thì cũng không rời đỉnh. Đây là phép đo vị trí giá, không hơn. '
+      : vbChe==='het'
+      ? 'Đang hiện <b>đủ mã</b>'+(vbSec==='all'?' toàn thị trường':' của ngành này')
+        +' nên có cả mã chưa rơi — mã ở ngay đỉnh hiện 0% và cần tăng ×1,0. '
+      : 'Đang hiện mã <b>đã rơi quá '+(-VB_NGUONG)+'%</b>'
+        +(vbSec==='all'?' trên toàn thị trường':' trong ngành này')
+        +'; bấm <b>Gần đỉnh</b> hay <b>Tất cả</b> ở hàng chip trên bảng để đổi rổ. ')
     +'Mục này KHÔNG lọc theo vốn hoá — mã nhỏ mới là phần đông trong nhóm rơi sâu, mà cũng là nhóm '
     +'thanh khoản mỏng nhất. Rơi sâu KHÔNG có nghĩa là sắp hồi: nhiều mã rơi vì doanh nghiệp hỏng '
     +'thật. Đây là danh sách để soi, không phải danh sách để mua.</div>'
@@ -2319,7 +2382,14 @@ function vbBind(){
   btn.onclick=()=>dat(!bar.classList.contains('on'));
   bd.onclick=()=>dat(false);
   $$('#vbSecBar [data-vbsec]').forEach(e=>e.onclick=()=>{
-    vbSec=e.dataset.vbsec; vbTop=100; dat(false); renderRadar();
+    const moi=e.dataset.vbsec;
+    /* ĐỔI NGÀNH THÌ VỀ CHẾ ĐỘ MẶC ĐỊNH CỦA NGÀNH ĐÓ, giữ đúng luật user chốt 15/08/2026:
+       chọn một ngành là để soi CẢ NGÀNH xem ai rơi ai chưa -> 'het' (hiện đủ mã); về lại
+       toàn thị trường thì 'het' là 1.500 dòng vô nghĩa -> quay về 'sau'.
+       Chỉ đặt khi ngành THẬT SỰ ĐỔI — bấm lại đúng ngành đang xem mà cũng nhảy về 'het'
+       thì bộ lọc người ta vừa chọn bị xoá không lý do. */
+    if(moi!==vbSec) vbChe=(moi==='all'?'sau':'het');
+    vbSec=moi; vbTop=100; dat(false); renderRadar();
     const p=$('#m-radar .panel'); if(p) p.scrollIntoView({block:'start',behavior:'smooth'}); });
   /* giữ trạng thái đang mở qua các lượt vẽ lại (vòng giá sống dựng lại module mỗi phút) */
   if(vbSecMo) dat(true);

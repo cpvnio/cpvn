@@ -690,6 +690,9 @@ textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-
 .vbl,.vbp{text-align:right;font-size:12.5px;font-weight:700;white-space:nowrap}
 .vbl u,.vbp u{display:block;text-decoration:none;font-size:9.5px;font-weight:700;color:var(--faint)}
 .vbl{color:var(--gold)}
+/* mã đang đứng ngay đỉnh: bỏ đỏ và bỏ vàng, để xám như một dữ kiện trung tính — xem chú
+   thích ở `hang` trong congcu.js. Chỉ lộ ra nhiều ở rổ "Gần đỉnh", nơi gần cả bảng là 0%. */
+.vbd.dinh,.vbl.dinh{color:var(--mut)}
 .vbm{text-align:right;font-size:12.5px;color:var(--mut);white-space:nowrap;font-weight:600}
 .vbv{text-align:right;font-weight:800;font-size:13px}
 @media(max-width:640px){
@@ -1028,7 +1031,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260817e"></script>
+<script defer src="assets/mobi.js?v=20260817h"></script>
 </head>
 <body>
 
@@ -1084,6 +1087,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260817e"></script>
+<script src="assets/congcu.js?v=20260817h"></script>
 </body>
 </html>
