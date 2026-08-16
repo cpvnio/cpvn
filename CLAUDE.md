@@ -468,6 +468,24 @@ giá sai hoặc giá nhảy — đừng đẩy.
      "T…" — mất đúng thứ cho biết đang xem ngành nào. Thà cao thêm một dòng.
   Nút giữ nhãn NGẮN CỐ ĐỊNH ("☰ Ngành"), tên ngành để tiêu đề nói — nhét tên ngành vào nút
   là vừa lặp vừa làm nút phình theo độ dài tên.
+- **VỀ BỜ — Ô TÌM MÃ (`#vbQ`), gõ được NHIỀU mã một lúc.** Dùng chung `tachMa` với hai ô gõ
+  mã của Đường đua nên "vic, hpg  FPT" hay "HPG FPT" đều ra cùng kết quả. **Gõ mã thì THAY
+  THẾ mọi bộ lọc khác** (cả ngưỡng −30% lẫn ngành đang chọn) — gõ tên một mã cụ thể là muốn
+  thấy ĐÚNG mã đó, không phải "mã đó nếu nó tình cờ thoả điều kiện đang bật"; nút ngành làm
+  mờ đi cho khỏi tưởng vẫn đang lọc theo ngành. Bốn thứ phải giữ:
+  1. **Ô TÌM PHẢI CÒN ĐÓ KỂ CẢ KHI KHÔNG RA MÃ NÀO.** Nhánh "rỗng" cũ `return` một `.empty`
+     trần, nên gõ sai một chữ là ô biến mất — không còn đường sửa, phải tải lại trang.
+  2. **Giữ TIÊU ĐIỂM và VỊ TRÍ CON TRỎ qua mỗi lượt vẽ lại** (`vbCaret`). Panel dựng lại từ
+     chuỗi HTML nên ô bị thay bằng ô mới: không tự trả lại con trỏ thì gõ tới chữ thứ hai là
+     mất tiêu điểm, bàn phím điện thoại đóng sập. Nhớ cả VỊ TRÍ chứ không chỉ `focus()` —
+     nhảy về cuối chuỗi thì sửa một mã ở giữa là không sửa nổi. Hoãn 200ms cho mỗi phím gõ
+     khỏi kéo theo một lượt lọc 1.500 mã.
+  3. **Vòng giá sống phải BỎ QUA lượt dựng lại khi đang gõ** (`document.activeElement.id
+     ==='vbQ'` trong `startLive`) — bằng không cứ ~1 phút là ô đang gõ dở bị thay mới.
+  4. **Mã gõ vào mà không hiện được thì NÓI RA MÃ NÀO** (`.vbmiss`), cùng luật với `#raThieu`
+     của Đường đua: im lặng bỏ qua là người ta ngồi gõ lại mấy lần, tưởng mình gõ sai chính tả.
+  `.pickbtn` vốn là nút cả-chiều-ngang ("Xem thêm 100 mã") nên trong hàng tìm phải ép
+  `width:auto`, bằng không nút xoá chiếm trọn một dòng ở khổ hẹp.
 - **HÀNG CON DÙNG CHUNG LƯỚI CỘT VỚI HÀNG NHÓM** — biến `--tdc` khai một chỗ cho cả `.tdrow`
   lẫn `.tdcon .rw` (`#quyPanel` có `--tdc` riêng vì hàng quỹ chỉ 5 ô). Hai lưới riêng là mọi
   con số của hàng con lệch khỏi cột của hàng nhóm ngay phía trên, bấm mở ra đọc rất khó chịu.

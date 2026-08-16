@@ -386,7 +386,12 @@ function startLive(){
       /* Radar phiên nay CHỨA bản đồ thế giới, mà bản đồ tự cập nhật tại chỗ theo nhịp
          riêng. Vẽ lại cả module ở đây là giết mọi thẻ nước đang mở, cứ ~1 phút một lần.
          Nên chỉ vẽ lại phần trong nước bằng cách dựng lại khối #radarAll. */
-      if(cur==='radar'&&radarTab==='phien') veLaiTrongNuoc(); else if(cur==='radar') MODULES.find(x=>x.id==='radar').render();
+      /* ĐANG GÕ TRONG Ô TÌM MÃ THÌ ĐỪNG DỰNG LẠI MODULE. Vẽ lại là ô bị thay bằng ô mới:
+         mất con trỏ giữa chừng, bàn phím điện thoại đóng sập, gõ dở một mã là cụt. Bỏ qua
+         một lượt bơm giá đổi lại việc gõ liền mạch — lượt sau (10 giây) tự bù. */
+      const dangGo=document.activeElement&&document.activeElement.id==='vbQ';
+      if(cur==='radar'&&radarTab==='phien') veLaiTrongNuoc();
+      else if(cur==='radar'&&!dangGo) MODULES.find(x=>x.id==='radar').render();
     }
   };
   tick();
@@ -2138,14 +2143,41 @@ const VBK={roi:c=>c.dath, von:c=>c.mcapLive||c.mcap||0};
    hiện đủ mọi mã của ngành đó — kể cả mã mới rơi 1% hay đang ở đỉnh (0%), vì lúc đó
    người xem không còn tìm "mã rơi sâu" nữa mà đang soi CẢ NGÀNH xem ai rơi ai chưa. */
 let vbSec='all';
-const vbLoc=()=>ST.list.filter(c=>c.close>0&&c.dath!=null
-  &&(vbSec==='all' ? c.dath<=VB_NGUONG : c.sector===vbSec));
+/* Ô TÌM MÃ — gõ được NHIỀU mã một lúc ("VIC HPG, FPT"), dùng chung bộ tách `tachMa` với
+   hai ô gõ mã của Đường đua nên một kiểu gõ chạy được ở cả ba chỗ.
+   Gõ mã thì THAY THẾ mọi bộ lọc khác (ngưỡng -30% lẫn ngành đang chọn): người ta gõ tên
+   một mã cụ thể là muốn thấy ĐÚNG mã đó, không phải "mã đó nếu nó tình cờ thoả điều kiện
+   đang bật" — im lặng bỏ qua là ngồi gõ lại mấy lần mà không hiểu vì sao trắng bảng. */
+let vbQ='';
+const vbLoc=()=>{
+  const go=tachMa(vbQ);
+  if(go.length) return go.map(s=>ST.map.get(s)).filter(c=>c&&c.close>0&&c.dath!=null);
+  return ST.list.filter(c=>c.close>0&&c.dath!=null
+    &&(vbSec==='all' ? c.dath<=VB_NGUONG : c.sector===vbSec));
+};
+/* mã gõ vào mà không hiện được -> phải NÓI RA mã nào và vì sao, đừng lặng lẽ bỏ qua */
+const vbThieu=()=>tachMa(vbQ).filter(s=>{ const c=ST.map.get(s);
+  return !(c&&c.close>0&&c.dath!=null); });
 function veBoPanel(){
   const ds=vbLoc().sort((a,b)=>(VBK[vbSort.k](a)-VBK[vbSort.k](b))*vbSort.d);
-  if(!ds.length) return '<div class="empty">'
-    +(vbSec==='all'?'Chưa có dữ liệu — chạy lại tools/build_screen.py'
+  const go=tachMa(vbQ), thieu=vbThieu();
+  /* Ô TÌM luôn phải còn đó kể cả khi không ra mã nào — gõ sai một chữ mà ô biến mất thì
+     không còn đường sửa, phải tải lại trang. */
+  const oTim='<div class="vbfind"><input type="text" id="vbQ" value="'+esc(vbQ)+'" '
+    +'placeholder="tìm mã: VIC HPG FPT" spellcheck="false" autocomplete="off" '
+    +'title="Gõ một hay nhiều mã, cách nhau bằng dấu cách hay dấu phẩy — hiện đúng mấy mã đó, '
+    +'kể cả mã chưa rơi khỏi đỉnh"/>'
+    +(go.length?'<button class="pickbtn" id="vbXoa" style="margin:0">✕ xoá tìm</button>':'')
+    +(thieu.length?'<span class="vbmiss">không có: <b>'+thieu.map(esc).join(', ')
+      +'</b> — sai mã, hoặc kho chưa có đủ giá để tính đỉnh</span>':'')+'</div>';
+  if(!ds.length) return '<div class="panel vbpan"><div class="ph"><span class="vbti">'
+    +(go.length?'Không tìm thấy mã nào':'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh')+'</span>'
+    +'<button class="secbtn'+(vbSec==='all'?'':' on')+'" id="vbSecBtn">☰ Ngành</button></div>'
+    +oTim+'<div class="pb"><div class="empty" style="padding:14px">'
+    +(go.length?'Không có mã nào khớp — kiểm lại mã vừa gõ.'
+      :vbSec==='all'?'Chưa có dữ liệu — chạy lại tools/build_screen.py'
       :'Ngành “'+esc(vbSec)+'” chưa có mã nào đủ dữ liệu đỉnh.')
-    +'</div>'+vbSecBarHTML();
+    +'</div></div></div>'+vbSecBarHTML();
   /* CẦN BAO NHIÊU LẦN để về bờ: rơi 50% thì phải tăng 100% mới hoà vốn. Đây mới là con
      số người cầm hàng cần, chứ "-50%" nghe nhẹ hơn thực tế rất nhiều. */
   const lai=d=>(100/(100+d)-1)*100;
@@ -2177,13 +2209,17 @@ function veBoPanel(){
      tiêu đề dài bị bóp thành bảy dòng dọc, còn nút ngành teo lại thành "☰…". Tên ngành
      đứng một mình là đủ (câu "tất cả mã của ngành" đã nằm ở ghi chú cuối bảng), và nút
      giữ nhãn NGẮN CỐ ĐỊNH — không lặp lại tên ngành mà tiêu đề vừa nói. */
-  const tieu=vbSec==='all'?'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh':esc(vbSec);
+  const tieu=go.length?'Mã đang tìm'
+    :vbSec==='all'?'Đã rơi hơn '+(-VB_NGUONG)+'% khỏi đỉnh':esc(vbSec);
   return '<div class="panel vbpan"><div class="ph"><span class="vbti">'+tieu+'</span>'
-    +'<button class="secbtn'+(vbSec==='all'?'':' on')+'" id="vbSecBtn" '
+    /* đang gõ mã thì ô ngành hết tác dụng — làm mờ đi cho khỏi tưởng vẫn đang lọc theo
+       ngành, đúng lối đã dùng cho ô nhóm ngành của Đầu tư bền vững */
+    +'<button class="secbtn'+(go.length?'':(vbSec==='all'?'':' on'))+'" id="vbSecBtn" '
+      +(go.length?'style="opacity:.45" ':'')
       +'title="Chọn nhóm ngành — chọn rồi thì hiện ĐỦ mã của ngành, kể cả mã chưa rơi">'
       +'☰ Ngành</button>'
     +'<span class="tdsrt">xếp theo'+nut('roi','mức rơi')+nut('von','vốn hoá')+'</span>'
-    +'<span class="cnt">'+ds.length+' mã</span></div>'
+    +'<span class="cnt">'+ds.length+' mã</span></div>'+oTim
     +'<div class="pb" style="padding:8px 14px" id="vbPanel">'
     +hd+ds.slice(0,vbTop).map(hang).join('')+'</div></div>'
     +(ds.length>vbTop?'<div class="note" style="text-align:center"><button class="pickbtn" id="vbThem" '
@@ -2192,9 +2228,12 @@ function veBoPanel(){
     +'đỉnh 52 tuần — phần lớn mã sập từ 2021-2022, đo bằng đỉnh 52 tuần thì mã mất 80% bốn năm '
     +'nay lại hiện ra như chỉ mới giảm nhẹ. Cột <b>×</b> là số lần giá phải tăng để về lại đỉnh cũ: '
     +'rơi 50% thì phải tăng gấp đôi mới hoà vốn, rơi 80% thì phải gấp năm. '
-    +(vbSec==='all'
+    +(go.length
+      ? 'Đang hiện <b>đúng '+go.length+' mã bạn gõ</b> — bỏ mọi bộ lọc khác, nên có cả mã chưa '
+        +'rơi. Mã đang đứng ngay đỉnh hiện 0% và cần tăng ×1,0. Xoá ô tìm để về danh sách cũ. '
+      : vbSec==='all'
       ? 'Danh sách toàn thị trường chỉ lấy mã đã rơi quá '+(-VB_NGUONG)+'%; <b>chọn một ngành</b> '
-        +'thì hiện ĐỦ mã của ngành đó, kể cả mã mới rơi 1% hay đang đứng ngay đỉnh (0%). '
+        +'hoặc <b>gõ mã vào ô tìm</b> thì hiện đủ mã, kể cả mã mới rơi 1% hay đang đứng ngay đỉnh (0%). '
       : 'Đang xem <b>đủ mã</b> của ngành này nên có cả mã chưa rơi — mã ở ngay đỉnh hiện 0% và '
         +'cần tăng ×1,0. ')
     +'Mục này KHÔNG lọc theo vốn hoá — mã nhỏ mới là phần đông trong nhóm rơi sâu, mà cũng là nhóm '
@@ -2235,7 +2274,23 @@ function vbSecBarHTML(){
    Vì `renderRadar` dựng lại panel mỗi lượt bơm giá sống, phải TỰ DỌN bản cũ đã chuyển ra
    body trước khi chuyển bản mới, bằng không mỗi phút lại chồng thêm một cột chết. */
 let vbBarEl=null, vbBdEl=null, vbSecMo=false;
+/* Ô TÌM MÃ bị THAY BẰNG Ô MỚI mỗi lượt vẽ lại (panel dựng lại từ chuỗi HTML). Không tự
+   trả lại con trỏ thì gõ tới chữ thứ hai là mất tiêu điểm, bàn phím điện thoại đóng sập.
+   Nhớ cả VỊ TRÍ con trỏ chứ không chỉ "focus": nhảy về cuối chuỗi thì sửa một mã ở giữa
+   là không sửa nổi. Hoãn 200ms để mỗi phím gõ không kéo theo một lượt lọc 1.500 mã. */
+let vbTimer=0, vbCaret=null;
 function vbBind(){
+  const q=$('#vbQ');
+  if(q){
+    q.oninput=e=>{ vbQ=e.target.value||''; vbTop=100;
+      vbCaret=e.target.selectionStart;
+      clearTimeout(vbTimer); vbTimer=setTimeout(()=>renderRadar(),200); };
+    q.onkeydown=e=>{ if(e.key==='Enter'){ clearTimeout(vbTimer); renderRadar(); } };
+    if(vbCaret!=null){ const p=Math.min(vbCaret,q.value.length);
+      q.focus(); try{ q.setSelectionRange(p,p); }catch(_){} }
+  }
+  const xo=$('#vbXoa');
+  if(xo) xo.onclick=()=>{ vbQ=''; vbCaret=null; vbTop=100; renderRadar(); };
   if(vbBarEl){ vbBarEl.remove(); vbBarEl=null; }
   if(vbBdEl){ vbBdEl.remove(); vbBdEl=null; }
   const bar=$('#m-radar #vbSecBar'), bd=$('#m-radar #vbSecBd'), btn=$('#vbSecBtn');
