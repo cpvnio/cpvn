@@ -707,9 +707,10 @@ function tapDoanPanel(){
   return '<div class="panel"><div class="ph">Dòng tiền theo tập đoàn'
     +'<span class="tdsrt">xếp theo'+nutXep('cap','vốn hoá')+nutXep('gtgd','GTGD')+'</span>'
     +'<span class="cnt">'+ds.length+' nhóm</span></div>'
-    /* lớp x<khoá> để màn hẹp hiện ĐÚNG cột đang xếp theo — nó chỉ đủ chỗ cho một cột tiền,
-       xếp theo vốn hoá mà cột hiện ra là GTGD thì bảng trông như không xếp gì cả */
-    +'<div class="pb x'+tdSort.k+'" style="padding:10px 16px" id="tdPanel">'+khoi+'</div></div>';
+    /* Bỏ lớp x<khoá> (17/08/2026). Nó sinh ra chỉ để màn hẹp chọn hiện ĐÚNG MỘT cột tiền —
+       cột đang xếp theo. Nay màn hẹp xếp hàng thành thẻ hai tầng nên hiện được cả GTGD lẫn
+       vốn hoá cùng lúc, không còn phải chọn, và mấy luật CSS đọc lớp này đã xoá theo. */
+    +'<div class="pb" style="padding:10px 16px" id="tdPanel">'+khoi+'</div></div>';
 }
 /* ═══════════ BỨC TRANH TOÀN CẦU — bản đồ thế giới tô theo chỉ số từng nước ═══════════
    MÀU THEO LUẬT CHỨNG KHOÁN VIỆT NAM: xanh = tăng, đỏ = giảm, vàng = tham chiếu.

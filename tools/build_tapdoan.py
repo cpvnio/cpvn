@@ -466,7 +466,15 @@ def main():
             # ĐỔI TÊN CƠ QUAN SANG TIẾNG VIỆT TRƯỚC KHI CẮT: cắt trước rồi mới đổi thì
             # "Commission for the Management of State Capita…" không còn khớp bảng nào.
             ten = ten_viet(ten_goc.get(khoa) or "")
-        if len(ten) > 46: ten = ten[:45].rstrip() + "…"
+        # NỚI 46 -> 72 (17/08/2026). Cái mốc 46 đặt ra hồi cột tên chỉ rộng một dòng hẹp,
+        # nên 30/164 nhóm bị cụt ngay giữa tên riêng: "Ngân hàng TMCP Đầu tư và…" — mất đúng
+        # mấy chữ dùng để phân biệt. Nay bảng cho tên XUỐNG DÒNG (màn hẹp) và cột tên cũng
+        # đã rộng thêm, nên cắt sớm ở đây là tự tay vứt chữ mà chỗ hiển thị thừa sức chứa.
+        # Vẫn giữ MỘT mốc trần: tên pháp lý dài nhất trong kho là 99 ký tự, thả trôi thì một
+        # dòng nuốt hết ba dòng của thẻ. 72 đủ trọn tên mọi ngân hàng — nhóm dài nhất bảng.
+        # Phần dôi ra trên màn RỘNG vẫn được CSS cắt bằng dấu ba chấm theo bề ngang THẬT,
+        # chuẩn hơn đoán mò bằng số ký tự.
+        if len(ten) > 72: ten = ten[:71].rstrip() + "…"
         syms = sorted(ds.items(), key=lambda kv: -mcap(kv[0]))
         # VỐN HOÁ CẢ NHÓM. Cộng thô là đếm hai lần KHI MẸ CŨNG NIÊM YẾT: vốn hoá VIC đã
         # bao gồm 69% VHM mà VHM lại được cộng nguyên cục -> Vingroup phình lên 2,23 triệu
