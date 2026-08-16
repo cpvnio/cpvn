@@ -581,6 +581,25 @@ CP.loadDaily=function(sym){
       if(!tot||d>ngayNen(tot.rows[tot.rows.length-1].t)) tot=r;
       return d>=phien;
     };
+    /* ═══ KHO TRƯỚC, NGUỒN NGOÀI CHỈ LÀ CỨU HỘ (17/08/2026 — user chốt, LẬT quyết định
+       05/08 "mượn thẳng của nguồn, đừng lấy trong kho") ═══
+       Lý do lật: quyết định cũ sinh ra để KHÔNG LƯU dữ liệu của họ. Nhưng ở Việt Nam **số
+       liệu là dữ kiện, không được bảo hộ quyền tác giả**, và **không có quyền sui generis
+       cho cơ sở dữ liệu** (Điều 22 Luật SHTT chỉ bảo hộ cách chọn lọc/sắp xếp, "không bao
+       hàm chính các tư liệu đó") — nên lưu nến trong kho gần như không có rủi ro bản quyền.
+       Đổi lại, cách cũ bắn MỘT lượt sang VNDirect cho MỖI LẦN MỞ MỖI TRANG MÃ, nhân với
+       1.527 trang và với mọi lượt crawler quét — đó mới là thứ khiến bên kia có động cơ và
+       có log để gửi công văn. Đổi một rủi ro gần bằng 0 lấy một rủi ro có thật.
+       CHUỖI NAY: kho -> (VNDirect -> VPS) chỉ khi kho KHÔNG CÓ mã đó.
+       Luật "chọn nguồn theo phiên mới nhất nó có" vì thế KHÔNG còn áp cho đường chính —
+       kho là nguồn chuẩn, và trong phiên nó thiếu đúng cây nến hôm nay (kho chốt 15:15).
+       Chấp nhận được: giá sống hiện to ở đầu trang, và nến hôm nay chưa đóng cửa thì cũng
+       chưa phải một cây nến thật. TUYỆT ĐỐI đừng bịa nến hôm nay từ giá sống — xem luật
+       "ĐỪNG dựng nến mới cho phiên nguồn chưa có" trong CLAUDE.md. */
+    const f=await CP.loadHistFile(sym);
+    if(f&&f.t&&f.t.length>=2) return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+    /* Kho không có mã này (mã mới niêm yết, hoặc lượt cào gần nhất trượt) — lúc đó mới đi
+       mượn, và vẫn giữ luật cũ: nguồn nào có phiên mới nhất thì lấy nguồn đó. */
     if(!CP.OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
       try{
         const j=await fetch(`${url}?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`)
@@ -588,8 +607,6 @@ CP.loadDaily=function(sym){
         if(j&&j.s==='ok'&&j.t&&j.t.length>=2&&nhan({rows:chuanDonVi(sym,j),src:ten})) return tot;
       }catch(e){}
     }
-    const f=await CP.loadHistFile(sym);
-    if(f&&f.t&&f.t.length>=2) nhan({rows:chuanDonVi(sym,f),src:'kho CPVN'});
     return tot;
   })();
   dayCache.set(sym,p); return p;
@@ -673,6 +690,19 @@ CP.tinDungMa=function(sym,tieu){
 CP.loadNews=async function(sym){
   if(newsCache.has(sym)&&Date.now()-newsCache.get(sym).at<300000) return newsCache.get(sym).d;
   let news=null;
+  /* ═══ KHO TRƯỚC (17/08/2026) ═══ `data/news/{MÃ}.json` do refresh_daily dựng bằng ĐÚNG
+     ba cổng lọc bên dưới, nên nội dung y hệt — chỉ khác độ mới, tối đa một ngày (kho chốt
+     15:15 mỗi phiên). Đổi lại: xoá hẳn MỘT lượt gọi VNDirect cho MỖI LẦN MỞ MỖI TRANG MÃ,
+     nhân với 1.527 trang và mọi lượt crawler quét. Tin là thứ nhịp NGÀY, không phải nhịp
+     phiên — trả một ngày độ mới để đổi lấy chừng ấy lượt gọi là món hời.
+     Chỉ đi hỏi nguồn sống khi kho KHÔNG CÓ mã đó (mã mới, hoặc lượt cào gần nhất trượt). */
+  try{
+    const f=await fetch(`data/news/${sym}.json`).then(r=>r.ok?r.json():null);
+    if(f&&f.news&&f.news.length){
+      const d={news:f.news};
+      newsCache.set(sym,{at:Date.now(),d}); return d;
+    }
+  }catch(e){}
   if(!CP.OFFLINE){
     /* NGUỒN SIMPLIZE news-event/list ĐÃ BỎ 16/08/2026 — ĐỪNG GỌI LẠI. Nó không trả url
        thật của bài báo, chỉ có `slug` nội bộ; mở bài phải gọi THÊM một lượt tới Simplize,
@@ -702,12 +732,8 @@ CP.loadNews=async function(sym){
     /* KHÔNG còn gọi analysis-report/list: cả mục báo cáo phân tích CTCK đã bỏ 16/08/2026
        (xem ghi chú dài ở cuối file). Bớt luôn một lượt gọi Simplize mỗi lần mở trang mã. */
   }
-  if(!news){   // nguồn sống chết -> kho tin tức
-    try{
-      const f=await fetch(`data/news/${sym}.json`).then(r=>r.ok?r.json():null);
-      if(f&&f.news&&f.news.length) news=f.news;
-    }catch(e){}
-  }
+  /* (Nhánh "nguồn sống chết -> rơi về kho" đã bỏ: kho nay được hỏi TRƯỚC ở đầu hàm, tới
+     được đây nghĩa là kho không có mã này nên hỏi lại cũng vô ích.) */
   const d={news:news||[]};
   newsCache.set(sym,{at:Date.now(),d}); return d;
 };
