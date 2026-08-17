@@ -336,6 +336,10 @@ async function pollLive(){
     try{
       const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
       if(j&&j.rows&&j.rows.length){ rows=j.rows.filter(Boolean); boardAt=j.at||0; }
+      /* nhóm thanh khoản nhịp nhanh — ghép SAU để đè lên bản chậm (xem core.js) */
+      const h=await fetch('data/board_nong.json').then(r=>r.ok?r.json():null).catch(()=>null);
+      if(h&&h.rows&&h.rows.length){ rows=(rows||[]).concat(h.rows.filter(Boolean));
+        if((h.at||0)>boardAt) boardAt=h.at; }
     }catch(e){}
     if(!rows){       // chỉ khi kho KHÔNG CÓ file
       const syms=[...ST.map.keys()]; rows=[];

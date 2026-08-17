@@ -303,6 +303,19 @@ async function doPoll(only){
       try{
         const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
         if(j&&j.rows&&j.rows.length){ rows=j.rows.filter(Boolean); CP.boardAt=j.at||0; }
+        /* NHÓM THANH KHOẢN, nhịp nhanh hơn — GHÉP SAU nên nó ĐÈ LÊN bản chậm.
+           `doPoll` duyệt rows theo thứ tự và gán đè, nên chỉ cần nối vào cuối là xong,
+           không phải trộn tay. 282 mã (GTGD >= 1 tỷ) chiếm 99,5% thanh khoản thị trường
+           nhưng chỉ tốn 2 lô — nên nhóm người ta thật sự nhìn được làm mới 5 phút/lần
+           trong khi cả thị trường vẫn 15 phút. Thiếu file này thì không sao: bản chậm
+           vẫn đủ dùng, chỉ là cũ hơn. */
+        try{
+          const h=await fetch('data/board_nong.json').then(r=>r.ok?r.json():null);
+          if(h&&h.rows&&h.rows.length){
+            rows=(rows||[]).concat(h.rows.filter(Boolean));
+            if((h.at||0)>(CP.boardAt||0)) CP.boardAt=h.at;
+          }
+        }catch(e){}
       }catch(e){}
     }
     /* CHỈ rơi về VPS khi kho KHÔNG CÓ file (chưa kịp triển khai lần đầu, hoặc Cloudflare

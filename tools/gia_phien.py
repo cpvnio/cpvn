@@ -50,7 +50,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nhipmang
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RA = os.path.join(BASE, "data", "board.json")
+RA = os.path.join(BASE, "data", "board.json")        # cả thị trường, nhịp chậm
+RA_NONG = os.path.join(BASE, "data", "board_nong.json")  # nhóm thanh khoản, nhịp nhanh
+LATEST = os.path.join(BASE, "data", "eod", "latest.json")
+GTGD_NONG = 1e9        # >= 1 tỷ/phiên. Đo 14/08: 282 mã, đúng 2 lô, chiếm 99,5% thanh
+                       # khoản TOÀN thị trường — nên nhóm này cập nhật nhanh là gần như
+                       # cập nhật nhanh mọi thứ người ta thật sự nhìn.
 BG = "https://bgapidatafeed.vps.com.vn/getliststockdata/"
 IDX = "https://bgapidatafeed.vps.com.vn/getlistindexdetail/10,11,02,03"
 LO = 150                                   # y hệt client và refresh_daily
@@ -73,11 +78,22 @@ def trong_phien(t=None):
     return 540 <= p < 905
 
 
-def cao():
+def nhom_nong():
+    """Mã có thanh khoản, lấy từ snapshot EOD gần nhất. Không cào được thì trả rỗng ->
+       lượt nào cũng quét đủ, chậm hơn chứ không sai."""
+    try:
+        d = json.load(open(LATEST, encoding="utf-8"))
+        return sorted(r["sym"] for r in d["data"] if (r.get("gtgd") or 0) >= GTGD_NONG)
+    except Exception:
+        return []
+
+
+def cao(syms=None):
     """Trả về (rows, indices). Lô nào hỏng thì BỎ QUA lô đó chứ không bỏ cả lượt —
        mất 150 mã còn hơn mất 1.527."""
-    u = json.load(open(os.path.join(BASE, "universe.json"), encoding="utf-8"))
-    syms = [s["sym"] for s in u["stocks"]]
+    if syms is None:
+        u = json.load(open(os.path.join(BASE, "universe.json"), encoding="utf-8"))
+        syms = [s["sym"] for s in u["stocks"]]
     rows, hong = [], 0
     for i in range(0, len(syms), LO):
         try:
@@ -104,45 +120,81 @@ def dang_song(rows):
     return song > len(rows) * 0.1
 
 
+def ghi(path, rows, idx, t):
+    """Ghi atomic. Trả về True nếu RUỘT thật sự đổi — chỉ mốc giờ đổi thì thôi, đừng ghi.
+       Giờ nghỉ trưa và lúc thị trường lặng, bảng đứng yên hàng chục phút; commit một file
+       chỉ khác mỗi trường `at` là tốn một lượt build Cloudflare cho đúng 0 thông tin."""
+    try:
+        cu = json.load(open(path, encoding="utf-8")).get("rows")
+    except Exception:
+        cu = None
+    if cu == rows:
+        return False
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"at": int(t.timestamp() * 1000), "sess": t.strftime("%Y-%m-%d"),
+                   "rows": rows, "idx": idx}, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, path)                    # atomic: đọc dở file đang ghi là JSON vỡ
+    return True
+
+
 def main():
+    """HAI TẦNG THEO THANH KHOẢN (user chốt 17/08/2026).
+       Không ai xem cùng lúc 1.527 mã. Nhóm GTGD >= 1 tỷ chỉ có 282 mã (đúng 2 lô) mà
+       chiếm 99,5% thanh khoản toàn thị trường — cập nhật nhanh nhóm đó là gần như cập
+       nhật nhanh mọi thứ người ta thật sự nhìn, với 2 lượt gọi thay vì 11.
+           nhóm thanh khoản  ->  5 phút  ·  2 lô
+           cả thị trường     -> 15 phút  · 11 lô
+       Cộng lại ~360 lượt/phiên = 0,017 lượt/giây lên VPS."""
     t = gio_vn()
-    rows, idx, hong = cao()
-    print(f"{t:%Y-%m-%d %H:%M} · {len(rows)} mã · {len(idx)} chỉ số · {hong} lô hỏng", flush=True)
+    nong = nhom_nong()
+    # Quét ĐỦ khi: tới nhịp 15 phút · chưa lấy được nhóm nóng · file cả-thị-trường thiếu
+    # hoặc đã sang phiên khác. Điều kiện cuối quan trọng: mở phiên mới mà chỉ cập nhật 282
+    # mã thì 1.245 mã còn lại mang giá phiên TRƯỚC suốt 15 phút đầu.
+    du = (t.minute % 15) < 5 or not nong
+    if not du:
+        try:
+            du = json.load(open(RA, encoding="utf-8")).get("sess") != t.strftime("%Y-%m-%d")
+        except Exception:
+            du = True
+
+    rows, idx, hong = cao(None if du else nong)
+    print(f"{t:%Y-%m-%d %H:%M} · {'QUÉT ĐỦ' if du else 'nhóm thanh khoản'} · "
+          f"{len(rows)} mã · {len(idx)} chỉ số · {hong} lô hỏng", flush=True)
 
     if not rows:
         print("không lấy được mã nào -> giữ nguyên file cũ", flush=True)
         return 1
     if not dang_song(rows):
-        # KHÔNG phải lỗi: ngoài giờ / nghỉ lễ thì bảng đứng yên là đúng. Chỉ là không có
-        # gì mới để ghi, mà ghi đè lượt rỗng lên file cũ là xoá giá phiên vừa đóng.
         print("bảng chưa có giao dịch (ngoài giờ / nghỉ) -> không ghi", flush=True)
         return 0
-
-    goi = {"at": int(t.timestamp() * 1000), "sess": t.strftime("%Y-%m-%d"),
-           "rows": rows, "idx": idx}
     if THU:
         m = next((x for x in rows if x.get("sym") == "VIC"), rows[0])
-        print("  thử — không ghi. Mẫu:", json.dumps(m, ensure_ascii=False)[:180], flush=True)
+        print("  thử — không ghi. Mẫu:", json.dumps(m, ensure_ascii=False)[:150], flush=True)
         return 0
 
-    tmp = RA + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(goi, f, ensure_ascii=False, separators=(",", ":"))
-    os.replace(tmp, RA)                      # atomic: đọc dở file đang ghi là JSON vỡ
-    print(f"đã ghi {RA} ({os.path.getsize(RA)/1024:.0f} KB)", flush=True)
-
-    if KHONG_DAY:
+    doi = []
+    if du and ghi(RA, rows, idx, t):
+        doi.append("data/board.json")
+    # Lượt quét đủ cũng làm mới luôn file nhóm nóng, để hai file không lệch mốc giờ
+    con = [r for r in rows if r.get("sym") in set(nong)] if (du and nong) else rows
+    if nong and ghi(RA_NONG, con, idx, t):
+        doi.append("data/board_nong.json")
+    if not doi:
+        print("ruột không đổi (bảng đứng yên) -> khỏi ghi, khỏi commit", flush=True)
         return 0
-    return day()
+    print("đã ghi: " + ", ".join(f"{p} ({os.path.getsize(os.path.join(BASE,p))/1024:.0f} KB)"
+                                 for p in doi), flush=True)
+    return 0 if KHONG_DAY else day(doi)
 
 
-def day():
+def day(doi):
     """Commit + push. KÉO LẠI TRƯỚC MỖI LƯỢT ĐẨY — cùng bài học với run_refresh.ps1: có
        commit khác chen vào giữa chừng là `git push` bị từ chối IM LẶNG, cả lượt nằm lại
        trong máy mà không ai biết (`Last Result: 0` vẫn là hỏng).
-       `-X theirs` = đụng nhau thì lấy BẢN VỪA CÀO. An toàn tuyệt đối ở đây vì file này
+       `-X theirs` = đụng nhau thì lấy BẢN VỪA CÀO. An toàn tuyệt đối ở đây vì hai file này
        dựng lại từ đầu mỗi lượt, không có gì để mất; thiếu nó là rebase dừng giữa chừng và
-       máy kẹt vĩnh viễn — ở nhịp 30 phút thì kẹt cả phiên chứ không phải một ngày.
+       máy kẹt vĩnh viễn — ở nhịp 5 phút thì kẹt cả phiên chứ không phải một ngày.
        KHÔNG đặt GIT_SSH_COMMAND ở đây: run_gia_phien.ps1 đặt sẵn cho cả lượt chạy, giữ
        một chỗ duy nhất phải nhớ (khoá deploy tên không mặc định + known_hosts của SYSTEM)."""
     def g(*a):
@@ -152,10 +204,10 @@ def day():
         return any(os.path.exists(os.path.join(BASE, ".git", x))
                    for x in ("rebase-merge", "rebase-apply"))
 
-    if not g("status", "--porcelain", "data/board.json").stdout.strip():
+    if not g("status", "--porcelain", *doi).stdout.strip():
         print("file không đổi -> khỏi commit", flush=True)
         return 0
-    g("add", "data/board.json")
+    g("add", *doi)
     g("commit", "-q", "-m", f"Giá phiên {gio_vn():%Y-%m-%d %H:%M}")
     for lan in range(1, 5):
         g("pull", "--rebase", "-X", "theirs", "-q", "origin", "main")
