@@ -15,11 +15,16 @@ Tức là tải lên VPS TỈ LỆ THUẬN với lượng truy cập — nó t�
 trang, không cần ai tấn công. Và mọi lượt gọi ấy mang sẵn `Origin: https://cpvn.io` nên
 log bên kia trỏ thẳng về mình.
 
-Script này lấy đúng 11 lượt mỗi nhịp, ghi vào kho, đẩy lên Cloudflare. Từ đó tải lên VPS
-là HẰNG SỐ — 1 người xem hay 1 triệu đều như nhau.
+Script này cào MỘT LẦN cho cả thị trường, ghi vào kho, đẩy lên Cloudflare. Từ đó tải lên
+VPS là HẰNG SỐ — 1 người xem hay 1 triệu đều như nhau.
 
-    nhịp 30 phút · phiên 9:00-15:00  ->  13 lượt chạy = 143 lượt gọi/phiên
-    (so với 108.000 lượt của kịch bản 100 người xem)
+HAI TẦNG THEO THANH KHOẢN:
+    nhóm GTGD >= 1 tỷ (282 mã, 2 lô)  ->  mỗi  5 phút
+    cả thị trường   (1.527 mã, 11 lô) ->  mỗi 15 phút
+    cộng lại ~360 lượt/phiên  (so với 108.000 lượt của kịch bản 100 người xem)
+
+NGÀY NGHỈ LỄ: hỏi tới 9:30, vẫn chưa mã nào khớp lệnh thì kết luận là nghỉ và IM tới hết
+ngày — trước đây lượt nào cũng chạy, tốn ~410 lượt gọi cho đúng 0 thông tin.
 
 GHI NGUYÊN VĂN, ĐỪNG TỰ PHÂN TÍCH
 ---------------------------------
@@ -62,6 +67,9 @@ LO = 150                                   # y hệt client và refresh_daily
 VNTZ = datetime.timezone(datetime.timedelta(hours=7))
 THU = "--thu" in sys.argv
 KHONG_DAY = "--khong-day" in sys.argv
+# Dấu "hôm nay là ngày nghỉ" — file CỤC BỘ trên máy cào, không đẩy lên kho (xem .gitignore).
+NGHI = os.path.join(BASE, "server", ".nghi_le")
+PHUT_KET_LUAN = 30     # sau 9:30 mà bảng vẫn chưa ai khớp lệnh thì kết luận là nghỉ
 
 
 def gio_vn():
@@ -76,6 +84,29 @@ def trong_phien(t=None):
         return False
     p = t.hour * 60 + t.minute
     return 540 <= p < 905
+
+
+def da_biet_nghi(t):
+    """Đã kết luận hôm nay là ngày nghỉ chưa. Ghi theo NGÀY nên sang hôm sau tự hết hiệu lực."""
+    try:
+        return open(NGHI, encoding="utf-8").read().strip() == t.strftime("%Y-%m-%d")
+    except Exception:
+        return False
+
+
+def ghi_nghi(t):
+    """NGÀY NGHỈ LỄ: kết luận MỘT LẦN rồi thôi gọi mạng cả ngày.
+       Trước đây lượt nào cũng chạy, cũng gọi VPS, rồi thấy bảng trống thì bỏ — một ngày lễ
+       tốn ~410 lượt gọi cho đúng 0 thông tin, mà lại đúng cái hình dạng dễ bị đọc là máy
+       quét mù. Nay hỏi tới 9:30; vẫn chưa mã nào khớp lệnh thì đóng dấu và im tới hết ngày.
+       CHỈ đóng dấu khi NHẬN ĐƯỢC bảng hợp lệ mà bảng trống — `dang_song` đòi >= 50 dòng, nên
+       lượt gọi HỎNG (rows rỗng) không bao giờ tới được đây. Phân biệt chỗ này là bắt buộc:
+       nhầm một sự cố mạng thành ngày nghỉ là tắt giá suốt cả phiên thật."""
+    try:
+        os.makedirs(os.path.dirname(NGHI), exist_ok=True)
+        open(NGHI, "w", encoding="utf-8").write(t.strftime("%Y-%m-%d"))
+    except Exception:
+        pass
 
 
 def nhom_nong():
@@ -166,7 +197,13 @@ def main():
         print("không lấy được mã nào -> giữ nguyên file cũ", flush=True)
         return 1
     if not dang_song(rows):
-        print("bảng chưa có giao dịch (ngoài giờ / nghỉ) -> không ghi", flush=True)
+        p = t.hour * 60 + t.minute
+        if p >= 540 + PHUT_KET_LUAN:
+            ghi_nghi(t)
+            print(f"tới {t:%H:%M} vẫn chưa mã nào khớp lệnh -> KẾT LUẬN NGÀY NGHỈ, "
+                  f"thôi gọi mạng tới hết ngày", flush=True)
+        else:
+            print("bảng chưa có giao dịch (đầu phiên) -> không ghi, lượt sau hỏi lại", flush=True)
         return 0
     if THU:
         m = next((x for x in rows if x.get("sym") == "VIC"), rows[0])
@@ -226,7 +263,13 @@ def day(doi):
 
 
 if __name__ == "__main__":
-    if "--bat-buoc" not in sys.argv and not trong_phien() and not THU:
-        print(f"{gio_vn():%H:%M} ngoài phiên -> thôi", flush=True)
-        sys.exit(0)
+    _t = gio_vn()
+    if "--bat-buoc" not in sys.argv and not THU:
+        if not trong_phien(_t):
+            print(f"{_t:%H:%M} ngoài phiên -> thôi", flush=True)
+            sys.exit(0)
+        # Kiểm TRƯỚC khi gọi mạng: đã biết hôm nay nghỉ thì không tốn lượt nào nữa
+        if da_biet_nghi(_t):
+            print(f"{_t:%H:%M} hôm nay đã kết luận là ngày nghỉ -> thôi", flush=True)
+            sys.exit(0)
     sys.exit(main())

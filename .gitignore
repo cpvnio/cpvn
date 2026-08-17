@@ -4,3 +4,8 @@ __pycache__/
 *.tmp
 .claude/
 wyckoff-lab.html
+
+# trạng thái vận hành của máy cào — KHÔNG đẩy lên kho
+server/*.log
+server/.nghi_le
+PUSH_FAILED.txt
