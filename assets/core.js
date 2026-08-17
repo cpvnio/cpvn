@@ -566,7 +566,18 @@ CP.startPolling=function(onUpdate,visibleSyms){
 CP.loadIndices=async function(){
   if(!CP.OFFLINE) try{
     const IDX=[['10','VNINDEX'],['11','VN30'],['02','HNX'],['03','UPCOM']];
-    const arr=await fetch(BG+'/getlistindexdetail/'+IDX.map(x=>x[0]).join(',')).then(r=>r.json());
+    /* CHỈ SỐ CŨNG LẤY TỪ KHO, đừng gọi VPS riêng một lượt nữa. `gia_phien.py` đã ghi sẵn
+       trường `idx` vào cùng file — bỏ sót chỗ này thì mỗi lượt MỞ TRANG vẫn là một lượt
+       sang VPS, tức đúng thứ vừa bỏ công xoá ở `doPoll`, chỉ khác là 1 thay vì 11.
+       Đo được ngay sau khi đổi doPoll: bgapidatafeed vẫn hiện 1 lượt/lần mở trang. */
+    let arr=null;
+    for(const f of ['data/board_nong.json','data/board.json']){
+      try{
+        const j=await fetch(f).then(r=>r.ok?r.json():null);
+        if(j&&j.idx&&j.idx.length){ arr=j.idx; break; }
+      }catch(e){}
+    }
+    if(!arr) arr=await fetch(BG+'/getlistindexdetail/'+IDX.map(x=>x[0]).join(',')).then(r=>r.json());
     const nameOf=Object.fromEntries(IDX);
     const cu=Object.fromEntries((CP.indices||[]).map(d=>[d.name,d]));
     const out=(arr||[]).filter(Boolean).map(x=>{

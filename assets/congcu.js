@@ -382,7 +382,13 @@ async function pollLive(){
     if(nnB||nnS){ ST.nnBuy=nnB; ST.nnSell=nnS; }
     try{   // chỉ số sống (VNINDEX/VN30/HNX/UPCOM) cho cột thông tin
       const IDX=[['10','VNINDEX'],['11','VN30'],['02','HNX'],['03','UPCOM']];
-      const arr=await fetch('https://bgapidatafeed.vps.com.vn/getlistindexdetail/10,11,02,03').then(r=>r.json());
+    /* chỉ số lấy từ kho, đừng gọi VPS riêng — bản sao luật của CP.loadIndices (core.js) */
+    let arr=null;
+    for(const f of ['data/board_nong.json','data/board.json']){
+      try{ const j=await fetch(f).then(r=>r.ok?r.json():null);
+        if(j&&j.idx&&j.idx.length){ arr=j.idx; break; } }catch(e){}
+    }
+    if(!arr) arr=await fetch('https://bgapidatafeed.vps.com.vn/getlistindexdetail/10,11,02,03').then(r=>r.json());
       const out=[];
       for(const d of arr||[]){
         const m=IDX.find(x=>x[0]===String(d.indexId||d.mc||'')); if(!m) continue;
