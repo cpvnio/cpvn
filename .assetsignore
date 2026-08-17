@@ -1,11 +1,26 @@
-# Không upload các file/thư mục hệ thống lên Cloudflare Workers assets
-# (fix lỗi "Asset too large": wrangler từng nuốt cả .git 26.9MB > giới hạn 25MB)
-.git
-.github
-.gitignore
-.assetsignore
-wrangler.jsonc
-__pycache__
-*.pyc
-.DS_Store
-refresh_daily.py
+# KHÔNG TRIỂN KHAI mấy thứ này lên Cloudflare — vẫn nằm nguyên trong git, chỉ là trình
+# duyệt không bao giờ hỏi tới nên chở lên biên là phí.
+#
+# VÌ SAO NÓ LÀM BUILD NHANH HƠN: `wrangler deploy` với `assets.directory="."` phải BĂM
+# TỪNG FILE trong thư mục mỗi lượt build để biết file nào đổi — chi phí tỉ lệ với TỔNG SỐ
+# FILE, không phải với số file vừa sửa. Đổi một dòng trong core.js vẫn phải băm đủ 10.502
+# file. Bớt file khỏi tập triển khai là bớt thẳng vào phần đó.
+#
+# ĐÃ KIỂM TỪNG DÒNG bằng cách dò `fetch(` trong assets/ và *.html — không chỗ nào gọi tới.
+# THÊM GÌ VÀO ĐÂY CŨNG PHẢI KIỂM LẠI ĐÚNG KIỂU ẤY: bỏ nhầm một thư mục client có đọc thì
+# trang hỏng IM LẶNG, chỉ mất một mục nội dung chứ không báo lỗi gì.
+
+# kho sâu cho nghiên cứu/bộ lọc — CLAUDE.md ghi rõ "Trang web KHÔNG đọc file này"
+data/finq/
+
+# chỉ `build_nganh.margin_ck()` đọc, chạy trên máy cào chứ không phải trình duyệt
+data/cocau/
+
+# mã nguồn máy cào và cấu hình máy chủ — không phục vụ trang
+tools/
+server/
+.github/
+
+# tài liệu nội bộ, bản demo để chọn giao diện
+*.md
+demo-*.html
