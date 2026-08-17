@@ -198,10 +198,22 @@ def main():
         return 1
     if not dang_song(rows):
         p = t.hour * 60 + t.minute
-        if p >= 540 + PHUT_KET_LUAN:
+        # CHỈ ĐƯỢC KẾT LUẬN TỪ MỘT LƯỢT QUÉT ĐỦ VÀ SẠCH.
+        #   Lập luận sai lần đầu: "dang_song đòi >= 50 dòng nên lượt hỏng không tới được
+        #   đây". Nhận 30 dòng (9/11 lô hỏng) thì dang_song CŨNG trả False -> vẫn rơi vào
+        #   nhánh này -> đóng dấu nghỉ -> TẮT GIÁ CẢ PHIÊN THẬT vì một cú chớp mạng, im
+        #   lặng. Phép thử bắt đúng ca đó.
+        #   Nay đòi ba điều kiện cùng lúc: là lượt QUÉT ĐỦ · KHÔNG lô nào hỏng · nhận về
+        #   ít nhất 1.000 dòng. Thiếu một điều là chờ lượt quét đủ kế tiếp (15 phút sau),
+        #   chậm hơn chứ không bao giờ sai về phía tắt nhầm.
+        du_tin = du and hong == 0 and len(rows) >= 1000
+        if p >= 540 + PHUT_KET_LUAN and du_tin:
             ghi_nghi(t)
             print(f"tới {t:%H:%M} vẫn chưa mã nào khớp lệnh -> KẾT LUẬN NGÀY NGHỈ, "
                   f"thôi gọi mạng tới hết ngày", flush=True)
+        elif p >= 540 + PHUT_KET_LUAN:
+            print(f"bảng trống nhưng lượt cào KHÔNG ĐỦ TIN ({len(rows)} dòng, {hong} lô hỏng)"
+                  f" -> KHÔNG dám kết luận, chờ lượt quét đủ kế tiếp", flush=True)
         else:
             print("bảng chưa có giao dịch (đầu phiên) -> không ghi, lượt sau hỏi lại", flush=True)
         return 0
