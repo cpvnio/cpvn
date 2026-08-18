@@ -292,7 +292,7 @@ function applyLiveCache(){
     if(n<100) return false;
     for(const sym in j.d){
       const c=ST.map.get(sym); if(!c) continue;
-      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt]=j.d[sym];
+      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt,op]=j.d[sym];
       if(!(last>0)) continue;
       c.close=last; c.nt=!!nt;                        // giá của phiên CŨ -> cấm tính %
       // lưới chặn biên độ, y như vòng poll — đệm cũng phải qua cửa này
@@ -318,7 +318,7 @@ function saveLiveCache(){
       if(!(c.close>0)) continue;
       // phần tử 11 = cờ CHƯA KHỚP LỆNH (bản đệm cũ 10 phần tử vẫn đọc được)
       d[c.sym]=[c.close,c.ref||0,c.vol||0,Math.round(c.gtgd||0),
-        c._fb||0,c._fs||0,c._hi||0,c._lo||0,c.ceil||0,c.floor||0,c.nt?1:0];
+        c._fb||0,c._fs||0,c._hi||0,c._lo||0,c.ceil||0,c.floor||0,c.nt?1:0,c._o||0];
     }
     const cur=JSON.parse(localStorage.getItem('cpvn_live')||'null');
     if(cur&&cur.at>=liveAt) return;
@@ -386,6 +386,7 @@ async function pollLive(){
       if(hi>lo&&last>0) c.rpos=(last-lo)/(hi-lo);
       const fb=(parseFloat(t.fBVol)||0)*10, fs=(parseFloat(t.fSVolume)||0)*10;
       c._fb=fb; c._fs=fs; c._hi=(parseFloat(t.highPrice)||0)*1000; c._lo=(parseFloat(t.lowPrice)||0)*1000;
+      c._o=(parseFloat(t.openPrice)||0)*1000||c._o;   // giá mở cửa: giữ trong đệm cho trang mã dựng nến
       if(last>0){ c.nnVal=(fb-fs)*last; nnB+=fb*last; nnS+=fs*last; }
       c.mcapLive=c.shares?c.shares*(last||c.close):c.mcapLive;
     }

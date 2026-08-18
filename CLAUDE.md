@@ -268,15 +268,39 @@ giá sai hoặc giá nhảy — đừng đẩy.
   207.900 bị ghi thành giá phiên 14/08. Nặng hơn ở khung NGÀY vì `CPChart.aggregate('D')`
   trả về CHÍNH mảng gốc → số bịa ăn thẳng vào đệm `dailyRows`, đổi sang tuần/tháng vẫn mang
   theo. Luật: `ngayVN(nến cuối) === CP.lastSessionDate()` **và** `!c.nt` mới được ghi.
-  > **ĐỪNG dựng nến mới cho phiên nguồn chưa có.** Bảng giá VPS không trả GIÁ MỞ CỬA (chỉ
-  > `lastPrice`/`r`/`c`/`f`/`highPrice`/`lowPrice`/`lot`), bịa `o` ra là tự tay tạo một cây
-  > nến không có thật. Thà chart dừng ở phiên gần nhất nguồn có — giá sống đã hiện to ở đầu
-  > trang rồi. Hai bản sao (`cophieu.html` `gopGiaSongVaoNen`, `bubbles.html` vòng 300ms)
-  > phải sửa cùng lúc.
+  > **NAY CÓ DỰNG NẾN HÔM NAY — vì bảng giá CÓ trả giá mở cửa (19/08/2026).** Câu cũ ở đây
+  > *"bảng giá VPS không trả GIÁ MỞ CỬA … bịa `o` ra là tự tay tạo một cây nến không có
+  > thật"* có **TIỀN ĐỀ SAI**: `openPrice` nằm sẵn trong mỗi dòng `board.json` — 872/1.522 mã
+  > phiên 18/08 (số còn lại là mã KHÔNG có giao dịch nên vốn không có nến nào để dựng). Nó
+  > chỉ chưa được đọc tới, nằm trong nhóm 34 trường đo được là "không dòng code nào đụng".
+  > Đối chiếu 12 mã lớn với DNSE phiên 18/08: **mở/cao/thấp/đóng và khối lượng khớp tuyệt đối
+  > 12/12**. Nên đây là nến THẬT, không phải nến bịa.
+  > **Vì sao phải dựng:** không có nó thì trong phiên chart đứng ở phiên hôm qua trong khi
+  > trang khác có đủ — người xem không có lý do ở lại. Đường thay thế duy nhất là quay lại
+  > mượn nguồn ngoài suốt 9h–15h15, tức dồn TOÀN BỘ lưu lượng giờ cao điểm sang VNDirect,
+  > ngược hẳn mục tiêu.
+  > **`CP.nenHomNay` + `CP.gopNenHomNay` (core.js), bản sao trong `bubbles.html`.** Ba cổng,
+  > thiếu cổng nào là đẻ ra nến sai: ① bảng giá phải đang ở phiên HÔM NAY (`CP.liveSess`) ·
+  > ② mã phải ĐÃ khớp lệnh phiên này (`!c.nt`) · ③ phải có CẢ `o` lẫn `price`, thiếu `o` thì
+  > thà không có nến còn hơn đoán. Mốc `t` theo quy ước kho: **00:00 UTC của ngày phiên**.
+  > **NỐI CÂY MỚI, TUYỆT ĐỐI KHÔNG GHI ĐÈ NẾN PHIÊN CŨ — bẫy đã dính 19/08.** Bản cũ ghi
+  > thẳng vào phần tử CUỐI với điều kiện `ngayVN(nến cuối)===CP.lastSessionDate()`. Điều kiện
+  > đó chặn được **NHỜ ĂN MAY** khi chart lấy từ nguồn ngoài (nguồn đã có nến hôm nay nên ngày
+  > không khớp). Từ lúc chart đọc KHO thì nến cuối của kho LÀ phiên hôm qua, mà
+  > `lastSessionDate()` trước 15:00 CŨNG trả hôm qua → điều kiện khớp → **giá phiên mới bị dán
+  > đè lên nến hôm qua, suốt 9:00–15:00**. Đúng con bệnh "VIC nến 13/08 đóng 207.900 bị ghi
+  > thành giá phiên 14/08" ghi ngay phía trên.
+  > **GHÉP VÀO CHUỖI NẾN NGÀY (`dailyRows`/`detDaily`) RỒI MỚI GỘP KHUNG.** Khung NGÀY thì
+  > `aggregate('D')` trả chính mảng gốc nên hai đường như nhau, nhưng khung TUẦN/THÁNG thì
+  > mảng đã gộp là mảng KHÁC — nối một cây nến ngày vào đó là đẻ ra một cột tuần giả.
+  > Kiểm: `node tools/test_khonen.js` mục 5 và 6. Hai bản sao (`cophieu.html`
+  > `gopGiaSongVaoNen`, `bubbles.html` vòng 300ms) phải sửa cùng lúc.
 - **Cộng dòng tiền NN phải theo NGÀY PHIÊN, không theo ngày lịch.** Từng cộng trùng
   phiên mới nhất: VIC 30 phiên hiện 688 tỷ thay vì 3.267 tỷ, im lặng hoàn toàn.
-- **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **11 phần tử đúng
-  thứ tự** `[price, ref, vol, gtgd, fbuy, fsell, high, low, ceil, flr, nt]`. Ba nơi đọc/ghi:
+- **Hợp đồng `cpvn_live`**: `{at, sess, final, idx, d}`, `d[MÃ]` là mảng **12 phần tử đúng
+  thứ tự** `[price, ref, vol, gtgd, fbuy, fsell, high, low, ceil, flr, nt, o]` (`o` = giá mở
+  cửa, NỐI ĐUÔI từ 19/08/2026 để dựng nến phiên đang chạy; bản đệm cũ 11 phần tử vẫn đọc
+  được, `o` ra undefined và chỉ mất cây nến hôm nay tới lượt quét kế tiếp). Ba nơi đọc/ghi:
   `core.js`, `bubbles.html`, `congcu.js`. Đổi thứ tự là hỏng giá cả 4 trang. Bản đệm cũ 10
   phần tử vẫn đọc được (thiếu `nt` -> coi như đã khớp lệnh). **`nt` phải nằm trong đệm**,
   bằng không F5 giữa phiên là đệm ghép giá phiên CŨ với tham chiếu HÔM NAY rồi tự chia ra

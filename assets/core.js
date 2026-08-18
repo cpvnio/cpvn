@@ -376,6 +376,12 @@ async function doPoll(only){
       if(ave&&c.vol) c.gtgd=ave*c.vol;
       c.high=(parseFloat(t.highPrice)||0)*1000||c.high;
       c.low=(parseFloat(t.lowPrice)||0)*1000||c.low;
+      /* GIÁ MỞ CỬA — bảng giá VPS CÓ trả `openPrice`, 872/1522 mã phiên 18/08 (mã còn lại
+         không có giao dịch nên vốn không có nến). Tài liệu từng ghi "VPS không trả giá mở
+         cửa" và lấy đó làm lý do cấm dựng nến hôm nay; tiền đề đó SAI. Đối chiếu 12 mã lớn
+         với DNSE phiên 18/08: mở/cao/thấp/đóng + khối lượng khớp TUYỆT ĐỐI 12/12.
+         Có `o` thật thì dựng nến hôm nay KHÔNG còn là bịa — xem CP.nenHomNay. */
+      c.o=(parseFloat(t.openPrice)||0)*1000||c.o;
       c.fbuy=(parseFloat(t.fBVol)||0)*10; c.fsell=(parseFloat(t.fSVolume)||0)*10;
       // fRoom của VPS tính theo LÔ 10 CỔ PHIẾU y như fBVol/fSVolume — đối chiếu
       // currentRoom của VNDirect ra đúng hệ số 10,0 ở cả 4 mã thử. Quên nhân 10 là
@@ -453,7 +459,11 @@ CP.saveLive=function(){
       /* Phần tử thứ 11 = cờ CHƯA KHỚP LỆNH. Thiếu nó thì F5 giữa phiên là lỗi quay lại
          y nguyên: đệm giữ giá phiên cũ + tham chiếu hôm nay, applyLive chia ra lại đẻ ra
          phần trăm bịa. Bản đệm cũ 10 phần tử vẫn đọc được (thiếu -> coi như đã khớp). */
-      d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr,c.nt?1:0];
+      /* PHẦN TỬ THỨ 12 `o` NỐI ĐUÔI, đừng chèn vào giữa — ba nơi đọc mảng này theo VỊ TRÍ
+         (core.js, bubbles.html, congcu.js) nên chèn giữa là hỏng giá cả 4 trang. Nối đuôi
+         thì bản đệm cũ 11 phần tử vẫn đọc được, `o` ra undefined và chỉ mất cây nến hôm nay
+         cho tới lượt quét kế tiếp — suy biến êm, không vỡ. */
+      d[c.sym]=[c.price,c.ref,c.vol,Math.round(c.gtgd),c.fbuy,c.fsell,c.high,c.low,c.ceil,c.flr,c.nt?1:0,c.o||0];
     }
     /* sess = phiên của số này · at = lúc ghi (để biết đệm còn tươi không)
        final = ĐÃ CHỐT CỨNG: ngoài giờ VÀ đã có lượt quét đủ sau khi đóng cửa.
@@ -483,11 +493,12 @@ CP.applyLive=function(){
     if(n<100) return false;
     for(const sym in j.d){
       const c=CP.coins.get(sym); if(!c) continue;
-      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt]=j.d[sym];
+      const [last,ref,vol,gtgd,fb,fs,hi,lo,ce,fl,nt,op]=j.d[sym];
       if(!(last>0)) continue;
       c.price=last; if(ref>0) c.ref=ref;
       c.vol=vol||0; c.gtgd=gtgd||0; c.fbuy=fb||0; c.fsell=fs||0;
       if(hi) c.high=hi; if(lo) c.low=lo; if(ce) c.ceil=ce; if(fl) c.flr=fl;
+      if(op) c.o=op;
       c.traded=last>0&&(vol||0)>0;
       c.nt=!!nt;                                       // giá của phiên CŨ -> cấm tính %
       // lưới chặn biên độ, y như trong doPoll — đệm cũng phải qua cửa này
@@ -685,6 +696,61 @@ CP.khoLoiThoi=async function(sym,f){
   if(!idx) return !sanChuan;
   for(const d of (idx[sym]||[])) if(d>cuoi&&d<=nay) return true;
   return false;
+};
+
+/* ═══ NẾN CỦA PHIÊN ĐANG CHẠY, DỰNG TỪ BẢNG GIÁ ════════════════════════════════
+   Kho chốt 15:15 nên trong phiên nó thiếu đúng cây nến hôm nay. Trước 19/08/2026 chỗ này
+   để trống và tài liệu cấm dựng, với lý do "bảng giá VPS không trả GIÁ MỞ CỬA nên bịa `o`
+   ra là tạo một cây nến không có thật". TIỀN ĐỀ ĐÓ SAI: `openPrice` nằm sẵn trong mỗi dòng
+   bảng giá (872/1522 mã phiên 18/08 — số còn lại là mã KHÔNG có giao dịch nên vốn không có
+   nến nào để dựng). Đối chiếu 12 mã lớn với DNSE phiên 18/08: mở/cao/thấp/đóng và khối
+   lượng khớp TUYỆT ĐỐI 12/12. Nên đây là nến THẬT, không phải nến bịa.
+
+   VÌ SAO ĐÁNG LÀM: không có nó thì trong phiên chart đứng ở phiên hôm qua, mà trang khác
+   thì có đủ — người xem không có lý do gì ở lại. Đường thay thế duy nhất là quay lại mượn
+   nguồn ngoài suốt 9h–15h15, tức dồn TOÀN BỘ lưu lượng giờ cao điểm sang VNDirect, ngược
+   hẳn thứ cả đợt này đang làm.
+
+   BA CỔNG, thiếu cổng nào là đẻ ra nến sai:
+     ① bảng giá phải đang ở phiên HÔM NAY (`CP.liveSess`) — bảng đêm còn giữ phiên trước,
+        dựng theo nó là gắn nhãn hôm nay cho số hôm qua;
+     ② mã phải ĐÃ khớp lệnh phiên này (`!c.nt`) — mã thanh khoản kém đứng im hàng tháng thì
+        `price` là giá của một phiên CŨ, dựng nến là bịa một phiên chưa từng có;
+     ③ phải có CẢ `o` lẫn `price` — thiếu `o` thì thà không có nến còn hơn đoán.
+   Mốc `t` theo đúng quy ước kho: 00:00 UTC của ngày phiên. */
+CP.nenHomNay=function(sym){
+  const c=CP.coins.get(sym); if(!c) return null;
+  const ngay=CP.dayVN();
+  if(CP.liveSess!==ngay||c.nt) return null;
+  const dong=+c.price||0, mo=+c.o||0;
+  if(!(dong>0&&mo>0)) return null;
+  /* Cao/thấp phải BAO cả giá mở và giá hiện tại: bảng giá đôi khi trả cao/thấp trễ hơn
+     giá khớp một nhịp, để nguyên thì thân nến thò ra ngoài bóng nến. */
+  const cao=Math.max(+c.high||0,dong,mo);
+  const thap=Math.min.apply(null,[+c.low||0,dong,mo].filter(x=>x>0));
+  return {t:Math.floor(Date.parse(ngay+'T00:00:00Z')/1e3),o:mo,h:cao,l:thap,c:dong,v:+c.vol||0};
+};
+
+/* Nối/cập nhật nến hôm nay vào một chuỗi nến ngày. Trả true nếu có đổi.
+   DÙNG CHUNG cho cophieu.html và bubbles.html — hai nơi trước đây mỗi nơi một bản. */
+CP.gopNenHomNay=function(rows,sym){
+  if(!rows||!rows.length) return false;
+  const n=CP.nenHomNay(sym); if(!n) return false;
+  const cuoi=rows[rows.length-1];
+  const dCuoi=ngayNen(cuoi.t), dNay=ngayNen(n.t);
+  if(dCuoi===dNay){                       // đã có nến hôm nay -> làm mới tại chỗ
+    cuoi.o=n.o; cuoi.h=n.h; cuoi.l=n.l; cuoi.c=n.c; cuoi.v=n.v; return true;
+  }
+  if(dCuoi>dNay) return false;            // chuỗi đã đi xa hơn hôm nay -> đừng đụng vào
+  /* NỐI MỘT CÂY MỚI, TUYỆT ĐỐI KHÔNG GHI ĐÈ NẾN PHIÊN CŨ. Bản cũ của
+     `gopGiaSongVaoNen` ghi thẳng vào phần tử CUỐI với điều kiện
+     `ngayVN(nến cuối)===CP.lastSessionDate()`. Điều kiện đó ĐÚNG khi chart lấy từ nguồn
+     ngoài (nguồn đã có nến hôm nay nên ngày không khớp), nhưng từ lúc chart đọc KHO thì
+     nến cuối của kho LÀ phiên hôm qua và `lastSessionDate()` trước 15:00 CŨNG là hôm qua
+     -> điều kiện khớp -> giá phiên mới bị dán đè lên nến hôm qua, suốt từ 9:00 tới 15:00.
+     Đúng con bệnh "VIC nến 13/08 đóng 207.900 bị ghi thành giá phiên 14/08" đã ghi trong
+     tài liệu. Lưới cũ chặn được là NHỜ ĂN MAY, không phải nhờ đúng. */
+  rows.push(n); return true;
 };
 /* ---------- NẾN NGÀY DÀI HẠN: MƯỢN THẲNG TỪ NGUỒN, KHÔNG LẤY TRONG KHO ------
    Luật (user chốt 05/08/2026): trang KHÔNG tự lưu nến để vẽ và KHÔNG tự tính

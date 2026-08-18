@@ -425,12 +425,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260819a"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260819b"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260819a"></script>
+<script defer src="assets/mobi.js?v=20260819b"></script>
 </head>
 <body>
 <header>
@@ -621,8 +621,8 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260819a"></script>
-<script src="assets/chart.js?v=20260819a"></script>
+<script src="assets/core.js?v=20260819b"></script>
+<script src="assets/chart.js?v=20260819b"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -862,6 +862,7 @@ async function loadChart(){
     if(!r||r.rows.length<2){ setCnote('Không có dữ liệu nến'); return; }
     dailyRows=r.rows; candleSrc=r.src; dailyNam=canNam;
   }
+  CP.gopNenHomNay(dailyRows,C.sym);   // nến phiên đang chạy, dựng từ bảng giá — xem core.js
   const rows=CPChart.aggregate(dailyRows,tf);
   if(rows.length<2){ setCnote('Chưa đủ dữ liệu'); return; }
   candles=rows;
@@ -886,13 +887,24 @@ function drawChart(){ if(chart) chart.draw(); }
    thật. Thà chart dừng ở phiên gần nhất mà nguồn có — giá sống đã hiện to ở đầu trang. */
 const ngayVN=t=>new Date((t+25200)*1000).toISOString().slice(0,10);
 function gopGiaSongVaoNen(){
-  if(!candles||!candles.length||!C||!(C.price>0)) return false;
-  /* mã CHƯA KHỚP LỆNH phiên này: giá đang giữ là giá khớp cuối của một phiên CŨ
-     (mã thanh khoản kém đứng im hàng tháng) — đừng dán nó lên bất kỳ nến nào */
-  if(C.nt) return false;
-  const l=candles[candles.length-1];
-  if(ngayVN(l.t)!==CP.lastSessionDate()) return false;
-  l.c=C.price; if(C.price>l.h)l.h=C.price; if(C.price<l.l)l.l=C.price;
+  /* GHÉP VÀO `dailyRows` RỒI MỚI GỘP KHUNG, đừng ghép vào `candles`. Với khung NGÀY thì
+     `aggregate('D')` trả về CHÍNH mảng gốc nên hai đường như nhau, nhưng khung TUẦN/THÁNG
+     thì `candles` là mảng đã gộp — nối một cây nến NGÀY vào đó là đẻ ra một cột tuần giả
+     đứng cạnh cột tuần thật.
+
+     Mọi luật (bảng giá phải đang ở phiên hôm nay · mã phải đã khớp lệnh · phải có giá mở
+     cửa thật · nối cây MỚI chứ không ghi đè nến phiên cũ) nằm trong `CP.gopNenHomNay` để
+     bubbles.html dùng chung — trước đây mỗi trang một bản và chúng đã trôi khỏi nhau. */
+  if(!dailyRows||!dailyRows.length||!C) return false;
+  const truoc=dailyRows.length;
+  if(!CP.gopNenHomNay(dailyRows,C.sym)) return false;
+  const themNen=dailyRows.length!==truoc;
+  candles=CPChart.aggregate(dailyRows,tf);
+  /* keepView=true để lượt bơm giá mỗi phút KHÔNG giật khung người dùng đang kéo; nhưng
+     lần ĐẦU nối thêm nến thì phải cho chart trượt tới, bằng không cây nến vừa sinh ra nằm
+     ngoài mép phải và người xem tưởng vẫn chưa có. */
+  if(chart) chart.setRows(candles,tf,!themNen);
+  if(ptChart&&$('ptkt').classList.contains('on')) ptChart.setRows(CPChart.aggregate(dailyRows,ptTf),ptTf,!themNen);
   return true;
 }
 

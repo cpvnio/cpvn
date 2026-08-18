@@ -177,14 +177,18 @@ console.log('\n── 4. F5 GIỮA PHIÊN KHÔNG ĐƯỢC CHỜ MẠNG ───
       const { CP, kho } = dungCP('2026-08-04T16:00');
       CP.eodDate = '2026-08-03'; CP.liveSess = '2026-08-04';
       CP.coins.set('AAA', { sym: 'AAA', price: 12345, ref: 12000, vol: 10, gtgd: 5e8,
-        fbuy: 1, fsell: 2, high: 12500, low: 11900, ceil: 13000, flr: 11000, shares: 1 });
+        fbuy: 1, fsell: 2, high: 12500, low: 11900, ceil: 13000, flr: 11000, o: 12100, shares: 1 });
       CP.saveLive();
       const j = JSON.parse(kho.cpvn_live);
       kiem('khoá lưu đúng tên cpvn_live', Object.keys(kho), ['cpvn_live']);
       kiem('có đủ 5 trường {at,sess,final,idx,d}',
         ['at', 'sess', 'final', 'idx', 'd'].every(k => k in j), true);
-      kiem('mỗi mã là mảng 11 phần tử ĐÚNG THỨ TỰ', j.d.AAA,
-        [12345, 12000, 10, 5e8, 1, 2, 12500, 11900, 13000, 11000, 0]);
+      /* 12 phần tử từ 19/08/2026 — `o` (giá mở cửa) NỐI ĐUÔI để dựng nến hôm nay từ bảng
+         giá thay vì đi mượn nguồn ngoài. Phép kiểm này khoá THỨ TỰ chứ không khoá độ dài:
+         chèn phần tử vào GIỮA là hỏng giá cả 4 trang, nối đuôi thì bản đệm cũ 11 phần tử
+         vẫn đọc được. */
+      kiem('mỗi mã là mảng 12 phần tử ĐÚNG THỨ TỰ', j.d.AAA,
+        [12345, 12000, 10, 5e8, 1, 2, 12500, 11900, 13000, 11000, 0, 12100]);
       // phần tử 11 = cờ CHƯA KHỚP LỆNH. Thiếu nó thì F5 giữa phiên là % bịa quay lại.
       {
         const n = dungCP('2026-08-04T16:00');

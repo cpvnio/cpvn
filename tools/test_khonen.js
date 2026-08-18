@@ -150,6 +150,71 @@ console.log('\n── 4. SUY BIẾN: lịch hỏng / chưa có bảng giá ─�
     await CP.khoLoiThoi('X', null), true);
 }
 
+console.log('\n── 5. NẾN CỦA PHIÊN ĐANG CHẠY (dựng từ bảng giá) ────────────');
+{
+  /* mốc 10:00 sáng 19/08 — GIỮA PHIÊN, đúng khoảng lỗi cũ dán giá mới lên nến cũ */
+  const CP = dung({ lich: { sk: [] }, coins: {} });
+  CP.liveSess = '2026-08-19';
+  const dat = (sym, o) => { CP.coins.set(sym, { sym, ex: 'HOSE', ...o }); };
+  dat('A', { price: 21000, o: 20500, high: 21200, low: 20400, vol: 1e6, nt: false });
+  const n = CP.nenHomNay('A');
+  kiem('dựng được nến hôm nay', !!n, true);
+  kiem('  ngày đúng 19/08', n && new Date((n.t + 25200) * 1000).toISOString().slice(0, 10), '2026-08-19');
+  kiem('  o/h/l/c lấy đúng từ bảng giá',
+    n && [n.o, n.h, n.l, n.c].join(','), '20500,21200,20400,21000');
+
+  /* BA CỔNG */
+  dat('B', { price: 21000, o: 0, high: 21200, low: 20400, nt: false });
+  kiem('thiếu giá mở cửa -> KHÔNG dựng (thà không có còn hơn đoán)', CP.nenHomNay('B'), null);
+  dat('C', { price: 21000, o: 20500, nt: true });
+  kiem('mã CHƯA khớp lệnh phiên này -> KHÔNG dựng', CP.nenHomNay('C'), null);
+  CP.liveSess = '2026-08-18';
+  kiem('bảng giá còn ở phiên CŨ -> KHÔNG dựng', CP.nenHomNay('A'), null);
+  CP.liveSess = '2026-08-19';
+
+  /* cao/thấp phải BAO giá mở và giá hiện tại */
+  dat('D', { price: 22000, o: 19000, high: 21000, low: 20000, vol: 5, nt: false });
+  const d = CP.nenHomNay('D');
+  kiem('cao/thấp bao trọn giá mở và giá hiện tại', [d.h, d.l].join(','), '22000,19000');
+}
+
+console.log('\n── 6. GHÉP: NỐI CÂY MỚI, KHÔNG GHI ĐÈ NẾN PHIÊN CŨ ──────────');
+{
+  const CP = dung({ lich: { sk: [] }, coins: {} });
+  CP.liveSess = '2026-08-19';
+  CP.coins.set('A', { sym: 'A', ex: 'HOSE', price: 21000, o: 20500, high: 21200, low: 20400, vol: 1e6, nt: false });
+  const ngay = d => Math.floor(Date.parse(d + 'T00:00:00Z') / 1000);
+
+  /* ĐÂY LÀ CA CỦA LỖI ĐÃ DÍNH: chuỗi kết ở phiên HÔM QUA (kho chốt 15:15), giữa phiên.
+     Bản cũ khớp `ngayVN(nến cuối)===CP.lastSessionDate()` (cả hai đều là 18/08) rồi ghi
+     thẳng giá hôm nay lên nến 18/08. */
+  const rows = [{ t: ngay('2026-08-17'), o: 1, h: 1, l: 1, c: 19000, v: 1 },
+                { t: ngay('2026-08-18'), o: 2, h: 2, l: 2, c: 20000, v: 2 }];
+  const doi = CP.gopNenHomNay(rows, 'A');
+  kiem('có nối thêm nến', doi, true);
+  kiem('  chuỗi dài thêm 1 (NỐI, không ghi đè)', rows.length, 3);
+  kiem('  nến 18/08 GIỮ NGUYÊN giá đóng cũ', rows[1].c, 20000);
+  kiem('  nến mới mang ngày 19/08',
+    new Date((rows[2].t + 25200) * 1000).toISOString().slice(0, 10), '2026-08-19');
+
+  /* gọi lại lần hai: cập nhật TẠI CHỖ, không đẻ thêm cây nữa */
+  CP.coins.get('A').price = 21500;
+  CP.gopNenHomNay(rows, 'A');
+  kiem('gọi lần hai -> vẫn 3 nến', rows.length, 3);
+  kiem('  nến hôm nay cập nhật tại chỗ', rows[2].c, 21500);
+
+  /* chuỗi đã có nến hôm nay sẵn (nguồn ngoài) -> cập nhật, không nối */
+  const rows2 = [{ t: ngay('2026-08-18'), o: 1, h: 1, l: 1, c: 20000, v: 1 },
+                 { t: ngay('2026-08-19'), o: 9, h: 9, l: 9, c: 9, v: 9 }];
+  CP.gopNenHomNay(rows2, 'A');
+  kiem('chuỗi đã có nến hôm nay -> cập nhật chứ không nối', rows2.length, 2);
+  kiem('  giá trị được làm mới', rows2[1].c, 21500);
+
+  /* chuỗi đi XA hơn hôm nay (không nên xảy ra) -> đừng đụng vào */
+  const rows3 = [{ t: ngay('2026-08-20'), o: 1, h: 1, l: 1, c: 1, v: 1 }];
+  kiem('chuỗi đã đi xa hơn hôm nay -> không đụng', CP.gopNenHomNay(rows3, 'A'), false);
+}
+
 console.log('\n────────────────────────────────────────────────────────────');
 console.log(`  ĐẠT ${pass} · HỎNG ${fail}\n`);
 process.exit(fail ? 1 : 0);
