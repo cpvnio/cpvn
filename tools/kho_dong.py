@@ -88,7 +88,10 @@ def slug(s):
 
 # ---------------------------------------------------------------- bảng mã
 # Mã ĐẶC TRƯNG của từng mẫu — có số ở đây là bằng chứng doanh nghiệp nộp theo mẫu đó.
-DAU_HIEU = {"BANK": (421900, 412000), "STOCK": (700001, 700002)}
+# Thứ tự xét có ý nghĩa: ngân hàng -> chứng khoán -> bảo hiểm -> còn lại là mẫu thường.
+# `22160` (các khoản chi hoạt động kinh doanh) chỉ mẫu BẢO HIỂM mới in — đo 5 công ty bảo
+# hiểm đều có, 4 doanh nghiệp sản xuất đều không.
+DAU_HIEU = {"BANK": (421900, 412000), "STOCK": (700001, 700002), "INSURANCE": (22160,)}
 MAU_MAC_DINH = "REAL_ESTATE_AND_MANUFACTURING"
 
 
@@ -110,6 +113,11 @@ def nap_bang():
 
 def do_mau(tho, labs):
     """Mẫu báo cáo, suy từ CHÍNH số đã cào — CHỈ XÉT 4 KỲ GẦN NHẤT.
+
+    BẢO HIỂM PHẢI TÁCH RIÊNG, đừng gộp vào mẫu thường. Bản trước tao ghi "bảo hiểm dùng
+    chung bộ mã cơ sở với sản xuất nên không cần tách" — SAI, và đối chiếu bắt được: BVH
+    khớp DNSE 73%, BMI 80%, trong khi mọi mã khác 99-100%. Bảng INSURANCE có dòng khác
+    thật, ví dụ `Tài sản khác = 12000 - 12500` chứ không phải `12600` như mẫu thường.
 
     Hai cái bẫy đã dính, cả hai đều đẩy công ty BẢO HIỂM thành ngân hàng:
     ① Kiểm `m in o` (có khoá) thay vì có SỐ: BVH/BMI/PTI đều có `412000` và `413300` nằm
@@ -179,7 +187,10 @@ def mot(sym, CT, CODES):
             if not tho: continue
             labs = sorted(tho.keys(), key=(thu_tuQ if loai == "QUARTER"
                                            else (lambda x: int(x) if str(x).isdigit() else -1)))
-            if khoi == "Q": o["mau"] = do_mau(tho, labs)
+            # ĐẶT `mau` Ở LƯỢT NÀO CÓ SỐ TRƯỚC, đừng khoá cứng vào lượt QUARTER: 146 mã
+            # (đa số UPCOM nhỏ) CHỈ có báo cáo NĂM, nguồn không trả quý nào. Khoá vào
+            # QUARTER thì chúng ra mau='?' rồi rơi về bảng mặc định mà không ai biết vì sao.
+            if not o.get("mau"): o["mau"] = do_mau(tho, labs)
             rows = []
             for k, lab, grp, bt in CT[o.get("mau") or MAU_MAC_DINH]:
                 v = [tinh(bt, tho.get(l) or {}) for l in labs]
@@ -211,7 +222,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     syms = sorted(f[:-5] for f in os.listdir(FIN) if f.endswith(".json"))
     if CHI: syms = [s for s in syms if s in CHI]
-    print(f"  {len(CT)} khoá dòng · {len(CODES)} mã dòng phải xin · {len(syms)} mã"
+    print(f"  {len(CT)} mẫu · {sum(len(v) for v in CT.values())} khoá dòng · {len(CODES)} mã dòng phải xin · {len(syms)} mã"
           + ("  [CHẠY THỬ, không ghi]" if THU else ""))
     t0 = time.time()
     with concurrent.futures.ThreadPoolExecutor(max_workers=LUONG) as ex:
