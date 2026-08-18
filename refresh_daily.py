@@ -90,11 +90,21 @@ def fetch_simplize(sym):
             d=get(f"https://api2.simplize.vn/api/company/summary/{sym}")["data"]
             # epsS lấy MỖI NGÀY (cùng 1 response, không tốn thêm request): EPS chuẩn của
             # Simplize = LNST cổ đông công ty mẹ / SLCP -> web tính P/E sống = giá / EPS
+            # SỐ CỔ PHIẾU LƯU HÀNH LẤY MỖI NGÀY, ĐỪNG KHOÁ SAU `if FULL` (sửa 19/08/2026).
+            # Nó nằm trong CHÍNH response này nên lấy hằng ngày tốn 0 lượt gọi thêm — trước
+            # đây bị gộp vào khối --full chỉ vì viết chung chỗ, không phải vì đắt.
+            # Hậu quả: SLCP chỉ mới lại THỨ HAI, trong khi chốt quyền xảy ra HẰNG NGÀY. Mà
+            # trang tính vốn hoá = SLCP × giá sống, còn giá thì đã bị nguồn hạ nền ngay ngày
+            # GDKHQ -> vốn hoá tụt đúng bằng tỉ lệ chia, im lặng, tới thứ Hai sau mới tự khỏi.
+            # Đo 19/08: SSI −15,4% (thưởng 100:20 chốt 17/08, đúng THỨ HAI nên trượt cả tuần),
+            # CTI −7,8%, BID −6,7%. User phát hiện, không phải phép kiểm nào.
+            # Vốn hoá ảnh hưởng bảng giá, bong bóng, bản đồ nhiệt và ĐƯỜNG ĐUA VỐN HOÁ.
             o={"mcap":d.get("marketCap"),"epsS":d.get("epsRatio"),
+               "shares":d.get("outstandingSharesValue"),
                "pct":{"w":d.get("pricePctChg7d"),"m":d.get("pricePctChg30d"),
                       "y":d.get("pricePctChg1y"),"y5":d.get("pricePctChg5y")}}
             if FULL or sym in hoso:
-                o.update({"shares":d.get("outstandingSharesValue"),
+                o.update({
                     "sector":(d.get("industryActivity") or "").strip() or None,
                     "sectorKey":d.get("bcIndustryGroupSlug"),"parent":d.get("bcEconomicSectorName"),
                     "img":d.get("imageUrl"),"pe":d.get("peRatio"),"pb":d.get("pbRatio"),
