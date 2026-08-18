@@ -1267,7 +1267,11 @@ function veKQKD(){
   kqkdTable(cols,dv); drawFinChart(cols);         // bảng TRƯỚC -> biểu đồ đo cột bảng
   const luot=++finLuot;
   // vốn hoá cần kho nến -> nạp xong mới có, vẽ lại (giữ nguyên kỳ và các năm đang mở)
-  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){ kqkdTable(cols,dv); drawFinChart(cols); } });
+  /* LƯỢT VẼ LẠI NÀY XOÁ SẠCH `tbody`, nên phải chèn lại dòng finx SAU nó. Thiếu chỗ này
+     thì bảng KQKD không bao giờ có dòng mở rộng: renderFin chèn xong, vài trăm ms sau
+     fillMcap về và dựng lại bảng, xoá mất — mà không có lỗi nào để lần. */
+  fillMcap(cols).then(ok=>{ if(ok&&luot===finLuot){ kqkdTable(cols,dv); drawFinChart(cols);
+    if(typeof veFinxRows==='function') veFinxRows(); } });
 }
 /* CÂN ĐỐI KẾ TOÁN: "TỔNG TÀI SẢN" và "TỔNG NGUỒN VỐN" là HAI VẾ CỦA MỘT ĐẲNG THỨC,
    luôn bằng nhau (đo toàn kho: 20.730/20.751 cặp khớp; 21 ca lệch là lỗi số liệu
@@ -1339,6 +1343,7 @@ async function renderFin(){
   genericTable($('bsT'),boTrungTong(bs),['bsa53','bsa78','TỔNG TÀI SẢN','VỐN CHỦ SỞ HỮU']);
   genericTable($('cfT'),cf,[]);
   veNganhRows();        // dòng chỉ số ngành nối vào cuối bảng CĐKT — vẽ lại theo kỳ đang chọn
+  veFinxRows();         // dòng báo cáo mở rộng (data/finx) nối vào cuối cả ba bảng
   pickFinHighlights(); if(C) renderHero();
 }
 
@@ -1351,6 +1356,115 @@ async function renderFin(){
    các dòng THUẦN QUÝ (ngày tồn, ngày thu, biên quý) bị ẩn ở chế độ năm — đặt biên gộp
    của riêng quý 4 dưới cột NĂM là nói sai kỳ. Màu tô theo TỪNG CỘT nên nhìn ngang một
    dòng là thấy chỉ số chuyển vàng/đỏ từ kỳ nào. Luật màu ghi ở tooltip tên dòng. */
+/* ---------- DÒNG BÁO CÁO MỞ RỘNG (data/finx) -------------------------------
+   Kho `data/finx` (tools/kho_dong.py) giữ những khoản mục mà data/fin và data/finq KHÔNG
+   có, cào theo bảng mã đã giải và kiểm chéo với DNSE (99,13%). Ở đây nối chúng vào CUỐI
+   ba bảng đang có, đúng lối `veNganhRows` — không dựng bảng thứ tư.
+
+   VÌ SAO CẦN: bảng KQKD trước nay ép MỌI mã vào một khuôn "Doanh thu / Giá vốn / LN gộp".
+   Với ngân hàng thì hai dòng đầu không phải khoản mục họ báo cáo và LN gộp luôn trống —
+   trong khi Thu nhập lãi thuần, Lãi dịch vụ, Chi phí dự phòng (những con số quyết định
+   chất lượng lợi nhuận của một ngân hàng) thì không có chỗ nào hiện.
+
+   BA LUẬT:
+   ① KHỚP THEO NHÃN KỲ đọc từ chính HÀNG TIÊU ĐỀ của bảng, đừng đoán theo thứ tự cột. Chế
+      độ NĂM còn bung thêm cột QUÝ (`qMoRong`) nên trục cột không thuần nhất — đọc nhãn thì
+      cả hai loại cột tự về đúng chỗ, khỏi phải xử lý riêng.
+   ② GỘP CẢ KHỐI Q LẪN Y vào một bảng tra. Nhãn quý ('Q2/26') và nhãn năm ('2026') không
+      đụng nhau nên gộp là an toàn, và nhờ vậy một hàm phục vụ được cả hai chế độ lẫn mấy
+      cột quý bung ra.
+   ③ BỎ DÒNG TRÙNG TÊN với dòng bảng đã có — bằng không "Doanh thu thuần" của finx đứng
+      ngay dưới "Doanh thu" của bảng cũ, hai con số gần bằng nhau, đọc ra như dữ liệu hỏng.
+      So bằng tên đã chuẩn hoá NFC + bỏ dấu: kho lẫn hai dạng Unicode (xem mục Bẫy). */
+let FX=null;
+const FX_TEN={BANK:'ngân hàng',STOCK:'chứng khoán',INSURANCE:'bảo hiểm',
+              REAL_ESTATE_AND_MANUFACTURING:'sản xuất – dịch vụ'};
+/* nhóm nào về bảng nào; nhóm lạ mặc định về cân đối kế toán */
+const FX_BANG={CASH_FLOW:'cfT',
+  GROSS_PROFIT:'kqkdT',PROFIT_BEFORE_TAX:'kqkdT',PROFIT_AFTER_TAX_PARENT_COMPANY:'kqkdT',
+  PROFIT_AFTER_TAX_AND_AFS:'kqkdT',OPERATING_EXPENSES:'kqkdT',OPERATING_INCOME:'kqkdT',
+  MAIN_BUSINESS_OPERATING_PROFIT:'kqkdT',INSURANCE_BUSINESS_PROFIT:'kqkdT'};
+/* Vì sao khối này có thể hiện một dòng TRÔNG NHƯ trùng dòng phía trên nhưng KHÁC DẤU:
+   `data/fin` (24hMoney) mất dấu ở lưu chuyển tiền tệ — đo được sai 60% số ô, xem CLAUDE.md.
+   `data/finx` lấy số CÓ DẤU của VNDirect. Nên khi hai dòng lệch nhau đúng ở dấu thì dòng
+   dưới mới là dòng đúng. Nói ra ở tooltip chứ đừng im lặng để người đọc tự đoán. */
+const GHI_FX='Các dòng dưới lấy từ data/finx (nguồn VNDirect), khớp theo nhãn kỳ với bảng '
+  +'trên. Dòng nào trùng số với dòng đã có thì đã tự ẩn; dòng còn lại là khoản mục bảng '
+  +'trên không có, hoặc là cùng khoản mục nhưng ĐÚNG DẤU (dấu lưu chuyển tiền tệ trong kho '
+  +'cũ bị sai ở nhiều kỳ). Thống kê mô tả quá khứ, không phải khuyến nghị.';
+const fxChuan=t=>String(t||'').normalize('NFC').toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,'');
+async function loadFinx(){
+  try{ const r=await fetch('data/finx/'+C.sym+'.json'); if(r.ok) FX=await r.json(); }catch(e){}
+  if(!FX||!(FX.Q||FX.Y)) { FX=null; return; }
+  veFinxRows();
+}
+function veFinxRows(){
+  if(!FX) return;
+  // ② một bảng tra dùng chung cho cả chế độ quý lẫn năm lẫn cột quý bung ra
+  const tra={};
+  for(const blk of [FX.Q,FX.Y]){
+    if(!blk||!blk.labels) continue;
+    for(const r of blk.rows||[]){
+      /* KHOÁ THEO (NHÓM, k) — khoá bằng mỗi `k` là ĐÈ MẤT SỐ. `k` dựng từ TÊN dòng nên
+         hai nhóm khác nhau cùng tên thì trùng khoá: mẫu CTCK có "AFS" ở cả
+         INVESTMENT_ASSETS (số dư, 691 tỷ) lẫn PROFIT_AFTER_TAX_AND_AFS (lãi/lỗ, −30 tỷ),
+         và "LNST công ty mẹ" ở hai nhóm. Đã dính: bảng cân đối của SSI hiện "AFS = −30",
+         tức lấy nhãn của khoản mục này gắn vào số của khoản mục kia. */
+      const kk=r.g+'|'+r.k;
+      const o=tra[kk]||(tra[kk]={n:r.n,g:r.g,v:{}});
+      blk.labels.forEach((l,i)=>{ if(r.v[i]!=null) o.v[l]=r.v[i]; });
+    }
+  }
+  const cell=v=>v==null?'—':Math.round(v).toLocaleString('en-US');
+  for(const id of ['kqkdT','bsT','cfT']){
+    const wrap=$(id), tb=wrap&&wrap.querySelector('table.ft tbody');
+    const th=wrap&&wrap.querySelector('table.ft thead tr');
+    if(!tb||!th) continue;
+    tb.querySelectorAll('tr.fxr').forEach(r=>r.remove());
+    // ① nhãn kỳ đọc thẳng từ hàng tiêu đề: bỏ ô đầu (đơn vị) và ô cuối (đệm)
+    const ths=[...th.children];
+    const ky=ths.slice(1, ths[ths.length-1].classList.contains('sp')?-1:undefined)
+                .map(x=>x.textContent.trim());
+    if(!ky.length) continue;
+    /* ③ BỎ DÒNG TRÙNG — SO THEO GIÁ TRỊ, KHÔNG THEO TÊN. Cùng một khoản mục nhưng hai
+       kho gọi hai kiểu: bảng cũ ghi "LƯU CHUYỂN TIỀN TỆ RÒNG TỪ HOẠT ĐỘNG ĐẦU TƯ", finx
+       ghi "Hoạt động đầu tư"; ngân hàng thì "Tiền cho vay" vs "Cho vay khách hàng". So tên
+       không bắt được cặp nào trong số đó, và kết quả là bảng hiện hai dòng số y hệt nhau
+       đứng cạnh nhau — đọc ra như dữ liệu hỏng. So dãy số thì ngôn ngữ không còn quan trọng. */
+    /* CẮT ĐUÔI RỖNG trước khi so. Hàng của bảng có thêm ô đệm `.sp` ở cuối nên chữ ký
+       của nó thừa một đoạn rỗng so với chữ ký dựng từ mảng số — hai chuỗi lệch đúng một
+       dấu `|` và mọi cặp trùng đều lọt lưới. Đã dính: VCB hiện "Tiền cho vay" và "Cho vay
+       khách hàng" cạnh nhau với dãy số y hệt. */
+    const catDuoi=a=>{ while(a.length&&a[a.length-1]==='') a.pop(); return a.join('|'); };
+    const soCua=tr=>catDuoi([...tr.cells].slice(1).map(td=>{
+      const t=td.textContent.replace(/[^\d.-]/g,'');
+      return t===''||t==='-'?'':String(Math.round(parseFloat(t)||0)); }));
+    const daCo=new Set([...tb.querySelectorAll('tr')].map(soCua));
+    const daCoTen=new Set([...tb.querySelectorAll('tr>td:first-child')].map(td=>fxChuan(td.textContent)));
+    const rows=[]; const daThem=new Set();
+    for(const k in tra){
+      const o=tra[k];
+      if((FX_BANG[o.g]||'bsT')!==id) continue;
+      const cn=fxChuan(o.n);
+      if(daCoTen.has(cn)||daThem.has(cn)) continue;
+      const tds=ky.map(l=>o.v[l]);
+      if(!tds.some(v=>v!=null)) continue;             // không có ô nào rơi vào cột đang hiện
+      const chuKy=catDuoi(tds.map(v=>v==null?'':String(Math.round(v))));
+      if(daCo.has(chuKy)) continue;                   // trùng dãy số với một dòng đã có
+      daThem.add(cn); daCo.add(chuKy);
+      rows.push('<tr class="fxr"><td><div class="lb">'+CP.esc(o.n)+'</div></td>'
+        +tds.map(v=>'<td>'+cell(v)+'</td>').join('')
+        +(ths[ths.length-1].classList.contains('sp')?'<td class="sp"></td>':'')+'</tr>');
+    }
+    if(!rows.length) continue;
+    const so=ky.length+1+(ths[ths.length-1].classList.contains('sp')?1:0);
+    tb.insertAdjacentHTML('beforeend',
+      '<tr class="fxr head ngcap"><td colspan="'+so+'" title="'+CP.esc(GHI_FX)+'">'
+      +'CHI TIẾT THEO MẪU BÁO CÁO ('+(FX_TEN[FX.mau]||'—')+')</td></tr>'+rows.join(''));
+  }
+}
+
 let NG=null;
 const NG_TEN={nh:'ngân hàng',ck:'chứng khoán',bh:'bảo hiểm',bds:'bất động sản',sx:'sản xuất – dịch vụ'};
 async function loadNganh(){
@@ -1752,6 +1866,7 @@ applyThmIcon();
   renderHero(); loadChart(); renderFromHist();
   renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
   loadNganh();          // chỉ số đặc thù ngành — kho data/nganh, nạp xong tự nối vào bảng CĐKT
+  loadFinx();           // dòng báo cáo mở rộng — kho data/finx, nạp xong tự nối vào ba bảng
   loadNnHist();         // dòng tiền khối ngoại 7D/30D: nạp ngầm, bấm là có ngay
   renderPeers(); renderDocsNews();
   const h=CP.health;
