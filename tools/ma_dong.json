@@ -2,7 +2,7 @@
  "REAL_ESTATE_AND_MANUFACTURING": {
   "ct": {
    "SHORT_TERM_ASSETS|Tiền": "37000",
-   "SHORT_TERM_ASSETS|Đầu tư tài chính": "412320",
+   "SHORT_TERM_ASSETS|Đầu tư tài chính": "11200",
    "SHORT_TERM_ASSETS|Phải thu": "11300",
    "SHORT_TERM_ASSETS|Hàng tồn kho": "11400",
    "SHORT_TERM_ASSETS|Tài sản khác": "11500",
@@ -16,7 +16,7 @@
    "ACCOUNTS_PAYABLE|Dài hạn": "13300",
    "BORROWINGS|Vay ngắn hạn": "13110",
    "BORROWINGS|Vay dài hạn": "13340",
-   "OWNERS_EQUITY|Vốn góp": "14148",
+   "OWNERS_EQUITY|Vốn góp": "14110",
    "OWNERS_EQUITY|LNST chưa phân phối": "14200",
    "GROSS_PROFIT|Lợi nhuận gộp": "23100",
    "GROSS_PROFIT|Doanh thu thuần": "21001",
