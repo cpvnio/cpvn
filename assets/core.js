@@ -8,6 +8,17 @@
 const CP={};
 (function(){
 const BG='https://bgapidatafeed.vps.com.vn';
+/* ═══ NGUỒN FILE GIÁ ═══
+   Để rỗng = đọc từ chính cpvn.io (`data/board*.json`, đi qua git + build Cloudflare).
+   Đặt thành 'https://data.cpvn.io' = đọc thẳng từ R2 — file giá thôi đi qua git.
+   VÌ SAO ĐÁNG ĐỔI: mỗi phiên thêm ~13 commit giá, `.git` đã 363 MB và còn phình. Nó vừa
+   làm gãy deploy 19 tiếng ngày 18/08 (file pack vượt 25 MiB) và làm mọi lượt build chậm
+   dần. Đưa file giá sang R2 là chặn đúng gốc: git ngừng phình vì giá, build ngừng chậm
+   thêm, và nhịp cập nhật không còn bị hạn mức build ghim.
+   ĐỔI MỘT DÒNG NÀY LÀ ĐỔI CẢ BA BẢN SAO — nhớ sửa cả bubbles.html và congcu.js. */
+const GIA_GOC='';
+const fGia=t=>(GIA_GOC||'')+(GIA_GOC?'/':'data/')+t;
+
 const HIST='https://histdatafeed.vps.com.vn/tradingview/history';
 CP.OFFLINE=/[?&]offline/.test(location.search);
 
@@ -301,7 +312,7 @@ async function doPoll(only){
     let rows=null;
     if(!CP.OFFLINE){
       try{
-        const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
+        const j=await fetch(fGia('board.json')).then(r=>r.ok?r.json():null);
         if(j&&j.rows&&j.rows.length){ rows=j.rows.filter(Boolean); CP.boardAt=j.at||0; }
         /* NHÓM THANH KHOẢN, nhịp nhanh hơn — GHÉP SAU nên nó ĐÈ LÊN bản chậm.
            `doPoll` duyệt rows theo thứ tự và gán đè, nên chỉ cần nối vào cuối là xong,
@@ -310,7 +321,7 @@ async function doPoll(only){
            trong khi cả thị trường vẫn 15 phút. Thiếu file này thì không sao: bản chậm
            vẫn đủ dùng, chỉ là cũ hơn. */
         try{
-          const h=await fetch('data/board_nong.json').then(r=>r.ok?r.json():null);
+          const h=await fetch(fGia('board_nong.json')).then(r=>r.ok?r.json():null);
           if(h&&h.rows&&h.rows.length){
             rows=(rows||[]).concat(h.rows.filter(Boolean));
             if((h.at||0)>(CP.boardAt||0)) CP.boardAt=h.at;
@@ -571,7 +582,7 @@ CP.loadIndices=async function(){
        sang VPS, tức đúng thứ vừa bỏ công xoá ở `doPoll`, chỉ khác là 1 thay vì 11.
        Đo được ngay sau khi đổi doPoll: bgapidatafeed vẫn hiện 1 lượt/lần mở trang. */
     let arr=null;
-    for(const f of ['data/board_nong.json','data/board.json']){
+    for(const f of [fGia('board_nong.json'),fGia('board.json')]){
       try{
         const j=await fetch(f).then(r=>r.ok?r.json():null);
         if(j&&j.idx&&j.idx.length){ arr=j.idx; break; }

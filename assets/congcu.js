@@ -327,6 +327,16 @@ function saveLiveCache(){
   }catch(e){}
 }
 const FORCE_LIVE=/[?&]forcelive/.test(location.search);   // cờ kiểm thử: poll cả khi tab ẩn
+/* ═══ NGUỒN FILE GIÁ ═══
+   Để rỗng = đọc từ chính cpvn.io (`data/board*.json`, đi qua git + build Cloudflare).
+   Đặt thành 'https://data.cpvn.io' = đọc thẳng từ R2 — file giá thôi đi qua git.
+   VÌ SAO ĐÁNG ĐỔI: mỗi phiên thêm ~13 commit giá, `.git` đã 363 MB và còn phình. Nó vừa
+   làm gãy deploy 19 tiếng ngày 18/08 (file pack vượt 25 MiB) và làm mọi lượt build chậm
+   dần. Đưa file giá sang R2 là chặn đúng gốc: git ngừng phình vì giá, build ngừng chậm
+   thêm, và nhịp cập nhật không còn bị hạn mức build ghim.
+   ĐỔI MỘT DÒNG NÀY LÀ ĐỔI CẢ BA BẢN SAO — nhớ sửa cả bubbles.html và congcu.js. */
+const GIA_GOC='';
+const fGia=t=>(GIA_GOC||'')+(GIA_GOC?'/':'data/')+t;
 async function pollLive(){
   if(livePolling) return false; livePolling=true;
   try{
@@ -334,10 +344,10 @@ async function pollLive(){
        đủ ở đó. Bản này trước đây còn tệ hơn hai bản kia: nó gọi 11 lô NỐI ĐUÔI nhau. */
     let rows=null;
     try{
-      const j=await fetch('data/board.json').then(r=>r.ok?r.json():null);
+      const j=await fetch(fGia('board.json')).then(r=>r.ok?r.json():null);
       if(j&&j.rows&&j.rows.length){ rows=j.rows.filter(Boolean); boardAt=j.at||0; }
       /* nhóm thanh khoản nhịp nhanh — ghép SAU để đè lên bản chậm (xem core.js) */
-      const h=await fetch('data/board_nong.json').then(r=>r.ok?r.json():null).catch(()=>null);
+      const h=await fetch(fGia('board_nong.json')).then(r=>r.ok?r.json():null).catch(()=>null);
       if(h&&h.rows&&h.rows.length){ rows=(rows||[]).concat(h.rows.filter(Boolean));
         if((h.at||0)>boardAt) boardAt=h.at; }
     }catch(e){}
@@ -384,7 +394,7 @@ async function pollLive(){
       const IDX=[['10','VNINDEX'],['11','VN30'],['02','HNX'],['03','UPCOM']];
     /* chỉ số lấy từ kho, đừng gọi VPS riêng — bản sao luật của CP.loadIndices (core.js) */
     let arr=null;
-    for(const f of ['data/board_nong.json','data/board.json']){
+    for(const f of [fGia('board_nong.json'),fGia('board.json')]){
       try{ const j=await fetch(f).then(r=>r.ok?r.json():null);
         if(j&&j.idx&&j.idx.length){ arr=j.idx; break; } }catch(e){}
     }
