@@ -1851,6 +1851,24 @@ async function khoLoiThoi(sym,f){
   for(const d of (idx[sym]||[])) if(d>cuoi&&d<=nay) return true;
   return false;
 }
+/* ĐƠN VỊ GIÁ: nguồn ngoài trả NGHÌN ĐỒNG, kho trả ĐỒNG — dò hệ số bằng cách so nến cuối
+   với tham chiếu của chính mã đó, tuyệt đối không đoán theo ngưỡng (VNZ 555k, HLB 505k rơi
+   đúng biên). Bản sao của chuanDonVi trong core.js, khác đúng một chỗ: bubbles đọc
+   `state.coins` chứ không có `CP`.
+   VÌ SAO PHẢI THÊM: hàm này bị GỌI 3 CHỖ trong file mà CHƯA TỪNG được định nghĩa ở đây —
+   bubbles.html không nạp core.js (chỉ chart.js + html2canvas) và `chuanDonVi` của core.js
+   nằm trong IIFE nên không phải biến toàn cục. Hai lượt gọi đầu nằm trong `try{}catch(e){}`
+   nên ReferenceError bị nuốt gọn; lượt thứ ba nằm ngoài nên ném ra, `loadDaily` reject và
+   thẻ chi tiết đứng mãi ở "đang tải biểu đồ". Không có lỗi nào hiện lên mặt trang. */
+function chuanDonVi(sym,j){
+  const c0=state.coins.get(sym)||{}, moc=c0.ref||c0.price||0;
+  const cuoi=j.c[j.c.length-1];
+  const k=moc>0&&cuoi>0?(Math.abs(cuoi*1000-moc)<Math.abs(cuoi-moc)?1000:1):(cuoi<500?1000:1);
+  const g=(a,i)=>(a&&a[i]!=null?a[i]:j.c[i]);
+  return j.t.map((t,i)=>({t,
+    o:Math.round(g(j.o,i)*k), h:Math.round(g(j.h,i)*k),
+    l:Math.round(g(j.l,i)*k), c:Math.round(j.c[i]*k), v:(j.v||[])[i]||0}));
+}
 const dayCache=new Map();
 function loadDaily(sym){
   if(dayCache.has(sym)) return dayCache.get(sym);
