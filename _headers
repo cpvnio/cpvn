@@ -40,14 +40,20 @@
   Cache-Control: public, max-age=604800
 
 # KHO DỮ LIỆU: đổi mỗi phiên -> KHÔNG cache dài, luôn hỏi lại máy chủ (ETag lo phần tiết kiệm)
-/data/*
+#
+# CẨN THẬN: `_headers` của Cloudflare CỘNG DỒN header của MỌI luật cùng khớp, KHÔNG phải
+# luật hẹp đè luật rộng. Đo được 18/08 trên board.json:
+#     Cache-Control: public, max-age=300, must-revalidate, public, max-age=60, must-revalidate
+# Hai `max-age` trong một header là header HỎNG — bên đọc lấy cái đầu (300) hoặc bỏ cả dòng.
+# Muốn một đường có luật riêng thì phải LOẠI nó khỏi luật rộng, đừng chỉ thêm luật hẹp.
+/data/[!b]*
   Cache-Control: public, max-age=300, must-revalidate
 
-# GIÁ TRONG PHIÊN: máy cào ghi mỗi 15 phút -> cache ngắn hơn /data/* để độ trễ thấy được
-# không cộng dồn (15 phút nhịp cào + 5 phút cache = 20 phút thì quá lâu; 60s -> tối đa 16).
-# Phải nằm SAU /data/* vì luật khớp muộn hơn mới đè được luật trước.
+# GIÁ TRONG PHIÊN: máy cào ghi mỗi 5 phút -> cache ngắn hơn phần kho còn lại để độ trễ
+# thấy được không cộng dồn (nhịp 5 phút + cache 60s = tối đa 6 phút).
+# ĐÃ LOẠI khỏi luật rộng bằng mẫu /data/[!b]* — xem cảnh báo cộng dồn header ở trên.
 # Cloudflare vẫn cache ở biên nên nghìn khách cùng lúc chỉ thành vài lượt về gốc.
-/data/board.json
+/data/board*.json
   Cache-Control: public, max-age=60, must-revalidate
 
 # universe: đổi 1 lần/ngày -> cache 5 phút như data/ (F5 không tải lại 600KB)
