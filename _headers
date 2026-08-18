@@ -46,15 +46,16 @@
 #     Cache-Control: public, max-age=300, must-revalidate, public, max-age=60, must-revalidate
 # Hai `max-age` trong một header là header HỎNG — bên đọc lấy cái đầu (300) hoặc bỏ cả dòng.
 # Muốn một đường có luật riêng thì phải LOẠI nó khỏi luật rộng, đừng chỉ thêm luật hẹp.
-/data/[!b]*
-  Cache-Control: public, max-age=300, must-revalidate
+# Nhưng CÁCH AN TOÀN NHẤT là đừng để hai luật cùng khớp: MỘT luật cho cả /data/*.
+# (Đã thử mẫu lớp ký tự `/data/[!b]*` rồi bỏ — Cloudflare không tài liệu hoá cú pháp đó,
+#  mà lúc build đang hỏng thì không được thêm biến số lạ nào.)
+/data/*
+  Cache-Control: public, max-age=60, must-revalidate
 
 # GIÁ TRONG PHIÊN: máy cào ghi mỗi 5 phút -> cache ngắn hơn phần kho còn lại để độ trễ
 # thấy được không cộng dồn (nhịp 5 phút + cache 60s = tối đa 6 phút).
 # ĐÃ LOẠI khỏi luật rộng bằng mẫu /data/[!b]* — xem cảnh báo cộng dồn header ở trên.
 # Cloudflare vẫn cache ở biên nên nghìn khách cùng lúc chỉ thành vài lượt về gốc.
-/data/board*.json
-  Cache-Control: public, max-age=60, must-revalidate
 
 # universe: đổi 1 lần/ngày -> cache 5 phút như data/ (F5 không tải lại 600KB)
 /universe.json
