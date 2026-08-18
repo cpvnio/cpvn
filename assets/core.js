@@ -617,6 +617,75 @@ CP.loadHistFile=async function(sym){
     if(j&&j.t&&j.t.length) d=j; }catch(e){}
   histCache.set(sym,d); return d;
 };
+
+/* ═══ KHO CÓ ĐANG Ở NỀN CŨ KHÔNG? ═══════════════════════════════════════════════
+   Kho tự hạ nền mỗi phiên (refresh_daily so giá tại ngày trùng nhau, lệch >0,5% thì tải
+   lại cả chuỗi) — nhưng nó chạy lúc 15:15. Nên có đúng MỘT khoảng kho sai: từ lúc mở cửa
+   NGÀY GDKHQ tới lượt cào kế tiếp. Hàm này bịt đúng khoảng đó.
+
+   HAI LƯỚI ĐỘC LẬP, cố ý không gộp — mỗi lưới bịt lỗ của lưới kia:
+
+   ① LƯỚI SỐ (không tốn lượt gọi nào). Tham chiếu hôm nay và giá đóng cửa phiên trước
+      trong kho PHẢI BẰNG NHAU nếu nền không đổi. Đo 1.522 mã phiên 18/08/2026:
+        HOSE  403 mã · lệch trung vị 0,00% · p99 0,00% · max 0,00%
+        HNX   299 mã · y hệt, 0,00% ở mọi phân vị
+        UPCOM 819 mã · p95 1,67% · p99 7,00% · max 17,24%
+      HOSE/HNX lấy tham chiếu = ĐÚNG giá đóng cửa phiên trước nên ngưỡng 0,5% không báo
+      nhầm một mã nào. UPCOM lấy BÌNH QUÂN phiên trước nên nhiễu thật — đúng như CLAUDE.md
+      đã cảnh báo, đừng hạ ngưỡng của sàn này xuống. Chỉ xét MỘT CHIỀU (kho CAO hơn tham
+      chiếu): hạ nền bao giờ cũng làm giá quá khứ THẤP đi, còn nhiễu bình quân thì đối xứng
+      hai chiều — nên xét một chiều là cắt nửa số báo nhầm mà không bỏ sót ca thật nào.
+
+   ② LỊCH `data/cotuc.json` — có sự kiện nào rơi vào (nến cuối của kho, phiên hôm nay].
+      Đây là lưới DUY NHẤT dùng được cho UPCOM.
+
+   VÌ SAO PHẢI CÓ CẢ HAI: bản vá 17/08 chỉ có lịch, và lời bác khi đó đúng — "lịch sót một
+   sự kiện là chart sai mà không có dấu hiệu gì". Lịch sót thật: bản cotuc.json ngày 17/08
+   CHƯA có HCC và TVS, tới bản 18/08 mới có (GDKHQ 19/08). Lưới số bịt đúng lỗ đó cho
+   HOSE/HNX. Ngược lại lịch bịt lỗ của lưới số ở UPCOM.
+
+   BÁO NHẦM LÀ VÔ HẠI, BỎ SÓT MỚI CHẾT. Báo nhầm = mã đó đi mượn nguồn ngoài, tức đúng
+   bằng hành vi của toàn bộ trang trước hôm nay. Bỏ sót = chart bung một cú sập giả bằng
+   đúng tỉ lệ cổ tức. Nên mọi chỗ nghi ngờ đều nghiêng về "coi như lỗi thời".
+   Đo trên phiên 18/08: hai lưới cộng lại bắt 15/1.522 mã = 1,0% phải mượn nguồn. */
+let ctPromise=null;
+CP.loadCotuc=function(){
+  if(ctPromise) return ctPromise;
+  ctPromise=(async()=>{
+    try{
+      const j=await fetch('data/cotuc.json').then(r=>r.ok?r.json():null);
+      if(!j||!j.sk) return null;
+      const idx={};
+      for(const e of j.sk) if(e&&e.s&&e.d) (idx[e.s]||(idx[e.s]=[])).push(e.d);
+      return idx;                       // {} = đã đọc được, mã này không có sự kiện
+    }catch(e){ return null; }           // null = KHÔNG ĐỌC ĐƯỢC, khác hẳn {}
+  })();
+  return ctPromise;
+};
+CP.khoLoiThoi=async function(sym,f){
+  if(!f||!f.t||!f.t.length) return true;
+  /* NGÀY LỊCH HÔM NAY, KHÔNG PHẢI `CP.lastSessionDate()`. Hàm kia trả về phiên đã ĐÓNG:
+     trước 15:00 nó còn trả HÔM QUA, đúng bằng ngày nến cuối của kho — nên dòng thoát sớm
+     ngay dưới sẽ nuốt luôn cả hai lưới và hàm này trả `false` với MỌI mã, suốt phiên.
+     Tức lớp bảo vệ chết đúng khoảng thời gian duy nhất nó sinh ra để canh. `test_khonen.js`
+     bắt được (7/17 phép hỏng); đừng đổi lại cho "nhất quán với chỗ khác".
+     Cửa sổ cần xét là (nến cuối của kho, HÔM NAY]. Hôm nay rơi vào T7/CN hay ngày nghỉ thì
+     cũng vô hại — GDKHQ bao giờ cũng là ngày giao dịch nên không có sự kiện nào ở đó. */
+  const cuoi=ngayNen(f.t[f.t.length-1]), nay=ymd(vnNow());
+  if(cuoi>=nay) return false;           // kho đã có nến hôm nay -> nền chắc chắn mới
+  const c=CP.coins.get(sym)||{};
+  const sanChuan=(c.ex==='HOSE'||c.ex==='HNX');
+  /* ① lưới số */
+  const kho=(f.c||[])[f.c.length-1];
+  if(c.ref>0&&kho>0&&(kho/c.ref-1)>(sanChuan?0.005:0.05)) return true;
+  /* ② lịch */
+  const idx=await CP.loadCotuc();
+  /* Lịch hỏng: HOSE/HNX vẫn tin được vì lưới số ở hai sàn đó không có nhiễu; UPCOM thì
+     mất lưới duy nhất của nó nên phải nghiêng về an toàn mà đi mượn nguồn. */
+  if(!idx) return !sanChuan;
+  for(const d of (idx[sym]||[])) if(d>cuoi&&d<=nay) return true;
+  return false;
+};
 /* ---------- NẾN NGÀY DÀI HẠN: MƯỢN THẲNG TỪ NGUỒN, KHÔNG LẤY TRONG KHO ------
    Luật (user chốt 05/08/2026): trang KHÔNG tự lưu nến để vẽ và KHÔNG tự tính
    điều chỉnh cổ tức/chia tách nữa — cả hai để nguồn lo.
@@ -675,26 +744,31 @@ CP.loadDaily=function(sym,sau){
       if(!tot||d>ngayNen(tot.rows[tot.rows.length-1].t)) tot=r;
       return d>=phien;
     };
-    /* ═══ NẾN VẼ CHART: NGUỒN NGOÀI TRƯỚC, KHO CHỈ LÀ CỨU HỘ CUỐI ═══
-       (Sáng 17/08 tao đảo thành kho-trước để bớt lượt gọi; user bác NGAY TRONG NGÀY và
-       bác đúng — chuỗi đã trả về như cũ. Ghi lại để đừng ai đảo lần nữa.)
+    /* ═══ KHO TRƯỚC, NGUỒN NGOÀI CHỈ KHI KHO KHÔNG DÙNG ĐƯỢC (19/08/2026) ═══
+       Trước đây chart luôn hỏi VNDirect trước vì "CPVN không có cơ chế tự hạ nền". Câu đó
+       KHÔNG còn đúng: `refresh_daily.work_hist` so giá tại NGÀY TRÙNG NHAU giữa nguồn và
+       file cũ, lệch quá 0,5% là tải lại cả chuỗi — chạy MỖI PHIÊN chứ không riêng --full.
+       Kiểm chứng độc lập 19/08/2026: 14 mã chốt quyền trong 20 ngày trước đó, đối chiếu
+       kho với DNSE (nguồn KHÁC nguồn kho dùng) — 14/14 đã hạ nền đúng.
 
-       LÝ DO KHÔNG THỂ LẤY KHO LÀM NGUỒN CHÍNH: **CPVN không có cơ chế TỰ HẠ NỀN.** Trang
-       không tự tính điều chỉnh cổ tức/chia tách — nó ăn theo nền mà NGUỒN đã hạ sẵn. Kho
-       vì thế chỉ mang đúng cái nền của lúc nó được cào (15:15 phiên trước), nên từ lúc mở
-       cửa NGÀY GDKHQ tới lượt cào kế tiếp, kho ở nền CŨ trong khi giá sống đã sang nền MỚI.
-       Đo được 17/08/2026: SSI chốt quyền cổ tức tiền 1.000đ + cổ phiếu thưởng 100:20 ->
-       nền mới (24.500 − 1.000) ÷ 1,2 = 19.583đ, đúng bằng số VNDirect trả, trong khi kho
-       vẫn ghi 24.500. Lấy kho lúc đó là chart bung một cú sập giả 20%.
-       Tao từng vá bằng cách dò `data/cotuc.json` xem mã có GDKHQ trong khoảng trống không.
-       Nó CHẠY ĐÚNG (8/1527 mã hôm đó tự rơi về nguồn), nhưng nó chỉ là lớp DÒ: lịch sót một
-       sự kiện là chart sai mà không có dấu hiệu gì. Với thứ dễ sai âm thầm như nền giá thì
-       lấy thẳng nguồn — nơi việc hạ nền là của họ và luôn đúng — mới là chỗ dừng đúng.
-       Bớt lượt gọi đã lấy ở chỗ khác rồi: bảng giá (11 lượt/lần, phần nặng nhất) nay đọc
-       `data/board.json`, còn tin đọc kho. Chart là 1 lượt/lần mở trang mã — trả giá đó để
-       nền giá luôn đúng là đổi hời.
+       Cái kho KHÔNG tự chữa được là KHOẢNG TRỐNG TRONG NGÀY: nó chốt lúc 15:15, nên từ khi
+       mở cửa NGÀY GDKHQ tới lượt cào kế tiếp, kho ở nền CŨ còn giá sống đã sang nền MỚI.
+       Đó là việc của `CP.khoLoiThoi`. Ngoài khoảng đó, kho là nguồn ĐÚNG và MIỄN PHÍ.
 
-       Vẫn giữ luật "CHỌN NGUỒN THEO PHIÊN MỚI NHẤT NÓ CÓ": nguồn nào đã có phiên gần nhất
+       Ba điều kiện để dùng kho, thiếu một là đi mượn nguồn:
+         ① có từ 2 nến trở lên
+         ② nền chưa lệch — `khoLoiThoi` trả false
+         ③ kho chưa chết lâu: nến cuối trong vòng 5 ngày lịch. Pipeline hỏng cả tuần thì
+            chart phải đi lấy chỗ khác chứ không đứng ở phiên tuần trước.
+       Trong phiên, chart THIẾU đúng cây nến hôm nay — chấp nhận, giá sống đã hiện to ở đầu
+       trang, và nến chưa đóng cửa cũng chưa phải nến thật. TUYỆT ĐỐI đừng bịa nến hôm nay
+       từ giá sống (xem luật "ĐỪNG dựng nến mới cho phiên nguồn chưa có"). */
+    const f=await CP.loadHistFile(sym);
+    const coKho=!!(f&&f.t&&f.t.length>=2);
+    if(coKho&&(to-f.t[f.t.length-1])<5*86400&&!(await CP.khoLoiThoi(sym,f))){
+      return (tot={rows:chuanDonVi(sym,f),src:'kho CPVN'});
+    }
+    /* Vẫn giữ luật "CHỌN NGUỒN THEO PHIÊN MỚI NHẤT NÓ CÓ": nguồn nào đã có phiên gần nhất
        thì dùng luôn và dừng; chưa có thì giữ làm dự phòng rồi hỏi tiếp. */
     if(!CP.OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
       try{
@@ -703,10 +777,9 @@ CP.loadDaily=function(sym,sau){
         if(j&&j.s==='ok'&&j.t&&j.t.length>=2&&nhan({rows:chuanDonVi(sym,j),src:ten})) return tot;
       }catch(e){}
     }
-    /* CỨU HỘ CUỐI: cả hai nguồn tắt. Kho có thể đang ở nền cũ (xem chú thích trên) nhưng
-       một chart hơi lệch vẫn hơn không có chart nào — và nhãn `src` nói rõ nó từ kho. */
-    const f=await CP.loadHistFile(sym);
-    if(f&&f.t&&f.t.length>=2) nhan({rows:chuanDonVi(sym,f),src:'kho CPVN'});
+    /* CỨU HỘ CUỐI: cả hai nguồn tắt mà kho thì đang ở nền cũ. Một chart hơi lệch vẫn hơn
+       không có chart nào — nhưng `src` phải NÓI RA là nền cũ, đừng để nó trông như số sạch. */
+    if(!tot&&coKho) nhan({rows:chuanDonVi(sym,f),src:'kho CPVN (nền cũ)'});
     return tot;
   })();
   dayCache.set(khoa,p); return p;

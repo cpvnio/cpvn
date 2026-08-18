@@ -44,7 +44,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 |---|---|
 | `universe.json` | 1522 mã: tên, sàn, ngành, SLCP, mcap, PE/PB, eps, cash, np, mốc %, vn30/hnx30 |
 | `data/eod/latest.json` | **File client luôn tải** (~100KB): giá đóng cửa phiên gần nhất + 4 chỉ số |
-| `data/hist/{MÃ}.json` | Nến ngày **từ 2013** (bồi 17/08/2026, xem `tools/boi_nen.py`): 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **KHÔNG còn là nguồn vẽ chart** (xem mục Nến), nay chỉ nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
+| `data/hist/{MÃ}.json` | Nến ngày **từ 2013** (bồi 17/08/2026, xem `tools/boi_nen.py`): 8 mảng `t,o,h,l,c,v,fb,fs` cùng độ dài, cũ→mới. **LÀ NGUỒN VẼ CHART CHÍNH từ 19/08/2026** (xem mục Nến), đồng thời nuôi MA/RSI/đỉnh 52T/dòng tiền NN/độ rộng/đường đua và bộ đo `tools/ta.py`. `fb`/`fs` (khối ngoại) đã vá đủ lịch sử 11/08/2026 — xem mục Khối ngoại |
 | `data/fin/{MÃ}.json` | KQKD/CĐKT/LCTT theo năm+quý, cổ tức. **`Y`/`Q` gom dồn đủ lịch sử; `bsQ`/`cfQ`/`bsY`/`cfY` chỉ 8 KỲ CUỐN CHIẾU** — muốn dài hơn đọc `data/finq` |
 | `data/finq/{MÃ}.json` | **Kho sâu**: cân đối kế toán + lưu chuyển tiền tệ ~79 quý / 22 năm, cùng sơ đồ khối `bsQ/cfQ/bsY/cfY`. Trang web KHÔNG đọc file này (để `data/fin` nhẹ) — nó dành cho nghiên cứu/bộ lọc. `tools/kho_sau.py` dựng |
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
@@ -58,37 +58,79 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
-## Nến vẽ chart — KHO TRƯỚC, nguồn ngoài chỉ là cứu hộ
+## Nến vẽ chart — KHO TRƯỚC, nguồn ngoài chỉ khi kho không dùng được
 
-> **ĐÃ LẬT 17/08/2026 (user chốt). Luật cũ 05/08 — "mượn thẳng của nguồn, đừng lấy trong
-> kho" — KHÔNG còn hiệu lực; đừng dựng lại.** `CP.loadDaily` và bản sao trong bubbles.html
-> nay đi **kho → (VNDirect → VPS) CHỈ KHI kho không có mã đó**.
-> **Vì sao lật:** luật cũ sinh ra để KHÔNG LƯU dữ liệu của họ. Nhưng ở Việt Nam **số liệu là
-> dữ kiện, không được bảo hộ quyền tác giả**, và **không có quyền sui generis cho CSDL**
-> (Điều 22 Luật SHTT chỉ bảo hộ cách chọn lọc/sắp xếp, "không bao hàm chính các tư liệu
-> đó") — nên lưu nến gần như không có rủi ro bản quyền. Đổi lại, cách cũ bắn MỘT lượt sang
-> VNDirect cho **mỗi lần mở mỗi trang mã**, nhân 1.527 trang và mọi lượt crawler quét. Đổi
-> một rủi ro gần bằng 0 lấy một rủi ro có thật — và rủi ro có thật ấy đúng là thứ khiến bên
-> kia có động cơ và có log để gửi công văn.
+> **LẬT THẬT SỰ 19/08/2026.** Bản ghi cũ nói "đã lật 17/08" là SAI — hôm đó lật rồi bị bác
+> ngay trong ngày và chuỗi trả về như cũ, nhưng tài liệu không được sửa lại. Suốt từ đó tới
+> 19/08, cả bản trên máy lẫn **bản đang chạy trên cpvn.io** đều vẫn gọi VNDirect trước, và
+> `CP.khoLoiThoi` mà mục này mô tả thì **không tồn tại trong code**. Bài học chung: **sửa tài
+> liệu trong CÙNG commit với code**, bằng không nó thành một lời khai chắc nịch về một thứ
+> không có thật — thứ tốn công đi kiểm mới phát hiện ra.
+>
+> `CP.loadDaily` và bản sao trong `bubbles.html` nay đi **kho → (VNDirect → VPS) chỉ khi kho
+> không dùng được**. Ba điều kiện để dùng kho, thiếu một là mượn nguồn: ① từ 2 nến trở lên ·
+> ② `khoLoiThoi` trả false · ③ nến cuối trong vòng 5 ngày lịch (pipeline chết cả tuần thì
+> chart phải đi lấy chỗ khác chứ không đứng ở phiên tuần trước).
+>
+> **Vì sao lật:** số liệu là **dữ kiện, không được bảo hộ quyền tác giả**, và VN **không có
+> quyền sui generis cho CSDL** (Điều 22 Luật SHTT chỉ bảo hộ cách chọn lọc/sắp xếp) — lưu nến
+> gần như không có rủi ro bản quyền. Đổi lại, cách cũ bắn MỘT lượt sang VNDirect cho **mỗi
+> lần mở mỗi trang mã**, nhân 1.527 mã và mọi lượt crawler quét. Khách còn được lợi: đo HPG
+> thì kho cho **13 năm trong 62 KB đã nén** (từ edge Cloudflare trong nước) trong khi VNDirect
+> trả **5 năm trong 65 KB không nén**.
+>
+> **CÂU "CPVN KHÔNG CÓ CƠ CHẾ TỰ HẠ NỀN" ĐÃ HẾT ĐÚNG — đừng trích lại nó để bác việc đọc kho.**
+> `refresh_daily.work_hist` so giá tại NGÀY TRÙNG NHAU giữa nguồn và file cũ, lệch quá 0,5%
+> là tải lại cả chuỗi; chạy **mỗi phiên**, không riêng `--full`. Kiểm chứng độc lập 19/08/2026:
+> 14 mã chốt quyền trong 20 ngày trước đó, đối chiếu kho với **DNSE** (nguồn KHÁC hẳn nguồn
+> kho dùng) — **14/14 đã hạ nền đúng**, gồm VHM, MBB, PVI, CLM, PGV.
+>
+> **Cái kho KHÔNG tự chữa được là KHOẢNG TRỐNG TRONG NGÀY.** Kho chốt 15:15, nên từ lúc mở
+> cửa NGÀY GDKHQ tới lượt cào kế tiếp nó vẫn ở nền CŨ trong khi giá sống đã sang nền MỚI.
+> Ca đo được: **SSI 17/08/2026** chốt cùng lúc cổ tức tiền 1.000đ + thưởng 100:20 → nền mới
+> `(24.500 − 1.000) ÷ 1,2 = 19.583đ`, đúng bằng số `dchart` trả, còn kho vẫn ghi 24.500.
+> **Nguồn KHÔNG sai — nó hạ nền đúng lịch; kho mới là bản cũ.** (Đừng lặp lại nhầm lẫn này:
+> đọc số 19.583 rất dễ kết luận ngược, phải mở `data/cotuc.json` soi ngày `d` trước khi phán.)
+>
+> **`CP.khoLoiThoi(sym, f)` bịt đúng khoảng đó, bằng HAI LƯỚI ĐỘC LẬP — đừng bỏ lưới nào.**
+> ① **Lưới số** (không tốn lượt gọi): tham chiếu hôm nay và giá đóng cửa phiên trước trong kho
+> phải BẰNG NHAU nếu nền không đổi. Đo 1.522 mã phiên 18/08/2026:
+> **HOSE 403 mã và HNX 299 mã lệch 0,00% ở cả p99 lẫn max** — hai sàn này lấy tham chiếu đúng
+> bằng giá đóng cửa phiên trước, nên ngưỡng **0,5%** không báo nhầm mã nào. **UPCOM 819 mã thì
+> p95 1,67% · p99 7,00% · max 17,24%** vì tham chiếu là BÌNH QUÂN phiên trước — sàn này dùng
+> ngưỡng **5%**, đừng hạ. Chỉ xét MỘT CHIỀU (kho cao hơn tham chiếu): hạ nền bao giờ cũng làm
+> giá quá khứ thấp đi, còn nhiễu bình quân thì đối xứng, nên xét một chiều cắt nửa số báo nhầm
+> mà không bỏ sót ca thật nào.
+> ② **Lịch `data/cotuc.json`**: có sự kiện nào rơi vào `(nến cuối của kho, hôm nay]`. Đây là
+> lưới DUY NHẤT dùng được cho UPCOM.
+>
+> **VÌ SAO PHẢI CÓ CẢ HAI.** Bản vá 17/08 chỉ có lịch, và lời bác khi đó ĐÚNG: *"lịch sót một
+> sự kiện là chart sai mà không có dấu hiệu gì"*. Lịch sót thật — bản `cotuc.json` ngày 17/08
+> **chưa có HCC và TVS**, tới bản 18/08 mới có (GDKHQ 19/08). Lưới số bịt lỗ đó cho HOSE/HNX;
+> ngược lại lịch bịt lỗ của lưới số ở UPCOM. Lịch tải hỏng thì HOSE/HNX vẫn tin lưới số, còn
+> UPCOM mất lưới duy nhất nên ngả về mượn nguồn.
+>
+> **BÁO NHẦM VÔ HẠI, BỎ SÓT MỚI CHẾT.** Báo nhầm = mã đó mượn nguồn ngoài, đúng bằng hành vi
+> của cả trang trước 19/08. Bỏ sót = chart bung cú sập giả bằng đúng tỉ lệ cổ tức. Nên mọi chỗ
+> nghi ngờ đều ngả về "coi như lỗi thời". Giá phải trả đo trên phiên 18/08: **15/1.522 mã =
+> 1,0%** phải mượn nguồn (toàn UPCOM báo nhầm), 99% còn lại đọc kho.
+>
+> **`ymd(vnNow())` CHỨ KHÔNG PHẢI `CP.lastSessionDate()`** — bẫy đã dính, `test_khonen.js` bắt
+> được 7/17 phép. Hàm kia trả về phiên đã ĐÓNG: trước 15:00 nó còn trả HÔM QUA, đúng bằng ngày
+> nến cuối của kho, nên dòng thoát sớm `cuoi>=nay` nuốt luôn cả hai lưới → hàm trả `false` với
+> MỌI mã, suốt phiên. Tức lớp bảo vệ chết đúng khoảng thời gian duy nhất nó sinh ra để canh.
+>
+> **KIỂM: `node tools/test_khonen.js`** (17 phép, chạy trên chính `core.js`). Bắt buộc chạy
+> cùng `test_gia.js` trước mỗi lần đẩy nếu có đụng vào nguồn nến. **Bản sao trong `bubbles.html`
+> phải sửa cùng lúc.**
+>
 > **Hệ quả phải chấp nhận:** trong phiên, chart THIẾU đúng cây nến hôm nay (kho chốt 15:15).
 > Giá sống vẫn hiện to ở đầu trang, và nến chưa đóng cửa thì cũng chưa phải nến thật —
-> **tuyệt đối đừng bịa nến hôm nay từ giá sống**, xem luật "ĐỪNG dựng nến mới cho phiên
-> nguồn chưa có". Luật "chọn nguồn theo phiên mới nhất nó có" (dưới đây) vì thế chỉ còn áp
-> cho nhánh cứu hộ.
-> **KHO LỖI THỜI TRONG NGÀY CHỐT QUYỀN — PHẢI TỰ PHÁT HIỆN, BẰNG KHÔNG CHART BUNG CÚ SẬP GIẢ.**
-> Kho chốt 15:15 nên từ lúc mở cửa NGÀY GDKHQ tới lượt cào kế tiếp, nó vẫn giữ nền TRƯỚC khi
-> hạ, trong khi giá sống đã sang nền mới. Ca đo được: **SSI ngày 17/08/2026** chốt quyền cùng
-> lúc **cổ tức tiền 1.000đ + cổ phiếu thưởng 100:20** → nền mới `(24.500 − 1.000) ÷ 1,2 =
-> 19.583đ`, **đúng bằng số `dchart` trả**, còn kho vẫn ghi 24.500 (tỉ lệ 1,2511).
-> **`dchart` KHÔNG sai — nó hạ nền đúng lịch; kho mới là bản cũ.** (Đừng lặp lại nhầm lẫn
-> này: lần đầu đọc số 19.583 rất dễ kết luận ngược, phải mở `data/cotuc.json` ra soi ngày `d`
-> trước khi phán.) Mẫu 70 mã ngẫu nhiên khác khớp nền 70/70 — chỉ mã đang chốt quyền mới lệch.
-> **Cách phát hiện: `CP.khoLoiThoi(sym, tNếnCuối)` hỏi `data/cotuc.json`** — có sự kiện nào
-> rơi vào khoảng `(nến cuối của kho, hôm nay]` thì kho chắc chắn chưa biết → đi mượn nguồn
-> ngoài cho riêng mã đó. **ĐỪNG dò bằng cách so số**: tham chiếu của UPCOM là BÌNH QUÂN phiên
-> trước chứ không phải giá đóng cửa, so giá sẽ báo động giả hàng loạt.
-> Giá phải trả rất nhỏ — đo 17/08: **8/1.527 mã** (BID, CTI, GMX, KTL, MBS, SEB, SSI, TMW),
-> tức 0,5%; 99,5% còn lại vẫn đọc kho. Bản sao trong `bubbles.html` phải sửa cùng lúc.
+> **tuyệt đối đừng bịa nến hôm nay từ giá sống**, xem luật "ĐỪNG dựng nến mới cho phiên nguồn
+> chưa có". Luật "chọn nguồn theo phiên mới nhất nó có" (dưới đây) vì thế chỉ còn áp cho nhánh
+> mượn nguồn. Nhãn `src` phân biệt ba trạng thái: `kho CPVN` · tên nguồn ngoài ·
+> **`kho CPVN (nền cũ)`** khi cả hai nguồn tắt mà kho thì đang lỗi thời — phải NÓI RA, đừng để
+> nó trông như số sạch.
 > Đây cũng là bằng chứng rằng **mọi lượt bồi kho phải quy về cùng nền trước khi ghép**
 > (xem ba luật ở mục kho `data/hist`).
 
@@ -169,10 +211,11 @@ Trình tự mở trang: nạp kho → `applyLive()` (đệm đè nếu `sess > e
 ### Kiểm thử — chạy TRƯỚC MỖI LẦN đẩy nếu có đụng vào giá
 
 ```
-node tools/test_gia.js
+node tools/test_gia.js      # 55 phép — cơ chế giá
+node tools/test_khonen.js   # 17 phép — kho có đang ở nền cũ không
 ```
 
-38 phép kiểm nạp thẳng `assets/core.js` vào đồng hồ giả + localStorage giả: lịch phiên ở mọi
+55 phép kiểm nạp thẳng `assets/core.js` vào đồng hồ giả + localStorage giả: lịch phiên ở mọi
 mốc chuyển, luật chốt cứng, luật đệm thắng/thua kho, F5 giữa phiên không được chờ mạng, hợp
 đồng 10 phần tử của `cpvn_live`, chế độ `?offline`. Hỏng một phép là có người dùng sẽ thấy
 giá sai hoặc giá nhảy — đừng đẩy.

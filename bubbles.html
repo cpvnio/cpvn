@@ -367,12 +367,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260818a"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260819a"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260818a"></script>
+<script defer src="assets/mobi.js?v=20260819a"></script>
 </head>
 <body>
 <div id="app">
@@ -543,7 +543,7 @@ document.addEventListener(MO,function(e){
   cấp dịch vụ tư vấn đầu tư chứng khoán. Người vận hành có thể nắm giữ cổ phiếu xuất hiện
   trên trang. Người dùng tự chịu trách nhiệm với quyết định của mình.</footer>
 
-<script src="assets/chart.js?v=20260818a"></script>
+<script src="assets/chart.js?v=20260819a"></script>
 <script src="html2canvas.min.js"></script>
 <script>
 /* ============================================================================
@@ -1811,18 +1811,53 @@ async function loadHistFile(sym){
   }catch(e){}
   histFileCache.set(sym,d); return d;
 }
-/* NẾN NGÀY: MƯỢN THẲNG CỦA NGUỒN, kho chỉ là cứu hộ cuối. CPVN không có cơ chế tự hạ
-   quyết định 05/08 "mượn thẳng của nguồn"). Bản sao của CP.loadDaily trong core.js —
-   bubbles.html tự chứa lõi dữ liệu, sửa một bên phải sửa cả hai. Lý do lật ghi đầy đủ ở
-   core.js: số liệu không được bảo hộ quyền tác giả và VN không có quyền sui generis cho
-   CSDL, nên lưu kho gần như không có rủi ro — trong khi gọi thẳng thì mỗi lượt mở mỗi
-   trang mã là một lượt nện sang VNDirect mang sẵn Origin của CPVN. */
+/* ═══ KHO TRƯỚC, NGUỒN NGOÀI CHỈ KHI KHO KHÔNG DÙNG ĐƯỢC (19/08/2026) ═══
+   BẢN SAO của CP.loadDaily + CP.khoLoiThoi trong core.js — bubbles.html tự chứa lõi dữ
+   liệu nên sửa một bên PHẢI sửa cả hai. Lý do đầy đủ và số liệu đo ghi ở core.js; tóm tắt:
+   kho tự hạ nền mỗi phiên lúc 15:15, nên chỉ sai đúng một khoảng — từ khi mở cửa NGÀY
+   GDKHQ tới lượt cào kế tiếp. `khoLoiThoi` bịt đúng khoảng đó bằng hai lưới độc lập
+   (so tham chiếu + lịch cotuc.json). Kiểm: `node tools/test_khonen.js`. */
 const VNDCHART='https://dchart-api.vndirect.com.vn/dchart/history';
+let ctPromise=null;
+function loadCotuc(){
+  if(ctPromise) return ctPromise;
+  ctPromise=(async()=>{
+    try{
+      const j=await fetch('data/cotuc.json').then(r=>r.ok?r.json():null);
+      if(!j||!j.sk) return null;
+      const idx={};
+      for(const e of j.sk) if(e&&e.s&&e.d) (idx[e.s]||(idx[e.s]=[])).push(e.d);
+      return idx;
+    }catch(e){ return null; }
+  })();
+  return ctPromise;
+}
+async function khoLoiThoi(sym,f){
+  if(!f||!f.t||!f.t.length) return true;
+  /* NGÀY LỊCH HÔM NAY. Đừng thay bằng "phiên gần nhất": trước 15:00 phiên gần nhất là HÔM
+     QUA, đúng bằng ngày nến cuối của kho, và dòng thoát sớm dưới đây sẽ nuốt cả hai lưới
+     -> hàm trả false với mọi mã suốt phiên, tức chết đúng lúc cần. Xem test_khonen.js. */
+  const cuoi=dayOfTs(f.t[f.t.length-1]), nay=dayVN();
+  if(cuoi>=nay) return false;
+  const c=state.coins.get(sym)||{};
+  const sanChuan=(c.ex==='HOSE'||c.ex==='HNX');
+  const kho=(f.c||[])[f.c.length-1];
+  if(c.ref>0&&kho>0&&(kho/c.ref-1)>(sanChuan?0.005:0.05)) return true;
+  const idx=await loadCotuc();
+  if(!idx) return !sanChuan;
+  for(const d of (idx[sym]||[])) if(d>cuoi&&d<=nay) return true;
+  return false;
+}
 const dayCache=new Map();
 function loadDaily(sym){
   if(dayCache.has(sym)) return dayCache.get(sym);
   const p=(async()=>{
     const to=Math.floor(Date.now()/1e3), from=to-15*365*86400;
+    const f=await loadHistFile(sym);
+    const coKho=!!(f&&f.t&&f.t.length>=2);
+    if(coKho&&(to-f.t[f.t.length-1])<5*86400&&!(await khoLoiThoi(sym,f))){
+      return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+    }
     if(!OFFLINE) for(const [url,res,ten] of [[VNDCHART,'D','VNDirect'],[HIST,'1D','VPS']]){
       try{
         const j=await fetch(`${url}?symbol=${sym}&resolution=${res}&from=${from}&to=${to}`)
@@ -1830,9 +1865,8 @@ function loadDaily(sym){
         if(j&&j.s==='ok'&&j.t&&j.t.length>=2) return {rows:chuanDonVi(sym,j),src:ten};
       }catch(e){}
     }
-    const f=await loadHistFile(sym);        // cứu hộ cuối, có thể ở nền cũ — xem core.js
-    if(!f||!f.t||f.t.length<2) return null;
-    return {rows:chuanDonVi(sym,f),src:'kho CPVN'};
+    if(!coKho) return null;
+    return {rows:chuanDonVi(sym,f),src:'kho CPVN (nền cũ)'};
   })();
   dayCache.set(sym,p); return p;
 }
