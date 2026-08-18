@@ -63,6 +63,33 @@ jobs:
             echo "may chinh con song -> thoi"; echo "can=0" >> "$GITHUB_OUTPUT"
           fi
 
+      # ═══ CANH GÁC TỪ NGOÀI — bước quan trọng nhất của workflow này ═══
+      # Ngày 18/08 Cloudflare ngừng deploy suốt 19 TIẾNG (file pack của .git vượt 25 MiB).
+      # Máy cào vẫn chạy đúng, GitHub vẫn có dữ liệu mới, chỉ có TRANG là đứng — và không
+      # gì báo. Nhãn "giá lúc HH:MM" tao thêm hôm trước lẽ ra phải hét lên, nhưng chính nó
+      # cũng nằm trong bản build không deploy được: THỨ CẢNH BÁO NẰM CÙNG ĐƯỜNG TRIỂN KHAI
+      # VỚI THỨ NÓ CẢNH BÁO, nên chết cùng nhau.
+      # Phép so này chạy ở GitHub, tức NGOÀI Cloudflare, nên nó sống sót khi Cloudflare
+      # hỏng. Lệch quá 45 phút -> job FAIL -> GitHub tự gửi email cho chủ kho.
+      - name: Canh trang co bat kip kho khong
+        if: always()
+        run: |
+          set -uo pipefail
+          GIO=$(TZ=Asia/Ho_Chi_Minh date +%H%M)
+          [ "$GIO" -lt 930 ] || [ "$GIO" -ge 1505 ] && { echo "ngoai phien - bo qua"; exit 0; }
+          KHO=$(python3 -c "import json;print(int(json.load(open('data/board_nong.json'))['at']/1000))" 2>/dev/null || echo 0)
+          WEB=$(curl -sf --max-time 20 "https://cpvn.io/data/board_nong.json?c=$RANDOM" \
+                | python3 -c "import json,sys;print(int(json.load(sys.stdin)['at']/1000))" 2>/dev/null || echo 0)
+          [ "$KHO" -eq 0 ] && { echo "kho chua co file - bo qua"; exit 0; }
+          [ "$WEB" -eq 0 ] && { echo "::error::cpvn.io KHONG doc duoc data/board_nong.json"; exit 1; }
+          LECH=$(( (KHO - WEB) / 60 ))
+          echo "kho=$KHO web=$WEB · trang cham hon kho $LECH phut"
+          if [ "$LECH" -ge 45 ]; then
+            echo "::error::TRANG KHONG BAT KIP KHO — cham $LECH phut. Nghi Cloudflare khong deploy duoc; xem Workers & Pages > cpvn1 > Builds."
+            exit 1
+          fi
+          echo "trang bat kip kho (lech $LECH phut) - OK"
+
       - name: Cao thay may chinh
         if: steps.kiem.outputs.can == '1'
         run: |
