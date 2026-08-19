@@ -551,31 +551,33 @@ function nyBang(){
   const th=(k,t,cl)=>'<th class="'+(cl||'')+' nyh" data-k="'+k+'">'+t+(nySort.k===k?(D<0?' ▾':' ▴'):'')+'</th>';
   const hang=r=>{
     const c=ST.map.get(r.s);
-    /* "×N lần" tô màu theo lời/lỗ: đây là con số người ta quét mắt tìm đầu tiên. */
     const x=r.x==null?'—':'<b style="color:'+(r.x>=1?'var(--green)':'var(--red)')+'">×'+r.x.toFixed(2)+'</b>';
     return '<tr data-sym="'+esc(r.s)+'">'
       +'<td class="l"><div class="co">'+(c?logoHTML(c):'<span class="lgw"></span>')
         +'<div><b>'+esc(r.s)+'</b><i class="nyn">'+esc((c&&c.name)||'')+'</i></div></div></td>'
       +'<td>'+esc(r.ex||'—')+'</td>'
       +'<td>'+nyNgay(r.d)+'</td>'
-      +'<td>'+(r.g!=null?num(r.g)+'đ':'—')+'</td>'
       +'<td>'+x+'</td>'
-      +'<td'+(r.q===0?' class="uoc" title="Ước tính — không rơi đúng bước giá của sàn, xem chú thích dưới bảng"':'')+'>'
-        +(r.gt!=null?(r.q===0?'~':'')+num(r.gt)+'đ':'—')+'</td>'
-      +'<td>'+(r.mc!=null?num(r.mc)+' tỷ':'—')+'</td></tr>';
+      +'<td class="nycb">'+(r.g!=null?num(r.g)+'đ':'—')+'</td></tr>';
   };
   return '<div class="nywrap"><table class="tbl"><thead><tr>'
-    +th('s','Mã','l')+th('ex','Sàn')+th('d','Ngày lên sàn')+th('g','Giá phiên đầu')
-    +th('x','So với nay')+th('gt','Giá lúc đó')+th('mc','Vốn hoá lên sàn')
+    +th('s','Mã','l')+th('ex','Sàn')+th('d','Ngày lên sàn')
+    +th('x','Tổng lợi suất')+th('g','Giá nền quy đổi')
     +'</tr></thead><tbody>'+ma.map(hang).join('')+'</tbody></table></div>'
-    +'<div class="nynote">'+ma.length.toLocaleString('en-US')+' mã · '
-    +'<b>Giá phiên đầu</b> quy về nền hôm nay (đã trừ mọi lần chia tách/cổ tức sau đó) nên '
-    +'<b>So với nay</b> là mức tăng thật kể từ ngày lên sàn. <b>Giá lúc đó</b> là giá thị '
-    +'trường ước tính của chính phiên ấy — dấu <b>~</b> nghĩa là con số không rơi đúng bước '
-    +'giá của sàn, tức phép dựng ngược đã tích sai số qua nhiều lần chia. '
-    +'<b>Không phải giá IPO</b>: giá IPO/đấu giá là chuyện khác và không có nguồn máy đọc '
-    +'được — kho đấu giá của HOSE không kèm mã chứng khoán, lẫn lộn giá/cổ phiếu với tổng '
-    +'giá trị, chỉ có HOSE, và phần lớn là đấu giá thoái vốn nhà nước chứ không phải IPO gốc.'
+    +'<div class="nynote">'+ma.length.toLocaleString('en-US')+' mã. '
+    +'<b>Tổng lợi suất</b> = giá hôm nay chia giá phiên đầu tiên, cả hai quy về cùng một nền. '
+    +'Con số này <b>đã gồm cổ tức tiền mặt</b>: nguồn hạ nền chuỗi giá theo cả cổ tức tiền lẫn '
+    +'cổ phiếu, nên phần cổ tức đã nằm sẵn trong tỉ lệ — đo được ngày 19/08: HRB chia 3.000đ, '
+    +'giá thô 35.400 và giá kho hạ đúng xuống 32.402 = 35.400×(32.400/35.400). Hiểu là '
+    +'“một đồng bỏ vào ngày lên sàn, cổ tức nhận được mua thêm cổ phiếu, nay thành mấy đồng”.'
+    +'<br><b>Giá nền quy đổi</b> là giá phiên đầu tiên đã kéo về mặt bằng hôm nay — '
+    +'<b>không phải giá thị trường ngày đó</b> (VCB ghi 9.084đ chứ không phải ~60.000đ như thực tế). '
+    +'Nó chỉ có nghĩa khi đặt cạnh giá hiện tại để ra cột bên trái.'
+    +'<br><b>Vì sao không có giá thật và vốn hoá ngày lên sàn:</b> dựng ngược giá thô từ chuỗi '
+    +'đã hạ nền thì sai số dồn qua từng lần chia — đo trên 1.051 mã chỉ 28,5% rơi đúng bước giá '
+    +'của sàn, riêng VCB lệch tới 1,7 lần. Giá IPO cũng không lấy được bằng máy: kho đấu giá của '
+    +'HOSE (821 bản ghi từ 2005) chỉ có <i>giá khởi điểm</i> chứ không có giá đấu thành công, '
+    +'không kèm mã chứng khoán, và không có VCB. Thà bỏ cột còn hơn hiện số không bảo vệ được.'
     +'</div>';
 }
 function nySapHTML(){

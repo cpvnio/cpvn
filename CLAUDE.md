@@ -1528,6 +1528,25 @@ kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45
 | hồ sơ chờ lên sàn | `api.hsx.vn/l/api/v1/1/securities?newListingStatusId=N` | chỉ HOSE |
 | GD bổ sung sắp tới | `finfo/v4/events` type `LISTED` ngày tương lai | 100 đợt |
 
+> **ĐÃ GỠ CỘT "Giá lúc đó" VÀ "Vốn hoá lên sàn" KHỎI GIAO DIỆN (20/08/2026) — đừng dựng lại
+> khi chưa có nguồn mới.** User chỉ ra VCB: trang ghi 9.084đ trong khi giá thật ngày lên sàn
+> ~60.000đ. Đó là giá ĐÃ HẠ NỀN, còn phép dựng ngược về giá thô thì đo được chỉ **28,5%** rơi
+> đúng bước giá của sàn, riêng VCB lệch **~1,7 lần**. Vốn hoá lên sàn dựa trên chính con số ấy
+> nên cũng bỏ theo. Thà bỏ cột còn hơn hiện số không bảo vệ được. Dữ liệu `gt`/`q`/`mc` vẫn
+> nằm trong kho cho ai muốn nghiên cứu, chỉ không hiện ra.
+> **GIÁ IPO CŨNG KHÔNG THAY THẾ ĐƯỢC — đã dò tận nơi.** `api.hsx.vn/a/api/v1/1/auctions` có
+> 821 bản ghi sâu tới **2005**, nhưng: `startingPrice` là **giá KHỞI ĐIỂM** chứ không phải giá
+> đấu thành công · `auctiondbAucResults` **rỗng ở mọi bản ghi** · không kèm mã chứng khoán ·
+> **không có VCB**. `finfo/v4/ipos`, `/v4/auctions`, `hnx.vn/api/auction/list` đều 404.
+
+**"TỔNG LỢI SUẤT" ĐÃ GỒM CỔ TỨC TIỀN — đừng cộng thêm lần nữa.** User đề nghị cộng tay
+`Σ(cổ tức × SLCP từng thời điểm)` vào vốn hoá hiện tại rồi chia vốn hoá lúc lên sàn. Không
+cần: nguồn hạ nền chuỗi giá theo **cả** cổ tức tiền lẫn cổ phiếu (đo 19/08: HRB chia 3.000đ,
+giá thô 35.400 → giá kho 32.402 = đúng `35.400×32.400/35.400`), nên `giá nay / giá kho ngày
+lên sàn` chính là tổng lợi suất có tái đầu tư cổ tức. Cộng thêm là **đếm hai lần**.
+Khác biệt còn lại giữa hai cách: cách của user còn tính phần công ty phình ra do phát hành
+thêm LẤY TIỀN — đó là vốn cổ đông bỏ thêm vào, không phải lãi.
+
 **HAI CỘT GIÁ, ĐỪNG TRỘN.** `g` = giá phiên đầu **quy về nền hôm nay** — chính xác tuyệt
 đối, và là số đúng để so ra `x` = "×N lần kể từ ngày lên sàn" (hai đầu cùng một nền).
 `gt` = giá thị trường thật ngày đó, **ƯỚC TÍNH** bằng cách gỡ ngược chuỗi hạ nền của
