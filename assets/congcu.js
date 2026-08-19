@@ -518,14 +518,22 @@ function sectorPerf(){
    Kho do `tools/kho_niemyet.py` dựng. Nạp LƯỜI — file ~200KB mà chỉ mục này dùng, kéo về
    trong `loadAll` là mọi người vào trang công cụ đều phải tải dù không mở tới.
 
-   HAI CỘT GIÁ, và phải nói rõ khác nhau chỗ nào, bằng không người đọc tưởng có số mâu thuẫn:
-     "Giá phiên đầu"  = giá phiên đầu tiên QUY VỀ NỀN HÔM NAY. Chính xác tuyệt đối, và là số
-                        đúng để so với giá hiện tại ra "×N lần" — hai đầu cùng một nền.
-     "Giá lúc đó"     = giá thị trường thật ngày lên sàn, ƯỚC TÍNH bằng cách gỡ ngược chuỗi
-                        hạ nền. Mã pha loãng nhiều thì sai số dồn (đo: chỉ 28,5% rơi đúng
-                        bước giá của sàn) nên số nào không đạt phép tự kiểm bị đánh dấu "~".
-   Vốn hoá lên sàn dùng "giá lúc đó" × số cổ phiếu LÚC ĐÓ — không trộn nền hôm nay với số
-   cổ phiếu cũ. */
+   BẢNG CHỈ CÒN NĂM CỘT, và chuyện GỠ BỚT mới là phần đáng ghi lại:
+     "Tổng lợi suất"     = giá nay / giá phiên đầu, hai đầu cùng một nền. ĐÃ GỒM CỔ TỨC TIỀN —
+                           nguồn hạ nền chuỗi giá theo cả cổ tức tiền lẫn cổ phiếu (đo 19/08:
+                           HRB chia 3.000đ, giá thô 35.400 -> giá kho 32.402 = đúng
+                           35.400×32.400/35.400). Ai đòi cộng thêm Σ(cổ tức × SLCP) là ĐẾM
+                           HAI LẦN — đã có người đề nghị đúng như vậy.
+     "Giá nền quy đổi"   = giá phiên đầu kéo về mặt bằng hôm nay. KHÔNG phải giá thị trường
+                           ngày đó (VCB ghi 9.084đ trong khi thực tế ~60.000đ) — nhãn cũ ghi
+                           "Giá phiên đầu" nên bị đọc thành giá thật, phải đổi.
+
+   ĐÃ GỠ "Giá lúc đó" VÀ "Vốn hoá lên sàn" (20/08/2026) — ĐỪNG DỰNG LẠI khi chưa có nguồn mới.
+   Dựng ngược về giá thô chỉ đạt 28,5% rơi đúng bước giá của sàn, riêng VCB lệch ~1,7 lần; vốn
+   hoá lên sàn dựa trên chính con số ấy nên bỏ theo. Giá IPO cũng không thay được: kho đấu giá
+   HOSE (821 bản ghi từ 2005) chỉ có GIÁ KHỞI ĐIỂM, `auctiondbAucResults` rỗng ở mọi bản ghi,
+   không kèm mã chứng khoán, và không có VCB. Trường `gt`/`q`/`mc` vẫn nằm trong kho cho ai
+   muốn nghiên cứu — chỉ không hiện ra. */
 let NY=null, nyLoc={ex:'all',tim:''}, nySort={k:'d',d:-1};
 async function nyLoad(){
   if(NY) return NY;
