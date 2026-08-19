@@ -281,6 +281,13 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .finwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   .finwrap canvas.fin{width:auto}
   .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  /* BA BẢNG BCTC = BA THẺ, chỉ thẻ đang chọn nằm trong luồng (user chốt 19/08/2026).
+     `display:none` chứ không phải ẩn bằng chiều cao — bảng ẩn phải KHÔNG chiếm chỗ. Đổi
+     lại thì mọi số đo của nó bằng 0, mà biểu đồ KQKD đo bề rộng bảng để đặt cột thẳng tâm:
+     xem mục vẽ lại ở tay bấm #finB. */
+  .finB{margin-top:6px}
+  .finblk{display:none;margin-top:12px}
+  .finblk.on{display:block}
   /* LƯỚI CỘT CHUNG cho mọi bảng (KQKD/CĐKT/LCTT/cổ tức) -> cột kỳ thẳng hàng nhau:
      nhãn cột 1 bọc .lb bề rộng CỐ ĐỊNH (nhãn dài không đẩy được cột), cột kỳ khai báo 106px
      (luôn > nội dung số) -> trình duyệt tính ra cùng một lưới ở cả 4 bảng */
@@ -531,22 +538,29 @@ document.addEventListener(MO,function(e){
       <div class="chips" id="finP">
         <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
       </div>
+      <!-- BA BẢNG NAY LÀ BA THẺ CHỌN, không còn xếp dọc (user chốt 19/08/2026). Trước đây
+           muốn xem lưu chuyển tiền tệ phải cuộn qua trọn bảng KQKD lẫn cân đối kế toán —
+           mỗi bảng vài chục dòng, trên điện thoại là cuộn rất lâu. Nút chọn đặt NGAY DƯỚI
+           nút quý/năm nên đổi bảng chỉ một cú bấm, không rời tầm mắt.
+           Tên bảng chuyển hẳn lên nút; ba dòng <h3> cũ bỏ đi vì nút đã nói rồi. -->
+      <div class="chips finB" id="finB">
+        <button data-b="kq" class="on">Kết quả kinh doanh</button><button data-b="cd">Cân đối kế toán</button><button data-b="lc">Lưu chuyển tiền tệ</button>
+      </div>
       <!-- Cơ cấu lợi nhuận (biểu đồ #segBox, rồi dòng bảng tr.ccr) đã bỏ hẳn 16/08/2026 —
            lý do đầy đủ ở khối chú thích cùng tên trong phần script. -->
-      <h3 class="t">Kết quả kinh doanh</h3>
-      <div class="finlegend">
-        <span><i style="background:#5b6b7a"></i>Doanh thu</span>
-        <span><i style="background:#16c784"></i>LN sau thuế</span>
-        <span><i style="background:#38bdf8;height:2.5px;width:11px;border-radius:1px;vertical-align:2px"></i>Biên ròng %</span>
+      <div class="finblk on" id="fb-kq">
+        <div class="finlegend">
+          <span><i style="background:#5b6b7a"></i>Doanh thu</span>
+          <span><i style="background:#16c784"></i>LN sau thuế</span>
+          <span><i style="background:#38bdf8;height:2.5px;width:11px;border-radius:1px;vertical-align:2px"></i>Biên ròng %</span>
+        </div>
+        <div class="finwrap">
+          <canvas class="fin" id="finCv"></canvas>
+          <div id="kqkdT"></div>
+        </div>
       </div>
-      <div class="finwrap">
-        <canvas class="fin" id="finCv"></canvas>
-        <div id="kqkdT"></div>
-      </div>
-      <h3 class="t">Cân đối kế toán</h3>
-      <div class="twrap" id="bsT"></div>
-      <h3 class="t">Lưu chuyển tiền tệ</h3>
-      <div class="twrap" id="cfT"></div>
+      <div class="finblk" id="fb-cd"><div class="twrap" id="bsT"></div></div>
+      <div class="finblk" id="fb-lc"><div class="twrap" id="cfT"></div></div>
       <div class="subnote" id="finNote">Đơn vị: tỷ đồng · kỳ mới nhất bên trái · nguồn 24hMoney, lưu trong kho CPVN nên xem được cả khi nguồn lỗi</div>
     </div>
   </div>
@@ -1376,6 +1390,33 @@ async function renderFin(){
    ③ BỎ DÒNG TRÙNG TÊN với dòng bảng đã có — bằng không "Doanh thu thuần" của finx đứng
       ngay dưới "Doanh thu" của bảng cũ, hai con số gần bằng nhau, đọc ra như dữ liệu hỏng.
       So bằng tên đã chuẩn hoá NFC + bỏ dấu: kho lẫn hai dạng Unicode (xem mục Bẫy). */
+/* ---------- TẠM TẮT HAI KHỐI MỞ RỘNG — user chốt 19/08/2026 ----------------
+   Một cờ tắt CẢ HAI, MỌI NGÀNH, không chừa mẫu nào:
+     · "CHI TIẾT THEO MẪU BÁO CÁO (…)" ở cuối cả ba bảng   (data/finx)
+     · "CHỈ SỐ ĐẶC THÙ NGÀNH (…)"      ở cuối bảng cân đối  (data/nganh)
+
+   VÌ SAO — user soi NTP và bắt đúng chỗ: khối finx TỰ MÂU THUẪN VỀ DẤU ngay trong một
+   bảng. Đo lại trên kho NTP:
+       GROSS_PROFIT      / "Giá vốn hàng bán"  =  −123
+       OPERATING_EXPENSES/ "Chi phí giá vốn"   =  +123      ← cùng một con số, ngược dấu
+   Cạnh đó "Chi phí bán hàng +8" và "Chi phí lãi vay +1" cũng dương. Tức là trong cùng một
+   bảng, khoản chi chỗ thì trừ chỗ thì cộng — người đọc không có cách nào biết dòng nào đã
+   trừ vào lợi nhuận, dòng nào chưa.
+
+   TỆ HƠN: luật bỏ dòng trùng (so theo DÃY SỐ) đã giữ nhầm bản sai. Bảng gốc có "Giá vốn
+   hàng bán +1.349", nên "Chi phí giá vốn +1.349" của finx bị coi là trùng và bỏ, còn bản
+   ÂM −1.349 thì chữ ký khác nên lọt lên màn hình. Lọc trùng càng tốt thì lỗi này càng nổi.
+
+   VÌ SAO PHÉP ĐỐI CHIẾU 99,13% KHÔNG BẮT ĐƯỢC: `doi_chieu_finx.py` so từng ô với DNSE, mà
+   DNSE cũng chính là nơi quy ước dấu này đến. Hai bên sai giống nhau thì vẫn "khớp". Phép
+   thiếu là so CHÉO NỘI BỘ — cùng khoản mục xuất hiện ở hai nhóm thì dấu phải nhất quán.
+
+   TẮT CHỨ KHÔNG XOÁ: kho data/finx (1.525 file) và data/nganh còn nguyên, hàm vẽ còn
+   nguyên. Bật lại = đổi cờ này thành true, SAU KHI đã thống nhất dấu ở khâu DỰNG KHO
+   (tools/kho_dong.py) — đừng chữa bằng cách đảo dấu lúc vẽ, vì lúc đó không còn biết dòng
+   nào nguồn đã âm sẵn. */
+const HIEN_MORONG=false;
+
 let FX=null;
 const FX_TEN={BANK:'ngân hàng',STOCK:'chứng khoán',INSURANCE:'bảo hiểm',
               REAL_ESTATE_AND_MANUFACTURING:'sản xuất – dịch vụ'};
@@ -1395,6 +1436,7 @@ const GHI_FX='Các dòng dưới lấy từ data/finx (nguồn VNDirect), khớp
 const fxChuan=t=>String(t||'').normalize('NFC').toLowerCase()
   .normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,'');
 async function loadFinx(){
+  if(!HIEN_MORONG) return;
   try{ const r=await fetch('data/finx/'+C.sym+'.json'); if(r.ok) FX=await r.json(); }catch(e){}
   if(!FX||!(FX.Q||FX.Y)) { FX=null; return; }
   veFinxRows();
@@ -1468,6 +1510,7 @@ function veFinxRows(){
 let NG=null;
 const NG_TEN={nh:'ngân hàng',ck:'chứng khoán',bh:'bảo hiểm',bds:'bất động sản',sx:'sản xuất – dịch vụ'};
 async function loadNganh(){
+  if(!HIEN_MORONG) return;
   try{ const r=await fetch('data/nganh/'+C.sym+'.json'); if(r.ok) NG=await r.json(); }catch(e){}
   if(!NG||!NG.ky||!NG.ky.length||!NG.d) { NG=null; return; }
   veNganhRows();
@@ -1835,6 +1878,17 @@ document.querySelectorAll('#secTabs button').forEach(b=>b.onclick=()=>{
 document.querySelectorAll('#finP button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#finP button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); finPeriod=b.dataset.v; renderFin();
+});
+/* ĐỔI THẺ BẢNG. VẼ LẠI BIỂU ĐỒ MỖI KHI QUAY VỀ `kq` — bắt buộc, không phải cho đẹp:
+   `drawFinChart` đo `offsetWidth` của <th> bảng KQKD để đặt cột biểu đồ thẳng tâm với cột
+   bảng. Thẻ đang ẩn thì mọi số đo bằng 0 và nó rơi về bề rộng mặc định 800px. Nên chỉ cần
+   đứng ở thẻ "Cân đối" rồi bấm quý/năm là biểu đồ vẽ ở bề rộng sai, quay lại thấy cột lệch
+   hẳn khỏi bảng. Vẽ lại lúc hiện là lúc duy nhất đo được số thật. */
+document.querySelectorAll('#finB button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#finB button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.finblk').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); $('fb-'+b.dataset.b).classList.add('on');
+  if(b.dataset.b==='kq') veLaiFinChart();
 });
 /* Safari iOS bắn resize liên tục khi thanh địa chỉ co giãn theo cú cuộn -> phải hoãn,
    bằng không mỗi cú vuốt là vẽ lại cả hai canvas. */
