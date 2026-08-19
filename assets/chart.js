@@ -199,7 +199,25 @@ let veBut=false;                                   // bút đang được giữ 
   /* EMA màu RIÊNG, không mượn màu MA: bật cả MA50 lẫn EMA50 mà cùng màu thì hai đường
      chạy sát nhau thành một vệt, không đọc ra đường nào là đường nào. */
   const EMACOL={20:'rgba(52,211,153,.9)',50:'rgba(251,146,60,.9)',200:'rgba(232,121,249,.85)'};
-  const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false};
+  /* HAI CỜ RIÊNG cho hai loại mốc, và `bctc` MẶC ĐỊNH TẮT. Lý do đo được: mốc BCTC có
+     mỗi quý một cái, mà chart mặc định mở ở khung Tháng/Năm — VCB ra 27 mốc BCTC chen với
+     19 mốc cổ tức trên cùng một hàng, thành một dải chấm liền không đọc được gì. Cổ tức thì
+     thưa (19 mốc trải 16 năm) nên bật sẵn được. Ai cần ngày ra báo cáo thì bấm một nút. */
+  const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false};
+  /* ---- MỐC SỰ KIỆN DOANH NGHIỆP (data/sukien) --------------------------------
+     Mỗi mốc: {t, k, gc} — t là giây UNIX ở 00:00 UTC của NGÀY sự kiện, đúng quy ước
+     mốc nến của kho. `xOfT` lo phần chiếu sang pixel nên khung Tuần/Tháng/Năm tự đúng,
+     không phải xử lý riêng.
+     GOM THEO NẾN chứ không vẽ từng mốc: một mã có thể chốt quyền tiền và cổ phiếu CÙNG
+     một ngày (SSI 17/08/2026), và ở khung Tháng thì cả chục sự kiện rơi vào một nến —
+     vẽ rời ra là mấy chấm chồng lên nhau thành một vệt không đọc được. */
+  let sukien=[];            // [{t,k,gc}] đã xếp theo thời gian
+  let skHit=[];             // [{x,y,r,ev}] ô bấm trúng của lượt vẽ gần nhất
+  let skHover=-1;
+  self.setSuKien=function(list){
+    sukien=(list||[]).filter(e=>e&&e.t).sort((a,b)=>a.t-b.t);
+    self.draw(); return self;
+  };
   /* EMA phải tính DỒN từ đầu chuỗi (mỗi giá trị phụ thuộc toàn bộ quá khứ), không cắt cửa
      sổ như MA được. Nên tính một lần rồi ĐỆM lại, đừng tính trong vòng vẽ: chart vẽ lại
      mỗi lần rê chuột, tính lại 200 kỳ × 3000 nến mỗi khung hình là giật ngay. */
@@ -456,6 +474,51 @@ let veBut=false;                                   // bút đang được giữ 
       x.fillStyle=MUT(); x.font='700 10px system-ui'; x.textAlign='left';
       x.fillText('MACD 12/26/9',8,top+11);
     }
+    /* ---- MỐC SỰ KIỆN ------------------------------------------------------
+       Đặt ở một HÀNG CỐ ĐỊNH sát đáy vùng giá, không bám theo giá nến: bám giá thì mốc
+       nhảy loạn khi kéo/phóng trục giá, mà mục đích chỉ là "ngày này có chuyện gì". */
+    skHit.length=0;
+    if((ind.sk||ind.bctc)&&sukien.length){
+      const yMoc=padT+plotH-9;
+      const gom=new Map();                       // chỉ số nến -> danh sách sự kiện
+      for(const e of sukien){
+        if(e.k==='bctc'?!ind.bctc:!ind.sk) continue;
+        const idx=Math.round(idxOfT(e.t));
+        if(idx<i0-1||idx>i1) continue;           // ngoài khung nhìn
+        (gom.get(idx)||gom.set(idx,[]).get(idx)).push(e);
+      }
+      x.textAlign='center'; x.textBaseline='middle'; x.font='700 9px system-ui';
+      for(const [idx,evs] of gom){
+        /* Chiếu theo mốc CỦA NẾN chứ không của sự kiện: ở khung Tháng thì mấy sự kiện
+           trong cùng tháng có t khác nhau, lấy t sự kiện là chấm lệch khỏi tâm nến. */
+        const nen=rows[Math.max(0,Math.min(rows.length-1,idx))];
+        const X=xOfT(nen?nen.t:evs[0].t);
+        if(X<-8||X>plotW+8) continue;
+        /* MÀU THEO LOẠI, ưu tiên loại "nặng" nhất trong nhóm: chia cổ phiếu/thưởng đổi số
+           cổ phiếu nên đáng chú ý hơn cổ tức tiền, còn BCTC là nhóm riêng. */
+        const co=k=>evs.some(e=>e.k===k);
+        const mau = co('cp')||co('thuong') ? '#eab308'
+                  : co('quyenmua')||co('phathanh') ? '#c026d3'
+                  : co('tien') ? '#38bdf8' : '#8a8a99';
+        const chu = co('cp')||co('thuong') ? 'C'
+                  : co('quyenmua')||co('phathanh') ? 'P'
+                  : co('tien') ? 'D' : 'B';
+        const R=6.5;
+        x.beginPath(); x.arc(X,yMoc,R,0,7);
+        x.fillStyle=mau; x.fill();
+        x.strokeStyle=PANEL(); x.lineWidth=1.5; x.stroke();
+        x.fillStyle='#fff'; x.fillText(chu,X,yMoc+0.5);
+        if(evs.length>1){                        // nhiều sự kiện cùng nến -> ghi số lượng
+          x.beginPath(); x.arc(X+R-1,yMoc-R+1,4.5,0,7);
+          x.fillStyle=PANEL(); x.fill();
+          x.fillStyle=mau; x.font='800 8px system-ui'; x.fillText(String(evs.length),X+R-1,yMoc-R+1.5);
+          x.font='700 9px system-ui';
+        }
+        skHit.push({x:X,y:yMoc,r:R+3,ev:evs});
+      }
+      // hộp chú giải của mốc đang rê — vẽ SAU tất cả để không bị chấm nào đè lên
+      if(skHover>=0&&skHover<skHit.length) veHopSK(x,skHit[skHover],w,h);
+    }
     // thanh ngắm
     if(hover>=0&&hover<span){
       const future=hover>=n;                       // đang rê vào vùng trống phía trước
@@ -487,6 +550,32 @@ let veBut=false;                                   // bút đang được giữ 
       paintTip(vis[n-1],0,vis[n-2]); opt.legend.classList.remove('on');
     }
   };
+
+  /* Hộp chú giải của mốc sự kiện. Vẽ THẲNG LÊN CANVAS chứ không dùng thẻ HTML như bảng
+     KQKD: chart này kéo/phóng/vẽ hình được nên toạ độ đổi liên tục, gắn thẻ HTML là phải
+     đồng bộ vị trí mỗi khung hình. Chart đã tự bắt chuột sẵn cho thanh ngắm rồi. */
+  function veHopSK(x,hit,w,h){
+    const dong=hit.ev.map(e=>e.gc||'').filter(Boolean);
+    if(!dong.length) return;
+    x.font='600 11px system-ui'; x.textAlign='left'; x.textBaseline='middle';
+    const MAXW=330;
+    // cắt dòng quá dài bằng "…" — hộp tràn ra ngoài canvas thì đọc mất nửa câu
+    const cat=t=>{ if(x.measureText(t).width<=MAXW) return t;
+      let a=t; while(a.length>4&&x.measureText(a+'…').width>MAXW) a=a.slice(0,-1); return a+'…'; };
+    const ds=dong.map(cat);
+    const bw=Math.max(...ds.map(t=>x.measureText(t).width))+18;
+    const bh=ds.length*16+10;
+    let bx=hit.x+12, by=hit.y-bh-10;
+    if(bx+bw>w-4) bx=hit.x-bw-12;                // sát mép phải -> lật sang trái
+    if(bx<4) bx=4;
+    if(by<4) by=hit.y+14;                        // sát mép trên -> lật xuống dưới
+    x.fillStyle=light()?'rgba(255,255,255,.98)':'rgba(24,26,34,.98)';
+    x.strokeStyle=light()?'rgba(0,0,0,.16)':'rgba(255,255,255,.18)'; x.lineWidth=1;
+    if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,bw,bh,8); x.fill(); x.stroke(); }
+    else { x.fillRect(bx,by,bw,bh); x.strokeRect(bx,by,bw,bh); }
+    x.fillStyle=TXT();
+    ds.forEach((t,i)=>x.fillText(t,bx+9,by+13+i*16));
+  }
 
   /* ---- DÒNG CHÚ GIẢI CỐ ĐỊNH (thay hộp bám theo chuột) ----------------------
      Hộp cũ chạy theo con trỏ, che mất chính chỗ đang muốn xem. Nay O/C/H/L nằm
@@ -865,6 +954,18 @@ let veBut=false;                                   // bút đang được giữ 
       hover=-1; self.draw(); return;
     }
     if(tool&&pending){ preview={t:tOfX(px),v:snapV(px,py)}; self.draw(); return; }
+    /* RÊ TRÚNG MỐC SỰ KIỆN — kiểm TRƯỚC thanh ngắm. Chấm nằm sát đáy vùng giá, nơi
+       thanh ngắm cũng chạy qua; xét sau thì mỗi lần vẽ lại vì thanh ngắm là chỉ số mốc
+       bị xoá, hộp chú giải chớp tắt liên tục. */
+    {
+      let h2=-1;
+      for(let i=0;i<skHit.length;i++){
+        const d=skHit[i];
+        if(Math.abs(px-d.x)<=d.r&&Math.abs(py-d.y)<=d.r){ h2=i; break; }
+      }
+      if(h2!==skHover){ skHover=h2; self.draw(); }
+      if(h2>=0){ cvs.style.cursor='pointer'; return; }
+    }
     if(px>geo.plotW){ if(hover!==-1){hover=-1; hoverY=-1; self.draw();} return; }
     if(!tool&&draws.length) cvs.style.cursor=hitTest(px,py)?'move':'';   // rê trúng hình -> báo kéo được
     const i=idxAt(px);
@@ -872,7 +973,7 @@ let veBut=false;                                   // bút đang được giữ 
        cả khi chỉ đổi Y (rê dọc trong cùng một nến) — trước chỉ vẽ khi đổi nến. */
     if(i!==hover||Math.abs(py-hoverY)>0.5){ hover=i; hoverY=py; self.draw(); }
   });
-  cvs.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; hoverY=-1; self.draw(); } });
+  cvs.addEventListener('mouseleave',()=>{ if(hover!==-1||skHover!==-1){ hover=-1; hoverY=-1; skHover=-1; self.draw(); } });
   /* Trang gọi khi bấm Esc: đang vẽ dở thì huỷ nét vẽ và trả TRUE, để Esc đó
      không đóng luôn cửa sổ toàn màn hình. */
   self.cancelTool=function(){ if(!pending&&!tool) return false; cancelDraw(); return true; };

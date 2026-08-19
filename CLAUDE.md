@@ -1473,6 +1473,52 @@ mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU
 > nào nguồn đã âm sẵn. **Cái giá của việc tắt** (biết trước, user chấp nhận): ngân hàng mất
 > Thu nhập lãi thuần / Chi phí dự phòng, và VCB lại hiện "Lợi nhuận gộp — — —" như cũ.
 
+**KHO SỰ KIỆN DOANH NGHIỆP `data/sukien/{MÃ}.json` (19/08/2026) — `tools/kho_sukien.py`.**
+1.482 mã · 47.510 mốc · lùi tới **2005** · 7 MB. Dựng từ HAI nguồn, cả hai đều tự dò ra:
+
+| loại | nguồn | độ sâu |
+|---|---|---|
+| cổ tức tiền · cổ phiếu · thưởng · **quyền mua** · phát hành riêng lẻ/ESOP | `api.vietstock.vn/tvnew/marks` | 2005–2007 |
+| ngày công bố **BCTC** | `api-finfo.vndirect.com.vn/v4/financial_statements`, trường `createdDate` | chỉ tin **từ 2020** |
+
+**Tìm ra nguồn Vietstock bằng cách nào:** tải mã nguồn `stockchart.vietstock.vn` rồi lần theo
+`new Datafeeds.UDFCompatibleDatafeed('https://api.vietstock.vn/tvnew')` — datafeed UDF chuẩn
+TradingView, không cần khoá, chỉ cần `Referer`. Các cửa khác **đã dò và đóng**, đừng dò lại:
+TCBS `apipubaws` 404 · CafeF `Events_RelatedStock` 404 · Fireant 401 · 24hMoney events 404 ·
+Simplize `document/list` và `filing/list` 404 · `finance.vietstock.vn/data/getdocument` trả về
+nguyên trang HTML. Simplize `events/list` và VNDirect `/v4/events` **đều chỉ sâu ~5 năm**.
+
+**BỐN CHỖ PHẢI CẨN THẬN, đều đo được:**
+1. **MÚI GIỜ.** `time` của Vietstock phải đọc ở **UTC+7** mới ra đúng ngày GDKHQ. Đối chiếu
+   với `effectiveDate` của VNDirect trên 8 mã: **khớp 72/72 khi đọc UTC+7, 0/72 khi đọc UTC**.
+2. **THỨ TỰ ĐỌC MÔ TẢ.** "Thực hiện quyền mua cổ phiếu phát hành thêm, tỷ lệ 50%, giá 10,000
+   đồng/CP" chứa CẢ "cổ phiếu" LẪN "đồng/CP" — bắt "cổ phiếu" trước thì một đợt **chào bán lấy
+   tiền** bị đọc thành cổ tức cổ phiếu 50%; bắt "tiền" trước thì giá phát hành 10.000đ thành
+   cổ tức tiền mặt. Phải xét `quyền mua` → `phát hành thêm cho` → `thưởng` → `cổ tức cổ phiếu`
+   → `tiền`. Sai kiểu này không lộ ra ở đâu, chỉ âm thầm làm lệch mọi phép tính dựa trên kho.
+3. **HAI QUY ƯỚC DẤU PHẨY TRONG CÙNG MỘT NGUỒN.** `tỷ lệ 62,162%` → phẩy là **thập phân**
+   (62,162%); `1,200 đồng/CP` → phẩy là **hàng nghìn** (1200đ). Đọc chung một hàm là sai một
+   loại. Đo trên 120 mã: 1.266 mốc, **100% đọc được**, không mốc nào rơi vào `khac`.
+4. **`createdDate` CHỈ ĐÚNG TỪ 2020.** Đo khoảng cách từ ngày chốt kỳ tới ngày nạp: 2020-2026
+   là 24-30 ngày và **khác nhau theo từng công ty** (NTP đều 22, HPG 18-34, VCB 24-31) = ngày
+   công bố thật; 2019 nhảy lên 108 ngày, 2018 là 473, 2016 là 1.203 = **dấu vết nạp hàng loạt**.
+   Lọc cứng `0 < cách kỳ <= 60`; kỳ nào không đạt thì BỎ, đừng vẽ mốc sai lên chart.
+
+**KHO RIÊNG, KHÔNG NHÉT VÀO `data/hist`:** file hist bị ghi đè TOÀN BỘ mỗi lần nguồn hạ nền
+(`refresh_daily.work_hist`), nhét vào đó là mất sạch vào một phiên GDKHQ nào đó mà không ai biết.
+**Chỉ ghi file khi danh sách sự kiện thực sự đổi** — ghi vô điều kiện thì trường `updated` đổi
+mỗi ngày và mỗi lượt chạy sinh 1.482 file "thay đổi" nội dung y hệt. Chạy trong lượt **7:30
+trước phiên** (`run_sang_som.ps1`), ~3,5 phút, hỏng thì bỏ qua chứ không chặn lượt chạy.
+
+**MỐC TRÊN CHART GIÁ.** `chart.setSuKien()` trong `assets/chart.js`; chấm tròn ở một HÀNG CỐ
+ĐỊNH sát đáy vùng giá (không bám giá nến — bám giá thì mốc nhảy loạn khi kéo/phóng trục giá).
+Gom theo NẾN chứ không vẽ rời: cùng ngày có thể có hai sự kiện, và ở khung Tháng cả chục sự
+kiện rơi vào một nến. Màu: vàng `C` = cổ phiếu/thưởng · tím `P` = quyền mua/phát hành · xanh
+`D` = tiền · xám `B` = BCTC. **Hai cờ riêng `ind.sk` và `ind.bctc`, BCTC mặc định TẮT** — đo
+trên VCB: 27 mốc BCTC chen với 19 mốc cổ tức ở khung Tháng thành một dải chấm liền không đọc
+được gì. Hộp chú giải vẽ THẲNG LÊN CANVAS (khác bảng KQKD dùng thẻ `data-tip`) vì chart này
+kéo/phóng được nên toạ độ đổi liên tục, mà nó đã tự bắt chuột sẵn cho thanh ngắm.
+
 **VỐN HOÁ TỪNG KỲ = GIÁ THÔ × SỐ CỔ PHIẾU CỦA CHÍNH KỲ ĐÓ (19/08/2026).** Bản cũ nhân mọi
 kỳ với SLCP hôm nay. User báo sai — đúng là sai, nhưng **không phải vì lý do dễ nghĩ nhất**,
 nên chép lại phép đo ở đây để đừng ai "sửa" ngược.
@@ -1507,7 +1553,27 @@ vốn hoá(t) = giá_kho(t) × G(t) × U(t) × SLCP(t)
 3. **Vốn góp không phải lúc nào cũng dùng được.** 206/1.502 mã có vốn góp kỳ mới nhất lệch
    quá 20% so với SLCP hôm nay (kho BCTC cũ hơn đợt phát hành gần nhất) → **cả mã đó quay về
    đường cũ**. Sau cổng này kỳ mới nhất khớp ±3% ở 1.443/1.489 mã, chỉ 1 mã lệch quá 20%.
-4. **`divQ` TRỘN HAI NGUỒN CÓ ĐỘ SÂU KHÁC NHAU** — bẫy nguy hiểm nhất, tìm ra muộn nhất.
+4. **~~`divQ` TRỘN HAI NGUỒN CÓ ĐỘ SÂU KHÁC NHAU~~ — ĐÃ GIẢI QUYẾT 19/08/2026 bằng
+   `data/sukien`.** Chuỗi sự kiện nay lấy từ kho mới (đủ tới 2007) chứ không từ `divQ`, nên
+   **ranh giới 5 năm đã gỡ hẳn** và có thêm hệ số riêng cho **quyền mua**:
+   `nghịch đảo = (1+r)·P/(P+r·X)` — chào bán dưới giá thị trường nên nguồn CÓ hạ nền nhưng hạ
+   ÍT HƠN chia tách; gán nhầm nó thành cổ tức cổ phiếu là gỡ quá tay. Phát hành riêng lẻ/ESOP
+   thì nghịch đảo = 1 (bán quanh giá thị trường, không hạ nền) và phần tăng cổ phiếu lấy từ
+   vốn góp. Đo lại trên HPG, giá thô suy ra vs giá đóng cửa THẬT: 2018 30.977đ (thật ~31.000,
+   **trước khi vá là 19.864đ**) · 2022 18.004 (18.000) · 2023 27.957 (27.950) · 2024 26.757
+   (26.750) · 2021 45.723 (46.400). Số cổ phiếu từng năm 2,124 → 2,761 → 3,313 → 4,473 → 5,815
+   → 6,396 → 7,675 tỷ, khớp đúng lịch sử tăng vốn thật.
+   > **BẤT BIẾN ĐỂ BẮT LỖI VỀ SAU: vốn hoá HÔM NAY phải bằng giá × SLCP hôm nay.** Chính nó
+   > bắt được hai lỗi mà mắt không thấy: ① cổng chất lượng so thẳng `vốn góp` với SLCP hôm nay
+   > mà quên nhân G — VHM chia 1:1 ngày 06/08/2026 rơi vào Q3/26 trong khi vốn góp mới tới
+   > Q2/26, lệch đúng 100% và mã bị loại oan; ② mốc SAU quý vốn góp cuối không được nhân tiếp
+   > sự kiện đã xảy ra từ đó tới nay, vốn hoá hôm nay của VHM ra đúng một nửa. Sau khi vá:
+   > 1.430/1.522 mã khớp trong ±1%, còn 5 mã lệch quá 10%.
+   > **Ngưỡng cổng là 10%, không phải 20%:** nới 20% thì cận trên là 1/0,8 = ×1,25, đo được
+   > DQC ×1,247 và ABT ×1,222 — cột mới nhất của bảng vênh 25% với ô "Vốn hoá" đầu trang, đọc
+   > ra như một trong hai chỗ hỏng. Siết 10% chỉ mất thêm 22 mã.
+
+   Nội dung cũ giữ lại để hiểu vì sao có `data/sukien`:  — bẫy nguy hiểm nhất, tìm ra muộn nhất.
    Cổ tức TIỀN lấy từ `dividend/histories` (sâu tới 2016), sự kiện CỔ PHIẾU lấy từ
    `events/list` — nguồn này **chỉ trả ~5 năm** (dò: NTP 22 sự kiện, cũ nhất 03/2021, không
    có trang 2). HPG: `divQ` biết **7 quý** trong khi vốn góp cho thấy **19 lần** SLCP nhảy.

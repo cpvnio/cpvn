@@ -47,6 +47,9 @@ TRAN = {
     "histdatafeed.vps.com.vn":     0.200,
     "api-finance-t19.24hmoney.vn": 0.125,
     "iboard-query.ssi.com.vn":     0.500,   #  2 lượt/giây
+    # datafeed UDF của stockchart.vietstock.vn — nguồn DUY NHẤT có lịch sử chia cổ tức đủ
+    # sâu (tới 2007). Giãn 8 lượt/giây: đây là API phục vụ chart của họ, đừng ép.
+    "api.vietstock.vn":            0.125,
 }
 MAC_DINH = 0.200          # host không khai tên -> 5 lượt/giây
 LUI = (1.0, 2.0, 4.0)     # chờ bao lâu trước lần thử lại thứ 1, 2, 3

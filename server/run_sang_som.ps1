@@ -55,10 +55,18 @@ if (-not (Test-Path $py)) { "KHONG THAY PYTHON: $py" | Add-Content $log; exit 9 
 $ma = $LASTEXITCODE
 if ($ma -ne 0) { "EXIT $ma - bo qua buoc day" | Add-Content $log; exit $ma }
 
+# KHO SỰ KIỆN DOANH NGHIỆP (data/sukien) — cổ tức/thưởng/quyền mua + ngày ra BCTC.
+# Đặt ở lượt TRƯỚC PHIÊN chứ không phải lượt EOD: nó chỉ đọc, không đụng giá hay kho nến,
+# mà chart lại cần nó ngay từ phiên sáng. ~3,5 phút, 1.500 lượt tới Vietstock ở 8 lượt/giây.
+# Công cụ tự BỎ QUA file không đổi nên ngày thường gần như không có gì để commit.
+# Hỏng ở bước này KHÔNG được chặn lượt chạy: universe.json mới là thứ bắt buộc phải lên.
+& $py 'C:\cpvn\tools\kho_sukien.py' 2>&1 | Add-Content $log
+if ($LASTEXITCODE -ne 0) { "kho_sukien EXIT $LASTEXITCODE - bo qua, chay tiep" | Add-Content $log }
+
 # Không có gì đổi thì ĐỪNG commit — mỗi commit rỗng vẫn kích một lượt build Cloudflare.
-& $git add universe.json 2>&1 | Add-Content $log
+& $git add universe.json data/sukien 2>&1 | Add-Content $log
 & $git diff --cached --quiet
-if ($LASTEXITCODE -eq 0) { 'universe.json khong doi - khong commit.' | Add-Content $log; exit 0 }
+if ($LASTEXITCODE -eq 0) { 'universe.json + data/sukien khong doi - khong commit.' | Add-Content $log; exit 0 }
 
 & $git -c user.name='cpvn-server' -c user.email='bot@users.noreply.github.com' `
   commit -m "Truoc phien $(Get-Date -Format 'yyyy-MM-dd') (server)" 2>&1 | Add-Content $log
