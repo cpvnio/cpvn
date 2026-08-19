@@ -285,9 +285,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
      `display:none` chứ không phải ẩn bằng chiều cao — bảng ẩn phải KHÔNG chiếm chỗ. Đổi
      lại thì mọi số đo của nó bằng 0, mà biểu đồ KQKD đo bề rộng bảng để đặt cột thẳng tâm:
      xem mục vẽ lại ở tay bấm #finB. */
-  .finB{margin-top:6px}
   .finblk{display:none;margin-top:12px}
   .finblk.on{display:block}
+  /* ---- THANH CHỌN BÁO CÁO — hai TRỤC ĐỘC LẬP, gộp một hàng trên PC ----------------
+     Kỳ (quý/năm) và bảng (KQKD/CĐKT/LCTT) là hai trục không liên quan nhau, nên ngăn bằng
+     một vạch dọc chứ đừng để thành một dãy nút liền mạch: nhìn liền dãy thì người ta tưởng
+     bấm bên này là tắt bên kia. Gộp một hàng cũng lấy lại được một hàng chiều cao. */
+  .finbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .finbar #finB{border-left:1px solid var(--line);padding-left:10px}
   /* LƯỚI CỘT CHUNG cho mọi bảng (KQKD/CĐKT/LCTT/cổ tức) -> cột kỳ thẳng hàng nhau:
      nhãn cột 1 bọc .lb bề rộng CỐ ĐỊNH (nhãn dài không đẩy được cột), cột kỳ khai báo 106px
      (luôn > nội dung số) -> trình duyệt tính ra cùng một lưới ở cả 4 bảng */
@@ -308,6 +313,53 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   @media (max-width:640px){
     table.ft th:first-child{width:132px}
     table.ft .lb{width:114px}
+  }
+
+  /* ---- MÀN HẸP: mỗi trục MỘT HÀNG ĐỦ BỀ RỘNG, CHIA ĐỀU ---------------------------
+     Đo thật ở 375px TRƯỚC khi sửa (user báo "quá nhiều nút dồn 1 chỗ và không thẳng hàng"):
+       secTabs  2 hàng, hàng 2 hụt 40px bên phải
+       finP     1 hàng, hết 208/342px rồi bỏ trống 134px
+       finB     2 hàng, "Lưu chuyển tiền tệ" rớt xuống đứng một mình
+     Tổng 5 hàng nút so le nhau, ăn 166px chiều cao trước khi thấy được con số nào.
+     Chia đều bằng grid thì mép trái VÀ mép phải của cả hai hàng thẳng nhau. */
+  /* NGƯỠNG 720px LÀ ĐO ĐƯỢC, KHÔNG PHẢI CON SỐ TRÒN MƯỢN TỪ CHỖ KHÁC. Hai thanh nút hoá
+     ra gãy ở gần đúng cùng một bề rộng:
+       .finbar  cần 616px nội dung (finP 175 + vạch 21 + finB 420) -> viewport ~682px
+       #secTabs cần 649px nội dung (156+177+85+121+86 + 24 khoảng) -> viewport ~681px
+     Nên một ngưỡng phục vụ cả hai; 720px là 682px cộng chỗ dư cho khác biệt phông chữ giữa
+     các máy. ĐỪNG mượn ngưỡng 760px của phần còn lại trang: dải 720-760 hai thanh vẫn xếp
+     một hàng thoải mái, ép xuống lưới ở đó là kéo giãn nút vô cớ. */
+  @media(max-width:720px){
+    .finbar{display:block}
+    .finbar #finB{border-left:0;padding-left:0;margin-top:6px}
+    #finP,#finB{display:grid;gap:6px}
+    #finP{grid-template-columns:repeat(2,1fr)}
+    #finB{grid-template-columns:repeat(3,1fr)}
+    #finP button,#finB button{width:100%;text-align:center}
+    /* THỨ BẬC NGƯỢC VỚI BỀ RỘNG: nút kỳ chiếm 1/2 hàng, nút bảng chỉ 1/3 — để cùng cỡ
+       thì trục PHỤ trông nặng hơn trục CHÍNH. Kéo lại bằng chiều cao: nút bảng dày hơn,
+       đậm hơn, 2 dòng chữ. */
+    #finP button{padding:6px 4px;font-size:12.5px}
+    #finB button{padding:7px 4px;font-size:12.5px;font-weight:800;line-height:1.2}
+    /* NHÃN BẢNG XUỐNG 2 DÒNG LÀ CỐ Ý: 1/3 của 343px = 110px, mà "Kết quả kinh doanh" một
+       dòng phải hạ cỡ chữ xuống ~9,7px mới vừa — không đọc nổi. Chỗ ngắt ghim bằng &nbsp;
+       trong HTML ("Kết quả" / "kinh doanh"); thả cho trình duyệt tự ngắt thì nó cắt theo
+       bề rộng và ra "Kết quả kinh" / "doanh". */
+
+    /* 5 THẺ NỘI DUNG KHÔNG XẾP LƯỚI ĐƯỢC Ở BỀ RỘNG NÀY. Chia 3 cột thì mỗi thẻ 110px
+       trong khi "Hồ sơ doanh nghiệp" cần 177px; chia 2 cột thì thành 3 hàng, cao hơn cả
+       lúc chưa sửa. Nên cho CUỘN NGANG một hàng — thẳng hàng tuyệt đối, giữ nguyên cỡ chữ
+       đọc được, và không thẻ nào bị giấu sau nút "thêm". Dấu hiệu "còn thẻ nữa bên phải" là
+       chính thẻ thứ ba BỊ CẮT GIỮA CHỪNG ở mép màn hình (đo ở 375px: nó nằm 327..400 trong
+       khi khung hết ở 359). Cỡ chữ hạ 14,5 -> 13,5px kéo tổng bề rộng 649 -> 578px, tức
+       dải 610-720px lại vừa đúng một hàng mà không phải cuộn.
+       ĐÃ THỬ RỒI BỎ: phủ thêm một lớp mờ dần ở mép phải (`mask-image`). Trông đẹp lúc mới
+       vào, nhưng cuộn hết sang phải rồi bấm "Tài liệu" thì chính thẻ ĐANG CHỌN bị mờ nửa
+       bên phải — đọc ra như lỗi hiển thị. Thà để mép cắt gọn. */
+    #secTabs{flex-wrap:nowrap;overflow-x:auto;margin:14px 0 10px;
+      scrollbar-width:none;-webkit-overflow-scrolling:touch}
+    #secTabs::-webkit-scrollbar{display:none}
+    #secTabs button{flex:0 0 auto;padding:8px 13px;font-size:13.5px}
   }
   table.ft thead th{color:var(--muted);background:var(--thead);font-weight:700}
   /* ĐẦU CỘT NĂM bấm được -> bung 4 quý của năm đó. Mũi tên nói rõ nó bấm được, chứ một
@@ -535,16 +587,18 @@ document.addEventListener(MO,function(e){
 
   <div class="sect on" id="s-tc">
     <div class="card">
-      <div class="chips" id="finP">
-        <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
-      </div>
+      <div class="finbar">
+        <div class="chips" id="finP">
+          <button data-v="Q" class="on">Theo quý</button><button data-v="Y">Theo năm</button>
+        </div>
       <!-- BA BẢNG NAY LÀ BA THẺ CHỌN, không còn xếp dọc (user chốt 19/08/2026). Trước đây
            muốn xem lưu chuyển tiền tệ phải cuộn qua trọn bảng KQKD lẫn cân đối kế toán —
            mỗi bảng vài chục dòng, trên điện thoại là cuộn rất lâu. Nút chọn đặt NGAY DƯỚI
            nút quý/năm nên đổi bảng chỉ một cú bấm, không rời tầm mắt.
            Tên bảng chuyển hẳn lên nút; ba dòng <h3> cũ bỏ đi vì nút đã nói rồi. -->
-      <div class="chips finB" id="finB">
-        <button data-b="kq" class="on">Kết quả kinh doanh</button><button data-b="cd">Cân đối kế toán</button><button data-b="lc">Lưu chuyển tiền tệ</button>
+        <div class="chips" id="finB">
+          <button data-b="kq" class="on">Kết&nbsp;quả kinh&nbsp;doanh</button><button data-b="cd">Cân&nbsp;đối kế&nbsp;toán</button><button data-b="lc">Lưu&nbsp;chuyển tiền&nbsp;tệ</button>
+        </div>
       </div>
       <!-- Cơ cấu lợi nhuận (biểu đồ #segBox, rồi dòng bảng tr.ccr) đã bỏ hẳn 16/08/2026 —
            lý do đầy đủ ở khối chú thích cùng tên trong phần script. -->
@@ -1089,6 +1143,20 @@ let finColsVe=null;
 /* Cơ cấu lợi nhuận nay là DÒNG BẢNG, không phải canvas — không cần vẽ lại theo resize
    hay đổi đèn, chỉ cần dựng lại khi bảng KQKD được dựng lại (veKQKD tự lo). */
 function veLaiFinChart(){ if(finColsVe) drawFinChart(finColsVe); }
+/* VẼ RỒI KIỂM LẠI — dùng cho `resize` và nút đổi sáng/tối.
+   Biểu đồ đo `offsetWidth` của bảng KQKD để đặt cột thẳng tâm với cột bảng, mà bảng thì
+   giãn theo bề rộng thẻ (cột `.sp` nuốt chỗ thừa). Lượt vẽ hoãn 60ms sau `resize` vẫn có
+   thể rơi vào lúc bố cục CHƯA ngã ngũ: đo được canvas dừng ở 1.020px trong khi bảng đã là
+   1.212px, và không còn `resize` nào nữa để tự chữa.
+   Không đoán một mốc chờ dài hơn — dài bao nhiêu cũng vẫn là đoán. Vẽ xong thì SO LẠI bề
+   rộng canvas với bề rộng bảng, lệch mới vẽ thêm. Đúng MỘT lượt kiểm, không lặp. */
+function veLaiFinChartChac(){
+  veLaiFinChart();
+  setTimeout(()=>{
+    const t=document.querySelector('#kqkdT table');
+    if(t&&t.offsetWidth>0&&$('finCv').style.width!==t.offsetWidth+'px') veLaiFinChart();
+  },220);
+}
 
 /* ---------- CƠ CẤU LỢI NHUẬN — ĐÃ BỎ HẲN 16/08/2026, ĐỪNG DỰNG LẠI ----------
    Đi qua ba bản rồi mới bỏ: ① biểu đồ cột chồng riêng (#segBox/#segCv) → ② dòng cuối bảng
@@ -1872,6 +1940,11 @@ document.querySelectorAll('#secTabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#secTabs button').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.sect').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); $('s-'+b.dataset.t).classList.add('on');
+  /* Màn hẹp: hàng thẻ cuộn ngang nên thẻ vừa bấm thường đang bị cắt mất một nửa ở mép.
+     Kéo nó vào hẳn trong khung. 'nearest' cả hai chiều -> thẻ nào đã nằm trọn trong khung
+     thì không xê dịch gì, và KHÔNG cuộn dọc trang (đó là lý do phải đặt block:'nearest'
+     chứ không để mặc định 'start'). */
+  try{ b.scrollIntoView({block:'nearest',inline:'nearest'}); }catch(e){}
   if(b.dataset.t==='tc'&&!finData) renderFin();
   if(b.dataset.t==='hs'&&!profData) loadProfile();
 });
@@ -1893,18 +1966,39 @@ document.querySelectorAll('#finB button').forEach(b=>b.onclick=()=>{
 /* Safari iOS bắn resize liên tục khi thanh địa chỉ co giãn theo cú cuộn -> phải hoãn,
    bằng không mỗi cú vuốt là vẽ lại cả hai canvas. */
 window.addEventListener('resize',(()=>{ let t=0; return ()=>{ clearTimeout(t);
-  t=setTimeout(()=>{ drawChart(); veLaiFinChart(); },60); }; })());
+  t=setTimeout(()=>{ drawChart(); veLaiFinChartChac(); },60); }; })());
 /* biểu đồ cao bằng cột trái -> cột trái đổi chiều cao (thêm dòng tiền mặt/LNST) thì vẽ lại */
 if(window.ResizeObserver){
   let t=0;
   new ResizeObserver(()=>{ clearTimeout(t); t=setTimeout(drawChart,60); }).observe($('cvWrap'));
+}
+/* BIỂU ĐỒ KQKD phải nghe bề rộng CỦA CHÍNH KHUNG BẢNG, không chỉ nghe `resize` cửa sổ.
+   Bảng giãn theo bề rộng thẻ (cột `.sp` nuốt chỗ thừa) còn canvas thì đo bề rộng bảng ĐÚNG
+   MỘT LẦN lúc vẽ, nên lượt vẽ hoãn 60ms sau `resize` vẫn có thể rơi vào lúc bố cục chưa
+   ngã ngũ. Đo được đúng vậy khi đổi khổ điện thoại -> khổ máy tính: canvas dừng ở 1.020px
+   trong khi bảng đã là 1.212px, và không có `resize` nào nữa để tự chữa.
+   ĐÂY LÀ ĐƯỜNG PHỤ, không phải chỗ dựa duy nhất — `veLaiFinChartChac` đã tự so lại bề rộng
+   sau mỗi lần vẽ, và tay bấm #finB đã gọi vẽ lại khi hiện thẻ. Giữ observer vì nó bắt được
+   thứ hai đường kia không thấy: thẻ cha đổi bề rộng mà cửa sổ KHÔNG resize (mở/đóng thẻ,
+   thanh cuộn dọc hiện ra). Lưu ý khi kiểm thử: trang ở trạng thái nền (`document.hidden`)
+   thì ResizeObserver KHÔNG bắn — đừng kết luận nó hỏng chỉ vì thử trong tab ẩn.
+   KHÔNG có vòng lặp: `.finwrap` là khối, bề rộng do thẻ cha định, canvas bên trong nó rộng
+   bao nhiêu cũng không đội ngược lên được. */
+if(window.ResizeObserver){
+  let t=0, w0=-1;
+  const kw=document.querySelector('.finwrap');
+  if(kw) new ResizeObserver(es=>{
+    const w=Math.round(es[0].contentRect.width);
+    if(!w||w===w0) return;                 // 0 = thẻ đang ẩn; trùng = không có gì đổi
+    w0=w; clearTimeout(t); t=setTimeout(veLaiFinChart,60);
+  }).observe(kw);
 }
 const thmBtn=$('thm');
 function applyThmIcon(){ thmBtn.textContent=isLight()?'☀️':'🌙'; }
 thmBtn.onclick=()=>{ const l=!isLight();
   document.documentElement.dataset.theme=l?'light':'';
   localStorage.setItem('cpvn_theme',l?'light':'');
-  applyThmIcon(); drawChart(); veLaiFinChart();   // màu nướng vào lúc vẽ canvas -> phải vẽ lại
+  applyThmIcon(); drawChart(); veLaiFinChartChac();  // màu nướng vào lúc vẽ canvas -> phải vẽ lại
 };
 applyThmIcon();
 

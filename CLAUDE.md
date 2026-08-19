@@ -1473,6 +1473,38 @@ mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU
 > nào nguồn đã âm sẵn. **Cái giá của việc tắt** (biết trước, user chấp nhận): ngân hàng mất
 > Thu nhập lãi thuần / Chi phí dự phòng, và VCB lại hiện "Lợi nhuận gộp — — —" như cũ.
 
+**THANH NÚT BÁO CÁO TÀI CHÍNH — NGƯỠNG 720px LÀ ĐO ĐƯỢC (19/08/2026).** User báo màn hẹp
+"quá nhiều nút dồn 1 chỗ và không thẳng hàng". Đo ở 375px trước khi sửa: `#secTabs` rớt 2
+hàng (hàng 2 hụt 40px bên phải), `#finP` hết 208/342px rồi bỏ trống 134px, `#finB` rớt
+"Lưu chuyển tiền tệ" xuống đứng một mình — 5 hàng nút so le, 166px chiều cao trước khi
+thấy con số nào.
+
+| | cần bao nhiêu để xếp MỘT hàng | tức viewport |
+|---|---|---|
+| `.finbar` (finP + vạch + finB) | 616px nội dung | ~682px |
+| `#secTabs` (5 thẻ, cỡ đầy đủ) | 649px nội dung | ~681px |
+
+Hai thanh gãy ở gần đúng cùng một chỗ nên **một ngưỡng 720px phục vụ cả hai** (682 + chỗ dư
+cho khác biệt phông chữ). **Đừng mượn ngưỡng 760px của phần còn lại trang** — dải 720–760
+hai thanh vẫn xếp một hàng thoải mái, ép xuống lưới ở đó là kéo giãn nút vô cớ. (Tao đã
+viết nhầm thành hai ngưỡng 720/620 rồi phải sửa lại: con số 578px dùng để tính ngưỡng
+`#secTabs` là bề rộng ở cỡ chữ ĐÃ THU NHỎ 13,5px, không phải cỡ đầy đủ 14,5px.)
+
+Dưới 720px: `#finP` lưới 2 cột, `#finB` lưới 3 cột, cả hai đủ bề rộng → **mép trái VÀ mép
+phải của hai hàng thẳng nhau**. Nút bảng 2 dòng chữ là CỐ Ý (1/3 của 343px = 110px, một
+dòng phải hạ cỡ chữ xuống ~9,7px mới vừa); chỗ ngắt ghim bằng `&nbsp;` trong HTML
+("Kết quả" / "kinh doanh") vì thả cho trình duyệt tự ngắt thì ra "Kết quả kinh" / "doanh".
+`#secTabs` chuyển sang **cuộn ngang một hàng** — 5 thẻ không xếp lưới nổi ở bề rộng này
+(3 cột thì mỗi thẻ 110px trong khi "Hồ sơ doanh nghiệp" cần 177px; 2 cột thì thành 3 hàng,
+cao hơn cả lúc chưa sửa). Đã thử rồi bỏ lớp mờ `mask-image` ở mép phải: cuộn hết sang phải
+rồi bấm "Tài liệu" thì chính thẻ ĐANG CHỌN bị mờ nửa bên phải, đọc ra như lỗi hiển thị.
+Tay bấm `#secTabs` gọi `scrollIntoView({block:'nearest',inline:'nearest'})` để thẻ vừa bấm
+không nằm nửa trong nửa ngoài — `block:'nearest'` là bắt buộc, để mặc định `'start'` là nó
+cuộn dọc cả trang.
+
+Đo lại sau khi sửa (320 / 375 / 414 / 600 / 700 / 721 / 760 / 1280px): hai hàng luôn thẳng
+mép, không mã nào tràn chữ ra ngoài nút, trang không tràn ngang.
+
 **BA BẢNG BCTC = BA THẺ CHỌN (19/08/2026).** `#finB` đặt ngay dưới `#finP` (quý/năm); ba
 bảng bọc trong `.finblk#fb-kq|fb-cd|fb-lc`, chỉ thẻ `.on` có `display:block`. Ba dòng
 `<h3 class="t">` cũ đã bỏ — tên bảng nằm trên nút. User chốt: xem lưu chuyển tiền tệ mà
@@ -1484,6 +1516,15 @@ phải cuộn qua trọn hai bảng kia là quá xa.
 > trong khi bảng 1.212px. Vì thế tay bấm `#finB` **phải gọi `veLaiFinChart()` mỗi khi quay
 > về `kq`** — lúc hiện lại là lúc duy nhất đo được số thật. Thêm bất kỳ canvas nào vào thẻ
 > ẩn về sau cũng dính đúng bẫy này.
+>
+> **Bẫy anh em: `resize` xong 60ms bố cục vẫn có thể chưa ngã ngũ.** Đo được canvas dừng ở
+> 1.020px trong khi bảng đã là 1.212px, và không còn `resize` nào nữa để tự chữa. Nên
+> `resize` và nút đổi sáng/tối gọi **`veLaiFinChartChac()`**: vẽ xong thì SO LẠI bề rộng
+> canvas với bề rộng bảng, lệch mới vẽ thêm đúng một lượt. Đừng "chờ lâu hơn" — dài bao
+> nhiêu cũng vẫn là đoán. Có thêm một `ResizeObserver` trên `.finwrap` làm đường phụ (bắt
+> trường hợp thẻ cha đổi bề rộng mà cửa sổ KHÔNG resize), nhưng đừng coi nó là chỗ dựa duy
+> nhất — **trang ở trạng thái nền (`document.hidden`) thì ResizeObserver không bắn**, nên
+> thử trong tab ẩn mà thấy im là chuyện bình thường, không phải nó hỏng.
 
 **`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
 rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
