@@ -573,7 +573,10 @@ function nyBang(){
     +'<b>So với nay</b> là mức tăng thật kể từ ngày lên sàn. <b>Giá lúc đó</b> là giá thị '
     +'trường ước tính của chính phiên ấy — dấu <b>~</b> nghĩa là con số không rơi đúng bước '
     +'giá của sàn, tức phép dựng ngược đã tích sai số qua nhiều lần chia. '
-    +'478 mã lên sàn trước 02/01/2013 không có giá vì nguồn nến chỉ bắt đầu từ mốc đó.</div>';
+    +'<b>Không phải giá IPO</b>: giá IPO/đấu giá là chuyện khác và không có nguồn máy đọc '
+    +'được — kho đấu giá của HOSE không kèm mã chứng khoán, lẫn lộn giá/cổ phiếu với tổng '
+    +'giá trị, chỉ có HOSE, và phần lớn là đấu giá thoái vốn nhà nước chứ không phải IPO gốc.'
+    +'</div>';
 }
 function nySapHTML(){
   const sap=NY.sap||[], bs=NY.bosung||[];
@@ -593,18 +596,54 @@ function nySapHTML(){
   h+='<div class="nynote">Chỉ HOSE — HNX và UPCOM không công bố đường ống hồ sơ qua giao diện '
     +'máy đọc được. Sở cũng <b>không công bố ngày giao dịch đầu tiên</b> ở bước này, nên mục '
     +'trên chỉ trả lời “sắp có ai lên sàn”, chưa trả lời được “ngày nào”.</div>';
-  h+='<h3 class="nyh3">Cổ phiếu mới chào sàn của mã đã niêm yết</h3>';
+  /* ================= NGUỒN CUNG MỚI CỦA MÃ ĐÃ NIÊM YẾT =========================
+     ĐÃ BỊ ĐỌC NHẦM HAI LẦN, nên chỗ này phải phòng thủ chứ không chỉ ghi chú.
+     User nhìn hàng "AAA … 31/08/2026" rồi hỏi *"AAA lên sàn từ lâu rồi, sao nói 31/8/2026
+     mới lên sàn"* — hoàn toàn hợp lý: bảng nằm ngay dưới mục "chờ lên sàn", cột tên "Ngày
+     giao dịch", còn lời giải thích thì nằm DƯỚI bảng trong khi người ta đọc bảng trước.
+     Dữ liệu vốn đúng (AAA lên sàn 25/11/2016, còn 11.468.234 cp phát hành thêm vào sàn
+     31/08/2026), sai là ở trình bày. Bốn thứ chống đọc nhầm, đừng gỡ cái nào:
+       ① tiêu đề nói THẲNG "mã ĐÃ niêm yết", không dùng chữ "lên sàn"
+       ② lời giải thích đặt TRÊN bảng
+       ③ cột "Đã niêm yết từ" ngay trong mỗi hàng — nhìn AAA 2016 cạnh 2026 là tự hiểu,
+          không cần đọc chú thích nào. Đây mới là thứ chặn được đọc nhầm.
+       ④ cột ngày gọi là "Cổ phiếu mới vào sàn" chứ không phải "Ngày giao dịch" */
+  h+='<h3 class="nyh3">Nguồn cung mới của mã ĐÃ niêm yết</h3>';
+  h+='<div class="nynote nytren">Đây <b>không phải mã mới lên sàn</b>. Đây là cổ phiếu '
+    +'<b>phát hành thêm</b> (chia cổ phiếu, ESOP hết hạn hạn chế, chào bán riêng lẻ…) của mã '
+    +'đang niêm yết, được đưa vào giao dịch trong những ngày tới — tức nguồn cung thật sắp '
+    +'vào thị trường. Cột <b>Đã niêm yết từ</b> là ngày mã đó lên sàn lần đầu.</div>';
   if(!bs.length) h+='<div class="empty">Không có đợt nào sắp tới.</div>';
-  else h+='<div class="nywrap"><table class="tbl"><thead><tr><th class="l">Mã</th>'
-    +'<th class="l">Nội dung</th><th>Ngày giao dịch</th></tr></thead><tbody>'
-    +bs.map(r=>{ const c=ST.map.get(r.s);
-      return '<tr data-sym="'+esc(r.s)+'"><td class="l"><div class="co">'
-      +(c?logoHTML(c):'<span class="lgw"></span>')+'<b>'+esc(r.s)+'</b></div></td>'
-      +'<td class="l">'+esc(r.gc||'')+'</td><td>'+nyNgay(r.d)+'</td></tr>';}).join('')
-    +'</tbody></table></div>';
-  h+='<div class="nynote">Đây là cổ phiếu <b>phát hành thêm</b> của mã đã niêm yết được đưa '
-    +'vào giao dịch — không phải mã mới, nhưng là nguồn cung thật sắp vào thị trường nên có '
-    +'ngày rõ ràng.</div>';
+  else{
+    const hnay=new Date(); hnay.setHours(0,0,0,0);
+    const conLai=d=>{
+      const t=new Date(d+'T00:00:00'); if(isNaN(t)) return '';
+      const n=Math.round((t-hnay)/86400000);
+      return n<=0?'<b class="nyd0">hôm nay</b>':n===1?'<b class="nyd0">ngày mai</b>'
+             :'<i class="nydn">còn '+n+' ngày</i>';
+    };
+    const lenSan={}; for(const r of (NY.ma||[])) lenSan[r.s]=r.d;
+    h+='<div class="nywrap"><table class="tbl"><thead><tr><th class="l">Mã</th>'
+      +'<th>Đã niêm yết từ</th><th>Số lượng phát hành thêm</th><th>Bằng % lượng lưu hành</th>'
+      +'<th>Cổ phiếu mới vào sàn</th><th>Công bố</th></tr></thead><tbody>'
+      +bs.map(r=>{ const c=ST.map.get(r.s);
+        const sh=(c&&c.shares)||0;
+        /* `shares` là số cổ phiếu HÔM NAY và với phần lớn mã đã GỒM luôn đợt này (đo: PVT
+           vốn góp Q1/26 469,9 triệu -> Q2/26 516,9 triệu, đúng bằng cộng thêm 46.987.703).
+           Nên tỷ lệ ở đây đọc là "bằng bao nhiêu phần lượng đang lưu hành", KHÔNG phải "pha
+           loãng thêm bao nhiêu" — hai cách đọc lệch nhau đúng một bậc mẫu số. */
+        const pc=(sh&&r.kl)?r.kl/sh*100:null;
+        const pcH=pc==null?'—':'<b'+(pc>=5?' class="nybig"':'')+'>'+pc.toFixed(pc>=10?0:1)+'%</b>';
+        return '<tr data-sym="'+esc(r.s)+'"><td class="l"><div class="co">'
+        +(c?logoHTML(c):'<span class="lgw"></span>')+'<b>'+esc(r.s)+'</b></div></td>'
+        +'<td class="nycb">'+(lenSan[r.s]?nyNgay(lenSan[r.s]):'—')+'</td>'
+        +'<td>'+num(r.kl)+' cp</td><td>'+pcH+'</td>'
+        +'<td>'+nyNgay(r.d)+' '+conLai(r.d)+'</td>'
+        +'<td class="nycb">'+nyNgay(r.cb)+'</td></tr>';}).join('')
+      +'</tbody></table></div>';
+    h+='<div class="nynote">Có bản ghi công bố từ 2023–2025 mà nay mới vào giao dịch — đó là '
+      +'cổ phiếu ESOP hết hạn hạn chế chuyển nhượng, không phải tin cũ sót lại.</div>';
+  }
   return h;
 }
 async function renderNiemYet(){

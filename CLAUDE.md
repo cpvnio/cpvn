@@ -1523,7 +1523,7 @@ kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45
 | thứ | nguồn | phủ |
 |---|---|---|
 | ngày lên sàn | `finfo/v4/stocks` trường `listedDate` (hỏi gộp 150 mã/lượt) | **1.529/1.529** |
-| giá phiên đầu | tự lấy từ `data/hist` | 1.051 |
+| giá phiên đầu | `data/hist`, thiếu thì bù `api.vietstock.vn/tvnew/history` | **1.488** |
 | vốn hoá lên sàn | giá thô × vốn góp/10.000 lúc đó (`data/finx`) | 859 |
 | hồ sơ chờ lên sàn | `api.hsx.vn/l/api/v1/1/securities?newListingStatusId=N` | chỉ HOSE |
 | GD bổ sung sắp tới | `finfo/v4/events` type `LISTED` ngày tương lai | 100 đợt |
@@ -1541,7 +1541,24 @@ nhân với số cổ phiếu lúc đó là trộn hai thời điểm.
 > yết gốc để đối chiếu. Cơ chế thì đúng — DMX (mới lên sàn, đúng một sự kiện) gỡ ra 82.184đ
 > so với 78.294đ của kho, sát bước giá 82.200đ. Nên chỉ `q=1` (rơi trong 1% của một bước giá)
 > mới coi là chắc; giao diện đánh dấu `~` cho phần còn lại. **Đừng bỏ `g` mà chỉ giữ `gt`.**
-> 478 mã lên sàn trước **02/01/2013** không có giá — đúng mốc nguồn nến VNDirect bắt đầu.
+> 478 mã lên sàn trước **02/01/2013** vượt mốc nguồn nến VNDirect, nay **bù bằng Vietstock**
+> (`api.vietstock.vn/tvnew/history` — cùng datafeed UDF đã dùng cho `data/sukien`): nguồn này
+> lùi tới ĐÚNG ngày lên sàn (VCB 30/06/2009 · FPT 13/12/2006 · REE 31/07/2000). Lấp được 438,
+> phủ lên **1.488/1.529 = 97,3%**.
+> **Hỏi bằng CỬA SỔ HẸP** quanh ngày lên sàn (−7 → +53 ngày), đừng xin cả chuỗi: nguồn cắt ở
+> 5.000 nến và cắt ở ĐẦU MỚI (REE xin cả chuỗi trả 2000→2021, mất hẳn 5 năm gần đây).
+> **Hai nguồn CÙNG MỘT NỀN — đã đo trước khi ghép**: 8 mã lớn, phần chồng nhau 1.651–3.400
+> phiên, trung vị tỷ lệ Vietstock/kho 0,9998–1,0049. Nên lấy giá phiên đầu của Vietstock chia
+> giá hôm nay của kho ra "×N lần" là hợp lệ, sai số ~0,5%.
+> **CHẶN GIÁ < 10đ**: nguồn trả 0 cho VNX, mà `x` chia cho nó ra **×1818** đứng đầu bảng "tăng
+> mạnh nhất" — sai mà lại ở chỗ dễ thấy nhất. Dưới bước giá nhỏ nhất của mọi sàn thì chắc chắn
+> không phải giá thật, bỏ cả cụm.
+
+> **KHÔNG DÙNG ĐƯỢC GIÁ IPO — đã dò.** `api.hsx.vn/a/api/v1/1/auctions` có thật (821 bản ghi)
+> nhưng **không kèm mã chứng khoán** (`symbolId`/`stockCode` đều null, chỉ có tên công ty),
+> `startingPrice` lẫn lộn giữa giá/cổ phiếu (28.000) với TỔNG giá trị (287 tỷ), chỉ có HOSE,
+> và phần lớn là đấu giá **thoái vốn nhà nước** chứ không phải IPO gốc. Ghép theo tên công ty
+> là đoán. `finfo/v4/ipos` và `/v4/auctions` 404, `hnx.vn/api/auction/list` 404.
 
 > **KHÔNG CÓ NGUỒN NÀO CHO "MÃ MỚI + NGÀY GIAO DỊCH ĐẦU TIÊN" — đã dò, đừng dò lại.**
 > `/v4/stocks?status:pending` rỗng · `/v4/events?group:listing` rỗng · `api.hsx.vn/.../news`

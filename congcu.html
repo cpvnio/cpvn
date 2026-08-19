@@ -365,6 +365,14 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
   background:var(--card2);color:var(--faint)}
 .nytt.ok{background:rgba(34,201,138,.15);color:var(--green)}
 .nynote{margin-top:9px;font-size:11.5px;line-height:1.6;color:var(--faint)}
+/* lời giải thích ĐẶT TRÊN bảng thì phải nổi hơn ghi chú thường, bằng không mắt vẫn lướt
+   thẳng xuống bảng — đó đúng là cách người ta đã đọc nhầm mục này hai lần */
+.nynote.nytren{margin:0 0 10px;padding:9px 12px;border-radius:9px;background:var(--card2);
+  border-left:3px solid var(--rose);color:var(--txt);font-size:12px}
+.nyd0{color:var(--rose);font-size:11px;font-weight:800;margin-left:5px}
+.nydn{font-style:normal;color:var(--faint);font-size:11px;font-weight:600;margin-left:5px}
+.tbl td.nycb{color:var(--faint);font-size:12px}
+.tbl .nybig{color:var(--rose)}
 @media(max-width:760px){
   .nywrap{max-height:none}
   .tbl .nyn{display:none}       /* màn hẹp: bỏ tên công ty, giữ mã cho gọn */
@@ -1057,7 +1065,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260820a"></script>
+<script defer src="assets/mobi.js?v=20260820c"></script>
 </head>
 <body>
 
@@ -1113,6 +1121,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260820a"></script>
+<script src="assets/congcu.js?v=20260820c"></script>
 </body>
 </html>

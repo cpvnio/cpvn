@@ -30,8 +30,16 @@ BỐN NGUỒN, mỗi thứ một chỗ — đã dò rồi mới chọn:
    > 82.200đ, tức cơ chế ĐÚNG, chỉ là càng lùi xa càng mất chính xác.
    > Nên cờ `q=1` chỉ bật khi giá thô rơi trong 1% của một bước giá hợp lệ; giao diện phải
    > đánh dấu số `q=0` là ước tính. **Đừng bỏ `g` đi mà chỉ giữ `gt`** — `g` là số chắc chắn.
-   Phủ **1.051/1.529**; 478 mã còn lại lên sàn TRƯỚC 02/01/2013 — đúng mốc nguồn nến
-   VNDirect bắt đầu, nên không cách nào có giá phiên đầu của chúng.
+   `data/hist` phủ 1.051/1.529 (478 mã còn lại lên sàn TRƯỚC 02/01/2013 — đúng mốc nguồn nến
+   VNDirect bắt đầu). Phần thiếu lấy bù từ **`api.vietstock.vn/tvnew/history`** — cùng datafeed
+   UDF đã dùng cho `data/sukien`, và nó lùi tới ĐÚNG NGÀY LÊN SÀN: VCB có nến từ 30/06/2009,
+   FPT 13/12/2006, STB 12/07/2006, REE 31/07/2000.
+   > Hỏi bằng CỬA SỔ HẸP quanh ngày lên sàn (−7 tới +53 ngày), không xin cả chuỗi: nguồn cắt
+   > ở **5.000 nến** và cắt ở ĐẦU MỚI (REE xin cả chuỗi thì trả 2000→2021, mất hẳn 5 năm gần
+   > đây). Cửa sổ hẹp thì mỗi lượt ~0,1 giây và không bao giờ chạm trần.
+   > **HAI NGUỒN CÙNG MỘT NỀN — đã đo trước khi ghép**: 8 mã lớn, phần chồng nhau 1.651–3.400
+   > phiên, trung vị tỷ lệ Vietstock/kho 0,9998–1,0049. Nên lấy giá phiên đầu của Vietstock
+   > rồi chia giá hôm nay của kho để ra "×N lần" là hợp lệ, sai số ~0,5%.
    > BẪY ĐƠN VỊ: `data/hist` lưu giá KHÔNG ĐỒNG NHẤT giữa các mã (mã thì đồng, mã thì nghìn
    > đồng). Phải suy hệ số cho TỪNG MÃ bằng cách so nến cuối với `data/eod/latest.json`
    > (nguồn này chắc chắn là ĐỒNG). Bỏ qua bước này thì giá lên sàn sai 1.000 lần ở một nửa
@@ -52,6 +60,13 @@ BỐN NGUỒN, mỗi thứ một chỗ — đã dò rồi mới chọn:
    · `finfo/v4/events` type `LISTED` ngày hiệu lực TƯƠNG LAI — đây là **GD BỔ SUNG** (cổ
      phiếu mới của mã ĐÃ niêm yết chính thức chào sàn), CÓ ngày rõ ràng. Không phải mã mới
      nhưng là nguồn cung thật sắp vào thị trường nên vẫn đáng hiện, để riêng một mục.
+     Bản ghi có BỐN trường ngày và với loại này cả ba `effectiveDate`/`expiredDate`/
+     `actualDate` bằng nhau (đo: 100/100 bản ghi) nên không có gì để chọn nhầm. Lấy thêm
+     `disclosureDate` (ngày công bố) và `numberOfShares`: user nhìn "Ngày giao dịch
+     20/08/2026" trơ trọi thì tưởng số liệu hỏng, phải cho thấy nó được công bố từ 9-14 ngày
+     trước và khối lượng bằng bao nhiêu phần của lượng đang lưu hành thì mới đọc ra nghĩa.
+     Lưu ý có bản ghi công bố từ 2023-2025 mà hiệu lực 2026 — đó là cổ phiếu ESOP hết hạn
+     chuyển nhượng, không phải bản ghi cũ sót lại.
    > Đã dò và ĐÓNG: `/v4/stocks?status:pending` (rỗng), `/v4/events?group:listing` (rỗng),
    > `api.hsx.vn/l/api/v1/1/news` 404, HNX `api.hnx.vn` không phân giải, `finance.vietstock.vn
    > /data/newlisting` 404, 24hMoney `upcoming-listing` 404, Simplize `new-listing` 404.
@@ -73,6 +88,7 @@ SUKIEN = os.path.join(BASE, "data", "sukien")
 LATEST = os.path.join(BASE, "data", "eod", "latest.json")
 OUT  = os.path.join(BASE, "data", "niemyet.json")
 VND  = "https://api-finfo.vndirect.com.vn/v4"
+VS   = "https://api.vietstock.vn/tvnew/history"
 HSX  = "https://api.hsx.vn/l/api/v1/1/securities"
 LO   = 150
 THU  = "--thu" in sys.argv
@@ -87,6 +103,12 @@ def jdump(o, p):
 
 def ymd(ts):
     return datetime.datetime.fromtimestamp(int(ts), datetime.UTC).strftime("%Y-%m-%d")
+
+
+def ngayVN(ts):
+    """Mốc của Vietstock phải đọc ở UTC+7 mới ra đúng ngày phiên — cùng bài học với
+    `tools/kho_sukien.py`, đọc theo UTC là lệch một ngày."""
+    return datetime.datetime.fromtimestamp(int(ts) + 7 * 3600, datetime.UTC).strftime("%Y-%m-%d")
 
 
 def qk(lb):
@@ -219,7 +241,33 @@ def main():
                         if h["c"][-1]:
                             r["x"] = round(h["c"][-1] / h["c"][i], 2)   # tăng mấy lần, cùng nền
                     break
+        # BÙ TỪ VIETSTOCK cho mã kho nến không với tới — xem chú thích ② ở đầu file
+        if "g" not in r and h and h.get("t"):
+            try:
+                a0 = int(datetime.datetime.fromisoformat(dd).replace(tzinfo=datetime.UTC).timestamp())
+                vs = json.loads(nhipmang.get(
+                    f"{VS}?symbol={s}&resolution=D&from={a0-86400*7}&to={a0+86400*53}",
+                    timeout=30, headers={"Referer": "https://stockchart.vietstock.vn/"}))
+                if vs.get("s") == "ok" and vs.get("t"):
+                    for i, tt in enumerate(vs["t"]):
+                        d1 = ngayVN(tt)
+                        if d1 >= dd:
+                            if (datetime.date.fromisoformat(d1)
+                                    - datetime.date.fromisoformat(dd)).days <= 5:
+                                r["g"] = round(vs["c"][i]); r["gd"] = d1; r["nv"] = 1
+                                if h["c"][-1]: r["x"] = round(h["c"][-1] * k / vs["c"][i], 2)
+                            break
+            except Exception:
+                pass
+        # CHẶN GIÁ VÔ NGHĨA. Nguồn trả 0 cho vài mã (VNX toàn phiên đầu = 0), mà `x` thì
+        # chia cho nó -> ra ×1818 đứng đầu bảng "tăng mạnh nhất": sai mà lại ở chỗ dễ thấy
+        # nhất. Dưới 10đ là dưới bước giá nhỏ nhất của mọi sàn nên chắc chắn không phải giá
+        # thật; bỏ cả cụm thay vì hiện một con số không đọc được.
+        if r.get("g") is not None and r["g"] < 10:
+            for kk in ("g", "gd", "gt", "q", "x", "mc", "nv"): r.pop(kk, None)
+            dem["bỏ vì giá < 10đ"] += 1
         if "g" in r: dem["có giá"] += 1
+        if r.get("nv"): dem["  trong đó bù từ Vietstock"] += 1
         # ---------- ③ số cổ phiếu + vốn hoá lúc lên sàn ----------
         try:
             Q = (json.load(open(os.path.join(FINX, s + ".json"), encoding="utf-8")).get("Q") or {})
@@ -272,6 +320,8 @@ def main():
             if key in seen: continue
             seen.add(key)
             bosung.append({"s": x.get("code"), "d": x.get("effectiveDate"),
+                           "cb": x.get("disclosureDate") or "",       # ngày công bố
+                           "kl": round(x.get("numberOfShares") or 0),
                            "gc": (x.get("note") or "").strip()})
     except Exception as e:
         print(f"  GD bổ sung: lỗi {type(e).__name__}")
