@@ -1510,8 +1510,22 @@ nguyên trang HTML. Simplize `events/list` và VNDirect `/v4/events` **đều ch
 mỗi ngày và mỗi lượt chạy sinh 1.482 file "thay đổi" nội dung y hệt. Chạy trong lượt **7:30
 trước phiên** (`run_sang_som.ps1`), ~3,5 phút, hỏng thì bỏ qua chứ không chặn lượt chạy.
 
-**MỐC TRÊN CHART GIÁ.** `chart.setSuKien()` trong `assets/chart.js`; chấm tròn ở một HÀNG CỐ
-ĐỊNH sát đáy vùng giá (không bám giá nến — bám giá thì mốc nhảy loạn khi kéo/phóng trục giá).
+**MỐC TRÊN CHART GIÁ.** `chart.setSuKien()` trong `assets/chart.js`; chấm tròn **neo NGAY TRÊN
+ĐỈNH NẾN**, cách 14px. Bản đầu đặt tất cả ở một hàng cố định sát đáy vùng giá; user báo *"nó
+đang ở dưới chart nên hơi không quen"* — đúng, mốc rời khỏi cây nến thì mắt phải tự dóng xuống
+mới biết ngày nào, còn các trang PTKT đều neo vào chính cây nến.
+
+> **BA CHẶN CỦA VIỆC NEO THEO GIÁ — đừng gỡ.** Trục giá kéo/phóng được (`yPan`/`yZoom`) nên
+> đỉnh nến chạy ra ngoài khung được: ① **ghì** mốc vào trong vùng giá `[padT+9, padT+plotH-9]`
+> — không ghì thì mốc biến mất hoặc vẽ đè lên dải khối lượng; ② nến sát đỉnh khung thì trên
+> hết chỗ → **lật xuống dưới đáy nến**, chỉ ghì mà không lật là mốc dán đè lên chính cây nến
+> đang muốn xem; ③ sự kiện ở **vùng trống tương lai** (đã công bố ngày chốt quyền nhưng chưa
+> tới phiên) không có nến để neo → rơi về hàng đáy như cũ.
+> Đo sau khi vá, VCB khung Tháng: bình thường mốc nằm y 38..182 (6 độ cao khác nhau = đã bám
+> nến); kéo giá lên 260px → y 23..38, kéo xuống 520px → y 38..332, **không mốc nào lọt ra
+> ngoài vùng giá và không mốc nào mất**. Bơm thử một sự kiện 45 ngày tới: không lỗi JS, mốc
+> rơi đúng hàng đáy. Rê chuột vẫn ra hộp chú giải (`skHit` dựng lại trong mỗi lượt vẽ).
+
 Gom theo NẾN chứ không vẽ rời: cùng ngày có thể có hai sự kiện, và ở khung Tháng cả chục sự
 kiện rơi vào một nến. Màu: vàng `C` = cổ phiếu/thưởng · tím `P` = quyền mua/phát hành · xanh
 `D` = tiền · xám `B` = BCTC. **Hai cờ riêng `ind.sk` và `ind.bctc`, BCTC mặc định TẮT** — đo

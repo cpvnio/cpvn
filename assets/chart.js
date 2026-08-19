@@ -474,12 +474,23 @@ let veBut=false;                                   // bút đang được giữ 
       x.fillStyle=MUT(); x.font='700 10px system-ui'; x.textAlign='left';
       x.fillText('MACD 12/26/9',8,top+11);
     }
-    /* ---- MỐC SỰ KIỆN ------------------------------------------------------
-       Đặt ở một HÀNG CỐ ĐỊNH sát đáy vùng giá, không bám theo giá nến: bám giá thì mốc
-       nhảy loạn khi kéo/phóng trục giá, mà mục đích chỉ là "ngày này có chuyện gì". */
+    /* ---- MỐC SỰ KIỆN — GẮN NGAY TRÊN ĐỈNH NẾN (user chốt 19/08/2026) -----------
+       Bản đầu đặt tất cả ở một hàng cố định sát đáy vùng giá. User báo "nó đang ở dưới
+       chart nên hơi không quen" — đúng, vì mốc nằm rời khỏi cây nến thì mắt phải tự dóng
+       xuống mới biết ngày đó là ngày nào; các trang PTKT đều neo mốc vào chính cây nến.
+
+       BA RỦI RO CỦA VIỆC NEO THEO GIÁ, và cách xử — đừng gỡ mấy cái chặn này:
+       ① TRỤC GIÁ KÉO/PHÓNG ĐƯỢC (yPan/yZoom) nên đỉnh nến chạy ra ngoài khung được. Ghì
+          mốc vào trong vùng giá; không ghì thì mốc biến mất hoặc vẽ đè lên dải khối lượng.
+       ② NẾN SÁT ĐỈNH KHUNG thì phía trên hết chỗ -> LẬT XUỐNG dưới đáy nến. Chỉ ghì mà
+          không lật thì mốc dán đè lên chính cây nến đang muốn xem.
+       ③ SỰ KIỆN Ở VÙNG TRỐNG TƯƠNG LAI (đã công bố ngày chốt quyền nhưng chưa tới phiên)
+          KHÔNG có nến để neo -> rơi về hàng đáy như cũ.
+       Riêng chuyện mốc che nến: chấm chỉ 13px và đặt CÁCH đỉnh nến 14px nên nằm ở khoảng
+       trống phía trên, không đè vào thân nến hay đường MA. */
     skHit.length=0;
     if((ind.sk||ind.bctc)&&sukien.length){
-      const yMoc=padT+plotH-9;
+      const yDay=padT+plotH-9, yTran=padT+9;     // biên ghì trên/dưới của vùng giá
       const gom=new Map();                       // chỉ số nến -> danh sách sự kiện
       for(const e of sukien){
         if(e.k==='bctc'?!ind.bctc:!ind.sk) continue;
@@ -491,9 +502,18 @@ let veBut=false;                                   // bút đang được giữ 
       for(const [idx,evs] of gom){
         /* Chiếu theo mốc CỦA NẾN chứ không của sự kiện: ở khung Tháng thì mấy sự kiện
            trong cùng tháng có t khác nhau, lấy t sự kiện là chấm lệch khỏi tâm nến. */
-        const nen=rows[Math.max(0,Math.min(rows.length-1,idx))];
+        const trong=idx>=0&&idx<rows.length;     // có nến thật để neo không
+        const nen=trong?rows[idx]:null;
         const X=xOfT(nen?nen.t:evs[0].t);
         if(X<-8||X>plotW+8) continue;
+        /* ① ghì trong vùng giá · ② hết chỗ trên đỉnh thì lật xuống đáy nến · ③ không có
+           nến thì về hàng đáy — xem khối chú thích đầu mục. */
+        let yMoc=yDay;
+        if(nen){
+          const tren=y(nen.h)-14;
+          yMoc=tren>=yTran?tren:y(nen.l)+14;
+          yMoc=Math.max(yTran,Math.min(yDay,yMoc));
+        }
         /* MÀU THEO LOẠI, ưu tiên loại "nặng" nhất trong nhóm: chia cổ phiếu/thưởng đổi số
            cổ phiếu nên đáng chú ý hơn cổ tức tiền, còn BCTC là nhóm riêng. */
         const co=k=>evs.some(e=>e.k===k);
