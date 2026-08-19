@@ -1473,6 +1473,68 @@ mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU
 > nào nguồn đã âm sẵn. **Cái giá của việc tắt** (biết trước, user chấp nhận): ngân hàng mất
 > Thu nhập lãi thuần / Chi phí dự phòng, và VCB lại hiện "Lợi nhuận gộp — — —" như cũ.
 
+**VỐN HOÁ TỪNG KỲ = GIÁ THÔ × SỐ CỔ PHIẾU CỦA CHÍNH KỲ ĐÓ (19/08/2026).** Bản cũ nhân mọi
+kỳ với SLCP hôm nay. User báo sai — đúng là sai, nhưng **không phải vì lý do dễ nghĩ nhất**,
+nên chép lại phép đo ở đây để đừng ai "sửa" ngược.
+
+| đo | kết quả |
+|---|---|
+| ① chuỗi giá kho đã hạ nền chưa? | **Rồi.** 557 sự kiện chia ≥15%: cú rơi một phiên sâu nhất trong quý có trung vị **6,84%**, trong khi chưa hạ nền thì phải **20%** |
+| ② hạ nền cả theo cổ tức TIỀN? | **Có.** `data/eod` (giá thô) vs `data/hist` (đã hạ nền), 13 phiên: HRB chia 3.000đ → thô/kho **1,0925** = đúng 35.400/32.400 |
+| ③ nguồn sai lớn nhất? | **Phát hành thêm vốn**, không phải cổ tức. VPX 5,6 triệu cp (2016) → 1,875 tỷ cp hôm nay |
+
+Hệ quả ①: với cổ tức **cổ phiếu**, phần hạ nền giá và phần tăng SLCP **triệt tiêu nhau** —
+`giá đã hạ nền × SLCP hôm nay` vốn đã đúng. Chia SLCP ra theo tỷ lệ chia là **trừ hai lần**.
+Hệ quả ②: cổ tức tiền hạ nền giá mà không đụng SLCP → kỳ càng xa càng bị kéo thấp.
+
+```
+vốn hoá(t) = giá_kho(t) × G(t) × U(t) × SLCP(t)
+   G(t) = tích (1+tỷ lệ) sự kiện CỔ PHIẾU sau t     U(t) = tích P/(P−d) sự kiện TIỀN sau t
+   SLCP(t) = vốn góp(t)/10.000đ  (data/finx OWNERS_EQUITY, KHÔNG suy từ tỷ lệ chia:
+             suy kiểu đó chỉ khớp 51,5% số ô khi soi lại bằng vốn góp)
+```
+`giá_kho × G × U` chính là **giá thô**, nên câu trên đọc là "giá thô × số cổ phiếu thật".
+Đối chiếu giá thô suy ra với giá đóng cửa THẬT của HPG: 2022 → 18.015đ (thật 18.000),
+2023 → 27.973đ (27.950), 2024 → 26.773đ (26.750), 2021 → 45.760đ (46.400).
+
+**BỐN CÁI BẪY ĐÃ VÁ** — đều tìm ra bằng phép đo, không phải đoán:
+
+1. **Vốn góp đăng ký TRỄ hơn ngày chốt quyền.** HPG chia 20% chốt quyền Q2/25 nhưng vốn góp
+   mãi Q3/25 mới nhảy 63.962 → 76.755 tỷ. Để nguyên thì đúng quý chia lại hiện vốn hoá
+   **tụt 15%** (×0,85) trong khi thực tế không tụt. Vá xong về ×1,02.
+2. **Hệ số tiền nổ khi d/P lớn.** `1/(1−d/P)` → vô cực nếu tiền xấp xỉ giá (MLC ra ×389).
+   Chặn ở **d/P > 30%** — đó là dấu hiệu dữ liệu hỏng, không phải sự kiện thật.
+3. **Vốn góp không phải lúc nào cũng dùng được.** 206/1.502 mã có vốn góp kỳ mới nhất lệch
+   quá 20% so với SLCP hôm nay (kho BCTC cũ hơn đợt phát hành gần nhất) → **cả mã đó quay về
+   đường cũ**. Sau cổng này kỳ mới nhất khớp ±3% ở 1.443/1.489 mã, chỉ 1 mã lệch quá 20%.
+4. **`divQ` TRỘN HAI NGUỒN CÓ ĐỘ SÂU KHÁC NHAU** — bẫy nguy hiểm nhất, tìm ra muộn nhất.
+   Cổ tức TIỀN lấy từ `dividend/histories` (sâu tới 2016), sự kiện CỔ PHIẾU lấy từ
+   `events/list` — nguồn này **chỉ trả ~5 năm** (dò: NTP 22 sự kiện, cũ nhất 03/2021, không
+   có trang 2). HPG: `divQ` biết **7 quý** trong khi vốn góp cho thấy **19 lần** SLCP nhảy.
+   Ngoài khoảng phủ, G(t) hụt → vốn hoá 2018 ra 42.190 tỷ thay vì ~66.000 tỷ.
+   → Chỉ dùng vốn góp **trong khoảng kho sự kiện phủ được** (`min(quý có sự kiện cổ phiếu cũ
+   nhất, quý mới nhất − 20)`); ngoài đó quay về SLCP hôm nay. Phần gỡ cổ tức TIỀN vẫn chạy
+   ở mọi kỳ. Sau khi vá, HPG 2018 ra **65.816 tỷ** so với thực tế ~65.844 tỷ.
+
+> **ĐÃ THỬ RỒI BỎ — đừng dựng lại:** tách "chia cổ phiếu" khỏi "phát hành lấy tiền" bằng
+> báo cáo (chia cổ phiếu thì lợi nhuận giữ lại giảm, phát hành thì không). Nghe xuôi nhưng
+> **lãi từng quý át mất tín hiệu**: HPG Q2/21 chia 35% bị đọc thành phát hành, Q2/24 thưởng
+> 10% cũng vậy (thưởng lấy từ thặng dư, không từ lợi nhuận giữ lại). `data/fin` bsQ cũng
+> không dùng được: dòng VỐN CHỦ SỞ HỮU chỉ có số ở vài quý gần nhất.
+
+Tác động đo trên 51.871 ô: trung vị ×1,024, và **tăng dần theo tuổi của kỳ** — 2025-26 ×1,000
+· 2024 ×1,023 · 2022 ×1,052 · 2019 ×1,092 · 2017 ×1,112 (đúng hình dạng một hệ số cổ tức tích
+luỹ). 41% số ô lệch quá 25%, 12% lệch quá 100%.
+
+**MỐC CHIA CỔ TỨC TRÊN BIỂU ĐỒ KQKD.** Chấm tròn dưới chân cột nào có chốt quyền (`veMocCoTuc`,
+đọc `finData.divQ`; cột NĂM gộp cả bốn quý), rê vào hiện chia gì bao nhiêu. Xanh = tiền,
+vàng = cổ phiếu/thưởng, có chú thích trong `.finlegend`. **Là thẻ HTML chứ không vẽ lên
+canvas**: canvas không có phần tử để rê vào nên phải tự bắt `mousemove` và dò toạ độ, trong
+khi trang đã có sẵn `CP.tips` chạy bằng uỷ quyền `data-tip` — thẻ thật thì được luôn chú
+giải lẫn chạm trên điện thoại. Thẻ cắm vào `.finwrap` (`position:relative`) nên dùng chung
+hệ toạ độ với `centers` của canvas và trôi theo cột khi cuộn ngang. `padB` của biểu đồ nâng
+6 → **15** để chừa chỗ; để 6 thì cột của kỳ nhỏ nhất đè lên chấm.
+
 **THANH NÚT BÁO CÁO TÀI CHÍNH — NGƯỠNG 720px LÀ ĐO ĐƯỢC (19/08/2026).** User báo màn hẹp
 "quá nhiều nút dồn 1 chỗ và không thẳng hàng". Đo ở 375px trước khi sửa: `#secTabs` rớt 2
 hàng (hàng 2 hụt 40px bên phải), `#finP` hết 208/342px rồi bỏ trống 134px, `#finB` rớt

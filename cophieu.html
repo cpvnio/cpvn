@@ -278,7 +278,14 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .finlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   canvas.fin{width:100%;height:200px;display:block}
   /* biểu đồ + bảng KQKD chung 1 khung cuộn -> cột biểu đồ thẳng hàng cột bảng */
-  .finwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  /* `position:relative` để hàng chấm cổ tức dùng CHUNG hệ toạ độ với canvas — chấm cắm
+     vào đây chứ không vào canvas, xem veMocCoTuc. Cuộn ngang thì chấm trôi theo cột. */
+  .finwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;position:relative}
+  /* KHÔNG đặt cursor:help — trang đã chốt luật đó ở CP.tips (dấu hỏi trông như báo lỗi).
+     Viền cùng màu nền để chấm nổi hẳn khỏi cột phía sau. */
+  .fmk{position:absolute;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;
+    background:var(--cyan);border:1.5px solid var(--panel);box-sizing:border-box}
+  .fmk.cp{background:#ffd60a}
   .finwrap canvas.fin{width:auto}
   .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   /* BA BẢNG BCTC = BA THẺ, chỉ thẻ đang chọn nằm trong luồng (user chốt 19/08/2026).
@@ -607,6 +614,10 @@ document.addEventListener(MO,function(e){
           <span><i style="background:#5b6b7a"></i>Doanh thu</span>
           <span><i style="background:#16c784"></i>LN sau thuế</span>
           <span><i style="background:#38bdf8;height:2.5px;width:11px;border-radius:1px;vertical-align:2px"></i>Biên ròng %</span>
+          <!-- hai mục dưới nói cho biết mấy chấm dưới chân cột là gì; không có dòng này
+               thì chấm hiện ra mà không ai biết phải rê chuột vào mới thấy nội dung -->
+          <span><i style="background:var(--cyan);border-radius:50%"></i>Cổ tức tiền</span>
+          <span><i style="background:#ffd60a;border-radius:50%"></i>Cổ phiếu / thưởng</span>
         </div>
         <div class="finwrap">
           <canvas class="fin" id="finCv"></canvas>
@@ -1206,7 +1217,9 @@ function drawFinChart(rows){
   let mx=0,mn=0;
   for(const r of show){ mx=Math.max(mx,r.rev||0,r.np||0); mn=Math.min(mn,r.np||0); }
   if(mx-mn<1e-9) mx=mn+1;
-  const padT=10,padB=6, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
+  /* padB 15 chứ không phải 6: 9px cuối là HÀNG CHẤM CỔ TỨC (xem veMocCoTuc). Để 6 thì
+     cột của kỳ có giá trị nhỏ nhất chạm tới đúng chỗ đặt chấm, chồng lên nhau. */
+  const padT=10,padB=15, y=v=>h-padB-(v-mn)/(mx-mn)*(h-padT-padB), zero=y(0);
   g.font='10px system-ui'; g.textBaseline='middle';
   for(let i=0;i<=3;i++){ const v=mn+(mx-mn)*i/3, yy=y(v);
     g.strokeStyle=GRIDC(); g.beginPath(); g.moveTo(0,yy); g.lineTo(w,yy); g.stroke();
@@ -1232,10 +1245,55 @@ function drawFinChart(rows){
       g.fillStyle='#38bdf8'; g.beginPath(); g.arc(centers[i],yn(v),2.4,0,7); g.fill(); }
   }
   // KHÔNG vẽ nhãn kỳ: hàng kỳ của bảng nằm ngay dưới, thẳng cột với biểu đồ
+  veMocCoTuc(show,centers,h);
+}
+/* ---------- MỐC CHIA CỔ TỨC TRÊN BIỂU ĐỒ KQKD -----------------------------------
+   Chấm tròn dưới chân mỗi cột có chốt quyền; rê vào là hiện chia gì, bao nhiêu.
+   VÌ SAO LÀ THẺ HTML CHỨ KHÔNG VẼ THẲNG LÊN CANVAS: canvas không có phần tử để rê vào,
+   muốn hiện chú giải thì phải tự bắt `mousemove` rồi dò toạ độ — trong khi trang đã có
+   sẵn cơ chế `data-tip` dùng chung (CP.tips) chạy bằng uỷ quyền sự kiện. Đặt mấy cái
+   chấm thành thẻ thật thì được luôn chú giải, được cả bấm trên điện thoại, khỏi viết
+   thêm dòng bắt chuột nào.
+   Thẻ cắm vào `.finwrap` (đã `position:relative`) nên toạ độ `left` dùng CHUNG hệ với
+   `centers` của canvas, và khi cuộn ngang thì chấm trôi theo cột — không lệch. */
+function skKy(label){
+  const dq=(finData&&finData.divQ)||{};
+  let cash=0,cp=0,th=0;
+  if(/^Q\d\/\d{2}$/.test(label)){ const v=dq[label];
+    if(v){ cash=v.cash||0; cp=v.div||0; th=v.bonus||0; } }
+  else{ /* cột NĂM gộp cả bốn quý của năm đó */
+    const hau='/'+String(label).slice(-2);
+    for(const q in dq) if(q.slice(-3)===hau){ const v=dq[q];
+      cash+=v.cash||0; cp+=v.div||0; th+=v.bonus||0; } }
+  return (cash||cp||th)?{cash:cash,cp:cp,th:th}:null;
+}
+function veMocCoTuc(show,centers,h){
+  const wrap=document.querySelector('.finwrap'); if(!wrap) return;
+  wrap.querySelectorAll('.fmk').forEach(e=>e.remove());
+  for(let i=0;i<show.length;i++){
+    const s=skKy(show[i].label); if(!s) continue;
+    const co=[];
+    if(s.cash) co.push('tiền mặt '+Math.round(s.cash).toLocaleString('en-US')+' đ/cp');
+    if(s.cp)   co.push('cổ phiếu '+(+s.cp.toFixed(1))+'%');
+    if(s.th)   co.push('thưởng '+(+s.th.toFixed(1))+'%');
+    const d=document.createElement('div');
+    d.className='fmk'+(s.cp||s.th?' cp':'');
+    d.style.left=Math.round(centers[i])+'px';
+    d.style.top=(h-11)+'px';
+    d.setAttribute('data-tip',show[i].label+' — chốt quyền: '+co.join(' · ')
+      +(s.cp||s.th?'. Chia bằng cổ phiếu làm số cổ phiếu tăng lên, nên giá các phiên'
+        +' trước ngày này đã được hạ nền cho khớp.':''));
+    wrap.appendChild(d);
+  }
 }
 /* VỐN HOÁ CUỐI TỪNG KỲ = SLCP × giá đóng cửa của kỳ đó. Đặt ngay dưới Biên LN ròng
    để đối chiếu: cùng mức lợi nhuận đó thì thị trường đang định giá bao nhiêu, và giá
    trị đó đã đổi thế nào qua từng quý/năm. */
+const GHI_MCAP='Vốn hoá cuối kỳ = giá THÔ của kỳ đó × số cổ phiếu CỦA CHÍNH KỲ ĐÓ '
+  +'(lấy từ vốn góp trên báo cáo, chia mệnh giá 10.000đ). Giá trong kho đã hạ nền theo cả '
+  +'cổ tức cổ phiếu lẫn cổ tức tiền, nên phải dựng ngược lại giá thô trước khi nhân — '
+  +'bằng không kỳ càng xa càng bị kéo thấp. Mã nào kho vốn góp lệch quá 20% so với số cổ '
+  +'phiếu hôm nay thì không đoán, chỉ gỡ phần cổ tức tiền.';
 function periodEndTs(label){          // "Q2/26" -> 30/6/2026 ; "2025" -> 31/12/2025
   const mq=/^Q(\d)\/(\d{2})$/.exec(label);
   const y=mq?2000+ +mq[2]:+label, m=mq?(+mq[1])*3:12;
@@ -1243,17 +1301,129 @@ function periodEndTs(label){          // "Q2/26" -> 30/6/2026 ; "2025" -> 31/12/
 }
 function closeAtTs(f,ts){ if(!f||!f.t||!f.t.length) return null;
   let v=null; for(let i=0;i<f.t.length;i++){ if(f.t[i]<=ts) v=f.c[i]; else break; } return v; }
+/* ---------- VỐN HOÁ TỪNG KỲ: GIÁ THÔ × SỐ CỔ PHIẾU CỦA CHÍNH KỲ ĐÓ ---------------
+   Bản cũ nhân MỌI kỳ với số cổ phiếu HÔM NAY. User báo sai, và đúng là sai — nhưng không
+   phải vì lý do dễ nghĩ nhất, nên chép lại phép đo ở đây để đừng ai "sửa" ngược trở lại.
+
+   ĐO ①: CHUỖI GIÁ TRONG KHO ĐÃ HẠ NỀN RỒI. 557 sự kiện chia cổ phiếu ≥15%: cú rơi một
+   phiên sâu nhất trong quý có trung vị 6,84%, trong khi nếu chuỗi CHƯA hạ nền thì phải
+   rơi trung vị 20%. Nên với cổ tức CỔ PHIẾU, phần hạ nền của giá và phần tăng của số cổ
+   phiếu TRIỆT TIÊU NHAU: `giá đã hạ nền × SLCP hôm nay` vốn đã đúng. Nếu chia thêm SLCP
+   ra theo tỷ lệ chia thì thành trừ HAI LẦN.
+
+   ĐO ②: KHO CÒN HẠ NỀN CẢ THEO CỔ TỨC TIỀN MẶT. Đối chiếu `data/eod` (giá THÔ chốt tại
+   chính phiên đó) với `data/hist` (bị hạ nền về sau), 13 phiên 31/07-18/08/2026:
+     HRB  chia tiền 3.000đ ngày 14/08, không đụng số cổ phiếu -> thô/kho = 1,0925
+          đúng bằng 35.400/32.400. Vốn hoá quá khứ đang bị KÉO THẤP 9,3% chỉ vì cổ tức.
+     SSI  thưởng 20% + tiền 1.000đ  -> 1,2 × 24.500/23.500 = 1,2511, khớp từng số.
+     MBB  mô tả sự kiện ghi 15% nhưng nền hạ đúng 20% -> ĐỪNG tin tỷ lệ trong mô tả.
+
+   ĐO ③: NGUỒN SAI LỚN NHẤT KHÔNG PHẢI CỔ TỨC MÀ LÀ PHÁT HÀNH THÊM VỐN. VPX có 5,6 triệu
+   cp năm 2016 và 1,875 tỷ cp hôm nay — gần như toàn bộ từ chào bán/riêng lẻ/ESOP, những
+   thứ KHÔNG kèm hạ nền giá nên không triệt tiêu được. Lấy SLCP hôm nay áp cho 2016 là
+   thổi vốn hoá lên 335 lần.
+
+   CÔNG THỨC ĐÚNG, rút gọn lại chỉ còn một câu — dựng lại GIÁ THÔ rồi nhân SLCP báo cáo:
+       vốn hoá(t) = giá_kho(t) × G(t) × U(t) × SLCP(t)
+       G(t) = tích (1+tỷ lệ) của các sự kiện CỔ PHIẾU sau t   (gỡ phần hạ nền chia tách)
+       U(t) = tích P/(P−d) của các sự kiện TIỀN sau t          (gỡ phần hạ nền cổ tức)
+       SLCP(t) = vốn góp(t)/10.000đ mệnh giá — lấy từ BCTC, KHÔNG suy đoán
+   Chú ý `G(t)·U(t)·giá_kho(t)` chính là giá thô, nên câu trên đọc là "giá thô × số cổ
+   phiếu thật". Số cổ phiếu KHÔNG tự suy từ tỷ lệ chia (đo ③ cho thấy suy kiểu đó chỉ
+   khớp 51,5% số ô khi soi lại bằng vốn góp).
+
+   BA CÁI BẪY ĐÃ VÁ, đều tìm ra bằng phép đo chứ không phải đoán:
+     · VỐN GÓP ĐĂNG KÝ TRỄ HƠN NGÀY CHỐT QUYỀN. HPG chia 20% chốt quyền trong Q2/25 nhưng
+       vốn góp mãi Q3/25 mới nhảy 63.962 -> 76.755 tỷ. Để nguyên thì đúng quý chia lại
+       hiện vốn hoá TỤT 15% (đo được ×0,85) trong khi thực tế không tụt gì. Vá: quý nào có
+       chia mà vốn góp chưa kịp tăng thì nhân tay (1+tỷ lệ). Sau khi vá HPG về ×1,02.
+     · HỆ SỐ TIỀN NỔ KHI d/P LỚN. `1/(1−d/P)` tiến ra vô cực nếu số tiền xấp xỉ giá — dấu
+       hiệu dữ liệu hỏng chứ không phải sự kiện thật (MLC ra ×389). Chặn ở d/P > 30%.
+     · VỐN GÓP KHÔNG PHẢI LÚC NÀO CŨNG DÙNG ĐƯỢC. 206/1.502 mã có vốn góp kỳ mới nhất
+       lệch quá 20% so với SLCP hôm nay (kho BCTC cũ hơn đợt phát hành gần nhất). Không
+       đoán: cả mã đó quay về đường cũ, chỉ giữ phần gỡ cổ tức tiền. Sau cổng này, kỳ mới
+       nhất khớp trong ±3% ở 1.443/1.489 mã và chỉ còn 1 mã lệch quá 20%. */
+const qKey=lb=>{const m=/^Q(\d)\/(\d{2})$/.exec(lb); return m?(2000+ +m[2])*4+ +m[1]:0;};
+let SLCPky=null, SLCPsym='';
+async function bangSLCP(f,k){
+  if(SLCPsym===C.sym&&SLCPky) return SLCPky;
+  SLCPsym=C.sym; SLCPky=[];
+  const dq=(finData&&finData.divQ)||{};
+  const fx=await taiFinx();
+  let vg={}, Q=fx&&fx.Q;
+  if(Q&&Q.labels) for(const r of Q.rows||[])
+    if(r.g==='OWNERS_EQUITY'&&/ốn góp/.test(r.n||'')){
+      Q.labels.forEach((lb,i)=>{ const v=r.v[i]; if(v>0) vg[lb]=v*1e9/1e4; }); break; }
+  const qs=[...new Set(Object.keys(vg).concat(Object.keys(dq)))].filter(qKey)
+             .sort((a,b)=>qKey(a)-qKey(b));
+  if(!qs.length) return SLCPky;
+  const tl=lb=>{const v=dq[lb]||{}; return ((v.div||0)+(v.bonus||0))/100;};
+  // CỔNG CHẤT LƯỢNG THEO MÃ — xem bẫy thứ ba ở trên
+  const lbM=qs.filter(l=>vg[l]).pop();
+  let tin=false;
+  if(lbM){ let sh=vg[lbM], r=tl(lbM);
+    if(r>0&&C.shares/sh>=1+r*0.8) sh*=1+r;
+    tin=Math.abs(C.shares/sh-1)<=0.20; }
+  if(!tin) vg={};
+  // lượt đi NGƯỢC dựng G và U: mỗi kỳ chỉ nhận sự kiện của các kỳ SAU nó
+  const g=[],u=[];
+  let G=1,U=1;
+  for(let i=qs.length-1;i>=0;i--){
+    const adj=closeAtTs(f,periodEndTs(qs[i]));
+    g[i]=G; u[i]=U;
+    const r=tl(qs[i]), d=(dq[qs[i]]||{}).cash||0;
+    if(adj&&d>0){ const P=adj*k*G*U*(1+r)+d;      // giá THÔ ngay trước ngày chốt quyền
+      if(P>0&&d/P<=0.30) U*=P/(P-d); }
+    G*=1+r;
+  }
+  /* RANH GIỚI TIN ĐƯỢC — bẫy thứ tư, tìm ra muộn nhất và nguy hiểm nhất.
+     `divQ` trộn HAI nguồn có độ sâu KHÁC NHAU: cổ tức TIỀN lấy từ dividend/histories (sâu
+     tới 2016), còn sự kiện CỔ PHIẾU lấy từ events/list — nguồn này chỉ trả ~5 năm gần nhất
+     (đã dò: NTP 22 sự kiện, cũ nhất 03/2021, không có trang 2). Hậu quả đo được ở HPG:
+     `divQ` biết 7 quý trong khi vốn góp cho thấy 19 lần số cổ phiếu nhảy. Ngoài khoảng phủ,
+     G(t) hụt hẳn -> giá thô dựng lại quá thấp -> vốn hoá 2018 ra 42.190 tỷ trong khi thực
+     tế ~66.000 tỷ (giá cuối 2018 ~31.000đ × 2,124 tỷ cp).
+     Nên: TRONG khoảng phủ thì dùng vốn góp (kho sự kiện đủ để tách phần chia tách khỏi
+     phần phát hành lấy tiền); NGOÀI khoảng đó thì quay về SLCP hôm nay — tương đương giả
+     định mọi đợt tăng vốn đều đã được hạ nền giá, sai với mã phát hành nhiều nhưng đúng
+     với đa số, và quan trọng hơn: KHÔNG tệ hơn bản cũ. Phần gỡ cổ tức TIỀN vẫn chạy ở mọi
+     kỳ vì nguồn tiền sâu hơn hẳn.
+     ĐÃ THỬ RỒI BỎ cách tách bằng báo cáo: "chia cổ phiếu thì lợi nhuận giữ lại giảm, phát
+     hành lấy tiền thì không" — nghe xuôi nhưng lãi từng quý át mất tín hiệu, HPG Q2/21 chia
+     35% bị đọc thành phát hành, Q2/24 thưởng 10% cũng vậy (thưởng lấy từ thặng dư chứ không
+     từ lợi nhuận giữ lại). Đừng dựng lại phép đó. */
+  let bien=qKey(qs[qs.length-1])-20;                 // 5 năm — đúng độ sâu đã dò của nguồn
+  for(const lb of qs) if(tl(lb)>0){ bien=Math.min(bien,qKey(lb)); break; }
+  for(let i=0;i<qs.length;i++){
+    let sh=qKey(qs[i])>=bien?vg[qs[i]]:null;
+    if(sh){ const r=tl(qs[i]);
+      if(r>0){ let nx=null;
+        for(let j=i+1;j<qs.length;j++) if(vg[qs[j]]){ nx=vg[qs[j]]; break; }
+        if(nx==null) nx=C.shares;                 // kỳ mới nhất: so thẳng với SLCP hôm nay
+        if(nx/sh>=1+r*0.8) sh*=1+r; } }           // vốn góp chưa kịp tăng -> gỡ trễ
+    else sh=C.shares/g[i];                        // không có vốn góp: chỉ gỡ được phần chia tách
+    SLCPky.push({ts:periodEndTs(qs[i]), sh:sh, mul:g[i]*u[i]});
+  }
+  return SLCPky;
+}
 async function fillMcap(rows){
   if(!rows||!rows.length||!C||!C.shares) return false;
   const f=await CP.loadHistFile(C.sym);
   if(!f||!f.t||!f.t.length) return false;
   const ref=C.ref||0, lastC=f.c[f.c.length-1];   // đối chiếu tham chiếu để không đoán sai đơn vị giá
   const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):1;
+  const B=await bangSLCP(f,k);
   let any=false;
   for(const r of rows){
-    const px=closeAtTs(f,periodEndTs(r.label));
-    r._mcap=px?px*k*C.shares/1e9:null;
-    if(r._mcap!=null) any=true;
+    const ts=periodEndTs(r.label), px=closeAtTs(f,ts);
+    if(!px){ r._mcap=null; continue; }
+    /* Kỳ SAU quý cuối cùng có dữ liệu -> dùng thẳng SLCP hôm nay (quý đang chạy dở).
+       Kỳ TRƯỚC quý đầu tiên -> lấy mốc cũ nhất, vì mọi sự kiện đều nằm sau nó. */
+    let e=null;
+    for(const x of B){ if(x.ts<=ts) e=x; else break; }
+    if(!e&&B.length&&ts<B[0].ts) e=B[0];
+    r._mcap=px*k*(e?e.mul*e.sh:C.shares)/1e9;
+    any=true;
   }
   return any;
 }
@@ -1295,7 +1465,7 @@ function kqkdTable(rows,div){
        + add('Thưởng cổ phiếu'+nn,'bonus',v=>v.toFixed(0)+'%');
   }
   const mcapH=show.some(r=>r._mcap!=null)
-    ? `<tr class="mcapRow"><td><div class="lb">Vốn hoá</div></td>`+
+    ? `<tr class="mcapRow"><td><div class="lb gt" data-tip="${CP.esc(GHI_MCAP)}">Vốn hoá</div></td>`+
       show.map(r=>`<td class="${qc(r).trim()}">${r._mcap!=null?Math.round(r._mcap).toLocaleString('en-US'):'—'}</td>`).join('')+
       '<td class="sp"></td></tr>'
     : '';
@@ -1503,9 +1673,17 @@ const GHI_FX='Các dòng dưới lấy từ data/finx (nguồn VNDirect), khớp
   +'cũ bị sai ở nhiều kỳ). Thống kê mô tả quá khứ, không phải khuyến nghị.';
 const fxChuan=t=>String(t||'').normalize('NFC').toLowerCase()
   .normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,'');
+/* MỘT LƯỢT TẢI DÙNG CHUNG. File này nay có HAI người dùng: khối hiển thị (đang tắt) và
+   VỐN GÓP cho phép tính vốn hoá (luôn chạy). Gọi fetch hai lần là tải đôi 30KB mà không
+   được gì; gói vào một lời hứa thì ai tới trước tải, ai tới sau dùng lại. */
+let FXp=null;
+function taiFinx(){
+  return FXp||(FXp=fetch('data/finx/'+C.sym+'.json')
+    .then(r=>r.ok?r.json():null).catch(()=>null));
+}
 async function loadFinx(){
   if(!HIEN_MORONG) return;
-  try{ const r=await fetch('data/finx/'+C.sym+'.json'); if(r.ok) FX=await r.json(); }catch(e){}
+  FX=await taiFinx();
   if(!FX||!(FX.Q||FX.Y)) { FX=null; return; }
   veFinxRows();
 }
