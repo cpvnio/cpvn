@@ -57,7 +57,16 @@ BỐN NGUỒN, mỗi thứ một chỗ — đã dò rồi mới chọn:
      8 = ĐƯỢC CHẤP THUẬN CHÍNH THỨC, 1 = chứng quyền.
      **Chỉ HOSE**, và **không có ngày giao dịch đầu tiên** (`ftdate` luôn rỗng). Đo 20/08:
      8 hồ sơ đã nộp, 0 chờ bổ sung, 1 được chấp thuận, 35 chứng quyền.
-   · `finfo/v4/events` type `LISTED` ngày hiệu lực TƯƠNG LAI — đây là **GD BỔ SUNG** (cổ
+   · **LỊCH NIÊM YẾT LẦN ĐẦU — `finfo/v4/events` nhóm `stockAlert`, type `listedHose` /
+     `listedUpcom` / `listedHnx`.** ĐÂY MỚI LÀ THỨ CẦN TÌM, và tao đã kết luận nhầm "không có
+     nguồn nào" ở hai lượt trước vì chỉ dò `group:investorRight` với `/v4/stocks`.
+     Mỗi bản ghi có: mã · ngày niêm yết (`effectiveDate`) · sàn (suy từ `type`) · **ngày công
+     bố** (`disclosureDate`) · và **giá tham chiếu** nằm trong `note` ("Giá tham chiếu: 30.000
+     đ/cp"). Đo: 251 sự kiện từ 01/2022, 239 có giá tham chiếu, công bố TRƯỚC 7-10 ngày.
+     > Lúc dựng kho (20/08/2026) chưa có mã nào sắp tới — đó là "chưa tới lúc công bố", KHÔNG
+     > phải "không có nguồn". Giao diện phải nói đúng vế đó, kèm bằng chứng nguồn còn sống
+     > (số sự kiện đã ghi + mốc gần nhất), bằng không người xem tưởng mục hỏng.
+   · ~~`finfo/v4/events` type `LISTED`~~ — ĐÃ BỎ khỏi giao diện 20/08/2026. Đó là **GD BỔ SUNG** (cổ
      phiếu mới của mã ĐÃ niêm yết chính thức chào sàn), CÓ ngày rõ ràng. Không phải mã mới
      nhưng là nguồn cung thật sắp vào thị trường nên vẫn đáng hiện, để riêng một mục.
      Bản ghi có BỐN trường ngày và với loại này cả ba `effectiveDate`/`expiredDate`/

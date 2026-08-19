@@ -591,12 +591,49 @@ function nyBang(){
     +'ca). Giá nền bị bỏ khi chuỗi giá sâu của nguồn không nối liền được với kho nến CPVN tại '
     +'phiên giao nhau. Thà để trống còn hơn hiện một con số không kiểm được.</div>';
 }
-function nySapHTML(){
-  const sap=NY.sap||[], bs=NY.bosung||[];
-  let h='';
-  h+='<h3 class="nyh3">Hồ sơ đang chờ lên sàn — HOSE</h3>';
-  /* NÓI ĐÚNG NGUYÊN NHÂN khi rỗng: API của HOSE chập chờn, và "không có hồ sơ nào" với
-     "chưa lấy được" là hai chuyện khác hẳn nhau đối với người đang tìm mã sắp lên sàn. */
+function nyLichHTML(){
+  /* ================= LỊCH NIÊM YẾT MỚI =========================================
+     NGUỒN: `finfo/v4/events` nhóm `stockAlert`, type `listedHose`/`listedUpcom`/`listedHnx`.
+     Đây MỚI là lịch niêm yết lần đầu — tìm ra sau khi đã dò trượt bảy cửa khác. Mỗi bản ghi
+     có mã · ngày niêm yết · sàn · NGÀY CÔNG BỐ · và giá tham chiếu nằm trong `note`.
+     Đo: 251 sự kiện từ 01/2022, 239 có giá tham chiếu, công bố trước 7-10 ngày.
+
+     HIỆN TẠI KHÔNG CÓ MÃ NÀO SẮP TỚI — và phải nói rõ đó là "chưa công bố", không phải
+     "không có nguồn". Hai câu đó khác hẳn nhau: nguồn chạy tốt, chỉ là đợt tới chưa tới lúc
+     công bố. Nên khối rỗng vẫn kèm bằng chứng nguồn sống (mốc gần nhất + số sự kiện). */
+  const L=NY.ny||[], sap=NY.sap||[];
+  const hnay=new Date(); hnay.setHours(0,0,0,0);
+  const tl=L.filter(r=>new Date(r.d+'T00:00:00')>=hnay);
+  const qua=L.filter(r=>new Date(r.d+'T00:00:00')<hnay);
+  const conLai=d=>{const t=new Date(d+'T00:00:00'); if(isNaN(t)) return '';
+    const n=Math.round((t-hnay)/86400000);
+    return n<=0?'<b class="nyd0">hôm nay</b>':n===1?'<b class="nyd0">ngày mai</b>':'<i class="nydn">còn '+n+' ngày</i>';};
+  const bang=(rows,truoc)=>'<div class="nywrap"><table class="tbl"><thead><tr>'
+    +'<th class="l">Mã</th><th>Sàn</th><th>Ngày lên sàn</th><th>Giá tham chiếu</th><th>Ngày công bố</th>'
+    +'</tr></thead><tbody>'+rows.map(r=>{const c=ST.map.get(r.s);
+      return '<tr'+(c?' data-sym="'+esc(r.s)+'"':'')+'><td class="l"><div class="co">'
+      +(c?logoHTML(c):'<span class="lgw"></span>')+'<b>'+esc(r.s)+'</b></div></td>'
+      +'<td>'+esc(r.ex||'—')+'</td>'
+      +'<td>'+nyNgay(r.d)+(truoc?' '+conLai(r.d):'')+'</td>'
+      +'<td>'+(r.gtc?num(r.gtc)+'đ':'—')+'</td>'
+      +'<td class="nycb">'+nyNgay(r.cb)+'</td></tr>';}).join('')+'</tbody></table></div>';
+
+  let h='<h3 class="nyh3">Sắp lên sàn</h3>';
+  if(tl.length) h+=bang(tl,true);
+  else h+='<div class="empty" style="text-align:left;padding:14px 12px">'
+    +'<b>Chưa có mã nào được công bố ngày lên sàn.</b><br>'
+    +'Không phải thiếu nguồn — sở công bố trước ngày giao dịch đầu tiên khoảng <b>7–10 ngày</b>, '
+    +'nên mục này chỉ có tên khi đợt tới đã được công bố. Bằng chứng nguồn đang chạy: đã ghi '
+    +'<b>'+L.length+'</b> lượt niêm yết, gần nhất <b>'+(L[0]?nyNgay(L[0].d)+' — '+esc(L[0].s):'—')+'</b>.'
+    +'</div>';
+
+  h+='<h3 class="nyh3">Vừa lên sàn</h3>';
+  h+='<div class="nynote nytren">Các mã đã chào sàn gần đây, kèm <b>giá tham chiếu phiên đầu</b> '
+    +'và ngày sở công bố. Đây là cùng một nguồn với mục trên — nhìn khoảng cách giữa hai cột '
+    +'ngày là biết đợt tới sẽ xuất hiện trước bao lâu.</div>';
+  h+=bang(qua.slice(0,60),false);
+
+  h+='<h3 class="nyh3">Hồ sơ đang chờ — HOSE</h3>';
   if(!sap.length) h+='<div class="empty">'+(NY.sapLoi
     ?'Chưa lấy được đường ống hồ sơ của HOSE ở lượt cập nhật gần nhất (API của Sở đang chập chờn).'
     :'Hiện không có hồ sơ nào trong đường ống của HOSE.')+'</div>';
@@ -606,57 +643,9 @@ function nySapHTML(){
       +'<td><b class="nytt'+(r.tt==='Đã được chấp thuận'?' ok':'')+'">'+esc(r.tt)+'</b></td>'
       +'<td>'+num(r.kl)+' cp</td><td>'+nyNgay(r.d)+'</td></tr>').join('')
     +'</tbody></table></div>';
-  h+='<div class="nynote">Chỉ HOSE — HNX và UPCOM không công bố đường ống hồ sơ qua giao diện '
-    +'máy đọc được. Sở cũng <b>không công bố ngày giao dịch đầu tiên</b> ở bước này, nên mục '
-    +'trên chỉ trả lời “sắp có ai lên sàn”, chưa trả lời được “ngày nào”.</div>';
-  /* ================= NGUỒN CUNG MỚI CỦA MÃ ĐÃ NIÊM YẾT =========================
-     ĐÃ BỊ ĐỌC NHẦM HAI LẦN, nên chỗ này phải phòng thủ chứ không chỉ ghi chú.
-     User nhìn hàng "AAA … 31/08/2026" rồi hỏi *"AAA lên sàn từ lâu rồi, sao nói 31/8/2026
-     mới lên sàn"* — hoàn toàn hợp lý: bảng nằm ngay dưới mục "chờ lên sàn", cột tên "Ngày
-     giao dịch", còn lời giải thích thì nằm DƯỚI bảng trong khi người ta đọc bảng trước.
-     Dữ liệu vốn đúng (AAA lên sàn 25/11/2016, còn 11.468.234 cp phát hành thêm vào sàn
-     31/08/2026), sai là ở trình bày. Bốn thứ chống đọc nhầm, đừng gỡ cái nào:
-       ① tiêu đề nói THẲNG "mã ĐÃ niêm yết", không dùng chữ "lên sàn"
-       ② lời giải thích đặt TRÊN bảng
-       ③ cột "Đã niêm yết từ" ngay trong mỗi hàng — nhìn AAA 2016 cạnh 2026 là tự hiểu,
-          không cần đọc chú thích nào. Đây mới là thứ chặn được đọc nhầm.
-       ④ cột ngày gọi là "Cổ phiếu mới vào sàn" chứ không phải "Ngày giao dịch" */
-  h+='<h3 class="nyh3">Nguồn cung mới của mã ĐÃ niêm yết</h3>';
-  h+='<div class="nynote nytren">Đây <b>không phải mã mới lên sàn</b>. Đây là cổ phiếu '
-    +'<b>phát hành thêm</b> (chia cổ phiếu, ESOP hết hạn hạn chế, chào bán riêng lẻ…) của mã '
-    +'đang niêm yết, được đưa vào giao dịch trong những ngày tới — tức nguồn cung thật sắp '
-    +'vào thị trường. Cột <b>Đã niêm yết từ</b> là ngày mã đó lên sàn lần đầu.</div>';
-  if(!bs.length) h+='<div class="empty">Không có đợt nào sắp tới.</div>';
-  else{
-    const hnay=new Date(); hnay.setHours(0,0,0,0);
-    const conLai=d=>{
-      const t=new Date(d+'T00:00:00'); if(isNaN(t)) return '';
-      const n=Math.round((t-hnay)/86400000);
-      return n<=0?'<b class="nyd0">hôm nay</b>':n===1?'<b class="nyd0">ngày mai</b>'
-             :'<i class="nydn">còn '+n+' ngày</i>';
-    };
-    const lenSan={}; for(const r of (NY.ma||[])) lenSan[r.s]=r.d;
-    h+='<div class="nywrap"><table class="tbl"><thead><tr><th class="l">Mã</th>'
-      +'<th>Đã niêm yết từ</th><th>Số lượng phát hành thêm</th><th>Bằng % lượng lưu hành</th>'
-      +'<th>Cổ phiếu mới vào sàn</th><th>Công bố</th></tr></thead><tbody>'
-      +bs.map(r=>{ const c=ST.map.get(r.s);
-        const sh=(c&&c.shares)||0;
-        /* `shares` là số cổ phiếu HÔM NAY và với phần lớn mã đã GỒM luôn đợt này (đo: PVT
-           vốn góp Q1/26 469,9 triệu -> Q2/26 516,9 triệu, đúng bằng cộng thêm 46.987.703).
-           Nên tỷ lệ ở đây đọc là "bằng bao nhiêu phần lượng đang lưu hành", KHÔNG phải "pha
-           loãng thêm bao nhiêu" — hai cách đọc lệch nhau đúng một bậc mẫu số. */
-        const pc=(sh&&r.kl)?r.kl/sh*100:null;
-        const pcH=pc==null?'—':'<b'+(pc>=5?' class="nybig"':'')+'>'+pc.toFixed(pc>=10?0:1)+'%</b>';
-        return '<tr data-sym="'+esc(r.s)+'"><td class="l"><div class="co">'
-        +(c?logoHTML(c):'<span class="lgw"></span>')+'<b>'+esc(r.s)+'</b></div></td>'
-        +'<td class="nycb">'+(lenSan[r.s]?nyNgay(lenSan[r.s]):'—')+'</td>'
-        +'<td>'+num(r.kl)+' cp</td><td>'+pcH+'</td>'
-        +'<td>'+nyNgay(r.d)+' '+conLai(r.d)+'</td>'
-        +'<td class="nycb">'+nyNgay(r.cb)+'</td></tr>';}).join('')
-      +'</tbody></table></div>';
-    h+='<div class="nynote">Có bản ghi công bố từ 2023–2025 mà nay mới vào giao dịch — đó là '
-      +'cổ phiếu ESOP hết hạn hạn chế chuyển nhượng, không phải tin cũ sót lại.</div>';
-  }
+  h+='<div class="nynote">Đường ống hồ sơ chỉ có ở HOSE — HNX và UPCOM không công bố qua giao '
+    +'diện máy đọc được. Sở cũng không kèm ngày giao dịch đầu tiên ở bước này, nên mục này trả '
+    +'lời “sắp có ai lên sàn”, còn “ngày nào” thì phải đợi mục <b>Sắp lên sàn</b> ở trên.</div>';
   return h;
 }
 async function renderNiemYet(){
@@ -667,24 +656,33 @@ async function renderNiemYet(){
   const sanDem={};
   for(const r of NY.ma||[]) sanDem[r.ex]=(sanDem[r.ex]||0)+1;
   const chip=(v,t)=>'<button data-ex="'+v+'"'+(nyLoc.ex===v?' class="on"':'')+'>'+t+'</button>';
+  /* HAI THẺ, lịch niêm yết KHÔNG hiện sẵn ở đầu trang (user chốt 20/08/2026): người vào đây
+     chủ yếu để tra mã đang niêm yết, còn lịch mã mới là thứ thỉnh thoảng mới ngó. Để nó chình
+     ình trên đầu là mỗi lần vào đều phải cuộn qua. */
   el.innerHTML=head(m)
-    +'<div class="card">'+nySapHTML()+'</div>'
-    +'<div class="card"><h3 class="nyh3">Toàn bộ mã đang niêm yết ('+nam.toLocaleString('en-US')+')</h3>'
+    +'<div class="nytab" id="nyTab">'
+      +'<button data-t="ds" class="on">Toàn bộ mã đang niêm yết</button>'
+      +'<button data-t="lich">Cổ phiếu sắp niêm yết</button></div>'
+    +'<div class="card nypane on" id="ny-ds">'
     +'<div class="nybar"><div class="nyseg" id="nyEx">'+chip('all','Tất cả')
       +Object.keys(sanDem).sort().map(k=>chip(k,k+' '+sanDem[k])).join('')+'</div>'
     +'<input id="nyTim" placeholder="Tìm mã hoặc tên…" value="'+esc(nyLoc.tim)+'"></div>'
-    +'<div id="nyBody">'+nyBang()+'</div></div>';
+    +'<div id="nyBody">'+nyBang()+'</div></div>'
+    +'<div class="card nypane" id="ny-lich">'+nyLichHTML()+'</div>';
   const ve=()=>{ $('#nyBody').innerHTML=nyBang(); gan(); };
   const gan=()=>{
     $$('#nyBody .nyh').forEach(t=>t.onclick=()=>{
       const k=t.dataset.k;
-      /* Bấm lại cùng cột thì ĐẢO CHIỀU; đổi cột thì mặc định GIẢM DẦN, trừ cột Mã (chữ cái
-         thì tăng dần mới tự nhiên). */
       if(nySort.k===k) nySort.d=-nySort.d; else { nySort.k=k; nySort.d=(k==='s'?1:-1); }
       ve();
     });
   };
   gan();
+  $$('#nyTab button').forEach(b=>b.onclick=()=>{
+    $$('#nyTab button').forEach(x=>x.classList.toggle('on',x===b));
+    $$('.nypane').forEach(x=>x.classList.remove('on'));
+    $('#ny-'+b.dataset.t).classList.add('on');
+  });
   $$('#nyEx button').forEach(b=>b.onclick=()=>{
     nyLoc.ex=b.dataset.ex;
     $$('#nyEx button').forEach(x=>x.classList.toggle('on',x===b));
