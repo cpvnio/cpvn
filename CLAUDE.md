@@ -1528,24 +1528,42 @@ kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45
 | hồ sơ chờ lên sàn | `api.hsx.vn/l/api/v1/1/securities?newListingStatusId=N` | chỉ HOSE |
 | GD bổ sung sắp tới | `finfo/v4/events` type `LISTED` ngày tương lai | 100 đợt |
 
-> **ĐÃ GỠ CỘT "Giá lúc đó" VÀ "Vốn hoá lên sàn" KHỎI GIAO DIỆN (20/08/2026) — đừng dựng lại
-> khi chưa có nguồn mới.** User chỉ ra VCB: trang ghi 9.084đ trong khi giá thật ngày lên sàn
-> ~60.000đ. Đó là giá ĐÃ HẠ NỀN, còn phép dựng ngược về giá thô thì đo được chỉ **28,5%** rơi
-> đúng bước giá của sàn, riêng VCB lệch **~1,7 lần**. Vốn hoá lên sàn dựa trên chính con số ấy
-> nên cũng bỏ theo. Thà bỏ cột còn hơn hiện số không bảo vệ được. Dữ liệu `gt`/`q`/`mc` vẫn
-> nằm trong kho cho ai muốn nghiên cứu, chỉ không hiện ra.
-> **GIÁ IPO CŨNG KHÔNG THAY THẾ ĐƯỢC — đã dò tận nơi.** `api.hsx.vn/a/api/v1/1/auctions` có
-> 821 bản ghi sâu tới **2005**, nhưng: `startingPrice` là **giá KHỞI ĐIỂM** chứ không phải giá
-> đấu thành công · `auctiondbAucResults` **rỗng ở mọi bản ghi** · không kèm mã chứng khoán ·
-> **không có VCB**. `finfo/v4/ipos`, `/v4/auctions`, `hnx.vn/api/auction/list` đều 404.
+> **GIÁ CHÀO SÀN — CÓ THẬT, LẤY ĐƯỢC, PHỦ 100% (`tools/kho_chaosan.py`).** Hai lượt trước
+> tao kết luận "không lấy được giá thị trường ngày lên sàn" — **SAI**, và user chỉ ra chỗ đúng:
+> trang hồ sơ doanh nghiệp Vietstock `finance.vietstock.vn/{MÃ}/ho-so-doanh-nghiep.htm` có sẵn
+> **Ngày giao dịch đầu tiên · Giá chào sàn · Khối lượng niêm yết lần đầu · Khối lượng niêm yết**,
+> **server-rendered thẳng trong HTML**, không cần API cũng không cần khoá phiên.
+> Cào 1.529 mã hết 484 giây, **phủ 1.529/1.529**. Đo: VCB 60.000đ · HPG 127.000đ · FPT
+> 400.000đ · VIC 125.000đ · REE 16.300đ · BID 18.800đ — giá THẬT của phiên chào sàn.
+> Bài học: trước khi tuyên bố "không nguồn nào có", phải dò cả trang HTML thường chứ không
+> chỉ endpoint JSON.
 
-**"TỔNG LỢI SUẤT" ĐÃ GỒM CỔ TỨC TIỀN — đừng cộng thêm lần nữa.** User đề nghị cộng tay
-`Σ(cổ tức × SLCP từng thời điểm)` vào vốn hoá hiện tại rồi chia vốn hoá lúc lên sàn. Không
-cần: nguồn hạ nền chuỗi giá theo **cả** cổ tức tiền lẫn cổ phiếu (đo 19/08: HRB chia 3.000đ,
-giá thô 35.400 → giá kho 32.402 = đúng `35.400×32.400/35.400`), nên `giá nay / giá kho ngày
-lên sàn` chính là tổng lợi suất có tái đầu tư cổ tức. Cộng thêm là **đếm hai lần**.
-Khác biệt còn lại giữa hai cách: cách của user còn tính phần công ty phình ra do phát hành
-thêm LẤY TIỀN — đó là vốn cổ đông bỏ thêm vào, không phải lãi.
+> **HAI NGUỒN HIỂU "NGÀY LÊN SÀN" KHÁC NHAU — 52 mã.** VNDirect `listedDate` = ngày niêm yết
+> trên **sàn hiện tại**; Vietstock = **ngày giao dịch đầu tiên**. Mã chuyển sàn lệch hẳn (MHL
+> 2024-09-20 vs 2009-11-26 · CVN 2025-06-11 vs 2010-08-06).
+> **Phát hiện bằng BẤT BIẾN, không phải bằng mắt:** giá chào sàn phải **≥** giá đã hạ nền (hạ
+> nền chỉ kéo giá quá khứ XUỐNG). 53 mã vi phạm, và đúng là nhóm chuyển sàn — vì hai con số đo
+> ở hai thời điểm khác nhau. Kho nay giữ `d` = ngày giao dịch đầu tiên (khớp cặp với `gc`) và
+> `dS` = ngày lên sàn hiện tại; giao diện đánh dấu ↷.
+
+**TỔNG LỢI SUẤT: DÙNG GIÁ CHÀO SÀN THẬT, KHÔNG DÙNG CHUỖI HẠ NỀN.**
+```
+x = ( giá nay × nh  +  ct ) / gc
+  nh = 1 cp gốc nay thành mấy cp (chỉ chia cổ phiếu + thưởng)
+  ct = cổ tức tiền cộng dồn trên 1 cp gốc, mỗi đợt × số cp đang nắm lúc đó
+  gc = giá chào sàn (Vietstock)
+```
+> **KHÔNG TÍNH QUYỀN MUA vào `nh`** — nhận thêm cổ phiếu kiểu đó phải BỎ THÊM TIỀN, gộp vào là
+> tính lãi cho cả phần vốn góp thêm. Đây cũng là chỗ con số này **thấp hơn** cách cũ (dựng từ
+> chuỗi hạ nền), vì chuỗi đó CÓ hạ nền theo quyền mua tức ngầm giả định có tham gia:
+> VIC **30,46** vs 78,66 · REE **17,05** vs 65,48 · VCB **4,06** vs 6,32.
+> Giao diện để nguyên **cả bốn thành phần** (gc · nh · ct · giá nay) chứ không chỉ kết quả —
+> ai cũng cộng lại được, và đó là cách duy nhất chống lại chuyện tin một con số không kiểm được.
+
+> **ĐỪNG lấy `gc × kl0` làm mẫu số "vốn hoá lúc lên sàn".** Nhiều mã chỉ niêm yết MỘT PHẦN vốn
+> ở lần đầu — VCB niêm yết 112.285.426 cp trong khi vốn điều lệ lúc đó 1,21 tỷ cp (9,3%). Lấy
+> phần niêm yết làm "vốn hoá cả công ty" là so một mẩu với toàn bộ, bội số phóng đại hàng chục
+> lần. Trường `mcny` trong kho là **vốn hoá phần được niêm yết**, đúng nghĩa của nó, không hơn.
 
 **HAI CỘT GIÁ, ĐỪNG TRỘN.** `g` = giá phiên đầu **quy về nền hôm nay** — chính xác tuyệt
 đối, và là số đúng để so ra `x` = "×N lần kể từ ngày lên sàn" (hai đầu cùng một nền).

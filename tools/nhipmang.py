@@ -50,6 +50,10 @@ TRAN = {
     # datafeed UDF của stockchart.vietstock.vn — nguồn DUY NHẤT có lịch sử chia cổ tức đủ
     # sâu (tới 2007). Giãn 8 lượt/giây: đây là API phục vụ chart của họ, đừng ép.
     "api.vietstock.vn":            0.125,
+    # trang hồ sơ doanh nghiệp của Vietstock — nguồn DUY NHẤT có GIÁ CHÀO SÀN và khối lượng
+    # niêm yết lần đầu. Mỗi trang ~300KB (nặng gấp trăm lần một lượt API) nên giãn 4 lượt/giây
+    # chứ không lấy mức mặc định.
+    "finance.vietstock.vn":        0.250,
 }
 MAC_DINH = 0.200          # host không khai tên -> 5 lượt/giây
 LUI = (1.0, 2.0, 4.0)     # chờ bao lâu trước lần thử lại thứ 1, 2, 3
