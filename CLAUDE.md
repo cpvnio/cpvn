@@ -1452,6 +1452,39 @@ chỉ đánh màu con số theo từng cột; luật màu, ánh xạ năm→Q4 v
 mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU `genericTable` trong
 `renderFin` (nó chèn vào tbody của chính bảng đó) và tự vẽ lại khi đổi Theo quý/Theo năm.
 
+> **ĐANG TẮT TỪ 19/08/2026 — cờ `HIEN_MORONG=false` trong `cophieu.html`.** Một cờ tắt cả
+> `loadNganh` (chỉ số đặc thù ngành) lẫn `loadFinx` (khối "CHI TIẾT THEO MẪU BÁO CÁO" ở cuối
+> ba bảng), mọi ngành. Kho `data/nganh` + `data/finx` và hai hàm vẽ giữ nguyên, chỉ hai
+> `loadX()` thoát sớm.
+>
+> **Lý do — `data/finx` tự mâu thuẫn về DẤU trong cùng một bảng.** Đo trên NTP:
+> `GROSS_PROFIT/"Giá vốn hàng bán" = −123` nhưng `OPERATING_EXPENSES/"Chi phí giá vốn" = +123`
+> — cùng một con số, ngược dấu. Cạnh đó "Chi phí bán hàng +8", "Chi phí lãi vay +1" cũng
+> dương: cùng là khoản chi mà chỗ trừ chỗ cộng, người đọc không biết dòng nào đã trừ vào
+> lợi nhuận. Và luật bỏ dòng trùng (so theo DÃY SỐ) **giữ nhầm bản sai** — bảng gốc có "Giá
+> vốn hàng bán +1.349" nên bản dương của finx bị coi là trùng và bỏ, bản ÂM lọt lên màn hình.
+>
+> **Vì sao `doi_chieu_finx.py` 99,13% không bắt được:** nó so từng ô với DNSE, mà DNSE chính
+> là nơi quy ước dấu này đến — hai bên sai giống nhau thì vẫn "khớp". Phép còn thiếu là **so
+> chéo NỘI BỘ**: cùng một khoản mục xuất hiện ở hai nhóm thì dấu phải nhất quán.
+>
+> **Bật lại thế nào:** thống nhất dấu ở khâu DỰNG KHO (`tools/kho_dong.py`) rồi mới đổi cờ
+> thành `true`. Đừng chữa bằng cách đảo dấu lúc vẽ — lúc đó không còn phân biệt được dòng
+> nào nguồn đã âm sẵn. **Cái giá của việc tắt** (biết trước, user chấp nhận): ngân hàng mất
+> Thu nhập lãi thuần / Chi phí dự phòng, và VCB lại hiện "Lợi nhuận gộp — — —" như cũ.
+
+**BA BẢNG BCTC = BA THẺ CHỌN (19/08/2026).** `#finB` đặt ngay dưới `#finP` (quý/năm); ba
+bảng bọc trong `.finblk#fb-kq|fb-cd|fb-lc`, chỉ thẻ `.on` có `display:block`. Ba dòng
+`<h3 class="t">` cũ đã bỏ — tên bảng nằm trên nút. User chốt: xem lưu chuyển tiền tệ mà
+phải cuộn qua trọn hai bảng kia là quá xa.
+
+> **BẪY — `drawFinChart` đo `offsetWidth` của `<th>` bảng KQKD** để đặt cột biểu đồ thẳng
+> tâm với cột bảng. Thẻ đang `display:none` thì mọi số đo bằng 0 và nó rơi về bề rộng mặc
+> định **800px**. Đo thật trên NTP: đứng ở thẻ "Cân đối" rồi bấm "Theo năm" → canvas 800px
+> trong khi bảng 1.212px. Vì thế tay bấm `#finB` **phải gọi `veLaiFinChart()` mỗi khi quay
+> về `kq`** — lúc hiện lại là lúc duy nhất đo được số thật. Thêm bất kỳ canvas nào vào thẻ
+> ẩn về sau cũng dính đúng bẫy này.
+
 **`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
 rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
 quá khứ nên phải chạy một lượt từ đầu chuỗi và **đệm lại** (`emaCache` khoá theo kỳ + độ dài
