@@ -560,38 +560,36 @@ function nyBang(){
   const hang=r=>{
     const c=ST.map.get(r.s);
     const x=r.x==null?'—':'<b style="color:'+(r.x>=1?'var(--green)':'var(--red)')+'">×'+r.x.toFixed(2)+'</b>';
-    /* mã CHUYỂN SÀN: ngày hiện ra là ngày giao dịch ĐẦU TIÊN, còn ngày lên sàn hiện tại
-       ghi vào tooltip — bằng không người xem thấy "UPCOM · 2009" mà mã đang ở HOSE thì
-       tưởng sai. */
+    /* mã CHUYỂN SÀN: ngày hiện ra là phiên giao dịch ĐẦU TIÊN, ngày lên sàn hiện tại để
+       trong dấu ↷ — bằng không thấy "HOSE · 2009" mà mã đang ở UPCOM thì tưởng sai. */
     const ngay=nyNgay(r.d)+(r.dS?'<i class="nydn" title="Ngày niêm yết trên sàn hiện tại — mã này đã chuyển sàn">↷ '+nyNgay(r.dS)+'</i>':'');
     return '<tr data-sym="'+esc(r.s)+'">'
       +'<td class="l"><div class="co">'+(c?logoHTML(c):'<span class="lgw"></span>')
         +'<div><b>'+esc(r.s)+'</b><i class="nyn">'+esc((c&&c.name)||'')+'</i></div></div></td>'
       +'<td>'+esc(r.ex||'—')+'</td>'
       +'<td>'+ngay+'</td>'
-      +'<td>'+(r.gc!=null?num(r.gc)+'đ':'—')+'</td>'
-      +'<td class="nycb">'+(r.nh!=null?'×'+r.nh.toFixed(2):'—')+'</td>'
-      +'<td class="nycb">'+(r.ct?num(r.ct)+'đ':'—')+'</td>'
+      +'<td class="nycb">'+(r.gc!=null?num(r.gc)+'đ':'—')+'</td>'
+      +'<td class="nycb">'+(r.g!=null?num(r.g)+'đ':'—')+'</td>'
       +'<td>'+x+'</td></tr>';
   };
   return '<div class="nywrap"><table class="tbl"><thead><tr>'
-    +th('s','Mã','l')+th('ex','Sàn')+th('d','Ngày lên sàn')+th('gc','Giá chào sàn')
-    +th('nh','1 cp thành')+th('ct','Cổ tức đã nhận')+th('x','Tổng lợi suất')
+    +th('s','Mã','l')+th('ex','Sàn')+th('d','Ngày lên sàn')
+    +th('gc','Giá tham chiếu phiên đầu')+th('g','Giá nền quy đổi')+th('x','Tổng lợi suất')
     +'</tr></thead><tbody>'+ma.map(hang).join('')+'</tbody></table></div>'
-    +'<div class="nynote">'+ma.length.toLocaleString('en-US')+' mã. Bảng này để nguyên '
-    +'<b>cả phép tính</b> chứ không chỉ kết quả, để ai cũng cộng lại được:<br>'
-    +'<b>Tổng lợi suất</b> = ( giá hôm nay × <b>1 cp thành</b> + <b>Cổ tức đã nhận</b> ) ÷ '
-    +'<b>Giá chào sàn</b>. Đọc là: <i>một cổ phiếu mua đúng phiên chào sàn, không bỏ thêm '
-    +'đồng nào, nay đáng mấy lần vốn</i>.<br>'
-    +'<b>1 cp thành</b> là số cổ phiếu mà 1 cổ phiếu ban đầu đã nhân lên nhờ chia cổ phiếu và '
-    +'cổ phiếu thưởng. <b>Không tính quyền mua</b> — nhận thêm cổ phiếu kiểu đó phải bỏ thêm '
-    +'tiền, gộp vào là tính lãi cho cả phần vốn góp thêm. <b>Cổ tức đã nhận</b> là tiền mặt '
-    +'cộng dồn trên một cổ phiếu gốc, mỗi đợt nhân với số cổ phiếu đang nắm lúc đó.<br>'
+    +'<div class="nynote">'+ma.length.toLocaleString('en-US')+' mã.<br>'
+    +'<b>Tổng lợi suất = giá hôm nay ÷ Giá nền quy đổi.</b> Giá nền là giá phiên đầu tiên sau '
+    +'khi trừ hết mọi lần chia tách, cổ tức tiền, cổ tức cổ phiếu và quyền mua — nên tỉ lệ này '
+    +'đã bao gồm <b>tất cả</b>: cổ tức tái đầu tư và có tham gia đủ mọi đợt chào bán thêm. '
+    +'Đây cũng là cách các chỉ số tổng lợi suất tính.<br>'
+    +'<b>Giá tham chiếu phiên đầu</b> là giá thị trường thật của phiên chào sàn (nguồn: hồ sơ '
+    +'doanh nghiệp Vietstock). Đặt cạnh giá nền để thấy cổ phiếu đã bị pha loãng/chia bao nhiêu '
+    +'lần kể từ đó — VCB chào sàn 60.000đ, nền quy đổi 9.084đ, tức đã chia ra hơn 6 lần.<br>'
     +'Ngày kèm dấu <b>↷</b> là mã đã <b>chuyển sàn</b>: ngày hiện ra là phiên giao dịch đầu '
     +'tiên, ngày trong dấu là ngày niêm yết trên sàn hiện tại.<br>'
-    +'Giá chào sàn và khối lượng niêm yết lần đầu lấy từ hồ sơ doanh nghiệp Vietstock — '
-    +'phủ đủ 1.529/1.529 mã, và là <b>giá thị trường thật</b> của phiên chào sàn chứ không '
-    +'phải giá quy đổi.</div>';
+    +'<b>Ô trống là cố ý.</b> Giá tham chiếu bị bỏ khi nó không khớp với chính ngày Vietstock '
+    +'ghi (mã chuyển sàn hay bị ghép ngày mới với giá của lần niêm yết gốc — đo được hàng trăm '
+    +'ca). Giá nền bị bỏ khi chuỗi giá sâu của nguồn không nối liền được với kho nến CPVN tại '
+    +'phiên giao nhau. Thà để trống còn hơn hiện một con số không kiểm được.</div>';
 }
 function nySapHTML(){
   const sap=NY.sap||[], bs=NY.bosung||[];

@@ -1546,24 +1546,34 @@ kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45
 > ở hai thời điểm khác nhau. Kho nay giữ `d` = ngày giao dịch đầu tiên (khớp cặp với `gc`) và
 > `dS` = ngày lên sàn hiện tại; giao diện đánh dấu ↷.
 
-**TỔNG LỢI SUẤT: DÙNG GIÁ CHÀO SÀN THẬT, KHÔNG DÙNG CHUỖI HẠ NỀN.**
+**TỔNG LỢI SUẤT = GIÁ NAY ÷ GIÁ NỀN QUY ĐỔI (user chốt 20/08/2026).**
 ```
-x = ( giá nay × nh  +  ct ) / gc
-  nh = 1 cp gốc nay thành mấy cp (chỉ chia cổ phiếu + thưởng)
-  ct = cổ tức tiền cộng dồn trên 1 cp gốc, mỗi đợt × số cp đang nắm lúc đó
-  gc = giá chào sàn (Vietstock)
+x = giá hôm nay / g          g = giá phiên đầu tiên trên NỀN HÔM NAY
 ```
-> **KHÔNG TÍNH QUYỀN MUA vào `nh`** — nhận thêm cổ phiếu kiểu đó phải BỎ THÊM TIỀN, gộp vào là
-> tính lãi cho cả phần vốn góp thêm. Đây cũng là chỗ con số này **thấp hơn** cách cũ (dựng từ
-> chuỗi hạ nền), vì chuỗi đó CÓ hạ nền theo quyền mua tức ngầm giả định có tham gia:
-> VIC **30,46** vs 78,66 · REE **17,05** vs 65,48 · VCB **4,06** vs 6,32.
-> Giao diện để nguyên **cả bốn thành phần** (gc · nh · ct · giá nay) chứ không chỉ kết quả —
-> ai cũng cộng lại được, và đó là cách duy nhất chống lại chuyện tin một con số không kiểm được.
+Giá nền đã trừ hết chia tách · cổ tức tiền · cổ tức cổ phiếu · **quyền mua**, nên tỉ lệ này
+bao gồm tất cả: cổ tức tái đầu tư VÀ có tham gia đủ mọi đợt chào bán thêm. Đây là quy ước
+của các chỉ số tổng lợi suất, và user chốt đúng nó: *"vẫn phải tính là tao có tham gia ở tất
+cả những lần chào bán thêm chứ"*.
+> **Đã thử cách kia rồi bỏ:** tính trên một cổ phiếu từ giá chào sàn thật —
+> `(giá nay × số cp nhân lên + cổ tức đã nhận) / giá chào sàn`, KHÔNG tính quyền mua. Ra thấp
+> hơn hẳn vì bỏ mất giá trị quyền mua: VIC 30,46 vs 78,66 · REE 17,05 vs 65,48 · VCB 4,06 vs
+> 6,32. Hai cách đều đúng theo quy ước riêng; user chọn cách gồm quyền mua.
 
-> **ĐỪNG lấy `gc × kl0` làm mẫu số "vốn hoá lúc lên sàn".** Nhiều mã chỉ niêm yết MỘT PHẦN vốn
-> ở lần đầu — VCB niêm yết 112.285.426 cp trong khi vốn điều lệ lúc đó 1,21 tỷ cp (9,3%). Lấy
-> phần niêm yết làm "vốn hoá cả công ty" là so một mẩu với toàn bộ, bội số phóng đại hàng chục
-> lần. Trường `mcny` trong kho là **vốn hoá phần được niêm yết**, đúng nghĩa của nó, không hơn.
+**BA PHÉP LỌC DỮ LIỆU, mỗi phép bắt một loại lỗi khác nhau — đừng gỡ phép nào:**
+1. **`gc` phải khớp BIÊN ĐỘ PHIÊN ĐẦU** so với giá đóng cửa hôm đó (HOSE ±20% · HNX ±30% ·
+   UPCOM ±40%, nới thêm 5đv). Bắt được **30 mã**.
+2. **`gc` không được vượt xa mức chia tách giải thích được** (`gc/g > max(3, tích(1+tỷ lệ)×3)`).
+   Bắt thêm **313 mã**.
+   > Cả hai đều cùng một gốc: **Vietstock ghép NGÀY của lần niêm yết mới với GIÁ của lần niêm
+   > yết gốc** ở mã chuyển sàn. ITA hiện "13/02/2025 · 54.000đ" trong khi giá thật hôm đó là
+   > 2.300đ; NTC "28/10/2025 · 20.000đ" trong khi thật là 164.500đ. Lỗi hệ thống bên nguồn.
+3. **`g` lấy từ chuỗi sâu của Vietstock phải NỐI LIỀN được với kho nến CPVN** tại phiên giao
+   nhau (lệch ≤3%). 466 mã cần kiểm → **344 khớp, 122 lệch nền bị loại**. Không có phép này
+   thì VTA ra giá nền 38đ trong khi kho ghi 1.500đ ở phiên kế tiếp mà không sự kiện nào giải
+   thích được.
+
+Kết quả: ngày lên sàn **1.529** · giá tham chiếu phiên đầu **1.186** · giá nền + tổng lợi suất
+**1.361**. Ô trống là CỐ Ý — thà để trống còn hơn hiện số không kiểm được.
 
 **HAI CỘT GIÁ, ĐỪNG TRỘN.** `g` = giá phiên đầu **quy về nền hôm nay** — chính xác tuyệt
 đối, và là số đúng để so ra `x` = "×N lần kể từ ngày lên sàn" (hai đầu cùng một nền).
