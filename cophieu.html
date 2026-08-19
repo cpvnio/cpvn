@@ -170,6 +170,15 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
     background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
   .nnseg b.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .nnseg b:not(.on):hover{color:var(--txt)}
+  /* ô nhập trông y hệt một nút của dải, chỉ hẹp hơn; bỏ mũi tên tăng/giảm của trình duyệt
+     vì ở cỡ này bấm không trúng mà lại chiếm mất nửa bề ngang */
+  .nnseg input{width:38px;font-size:10.5px;font-weight:800;padding:1px 4px;border-radius:5px;
+    text-align:center;background:var(--panel2);color:var(--muted);border:1px solid var(--line);
+    -moz-appearance:textfield;appearance:textfield}
+  .nnseg input::-webkit-outer-spin-button,.nnseg input::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0}
+  .nnseg input:focus{outline:none;border-color:var(--accent);color:var(--txt)}
+  .nnseg input.on{background:var(--accent);border-color:var(--accent);color:#fff}
 
   /* ---- chart (cột phải, tự giãn theo chiều cao 2 bảng trái) ---- */
   #chartCard{display:flex;flex-direction:column;min-width:0}
@@ -491,12 +500,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260819d"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260819e"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260819d"></script>
+<script defer src="assets/mobi.js?v=20260819e"></script>
 </head>
 <body>
 <header>
@@ -702,8 +711,8 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260819d"></script>
-<script src="assets/chart.js?v=20260819d"></script>
+<script src="assets/core.js?v=20260819e"></script>
+<script src="assets/chart.js?v=20260819e"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -820,8 +829,17 @@ function renderHero(){
    1D lấy từ bảng giá trực tiếp (chạy theo phiên). 7D/30D cộng dồn giá trị mua–bán
    ròng từng phiên: nguồn sống VNDirect (CORS mở) -> kho data/nn.json khi nguồn lỗi. */
 let nnPeriod=1, nnHist=null, nnHistTried=false, nnLoading=false;
+/* Ô NHẬP SỐ PHIÊN TUỲ CHỌN sau 30D (user chốt 19/08/2026, để soi 45/60/90/120 phiên).
+   Dùng ô nhập chứ không thêm vài nút cố định: mỗi mốc một nút thì dải nút dài ra mãi mà vẫn
+   không bao giờ đủ, còn `prompt()` thì chặn cả trang và trên điện thoại rất khó chịu.
+   Đơn vị là PHIÊN chứ không phải ngày lịch — giống hệt 7D/30D đang có (`nnSum` đếm phần tử
+   trong kho), nên đừng đổi cách hiểu ở riêng ô này. */
+const NN_MAX=365;
 const nnSegHTML=()=>`<span class="nnseg" id="nnSeg">`+
-  [[1,'1D'],[7,'7D'],[30,'30D']].map(([v,t])=>`<b data-p="${v}"${nnPeriod===v?' class="on"':''}>${t}</b>`).join('')+`</span>`;
+  [[1,'1D'],[7,'7D'],[30,'30D']].map(([v,t])=>`<b data-p="${v}"${nnPeriod===v?' class="on"':''}>${t}</b>`).join('')+
+  `<input id="nnTuy" type="number" inputmode="numeric" min="2" max="${NN_MAX}" step="1"`+
+  ` placeholder="…" title="Số phiên tuỳ chọn — gõ số rồi Enter (ví dụ 45, 60, 90, 120)"`+
+  `${[1,7,30].includes(nnPeriod)?'':` value="${nnPeriod}" class="on"`}></span>`;
 function nnToday(){ return ((C.fbuy||0)-(C.fsell||0))*(C.price||0); }   // đồng
 function nnSum(days){
   if(days<=1) return {v:nnToday(),n:1};
@@ -836,13 +854,15 @@ function nnSum(days){
   const moiNhat=nnHist.length?nnHist[0].d:'';
   const seen=new Set(), arr=[];
   // chỉ cộng số sống khi nó thuộc phiên MỚI HƠN phiên mới nhất trong kho
-  if(C.traded&&live&&sessLive>moiNhat){ arr.push(live); seen.add(sessLive); }
+  if(C.traded&&live&&sessLive>moiNhat){
+    arr.push({v:live,q:(C.fbuy||0)-(C.fsell||0)}); seen.add(sessLive); }
   for(const x of nnHist){                                   // rồi tới các phiên cũ (mới -> cũ)
-    if(seen.has(x.d)) continue; seen.add(x.d); arr.push(x.v);
+    if(seen.has(x.d)) continue; seen.add(x.d); arr.push({v:x.v,q:x.q});
     if(arr.length>=days) break;
   }
   if(!arr.length) return null;
-  return {v:arr.reduce((a,b)=>a+b,0), n:arr.length};
+  return {v:arr.reduce((a,b)=>a+b.v,0), q:arr.every(x=>x.q!=null)?arr.reduce((a,b)=>a+b.q,0):null,
+          n:arr.length};
 }
 function nnCell(){
   const r=nnSum(nnPeriod);
@@ -851,17 +871,43 @@ function nnCell(){
   if(Math.abs(v)<5e7) return `<span style="color:var(--muted)">0 tỷ</span>`;
   const col=v>0?'var(--green)':'var(--red)';
   const num=(Math.abs(v)/1e9).toLocaleString('en-US',{maximumFractionDigits:Math.abs(v)>=1e11?0:1});
-  const tip=r.n<nnPeriod?` title="mới có ${r.n} phiên trong kho"`:'';
+  /* Chú giải nói thêm KHỐI LƯỢNG RÒNG. Con số hiện ra là khối lượng ròng × GIÁ ĐÓNG CỬA
+     từng phiên — một phép xấp xỉ, đo trên HPG lệch 7-18% so với giá trị khớp thật của
+     VNDirect (họ cộng giá khớp từng lệnh, kể cả thoả thuận ở giá thương lượng). Khối lượng
+     thì kho có CHÍNH XÁC, không đi qua giá, nên để nó ngay đây cho ai cần đếm số cổ phiếu
+     khối ngoại gom/xả. */
+  const bit=[];
+  if(r.n<nnPeriod) bit.push(`mới có ${r.n} phiên trong kho`);
+  else bit.push(`${r.n} phiên`);
+  if(r.q!=null) bit.push(`khối lượng ròng ${r.q>=0?'+':'−'}${Math.abs(r.q).toLocaleString('en-US')} cp`);
+  bit.push('giá trị = khối lượng ròng × giá đóng cửa từng phiên (xấp xỉ)');
+  const tip=` title="${CP.esc(bit.join(' · '))}"`;
   return `<span style="color:${col}"${tip}>${v>0?'+':'−'}${num} tỷ</span>`;
 }
 function paintNn(){ const el=$('nnVal'); if(el) el.innerHTML=nnCell(); }
 function bindNnSeg(){
   const seg=$('nnSeg'); if(!seg) return;
+  const o=seg.querySelector('#nnTuy');
   seg.querySelectorAll('b').forEach(b=>b.onclick=()=>{
     nnPeriod=+b.dataset.p;
     seg.querySelectorAll('b').forEach(x=>x.classList.toggle('on',x===b));
+    if(o){ o.classList.remove('on'); o.value=''; }
     paintNn(); if(nnPeriod>1) loadNnHist();
   });
+  if(!o) return;
+  const dat=()=>{
+    const v=Math.round(+o.value||0);
+    if(!(v>=2)){ o.classList.remove('on'); return; }          // số vô nghĩa -> không đổi gì
+    nnPeriod=Math.min(NN_MAX,v); o.value=nnPeriod;
+    seg.querySelectorAll('b').forEach(x=>x.classList.remove('on'));
+    o.classList.add('on');
+    paintNn(); loadNnHist();
+  };
+  o.onchange=dat;
+  /* Enter phải chặn nổi bọt: ô này nằm trong bảng của thẻ, để trình duyệt tự xử lý thì
+     trên điện thoại nó cuộn giật về đầu trang. */
+  o.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); o.blur(); dat(); } };
+  o.onclick=e=>e.stopPropagation();
 }
 async function loadNnHist(){
   if(nnHist||nnLoading||nnHistTried) return; nnLoading=true;
@@ -872,16 +918,21 @@ async function loadNnHist(){
       const n=f.t.length, ref=(C&&C.ref)||0, lastC=f.c[n-1];
       const k=ref>0&&lastC>0?(Math.abs(lastC*1000-ref)<Math.abs(lastC-ref)?1000:1):1;
       const a=[];
-      for(let i=Math.max(0,n-45);i<n;i++)
-        a.push({d:dayOf(f.t[i]), v:(((f.fb||[])[i]||0)-((f.fs||[])[i]||0))*f.c[i]*k});
+      /* Đọc NN_MAX phiên chứ không phải 45: file kho đã nằm sẵn trong bộ nhớ nên đọc thêm
+         không tốn lượt gọi nào, mà cắt ở 45 thì mọi mốc dài hơn lặng lẽ trả về đúng 45
+         phiên — người xem bấm 90 và nhận số của 45 phiên mà không có gì báo. */
+      for(let i=Math.max(0,n-NN_MAX);i<n;i++)
+        a.push({d:dayOf(f.t[i]), q:((f.fb||[])[i]||0)-((f.fs||[])[i]||0),
+                v:(((f.fb||[])[i]||0)-((f.fs||[])[i]||0))*f.c[i]*k});
       if(a.length){ a.reverse(); nnHist=a; }   // mới -> cũ
     }
   }catch(e){}
   if(!nnHist&&!CP.OFFLINE) try{               // lưới an toàn: VNDirect (CORS mở), 1 lượt gọi ~45 phiên
-    const from=new Date(Date.now()-70*86400e3).toISOString().slice(0,10);
+    const from=new Date(Date.now()-Math.round(NN_MAX*1.5)*86400e3).toISOString().slice(0,10);
     const j=await fetch(`https://api-finfo.vndirect.com.vn/v4/foreigns?q=code:${C.sym}~tradingDate:gte:${from}`+
-      `&size=60&sort=tradingDate:desc&fields=tradingDate,netVal`).then(r=>r.json());
-    const a=(j.data||[]).filter(x=>x.tradingDate).map(x=>({d:x.tradingDate,v:+x.netVal||0}));
+      `&size=${NN_MAX}&sort=tradingDate:desc&fields=tradingDate,netVal`).then(r=>r.json());
+    // lưới an toàn chỉ có GIÁ TRỊ, không có khối lượng -> q=null, chú giải tự bỏ dòng KL
+    const a=(j.data||[]).filter(x=>x.tradingDate).map(x=>({d:x.tradingDate,v:+x.netVal||0,q:null}));
     if(a.length) nnHist=a;
   }catch(e){}
   nnLoading=false; nnHistTried=true; paintNn();

@@ -16,8 +16,19 @@ chiếu nguyên phần chồng nhau. Khớp mới lấy phần cũ; lệch quá 
 là số CỔ PHIẾU giống hệt đơn vị kho đang dùng — không phải đoán.
 
   python3 tools/va_ngoai.py --thu          # chạy thử, không ghi gì
-  python3 tools/va_ngoai.py                # vá thật
+  python3 tools/va_ngoai.py                # vá thật (chỉ ĐIỀN CHỖ TRỐNG)
   python3 tools/va_ngoai.py --ma HPG,VIC   # chỉ mấy mã này
+  python3 tools/va_ngoai.py --sua 2026-07-17 2026-08-13   # GHI ĐÈ trong khoảng ngày
+
+CHẾ ĐỘ `--sua` (thêm 19/08/2026): ghi đè cả phiên ĐÃ CÓ SỐ, chỉ trong khoảng ngày chỉ định.
+Cần vì 24hMoney đổi đơn vị giữa chừng — mọi phiên tới 13/08/2026 nguồn đó trả nhỏ hơn 10
+lần — và bước bù trong `refresh_daily` đã bê nguyên vào kho. Đối chiếu ba nguồn trên
+VCB/HPG: VNDirect và bảng giá VPS khớp nhau TỪNG SỐ ở mọi phiên, 24hMoney lệch đúng ×10 ở
+20 phiên 17/07-13/08. Ngoài khoảng đó kho sạch: đo VCB/HPG/SSI theo năm, 2020 khớp 249/249
+phiên, 2022 249/249, 2024 247/247.
+Phải CHỈ ĐỊNH KHOẢNG chứ không cho ghi đè toàn kho: bước đối chiếu ở dưới chỉ chặn được mã
+lệch trên diện rộng, còn mở toang cửa ghi đè thì một lượt chạy nhầm là mất sạch phần kho
+đang đúng mà không có bản nào để đối chiếu lại.
 """
 import json, os, sys, time, datetime, urllib.request, concurrent.futures, threading
 
@@ -25,13 +36,22 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HIST = os.path.join(BASE, "data", "hist")
 UA   = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120"}
 SRC  = "https://api-finfo.vndirect.com.vn/v4/foreigns"
+# --sua TU DEN -> ghi đè cả phiên đã có số, GIỚI HẠN trong khoảng ngày này
+SUA  = None
+if "--sua" in sys.argv:
+    _i = sys.argv.index("--sua")
+    SUA = (sys.argv[_i + 1], sys.argv[_i + 2])
 TU   = "2018-01-01"          # nguồn bắt đầu 30/08/2018, xin sớm hơn cũng không sao
 
 THU = "--thu" in sys.argv
 CHI = None
-for a in sys.argv:
+for _j, a in enumerate(sys.argv):
     if a.startswith("--ma"):
-        CHI = {x.strip().upper() for x in a.split("=", 1)[-1].replace("--ma", "").split(",") if x.strip()}
+        # nhận CẢ HAI dạng: `--ma=HPG,VIC` và `--ma HPG,VIC`. Bản cũ chỉ đọc dạng có dấu `=`
+        # trong khi chính dòng hướng dẫn ở đầu file viết dạng cách trắng -> gõ theo hướng dẫn
+        # là bộ lọc rỗng và công cụ lặng lẽ chạy TOÀN BỘ 1.500 mã.
+        v = a.split("=", 1)[1] if "=" in a else (sys.argv[_j + 1] if _j + 1 < len(sys.argv) else "")
+        CHI = {x.strip().upper() for x in v.split(",") if x.strip()}
 
 def get(url, timeout=45):
     with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
@@ -81,7 +101,12 @@ def mot(sym):
     ok = bad = 0
     for i, ts in enumerate(t):
         if not (fb[i] or fs[i]): continue
-        g = src.get(ngay(ts))
+        d0 = ngay(ts)
+        # KHOẢNG ĐANG VÁ KHÔNG ĐƯỢC TÍNH VÀO CỔNG. Cổng này sinh ra để chặn NGUỒN hỏng,
+        # nhưng ở ca --sua thì chính KHO mới là bên sai — để nguyên thì 20 phiên lệch trên
+        # ~311 phiên = 6,4% > ngưỡng 5%, và công cụ loại đúng những mã cần vá nhất.
+        if SUA and SUA[0] <= d0 <= SUA[1]: continue
+        g = src.get(d0)
         if not g: continue
         if abs(fb[i] - g[0]) <= max(10, fb[i] * 0.002) and abs(fs[i] - g[1]) <= max(10, fs[i] * 0.002):
             ok += 1
@@ -92,12 +117,15 @@ def mot(sym):
             kq["lech"] += 1; bao.append((sym, ok, bad))
         return
 
-    # --- chỉ điền vào phiên đang TRỐNG, không đụng số kho đã có
+    # --- điền vào phiên đang TRỐNG; trong khoảng `--sua` thì ghi đè cả phiên đã có số
     them = 0
     for i, ts in enumerate(t):
-        if fb[i] or fs[i]: continue
-        g = src.get(ngay(ts))
+        d0 = ngay(ts)
+        trong_khoang = SUA and SUA[0] <= d0 <= SUA[1]
+        if (fb[i] or fs[i]) and not trong_khoang: continue
+        g = src.get(d0)
         if not g or (not g[0] and not g[1]): continue
+        if fb[i] == g[0] and fs[i] == g[1]: continue      # đã đúng rồi, đừng đếm là đã sửa
         fb[i], fs[i] = g
         them += 1
     if not them:

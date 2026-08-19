@@ -1473,6 +1473,39 @@ mục CHỈ SỐ ĐẶC THÙ NGÀNH phía trên. `veNganhRows` phải chạy SAU
 > nào nguồn đã âm sẵn. **Cái giá của việc tắt** (biết trước, user chấp nhận): ngân hàng mất
 > Thu nhập lãi thuần / Chi phí dự phòng, và VCB lại hiện "Lợi nhuận gộp — — —" như cũ.
 
+**KHỐI NGOẠI `fb`/`fs` TRONG `data/hist` — CÓ LƯU HẰNG NGÀY, VÀ ĐÃ TỪNG BỊ NHIỄM ×10.**
+User hỏi xác nhận có chắc đang lưu hằng ngày không (để làm nền cho cộng dồn 45/60/90/120
+phiên). Câu trả lời: **có**, và cơ chế giữ được cả qua lượt hạ nền — `fbfs` dựng từ FILE CŨ
+trước, khoá theo ngày, nên tải lại cả chuỗi vẫn không mất. Đo bằng nguồn độc lập
+(`api-finfo.vndirect.com.vn/v4/foreigns`) trên VCB/HPG/SSI: **2020 khớp 249/249 phiên, 2022
+249/249, 2024 247/247**.
+
+> **NHƯNG 20 PHIÊN 17/07–13/08/2026 ĐÃ BỊ NHỎ ĐI ĐÚNG 10 LẦN.** Truy bằng ba nguồn: VNDirect
+> và bảng giá VPS (`data/eod`) khớp nhau TỪNG SỐ ở mọi phiên; **24hMoney**
+> (`foreign-trading-history`, thứ `fetch_foreign30` đang gọi) trả nhỏ hơn 10 lần cho MỌI phiên
+> tới 13/08 rồi tự đúng lại từ 14/08 — đổi đơn vị giữa chừng bên nguồn.
+> **Vì sao lọt vào kho:** `fbfs.update(f6)` ĐÈ luôn cả những phiên đang đúng lấy từ bảng giá;
+> chỉ cần MỘT phiên hụt là kích lượt bù và ghi đè ~30 phiên.
+> **Đã vá hai lớp:** (a) `hop_nhat_nn()` trong `refresh_daily.py` — chỉ ĐIỀN CHỖ TRỐNG, và
+> đối chiếu trung vị tỷ lệ trên phần chồng nhau, lệch quá 20% thì **bỏ cả lượt trả về**;
+> (b) `tools/va_ngoai.py --sua TU DEN` — chế độ ghi đè CÓ GIỚI HẠN NGÀY, dùng VNDirect làm
+> chuẩn. Chạy 19/08: 1.086 mã được vá (+93.421 phiên có số), sau đó đối chiếu lại với
+> `data/eod`: **5.295 ô khớp tuyệt đối, còn đúng 1 ô lệch**.
+> **Bẫy khi vá:** cổng "lệch quá 5% thì bỏ mã" của `va_ngoai` chặn đúng những mã cần vá nhất
+> (20 phiên lệch trên ~311 = 6,4%). Chế độ `--sua` phải **loại khoảng đang vá ra khỏi cổng**.
+> Cũng sửa `--ma HPG,VIC` (dạng cách trắng) — bản cũ chỉ đọc `--ma=...` trong khi chính dòng
+> hướng dẫn viết dạng cách trắng, gõ theo hướng dẫn là lặng lẽ chạy toàn bộ 1.529 mã.
+> **Bài học chung:** một nguồn phụ có thể đổi đơn vị bất cứ lúc nào mà không báo. Mọi chỗ
+> trộn hai nguồn cho CÙNG một đại lượng đều phải đối chiếu tỷ lệ ở phần chồng nhau trước khi
+> tin, và không bao giờ để nguồn phụ đè lên nguồn chính.
+
+**Ô CHỌN SỐ PHIÊN TUỲ Ý cho "NN mua – bán ròng"** (`#nnTuy`, 19/08/2026): ô nhập số nằm sau
+1D/7D/30D, đơn vị là **PHIÊN** giống hệt 7D/30D. Cửa sổ đọc kho nới 45 → `NN_MAX`=365 phiên —
+để 45 thì mọi mốc dài hơn lặng lẽ trả về đúng 45 phiên mà không có gì báo. Chú giải nói thêm
+**khối lượng ròng chính xác** (kho lưu số cổ phiếu, không qua giá) vì con số hiện ra chỉ là
+xấp xỉ: khối lượng ròng × giá đóng cửa từng phiên, đo trên HPG lệch **7–18%** so với giá trị
+khớp thật của VNDirect (họ cộng giá khớp từng lệnh, kể cả thoả thuận ở giá thương lượng).
+
 **KHO SỰ KIỆN DOANH NGHIỆP `data/sukien/{MÃ}.json` (19/08/2026) — `tools/kho_sukien.py`.**
 1.482 mã · 47.510 mốc · lùi tới **2005** · 7 MB. Dựng từ HAI nguồn, cả hai đều tự dò ra:
 

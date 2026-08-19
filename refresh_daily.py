@@ -207,6 +207,33 @@ def fetch_hist(sym,days):
                         "v":[int(j["v"][i] or 0) if j.get("v") and i<len(j["v"]) else 0 for i in range(n)]}
             except Exception: time.sleep(0.8*(att+1))
     return None
+def hop_nhat_nn(fbfs, moi):
+    """Gộp NN từ nguồn bù (24hMoney) vào bảng đang có. HAI LUẬT, cả hai đều là bài học đo
+    được ngày 19/08/2026 chứ không phải phòng xa:
+
+    ① CHỈ ĐIỀN CHỖ TRỐNG, KHÔNG ĐÈ. Bản cũ gọi thẳng `fbfs.update(moi)` nên chỉ cần MỘT
+       phiên bị hụt là cả ~30 phiên đang ĐÚNG (lấy từ bảng giá) bị nguồn bù ghi đè.
+    ② ĐỐI CHIẾU ĐƠN VỊ TRƯỚC KHI TIN. 24hMoney đổi đơn vị giữa chừng: mọi phiên tới
+       13/08/2026 trả nhỏ hơn 10 lần, từ 14/08 mới đúng. Đối chiếu 3 nguồn (VPS, 24hMoney,
+       VNDirect) trên VCB/HPG: VNDirect và VPS khớp nhau từng số ở mọi phiên, 24hMoney lệch
+       đúng ×10 ở 20 phiên 17/07-13/08. Hậu quả: 20 phiên trong kho bị chia 10 mà không có
+       gì báo — mọi phép cộng dồn dòng tiền ngoại đi qua khoảng đó đều sai.
+       Nên: lấy phần CHỒNG NHAU giữa nguồn bù và số đang có, tính trung vị tỷ lệ; lệch quá
+       20% thì BỎ CẢ LƯỢT trả về, thà thiếu còn hơn nhiễm."""
+    if not moi: return 0
+    chung=[(fbfs[k][0], moi[k][0]) for k in moi if k in fbfs and fbfs[k][0] and moi[k][0]]
+    if len(chung) >= 3:
+        ty=sorted(a/b for a,b in chung)
+        tv=ty[len(ty)//2]
+        if abs(tv-1) > 0.20:
+            print(f"  NN nguồn bù lệch đơn vị ×{tv:.2f} trên {len(chung)} phiên chồng nhau — BỎ",flush=True)
+            return 0
+    them=0
+    for k,v in moi.items():
+        if k not in fbfs: fbfs[k]=v; them+=1
+    return them
+
+
 def fetch_foreign30(sym):   # seed NN 30 phiên gần nhất (24hMoney) khi backfill lần đầu
     try:
         d=get(f"https://api-finance-t19.24hmoney.vn/v1/ios/stock/foreign-trading-history?symbol={sym}").get("data") or []
@@ -248,7 +275,7 @@ def work_hist(sym):
             if fb or fs: fbfs[vn_day(tt)]=(fb,fs)
     if fresh or FULL:      # backfill lần đầu + --full T2: vá lại NN 30 phiên gần nhất
         f30=fetch_foreign30(sym)   # -> ngày nào Actions lỡ/lỗi cũng được bù NN trong vòng 1 tuần
-        if f30: fbfs.update(f30)
+        hop_nhat_nn(fbfs,f30)
     if fullfetch:
         out=d
         # Nguồn trả thiếu quá khứ so với file đã lưu -> ghép phần cũ lại (không mất dữ liệu),
@@ -279,8 +306,7 @@ def work_hist(sym):
     # Ngày chạy bình thường không có lỗ -> không tốn thêm lượt gọi nào.
     if not (fresh or FULL) and out["t"]:
         if any(vn_day(tt) not in fbfs for tt in out["t"][-6:]):
-            f6=fetch_foreign30(sym)
-            if f6: fbfs.update(f6)
+            hop_nhat_nn(fbfs,fetch_foreign30(sym))
     out["fb"]=[]; out["fs"]=[]
     for tt in out["t"]:
         fb,fs=fbfs.get(vn_day(tt),(0,0))
