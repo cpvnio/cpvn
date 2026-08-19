@@ -1516,6 +1516,45 @@ lượng thì phải cùng một luật.
 xấp xỉ: khối lượng ròng × giá đóng cửa từng phiên, đo trên HPG lệch **7–18%** so với giá trị
 khớp thật của VNDirect (họ cộng giá khớp từng lệnh, kể cả thoả thuận ở giá thương lượng).
 
+**THÔNG TIN NIÊM YẾT `data/niemyet.json` (20/08/2026) — `tools/kho_niemyet.py`, mục
+`/niemyet` trong nhóm Bảng giá.** MỘT file chung chứ không mỗi mã một file: đây là bảng liệt
+kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45 KB).
+
+| thứ | nguồn | phủ |
+|---|---|---|
+| ngày lên sàn | `finfo/v4/stocks` trường `listedDate` (hỏi gộp 150 mã/lượt) | **1.529/1.529** |
+| giá phiên đầu | tự lấy từ `data/hist` | 1.051 |
+| vốn hoá lên sàn | giá thô × vốn góp/10.000 lúc đó (`data/finx`) | 859 |
+| hồ sơ chờ lên sàn | `api.hsx.vn/l/api/v1/1/securities?newListingStatusId=N` | chỉ HOSE |
+| GD bổ sung sắp tới | `finfo/v4/events` type `LISTED` ngày tương lai | 100 đợt |
+
+**HAI CỘT GIÁ, ĐỪNG TRỘN.** `g` = giá phiên đầu **quy về nền hôm nay** — chính xác tuyệt
+đối, và là số đúng để so ra `x` = "×N lần kể từ ngày lên sàn" (hai đầu cùng một nền).
+`gt` = giá thị trường thật ngày đó, **ƯỚC TÍNH** bằng cách gỡ ngược chuỗi hạ nền của
+`data/sukien`. Vốn hoá lên sàn phải dùng `gt`, không dùng `g` — `g` nằm trên nền hôm nay,
+nhân với số cổ phiếu lúc đó là trộn hai thời điểm.
+
+> **`gt` KHÔNG ĐÁNG TIN BẰNG `g` — đã đo.** Phép tự kiểm: giá thô phải rơi đúng BƯỚC GIÁ của
+> sàn (HOSE 10/50/100đ theo dải, HNX/UPCOM 100đ). Trên 1.051 mã: giá kho đúng bước **29,2%**,
+> giá đã gỡ nền **28,5%** — gỡ nền KHÔNG cải thiện, vì mã pha loãng nhiều thì sai số dồn
+> (VPB tích chia cổ phiếu ×4,91 · HDB ×4,74 · VHM ×3,25) và không nguồn nào công bố giá niêm
+> yết gốc để đối chiếu. Cơ chế thì đúng — DMX (mới lên sàn, đúng một sự kiện) gỡ ra 82.184đ
+> so với 78.294đ của kho, sát bước giá 82.200đ. Nên chỉ `q=1` (rơi trong 1% của một bước giá)
+> mới coi là chắc; giao diện đánh dấu `~` cho phần còn lại. **Đừng bỏ `g` mà chỉ giữ `gt`.**
+> 478 mã lên sàn trước **02/01/2013** không có giá — đúng mốc nguồn nến VNDirect bắt đầu.
+
+> **KHÔNG CÓ NGUỒN NÀO CHO "MÃ MỚI + NGÀY GIAO DỊCH ĐẦU TIÊN" — đã dò, đừng dò lại.**
+> `/v4/stocks?status:pending` rỗng · `/v4/events?group:listing` rỗng · `api.hsx.vn/.../news`
+> 404 · `api.hnx.vn` không phân giải · `finance.vietstock.vn/data/newlisting` 404 · 24hMoney
+> `upcoming-listing` 404 · Simplize `new-listing` 404. HOSE **có** đường ống hồ sơ (tìm ra
+> bằng cách tải bundle `www.hsx.vn/static/js/main.*.js` rồi lần theo `/securities/new-listing-status`)
+> nhưng `ftdate` luôn rỗng và chỉ có HOSE. Vì thế mục "sắp lên sàn" trả lời được "sắp có ai
+> lên sàn", chưa trả lời được "ngày nào".
+> **API của HOSE chập chờn thật** (đo 20/08: đầu phiên lấy được 9 hồ sơ, cuối phiên nghẽn
+> liên tục 5 phút). Nên builder thử lại 3 lần, và khi vẫn hỏng thì **giữ danh sách của lượt
+> trước** + bật cờ `sapLoi` để giao diện nói "chưa lấy được" chứ không nói "không có hồ sơ
+> nào" — hai câu đó khác hẳn nhau với người đang tìm mã sắp lên sàn.
+
 **KHO SỰ KIỆN DOANH NGHIỆP `data/sukien/{MÃ}.json` (19/08/2026) — `tools/kho_sukien.py`.**
 1.482 mã · 47.510 mốc · lùi tới **2005** · 7 MB. Dựng từ HAI nguồn, cả hai đều tự dò ra:
 

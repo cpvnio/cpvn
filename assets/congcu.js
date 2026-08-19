@@ -513,6 +513,136 @@ function sectorPerf(){
   return Object.keys(G).map(k=>({k,d:G[k].cap?G[k].d/G[k].cap:0})).sort((a,b)=>b.d-a.d);
 }
 
+
+/* ================= THÔNG TIN NIÊM YẾT (data/niemyet.json) =========================
+   Kho do `tools/kho_niemyet.py` dựng. Nạp LƯỜI — file ~200KB mà chỉ mục này dùng, kéo về
+   trong `loadAll` là mọi người vào trang công cụ đều phải tải dù không mở tới.
+
+   HAI CỘT GIÁ, và phải nói rõ khác nhau chỗ nào, bằng không người đọc tưởng có số mâu thuẫn:
+     "Giá phiên đầu"  = giá phiên đầu tiên QUY VỀ NỀN HÔM NAY. Chính xác tuyệt đối, và là số
+                        đúng để so với giá hiện tại ra "×N lần" — hai đầu cùng một nền.
+     "Giá lúc đó"     = giá thị trường thật ngày lên sàn, ƯỚC TÍNH bằng cách gỡ ngược chuỗi
+                        hạ nền. Mã pha loãng nhiều thì sai số dồn (đo: chỉ 28,5% rơi đúng
+                        bước giá của sàn) nên số nào không đạt phép tự kiểm bị đánh dấu "~".
+   Vốn hoá lên sàn dùng "giá lúc đó" × số cổ phiếu LÚC ĐÓ — không trộn nền hôm nay với số
+   cổ phiếu cũ. */
+let NY=null, nyLoc={ex:'all',tim:''}, nySort={k:'d',d:-1};
+async function nyLoad(){
+  if(NY) return NY;
+  try{ NY=await (await fetch('data/niemyet.json')).json(); }catch(e){ NY={ma:[],sap:[],bosung:[]}; }
+  return NY;
+}
+const nyNgay=d=>{ if(!d||d.length<10) return '—';
+  return d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4); };
+function nyBang(){
+  const ma=(NY.ma||[]).filter(r=>{
+    if(nyLoc.ex!=='all'&&r.ex!==nyLoc.ex) return false;
+    if(nyLoc.tim){ const q=nyLoc.tim.toUpperCase();
+      const c=ST.map.get(r.s);
+      if(r.s.indexOf(q)<0 && String((c&&c.name)||'').toUpperCase().indexOf(q)<0) return false; }
+    return true;
+  });
+  const K=nySort.k, D=nySort.d;
+  ma.sort((a,b)=>{
+    const va=K==='s'?a.s:(a[K]==null?-Infinity:a[K]), vb=K==='s'?b.s:(b[K]==null?-Infinity:b[K]);
+    return (va<vb?-1:va>vb?1:0)*D;
+  });
+  if(!ma.length) return '<div class="empty">Không có mã nào khớp bộ lọc.</div>';
+  const th=(k,t,cl)=>'<th class="'+(cl||'')+' nyh" data-k="'+k+'">'+t+(nySort.k===k?(D<0?' ▾':' ▴'):'')+'</th>';
+  const hang=r=>{
+    const c=ST.map.get(r.s);
+    /* "×N lần" tô màu theo lời/lỗ: đây là con số người ta quét mắt tìm đầu tiên. */
+    const x=r.x==null?'—':'<b style="color:'+(r.x>=1?'var(--green)':'var(--red)')+'">×'+r.x.toFixed(2)+'</b>';
+    return '<tr data-sym="'+esc(r.s)+'">'
+      +'<td class="l"><div class="co">'+(c?logoHTML(c):'<span class="lgw"></span>')
+        +'<div><b>'+esc(r.s)+'</b><i class="nyn">'+esc((c&&c.name)||'')+'</i></div></div></td>'
+      +'<td>'+esc(r.ex||'—')+'</td>'
+      +'<td>'+nyNgay(r.d)+'</td>'
+      +'<td>'+(r.g!=null?num(r.g)+'đ':'—')+'</td>'
+      +'<td>'+x+'</td>'
+      +'<td'+(r.q===0?' class="uoc" title="Ước tính — không rơi đúng bước giá của sàn, xem chú thích dưới bảng"':'')+'>'
+        +(r.gt!=null?(r.q===0?'~':'')+num(r.gt)+'đ':'—')+'</td>'
+      +'<td>'+(r.mc!=null?num(r.mc)+' tỷ':'—')+'</td></tr>';
+  };
+  return '<div class="nywrap"><table class="tbl"><thead><tr>'
+    +th('s','Mã','l')+th('ex','Sàn')+th('d','Ngày lên sàn')+th('g','Giá phiên đầu')
+    +th('x','So với nay')+th('gt','Giá lúc đó')+th('mc','Vốn hoá lên sàn')
+    +'</tr></thead><tbody>'+ma.map(hang).join('')+'</tbody></table></div>'
+    +'<div class="nynote">'+ma.length.toLocaleString('en-US')+' mã · '
+    +'<b>Giá phiên đầu</b> quy về nền hôm nay (đã trừ mọi lần chia tách/cổ tức sau đó) nên '
+    +'<b>So với nay</b> là mức tăng thật kể từ ngày lên sàn. <b>Giá lúc đó</b> là giá thị '
+    +'trường ước tính của chính phiên ấy — dấu <b>~</b> nghĩa là con số không rơi đúng bước '
+    +'giá của sàn, tức phép dựng ngược đã tích sai số qua nhiều lần chia. '
+    +'478 mã lên sàn trước 02/01/2013 không có giá vì nguồn nến chỉ bắt đầu từ mốc đó.</div>';
+}
+function nySapHTML(){
+  const sap=NY.sap||[], bs=NY.bosung||[];
+  let h='';
+  h+='<h3 class="nyh3">Hồ sơ đang chờ lên sàn — HOSE</h3>';
+  /* NÓI ĐÚNG NGUYÊN NHÂN khi rỗng: API của HOSE chập chờn, và "không có hồ sơ nào" với
+     "chưa lấy được" là hai chuyện khác hẳn nhau đối với người đang tìm mã sắp lên sàn. */
+  if(!sap.length) h+='<div class="empty">'+(NY.sapLoi
+    ?'Chưa lấy được đường ống hồ sơ của HOSE ở lượt cập nhật gần nhất (API của Sở đang chập chờn).'
+    :'Hiện không có hồ sơ nào trong đường ống của HOSE.')+'</div>';
+  else h+='<div class="nywrap"><table class="tbl"><thead><tr><th class="l">Doanh nghiệp</th>'
+    +'<th>Trạng thái</th><th>KL niêm yết</th><th>Ngày hồ sơ</th></tr></thead><tbody>'
+    +sap.map(r=>'<tr><td class="l">'+esc(r.ten||r.s||'—')+'</td>'
+      +'<td><b class="nytt'+(r.tt==='Đã được chấp thuận'?' ok':'')+'">'+esc(r.tt)+'</b></td>'
+      +'<td>'+num(r.kl)+' cp</td><td>'+nyNgay(r.d)+'</td></tr>').join('')
+    +'</tbody></table></div>';
+  h+='<div class="nynote">Chỉ HOSE — HNX và UPCOM không công bố đường ống hồ sơ qua giao diện '
+    +'máy đọc được. Sở cũng <b>không công bố ngày giao dịch đầu tiên</b> ở bước này, nên mục '
+    +'trên chỉ trả lời “sắp có ai lên sàn”, chưa trả lời được “ngày nào”.</div>';
+  h+='<h3 class="nyh3">Cổ phiếu mới chào sàn của mã đã niêm yết</h3>';
+  if(!bs.length) h+='<div class="empty">Không có đợt nào sắp tới.</div>';
+  else h+='<div class="nywrap"><table class="tbl"><thead><tr><th class="l">Mã</th>'
+    +'<th class="l">Nội dung</th><th>Ngày giao dịch</th></tr></thead><tbody>'
+    +bs.map(r=>{ const c=ST.map.get(r.s);
+      return '<tr data-sym="'+esc(r.s)+'"><td class="l"><div class="co">'
+      +(c?logoHTML(c):'<span class="lgw"></span>')+'<b>'+esc(r.s)+'</b></div></td>'
+      +'<td class="l">'+esc(r.gc||'')+'</td><td>'+nyNgay(r.d)+'</td></tr>';}).join('')
+    +'</tbody></table></div>';
+  h+='<div class="nynote">Đây là cổ phiếu <b>phát hành thêm</b> của mã đã niêm yết được đưa '
+    +'vào giao dịch — không phải mã mới, nhưng là nguồn cung thật sắp vào thị trường nên có '
+    +'ngày rõ ràng.</div>';
+  return h;
+}
+async function renderNiemYet(){
+  const el=$('#m-niemyet'); const m=MODULES.find(x=>x.id==='niemyet');
+  el.innerHTML=head(m)+'<div class="empty">Đang nạp…</div>';
+  await nyLoad();
+  const nam=(NY.ma||[]).length;
+  const sanDem={};
+  for(const r of NY.ma||[]) sanDem[r.ex]=(sanDem[r.ex]||0)+1;
+  const chip=(v,t)=>'<button data-ex="'+v+'"'+(nyLoc.ex===v?' class="on"':'')+'>'+t+'</button>';
+  el.innerHTML=head(m)
+    +'<div class="card">'+nySapHTML()+'</div>'
+    +'<div class="card"><h3 class="nyh3">Toàn bộ mã đang niêm yết ('+nam.toLocaleString('en-US')+')</h3>'
+    +'<div class="nybar"><div class="nyseg" id="nyEx">'+chip('all','Tất cả')
+      +Object.keys(sanDem).sort().map(k=>chip(k,k+' '+sanDem[k])).join('')+'</div>'
+    +'<input id="nyTim" placeholder="Tìm mã hoặc tên…" value="'+esc(nyLoc.tim)+'"></div>'
+    +'<div id="nyBody">'+nyBang()+'</div></div>';
+  const ve=()=>{ $('#nyBody').innerHTML=nyBang(); gan(); };
+  const gan=()=>{
+    $$('#nyBody .nyh').forEach(t=>t.onclick=()=>{
+      const k=t.dataset.k;
+      /* Bấm lại cùng cột thì ĐẢO CHIỀU; đổi cột thì mặc định GIẢM DẦN, trừ cột Mã (chữ cái
+         thì tăng dần mới tự nhiên). */
+      if(nySort.k===k) nySort.d=-nySort.d; else { nySort.k=k; nySort.d=(k==='s'?1:-1); }
+      ve();
+    });
+  };
+  gan();
+  $$('#nyEx button').forEach(b=>b.onclick=()=>{
+    nyLoc.ex=b.dataset.ex;
+    $$('#nyEx button').forEach(x=>x.classList.toggle('on',x===b));
+    ve();
+  });
+  const o=$('#nyTim');
+  let t0=0;
+  o.oninput=()=>{ clearTimeout(t0); t0=setTimeout(()=>{ nyLoc.tim=o.value.trim(); ve(); },200); };
+}
+
 /* ---------------------------------------------------------------- đăng ký */
 const MODULES=[
   {id:'radar', ic:'📡', name:'Radar phiên', tag:'',
@@ -521,10 +651,13 @@ const MODULES=[
    meta:[], render:renderTapDoan},
   {id:'race', ic:'🏁', name:'Đường đua vốn hoá', tag:'6,5 năm thị trường chạy lại trong 30 giây — bảng xếp hạng vốn hoá đổi ngôi theo từng tháng.',
    meta:[], render:renderRace},
+  {id:'niemyet', ic:'🔔', name:'Thông tin niêm yết', tag:'Ngày lên sàn của toàn bộ mã đang niêm yết, giá phiên đầu tiên và mức tăng kể từ đó — kèm hồ sơ đang chờ lên sàn.',
+   meta:[], render:renderNiemYet},
 ];
 let cur=null; const done={};
-const PATHOF={radar:'/radar',tapdoan:'/tapdoan',race:'/duongdua'};
-const TITLEOF={radar:'Radar phiên',tapdoan:'Danh mục tập đoàn',race:'Đường đua vốn hoá'};
+const PATHOF={radar:'/radar',tapdoan:'/tapdoan',race:'/duongdua',niemyet:'/niemyet'};
+const TITLEOF={radar:'Radar phiên',tapdoan:'Danh mục tập đoàn',race:'Đường đua vốn hoá',
+               niemyet:'Thông tin niêm yết'};
 function renderNav(){
   $$('.tabs a[data-m]').forEach(e=>{
     e.classList.toggle('on',e.dataset.m===cur);
@@ -537,7 +670,7 @@ function renderNav(){
   /* "Danh mục tập đoàn" chạy trên trang công cụ nhưng thuộc NHÓM BẢNG GIÁ — mục cha
      "Bảng giá" phải sáng, bằng không đang ở trong nhóm mà thanh trên lại tối thui. */
   const fam=$('.tabs .tw:first-child>a');
-  if(fam) fam.classList.toggle('on',cur==='tapdoan');
+  if(fam) fam.classList.toggle('on',cur==='tapdoan'||cur==='niemyet');
   /* mục con đang xem cũng sáng theo, để mở menu ra là biết mình đứng ở đâu */
   const tNay=cur==='radar'?radarTab:cur==='race'?(RA.mode==='dca'?'dca':'dua'):null;
   $$('.dd a[data-md]').forEach(a=>a.classList.toggle('on',a.dataset.md===cur&&a.dataset.t===tNay));

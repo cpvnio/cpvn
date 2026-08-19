@@ -343,6 +343,32 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .rw .pz{font-size:12.5px;font-weight:700;text-align:right}
 .rw .mt{font-size:12px;font-weight:800;text-align:right;white-space:nowrap}
 .empty{padding:24px 10px;text-align:center;color:var(--faint);font-size:12.5px}
+/* ---- THÔNG TIN NIÊM YẾT ---- */
+.nyh3{margin:20px 0 10px;font-size:15px;font-weight:800}
+.nyh3:first-child{margin-top:0}
+.nybar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.nyseg{display:inline-flex;gap:4px;flex-wrap:wrap}
+.nyseg button{background:var(--card2);color:var(--faint);border:1px solid var(--line);
+  border-radius:7px;padding:5px 11px;font-size:12px;font-weight:800;cursor:pointer}
+.nyseg button.on{background:var(--rose);border-color:var(--rose);color:#fff}
+#nyTim{flex:1;min-width:150px;max-width:280px;background:var(--card2);color:var(--txt);
+  border:1px solid var(--line);border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:600}
+#nyTim:focus{outline:none;border-color:var(--rose)}
+/* bảng dài -> cuộn TRONG khung, giữ hàng tiêu đề dính trên đầu */
+.nywrap{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.tbl .nyh{cursor:pointer;user-select:none}
+.tbl .nyh:hover{color:var(--txt)}
+.tbl .nyn{display:block;font-style:normal;font-size:11px;color:var(--faint);font-weight:600;
+  max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl td.uoc{color:var(--faint)}
+.nytt{font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px;
+  background:var(--card2);color:var(--faint)}
+.nytt.ok{background:rgba(34,201,138,.15);color:var(--green)}
+.nynote{margin-top:9px;font-size:11.5px;line-height:1.6;color:var(--faint)}
+@media(max-width:760px){
+  .nywrap{max-height:none}
+  .tbl .nyn{display:none}       /* màn hẹp: bỏ tên công ty, giữ mã cho gọn */
+}
 
 /* ---------- điều khiển ---------- */
 .ctl{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
@@ -1031,7 +1057,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260819f"></script>
+<script defer src="assets/mobi.js?v=20260820a"></script>
 </head>
 <body>
 
@@ -1040,7 +1066,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 <header>
   <a class="brand" href="/"><img src="assets/logo-128.png?v=3" alt="CPVN"/><span><b>CPVN</b>.IO</span></a>
   <nav class="tabs">
-    <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a></span></span>
+    <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a><a href="congcu.html?m=niemyet">Thông tin niêm yết</a></span></span>
     <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="vb">🛟 Khi nào về bờ</a></span></span>
     <span class="tw"><a data-m="race">Đường đua</a><span class="dd"><a data-md="race" data-t="dua">🏁 Đường đua vốn hoá</a><a data-md="race" data-t="dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
@@ -1087,6 +1113,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260819f"></script>
+<script src="assets/congcu.js?v=20260820a"></script>
 </body>
 </html>
