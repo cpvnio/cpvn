@@ -152,7 +152,13 @@ CP.loadBase=async function(){
       c.fbuy=r.fBuy||0; c.fsell=r.fSell||0; c.traded=(r.vol||0)>0;
       // KHỐI NGOẠI: cả hai đều tính bằng CỔ PHIẾU. fTotal = TRẦN room (nguồn VNDirect,
       // VPS không có) -> có nó mới suy được "đang sở hữu = trần − còn lại".
-      if(r.fRoom!=null) c.froom=r.fRoom;
+      /* SỐ ÂM = KHÔNG CÓ SỐ, đừng hiện. Nguồn trả `fRoom` âm cho 402/1.529 mã (đo
+         19/08/2026) — VNDirect không có `currentRoom` cho một mã nào trong số đó, tức đây
+         là giá trị rác chứ không phải "room đã vượt trần". Để lọt là trang hiện
+         "Room còn −13,9%" (HCC), tệ nhất tới −30,0% (DAD): 130 mã âm rõ rệt.
+         Đường nạp giá SỐNG (`applyLive`) đã chặn `fr>=0` từ lâu, đường nạp KHO thì quên —
+         hai đường cùng đọc một đại lượng phải cùng một luật. */
+      if(r.fRoom!=null&&r.fRoom>=0) c.froom=r.fRoom;
       if(r.fTotal!=null) c.fcap=r.fTotal;
       /* nt = CHƯA KHỚP LỆNH phiên này (giá là giá khớp cuối cùng của một phiên cũ).
          KHÔNG được lấy giá cũ trừ tham chiếu hôm nay ra % — đó là biến động chưa từng

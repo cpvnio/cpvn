@@ -1499,6 +1499,16 @@ trước, khoá theo ngày, nên tải lại cả chuỗi vẫn không mất. Đ
 > trộn hai nguồn cho CÙNG một đại lượng đều phải đối chiếu tỷ lệ ở phần chồng nhau trước khi
 > tin, và không bao giờ để nguồn phụ đè lên nguồn chính.
 
+**`fRoom` ÂM = KHÔNG CÓ SỐ, ĐỪNG HIỆN (19/08/2026).** `data/eod/latest.json` trả `fRoom` âm
+cho **402/1.529 mã**; VNDirect không có `currentRoom` cho một mã nào trong số đó → giá trị rác,
+không phải "room đã vượt trần". Đường nạp giá SỐNG (`applyLive`) đã chặn `fr>=0` từ lâu, đường
+nạp KHO (`loadBase`, đọc `latest.json`) thì quên — nên trang hiện **"Room còn −13,9%"** (HCC,
+đúng mã user chụp), tệ nhất −30,0% (DAD); **130 mã âm rõ rệt**. Hai đường cùng đọc một đại
+lượng thì phải cùng một luật.
+> Đơn vị thì latest.json đã chuẩn: đo 100 mã, `fRoom` khớp `currentRoom` của VNDirect **×1,00**.
+> Nhưng `data/board.json` (bảng giá THÔ của VPS) thì `fRoom` nhỏ hơn **đúng 10 lần** — 120/120
+> mã — nên chỗ nào đọc thẳng board thô vẫn phải nhân 10 (`applyLive` đang làm đúng).
+
 **Ô CHỌN SỐ PHIÊN TUỲ Ý cho "NN mua – bán ròng"** (`#nnTuy`, 19/08/2026): ô nhập số nằm sau
 1D/7D/30D, đơn vị là **PHIÊN** giống hệt 7D/30D. Cửa sổ đọc kho nới 45 → `NN_MAX`=365 phiên —
 để 45 thì mọi mốc dài hơn lặng lẽ trả về đúng 45 phiên mà không có gì báo. Chú giải nói thêm
