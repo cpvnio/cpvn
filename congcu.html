@@ -391,6 +391,15 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px}
 .ptleg i.pk1{background:#0284c7}
 .ptleg i.pk2{background:#7c3aed}
+.ptleg i.pk0{background:#94a3b8;opacity:.6}
+.ptleg i.pk3{background:#d97706;height:3px;border-radius:2px}
+/* Dải chỉ số phụ: VN30 / HNX / UPCOM đứng một hàng dưới bốn ô lớn — chúng là thông tin
+   phụ, cho lên ô lớn là bốn ô chính mất chỗ mà chẳng ai đọc dòng nào trước dòng nào. */
+.ptcsw{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
+.ptcs{background:var(--card2);border:1px solid var(--line);border-radius:8px;
+  padding:5px 10px;font-size:12px;font-variant-numeric:tabular-nums}
+.ptcs b{font-weight:800;margin-right:6px}
+.ptcs i{font-style:normal;font-weight:700;margin-left:6px}
 /* BẢNG CUỘN NGANG TRONG CHÍNH NÓ — thân trang tuyệt đối không được tràn */
 .pttw{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pttb{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -430,6 +439,25 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptcfc>b{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
 .ptcfn{margin:8px 0 0;font-size:11px;line-height:1.6;color:var(--faint)}
 .ptvg1{padding:14px;font-size:12.5px;line-height:1.7;color:var(--txt)}
+/* ---- ĐIỂM SÁNG TRONG NGÀY ---- */
+/* Năm cột đọc hết trong MỘT màn — đó là cả lý do khối này tồn tại. Tự xuống hàng theo bề
+   ngang; khổ hẹp thành một cột và mỗi cột vẫn đọc được nguyên vẹn. */
+.dsw{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.dscol{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 11px;min-width:0}
+.dscol h4{margin:0 0 8px;font-size:12px;font-weight:800;color:var(--txt)}
+.dsr{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:baseline;
+  padding:4px 0;border-bottom:1px solid var(--line);cursor:pointer;min-width:0}
+.dsr:last-of-type{border-bottom:0}
+.dsr:hover{background:var(--card)}
+.dsr2{cursor:default}
+.dsr>b{font-size:12.5px;font-weight:800}
+.dsr>b.dsnn{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Tên ngành co lại được, con số thì KHÔNG — số bị cắt là mất nghĩa, tên bị cắt thì vẫn đoán ra */
+.dsn{font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dsv{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.dsv>i{font-style:normal;font-weight:600;font-size:10px;color:var(--faint);margin-left:5px}
+.dse{font-size:11.5px;color:var(--faint);padding:6px 0}
+.dsg{margin:7px 0 0;font-size:10.5px;line-height:1.5;color:var(--faint)}
 .ptvg1 i{color:var(--faint);font-size:11.5px}
 /* Khổ hẹp: vùng giá và dòng tiền XẾP DỌC — hai cột trong 375px thì cột nào cũng bẹp */
 @media(max-width:760px){
@@ -1139,7 +1167,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260820k"></script>
+<script defer src="assets/mobi.js?v=20260820m"></script>
 </head>
 <body>
 
@@ -1196,6 +1224,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260820k"></script>
+<script src="assets/congcu.js?v=20260820m"></script>
 </body>
 </html>

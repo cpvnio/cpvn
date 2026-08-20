@@ -53,6 +53,12 @@ else                                   { & $py refresh_daily.py 2>&1 }
 & $py tools\kho_giaodich.py --sau 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# CHỈ SỐ THEO PHIÊN (data/chiso.json) — VNINDEX/VN30/HNX/HNX30/UPCOM, điểm đóng cửa và
+# % thay đổi, sâu tới 2017. Đúng 5 lượt gọi, vài giây. `data/idx.json` của pipeline chỉ
+# giữ ~15 phiên và không có % thay đổi nên không thay được cái này.
+& $py tools\kho_giaodich.py --chiso 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_giaodich --chiso EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # VÙNG GIÁ KHỚP LỆNH của phiên vừa chốt — khối lượng gộp theo từng mức giá, kèm phân bổ
 # dòng tiền. 2 lượt/mã = ~3.060 lượt ≈ 13 phút. Chỉ làm PHIÊN HÔM NAY; muốn bồi lịch sử
 # thì chạy tay `--vg --tu ... --den ...` (kho vùng giá của nguồn chỉ có từ ~09/2025).

@@ -181,6 +181,12 @@ def eod_trang(sym, trang, tu, den):
     return dat.get("ListPrice_Results") or [], tong
 
 
+# Thống kê giá trả 20 dòng/trang, thống kê ĐẶT LỆNH trả 30. Lấy 1 trang giá là hụt 10
+# phiên so với sổ lệnh, và chỗ hụt đó lặng lẽ thành "phiên không có giá". Lấy 2 trang giá
+# (40 phiên) là phủ trọn, và vẫn chỉ tốn thêm 1 lượt/mã.
+TRANG_NGAY = 2
+
+
 def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
     """Trả về dict {ngày: bản ghi}. day_du=True thì lật hết trang."""
     den = den or datetime.datetime.now(TZ).strftime("%Y-%m-%d")
@@ -209,7 +215,9 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
                 "shR": (round(r["MarketCap"] / r["ClosePrice"])
                         if r.get("MarketCap") and r.get("ClosePrice") else None),
             }
-        if not day_du or len(ra) >= (tong or 0) or trang > 400:
+        if trang >= (TRANG_NGAY if not day_du else 400):
+            break
+        if day_du and len(ra) >= (tong or 0):
             break
         trang += 1
     return ra, sid[0]
@@ -619,6 +627,51 @@ def phien_ghi(ngay, goi_ma):
     return os.path.getsize(p)
 
 
+# ── tầng 4: CHỈ SỐ THEO PHIÊN ────────────────────────────────────────────────
+CHISO = os.path.join(BASE, "data", "chiso.json")
+IDX = ("VNINDEX", "VN30", "HNX", "HNX30", "UPCOM")
+
+
+def kho_chiso():
+    """Điểm đóng cửa + KHỐI LƯỢNG của từng chỉ số theo phiên -> `data/chiso.json`.
+
+    Nguồn: `dchart-api.vndirect.com.vn` — sâu tới **2017-08** (2.244 phiên cho VNINDEX),
+    trong khi `data/idx.json` của pipeline chỉ giữ ~15 phiên và không có % thay đổi.
+    Endpoint chỉ số của Entrade cũng chạy nhưng chỉ lùi ~300 phiên, nên để làm nguồn đối
+    chiếu chứ không làm nguồn chính. Hai bên khớp nhau ở phiên cuối (1.734,24).
+
+    % THAY ĐỔI TÍNH TẠI CHỖ chứ không lấy của nguồn: chỉ số không chia tách nên
+    `c[i]/c[i-1] - 1` là định nghĩa duy nhất, và tự tính thì phiên nào cũng có, kể cả
+    phiên đầu chuỗi của một lượt cào bù.
+    """
+    ra = {}
+    for m in IDX:
+        try:
+            b = nhipmang.get("https://dchart-api.vndirect.com.vn/dchart/history"
+                             f"?symbol={m}&resolution=D&from=1400000000&to="
+                             f"{int(datetime.datetime.now(TZ).timestamp()) + 86400}")
+            j = json.loads(b)
+        except Exception:
+            continue
+        if j.get("s") != "ok" or not j.get("t"):
+            continue
+        d, c, v = [], [], []
+        for i, t in enumerate(j["t"]):
+            d.append(datetime.datetime.fromtimestamp(t, TZ).strftime("%Y-%m-%d"))
+            c.append(round(j["c"][i], 2))
+            v.append(int((j.get("v") or [0] * len(j["t"]))[i] or 0))
+        ra[m] = {"d": d, "c": c, "v": v,
+                 "pc": [None] + [round((c[i] / c[i - 1] - 1) * 100, 2) if c[i - 1] else None
+                                 for i in range(1, len(c))]}
+        print(f"    {m}: {len(d):,} phiên · {d[0]} → {d[-1]} · đóng cuối {c[-1]:,}", flush=True)
+    if not ra:
+        return 0
+    tmp = CHISO + ".tmp"
+    json.dump(ra, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, CHISO)
+    return len(ra)
+
+
 # ── đối chiếu ─────────────────────────────────────────────────────────────────
 def entrade(sym, t0, t1):
     """Nguồn ĐỘC LẬP để soi lại: chart API của Entrade (nền tảng của DNSE), mở, không cần
@@ -649,8 +702,15 @@ def main():
     ap.add_argument("--tatca", action="store_true", help="với --sau: lật HẾT trang")
     ap.add_argument("--vg", action="store_true",
                     help="VÙNG GIÁ khớp lệnh + phân bổ dòng tiền cho --ngay (1 lượt/mã/ngày ×2)")
+    ap.add_argument("--chiso", action="store_true",
+                    help="chỉ số theo phiên (VNINDEX/VN30/HNX/HNX30/UPCOM) -> data/chiso.json")
     ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo sau khi chạy")
     a = ap.parse_args()
+
+    if a.chiso:
+        n = kho_chiso()
+        print(f"  chỉ số: {n}/{len(IDX)} · {CHISO}", flush=True)
+        return 0
 
     if a.vg:
         u = json.load(open(UNI, encoding="utf-8"))["stocks"]
