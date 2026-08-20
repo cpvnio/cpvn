@@ -90,4 +90,20 @@ for ($i = 0; $i -lt $ma.Count; $i += $lo) {
   if ($day) { Ghi "day xong lo, tong $($i + $nhom.Count)/$($ma.Count)" }
   else      { Ghi 'DAY THAT BAI sau 5 lan - giu commit tai cho, lo sau day tiep' }
 }
+# Gộp lại cho trang /phantich ngay khi cào xong, đừng đợi tới lượt EOD 15:15 hôm sau —
+# cào cả đêm mà trang vẫn hiện "2 mã" thì công cào coi như chưa tới tay ai.
+Ghi 'Dang gop data/phantich.json'
+& $py 'tools\build_phantich.py' 2>&1 | Add-Content $log
+& $git add data/phantich.json 2>&1 | Add-Content $log
+& $git diff --cached --quiet
+if ($LASTEXITCODE -ne 0) {
+  & $git -c user.name='cpvn-server' -c user.email='bot@users.noreply.github.com' `
+    commit -m 'Gop data/phantich.json sau khi boi kho' 2>&1 | Add-Content $log
+  for ($k = 1; $k -le 5; $k++) {
+    & $git pull --rebase -X theirs origin main 2>&1 | Add-Content $log
+    & $git push origin main 2>&1 | Add-Content $log
+    if ($LASTEXITCODE -eq 0) { break }
+    Start-Sleep -Seconds (5 * $k)
+  }
+}
 Ghi "=== XONG $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="

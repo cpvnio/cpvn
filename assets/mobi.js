@@ -14,14 +14,21 @@
     radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>'+
           '<path d="M12 12l6.4-4.2"/>',
     dua:'<path d="M4 20V10M10 20V4M16 20v-8M22 20V7"/>',
+    /* ĐỪNG mượn icon `dua` cho `pt`: cả hai đứng CẠNH NHAU trên thanh đáy, hai cột bar
+       giống hệt nhau thì thanh điều hướng thành hai nút không phân biệt được. Phân tích
+       dùng đồ thị ĐƯỜNG có trục, khác hẳn về hình khối. */
+    pt:'<path d="M4 4v16h16"/><path d="M7.5 15.5l3.5-4.5 3 2.5 4.5-6.5"/>',
     tap:'<path d="M4 21V7.5L11 3l7 4.5V21M4 21h16M9.5 21v-5h4v5M9 11h.01M14 11h.01"/>'
   };
-  /* BA MỤC CHÍNH. Bong bóng và Danh mục tập đoàn không leo lên hàng này: năm mục
-     ngang hàng trong khi thật ra chỉ có ba nhánh thì người dùng đọc ra một cấu
-     trúc sai. Chúng nằm trong bốn lối rẽ của Radar (xem CON bên dưới). */
+  /* BỐN MỤC CHÍNH. Bong bóng và Danh mục tập đoàn vẫn không leo lên hàng này: chúng là
+     "soi thị trường theo một góc khác", cùng nhánh với Radar, nên nằm trong lối rẽ của
+     Radar (xem CON bên dưới). "Phân tích" thì khác hẳn — nó là kho số chốt phiên và sổ
+     lệnh, không phải một góc nhìn của radar — nên đứng riêng, đúng vị trí user chốt
+     20/08/2026: GIỮA Radar và Đường đua, khớp với thanh máy bàn. */
   var MUC=[
     ['bang','Bảng giá',  '/'],
     ['radar','Radar',    'congcu.html?m=radar'],
+    ['pt','Phân tích',   'congcu.html?m=phantich'],
     ['dua','Đường đua',  'congcu.html?m=race']
   ];
   /* BỐN LỐI RẼ CỦA RADAR (user chốt 11/08/2026).
@@ -63,10 +70,12 @@
     if(/bubbles/.test(p))  return ['radar','bong'];
     if(/cophieu/.test(p))  return ['bang',''];      /* trang một mã đi ra từ bảng giá */
     if(/duongdua/.test(p)) return ['dua',''];
+    if(/phantich/.test(p)) return ['pt',''];
     if(/tapdoan/.test(p))  return ['radar','tap'];
     var m=/radar/.test(p) ? 'radar' : /congcu/.test(p) ? (q.get('m')||'radar') : '';
     if(!m)            return ['bang',''];   /* BẢNG GIÁ: không dải mục con */
-    if(m==='race')    return ['dua',''];
+    if(m==='race')     return ['dua',''];
+    if(m==='phantich') return ['pt',''];
     if(m==='tapdoan') return ['radar','tap'];
     var tt=q.get('t')||'phien'; if(tt==='tg') tt='phien';   // link cũ ?t=tg
     return ['radar',tt];   /* phien = mặc định, không nút nào sáng */

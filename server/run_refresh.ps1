@@ -53,6 +53,12 @@ else                                   { & $py refresh_daily.py 2>&1 }
 & $py tools\kho_giaodich.py --sau 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# Gộp kho giao dịch thành MỘT file cho trang /phantich. Không gọi mạng, vài giây.
+# Phải chạy SAU kho_giaodich, và mỗi ngày — kho đổi mà file gộp không đổi thì trang
+# hiện số của hôm qua mà không có dấu hiệu gì.
+& $py tools\build_phantich.py 2>&1
+if ($LASTEXITCODE -ne 0) { "build_phantich EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # Tên commit theo NGÀY PHIÊN trong kho vừa dựng, không theo ngày chạy máy: lượt nào
 # vắt qua nửa đêm mà lấy ngày máy sẽ đặt tên phiên hôm sau cho dữ liệu hôm trước.
 $sess = & $py -c "import json;print(json.load(open('data/health.json'))['date'])" 2>$null

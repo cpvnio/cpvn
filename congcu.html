@@ -365,6 +365,37 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
   background:var(--card2);color:var(--faint)}
 .nytt.ok{background:rgba(34,201,138,.15);color:var(--green)}
 .nytab{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+/* ---- PHÂN TÍCH DỮ LIỆU ---- */
+/* Lời cảnh báo về ĐỘ PHỦ phải đứng TRÊN số chứ không phải dưới bảng: kho đang bồi dần nên
+   mỗi phiên có số mã khác nhau, ai đọc số trước rồi mới đọc ghi chú thì đã hiểu sai rồi. */
+.ptnote{margin:0 0 12px;padding:9px 12px;border-radius:9px;background:var(--card2);
+  border-left:3px solid var(--rose);color:var(--txt);font-size:12px;line-height:1.65}
+.ptgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.ptbox{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
+  display:flex;flex-direction:column;gap:3px;min-width:0}
+.ptbox .ptlb{font-size:11px;color:var(--faint);font-weight:700;letter-spacing:.02em}
+.ptbox b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptbox i{font-style:normal;font-size:11px;color:var(--faint)}
+.ptcv{width:100%}
+.ptcv canvas{width:100%;display:block}
+.ptleg{margin:6px 0 0;font-size:11.5px;color:var(--faint)}
+.ptleg i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px}
+.ptleg i.pk1{background:#0284c7}
+.ptleg i.pk2{background:#7c3aed}
+/* BẢNG CUỘN NGANG TRONG CHÍNH NÓ — 11 cột không nhét vừa màn hẹp, mà cắt bớt cột thì mất
+   đúng mấy con số người ta mở trang này ra để soi. Thân trang tuyệt đối không được tràn. */
+.pttw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pttb{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.pttb th,.pttb td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.pttb th{position:sticky;top:0;background:var(--card);color:var(--faint);font-size:11px;
+  font-weight:800;cursor:pointer;user-select:none;z-index:1}
+.pttb th.r,.pttb td.r{text-align:right}
+.pttb th.sorted{color:var(--rose)}
+.pttb th.sorted::after{content:'▾';margin-left:4px;font-size:9px}
+.pttb th.sorted.a::after{content:'▴'}
+.pttb tbody tr{cursor:pointer}
+.pttb tbody tr:hover{background:var(--card2)}
 .nytab button{background:var(--card);color:var(--faint);border:1px solid var(--line);
   border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:800;cursor:pointer}
 .nytab button.on{background:var(--rose);border-color:var(--rose);color:#fff}
@@ -1071,7 +1102,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260820i"></script>
+<script defer src="assets/mobi.js?v=20260820j"></script>
 </head>
 <body>
 
@@ -1082,6 +1113,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
   <nav class="tabs">
     <span class="tw"><a href="/">Bảng giá</a><span class="dd"><a href="/">Bảng giá</a><a href="/bubbles">Bản đồ bong bóng</a><a href="congcu.html?m=tapdoan">Danh mục tập đoàn</a><a href="congcu.html?m=niemyet">Thông tin niêm yết</a></span></span>
     <span class="tw"><a data-m="radar">Radar</a><span class="dd"><a data-md="radar" data-t="phien">📡 Nhịp phiên</a><a data-md="radar" data-t="vb">🛟 Khi nào về bờ</a></span></span>
+    <span class="tw"><a data-m="phantich">Phân tích</a><span class="dd"><a data-md="phantich">📊 Phân tích dữ liệu</a></span></span>
     <span class="tw"><a data-m="race">Đường đua</a><span class="dd"><a data-md="race" data-t="dua">🏁 Đường đua vốn hoá</a><a data-md="race" data-t="dca">🌱 Đầu tư bền vững</a></span></span>
   </nav>
 <script>(function(){/* MÀN CẢM ỨNG: chạm vào mục cha là MỞ/ĐÓNG menu con, không đi đâu cả —
@@ -1127,6 +1159,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260820i"></script>
+<script src="assets/congcu.js?v=20260820j"></script>
 </body>
 </html>
