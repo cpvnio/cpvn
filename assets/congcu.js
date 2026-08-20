@@ -1523,29 +1523,19 @@ function ptVeMa(){
     ?(((fnM[i]||0)+(fnB[i]||0))/2/x*100):null);
   if(PT.maI==null||PT.maI>m) PT.maI=m;
   const k=PT.maI;
-  const doi=(kk)=>{ const j2=m-kk; return (j2>=0&&c[j2]&&c[m])?((c[m]/c[j2]-1)*100):null; };
-  const tbGT=mval.filter(x=>x).reduce((a,b)=>a+b,0)/Math.max(mval.filter(x=>x).length,1);
-  const tongTT=pval.reduce((a,b)=>a+(b||0),0), tongKL=mval.reduce((a,b)=>a+(b||0),0);
-  const fnRongTong=fnRong.reduce((a,b)=>a+(b||0),0);
-  const tdRongTong=tdRong.reduce((a,b)=>a+(b||0),0);
+  /* `doi` `tbGT` `tongTT` `tongKL` `fnRongTong` `tdRongTong` ĐÃ XOÁ 22/08/2026 cùng
+     hàng ô tổng hợp — chúng chỉ phục vụ mấy ô đó. Muốn dựng lại thì tính lại, đừng để
+     sáu biến chết nằm đây rồi lần sau có người tưởng chúng đang được dùng. */
   const ph=(v)=>v==null?'—':'<b class="'+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</b>';
-  const box=(nhan,gt,ghi)=>'<div class="ptbox"><span class="ptlb">'+nhan+'</span><b>'+gt+'</b>'+
-    (ghi?'<i>'+ghi+'</i>':'')+'</div>';
   const vg=(PT.phien[PT.ngay]&&PT.phien[PT.ngay].ma&&PT.phien[PT.ngay].ma[PT.ma])||null;
+  /* HÀNG Ô TỔNG HỢP ĐÃ XOÁ 22/08/2026 (user chốt: *"xoá cái này ở mỗi cổ phiếu phân
+     tích luôn, tao cần giá theo phiên"*). Bảy ô đó in số của CẢ KHUNG — "so 1 tháng",
+     "so 63 phiên", "GT khớp lệnh TB", "khối ngoại ròng cả khung" — trong khi cả trang
+     này xoay quanh MỘT PHIÊN đang chọn/đang ghim. Hai loại kỳ khác nhau nằm chồng lên
+     nhau ở đầu trang là đọc nhầm rất dễ: thấy "−461 tỷ" tưởng của phiên đang xem.
+     Thứ duy nhất trong đó là số THEO PHIÊN — tỉ lệ sở hữu nước ngoài — đã chuyển vào
+     đúng ô Khối ngoại của thanh đọc số. */
   w.innerHTML=dau
-    /* BẢY Ô -> LƯỚI CHIA CỨNG, y như hàng ô toàn thị trường. `auto-fit minmax(180px)` ở
-       bề ngang 1.364px tính ra đúng 186px/cột nên nó chọn 6 cột, ô thứ 7 rơi xuống hàng
-       dưới đứng một mình — trông như một khối riêng chứ không phải phần đuôi của hàng. */
-    +'<div class="panel"><div class="pb"><div class="ptgrid ptg7m">'
-      +box('Giá đóng cửa', num(c[m]), 'phiên <b>'+esc(d[m])+'</b> · '+ph(pcs[m]))
-      +box('So 1 tháng', ph(doi(21)), '21 phiên trước')
-      +box('So '+d.length+' phiên', ph(doi(d.length-1)), 'cả khung đang xem')
-      +box('GT khớp lệnh TB', ptTien(tbGT), 'mỗi phiên trong khung')
-      +box('Vốn hoá', mcap[m]?ptTien(mcap[m]):'—', sh[m]?'<b>'+num(sh[m])+'</b> cp':'')
-      +box('Khối ngoại ròng', fnRongTong?ptTien(fnRongTong):'—',
-           'cả khung'+(fnSH[m]!=null?' · sở hữu <b>'+fnSH[m].toFixed(1)+'%</b>':''))
-      +box('Tự doanh ròng', tdRongTong?ptTien(tdRongTong):'—', 'cả khung · CTCK tự mua bán')
-    +'</div></div></div>'
     /* THANH ĐỌC SỐ CỦA PHIÊN ĐANG CHỌN — đứng NGAY TRÊN lưới đồ thị, không nhét xuống dưới:
        rê chuột trên đồ thị mà số hiện ở cuối trang thì mắt phải nhảy đi nhảy lại. */
     +'<div class="ptdoc" id="ptDoc"></div>'
@@ -1621,6 +1611,7 @@ function ptVeMa(){
     +'<b class="ptdcv'+(cl?' '+cl:'')+'">'+gt+'</b>'
     +(phu?'<span class="ptdcp">'+phu+'</span>':'')+'</div>';
   const tien=(v)=>v==null?null:((v>0?'+':'')+ptTien(v));
+  const cqN=((PT.cq||{})[PT.ma]||{}).n||0;
   $('#ptDoc').innerHTML=
     '<div class="ptdh"><span class="ptdd">'+esc(d[k])+'</span>'
       +(PT.ghim!=null
@@ -1633,14 +1624,26 @@ function ptVeMa(){
     +oo('Giá trị khớp lệnh', ptTien(mval[k]), num(mv[k])+' cp')
     +oo('Khối ngoại ròng', fnRong[k]!=null?tien(fnRong[k]):oNul,
         fnM[k]!=null?('mua <b class="up">'+ptTien(fnM[k])+'</b> · bán <b class="dn">'
-          +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')):'',
+          +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')
+          +(fnSH[k]!=null?' · sở hữu <b>'+fnSH[k].toFixed(1)+'%</b>':'')):'',
         fnRong[k]!=null?cls(fnRong[k]):'')
+    /* Ô này từng in một câu giải thích tĩnh ("tiền của chính công ty chứng khoán") —
+       chữ đó không đổi theo phiên nên chiếm chỗ mà không nói gì. Nay in mua/bán của
+       CHÍNH phiên đó, và nói luôn mã có bao nhiêu chứng quyền đang lưu hành: 12/12 mã
+       đầu bảng tự doanh mua ròng đều có chứng quyền, tức phần lớn là phòng hộ bắt buộc
+       chứ không phải đặt cược — không nói ra thì con số này đọc sai bản chất. */
     +oo('Tự doanh ròng', tdRong[k]!=null?tien(tdRong[k]):oNul,
-        tdRong[k]==null?'nguồn không có tự doanh ở mã này':'tiền của chính công ty chứng khoán',
+        tdRong[k]==null?'nguồn không có tự doanh ở mã này'
+          :('mua <b class="up">'+ptTien(tdM[k]||0)+'</b> · bán <b class="dn">'
+            +ptTien(tdB[k]||0)+'</b>'+(cqN?' · <b>'+cqN+' chứng quyền</b> đang lưu hành':'')),
         tdRong[k]!=null?cls(tdRong[k]):'')
-    +oo('Giá thoả thuận', ptt[k]!=null?num(ptt[k]):oNul,
-        ptt[k]!=null?('<b class="'+cls(ptt[k]/c[k]-1)+'">'+((ptt[k]/c[k]-1)*100).toFixed(1)
-          +'%</b> so giá sàn · '+num(pv[k])+' cp'):'phiên này không có thoả thuận')
+    /* THOẢ THUẬN PHẢI CÓ GIÁ TRỊ BẰNG TIỀN (user chốt 22/08/2026). "200.000 cp" không
+       nói được gì nếu chưa nhân với giá — cùng một khối lượng ở mã 3.000đ và mã 200.000đ
+       là hai câu chuyện khác hẳn, mà đây đúng là chỗ hay có lô sang tay lớn. */
+    +oo('Thoả thuận', pval[k]?ptTien(pval[k]):oNul,
+        ptt[k]!=null?('giá <b>'+num(ptt[k])+'</b> · <b class="'+cls(ptt[k]/c[k]-1)+'">'
+          +((ptt[k]/c[k]-1)>0?'+':'')+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá sàn · '
+          +num(pv[k])+' cp'):'phiên này không có thoả thuận')
     +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul, sh[k]?num(sh[k])+' cp lưu hành':'')
     +'</div>';
   const bg=$('#ptBoGhim');

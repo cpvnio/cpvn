@@ -1413,11 +1413,27 @@ duy nhất lúc đó. Đổi mã thì `ghim=null`.
 > HTML và vẽ lại 11 canvas. Chưa ghim thì việc đó chạy mỗi lần chuột qua một cột; ghim
 > rồi thì thôi hẳn.
 
+**HÀNG Ô TỔNG HỢP ĐÃ XOÁ 22/08/2026 — ĐỪNG DỰNG LẠI.** Bảy ô đầu trang mã (So 1 tháng ·
+So 63 phiên · GT khớp lệnh TB · Khối ngoại ròng cả khung…) in số của **CẢ KHUNG**, trong
+khi cả trang xoay quanh MỘT PHIÊN đang chọn/đang ghim. Hai loại kỳ chồng lên nhau ở đầu
+trang là đọc nhầm rất dễ: thấy "−461 tỷ" tưởng của phiên đang xem. User chốt: *"xoá cái
+này, tao cần giá theo phiên"*. Thứ duy nhất trong đó là số THEO PHIÊN — tỉ lệ sở hữu
+nước ngoài — đã chuyển vào ô Khối ngoại của thanh đọc số. Sáu biến chỉ phục vụ mấy ô đó
+(`doi` `tbGT` `tongTT` `tongKL` `fnRongTong` `tdRongTong`) và `box` xoá theo.
+
 **BẢNG ĐỌC SỐ = SÁU KHỐI, KHÔNG PHẢI 12 MẨU NGANG VAI.** Bản cũ in 12 `<span>` cùng cỡ
 cùng màu xếp một hàng dài, nên mắt phải đọc HẾT nhãn mới tìm ra thứ cần — mà nhãn lại bé
 hơn số, đúng ngược. Nay mỗi khối trả lời MỘT câu (giá · tiền · khối ngoại · tự doanh ·
 thoả thuận · vốn hoá), trong khối có một con số lớn là câu trả lời và một dòng chú thích
 cho chính nó. Lưới 2 cột ở khổ hẹp → 3 → 6.
+
+> **DÒNG PHỤ PHẢI LÀ SỐ CỦA CHÍNH PHIÊN ĐÓ, ĐỪNG NHÉT CÂU GIẢI THÍCH TĨNH.** Ô tự doanh
+> từng in "tiền của chính công ty chứng khoán" — chữ đó không đổi theo phiên nên chiếm
+> chỗ mà không nói gì. Nay in mua/bán của chính phiên, kèm **số chứng quyền đang lưu
+> hành** của mã (đọc `PT.cq`): 12/12 mã đầu bảng tự doanh mua ròng đều có chứng quyền,
+> tức phần lớn là phòng hộ bắt buộc — không nói ra thì con số đọc sai bản chất.
+> Thoả thuận lấy **GIÁ TRỊ BẰNG TIỀN** làm số chính, không lấy khối lượng: "200.000 cp"
+> không nói được gì nếu chưa nhân với giá, mà đây đúng là chỗ hay có lô sang tay lớn.
 
 > **LƯỚI Ô ĐẦU TRANG PHẢI CHIA CỨNG, ĐỪNG `auto-fit`.** Hàng ô toàn thị trường có 6 đơn
 > vị (ô chỉ số span 2), hàng ô một mã có 7. `repeat(auto-fit,minmax(180px,1fr))` ở bề
