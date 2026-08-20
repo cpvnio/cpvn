@@ -703,7 +703,8 @@ async function renderNiemYet(){
    Dữ liệu chia hai tầng: `data/phantich.json` nhẹ (chỉ chuỗi toàn thị trường, tải ngay) và
    `data/phien/{NGÀY}.json` (bảng mã + vùng giá, tải khi chọn phiên). */
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
-          n:60, ma:null, maD:null, nMa:63, maI:null};   // nMa = 63 phiên ≈ 3 tháng
+          n:60, ma:null, maD:null, nMa:63, maI:null,
+          che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
   if(PT.tt) return PT.tt;
@@ -771,7 +772,14 @@ function ptTop(){
       '<i class="'+cls(p)+'">'+(p>0?'+':'')+(p==null?'—':p.toFixed(2)+'%')+'</i></span>';
   }).join('');
   $('#ptTop').innerHTML='<div class="panel"><div class="ph"><span>📊</span>Toàn thị trường — phiên '+
-    esc(PT.ngay)+'<span class="cnt">'+num(t.n[i])+' mã</span></div><div class="pb">'
+    esc(PT.ngay)
+    /* Nút chuyển cách đọc đồ thị đặt NGAY CẠNH TÊN, không đẩy xuống hàng riêng: nó đổi ý
+       nghĩa của chính cái đồ thị ngay dưới, để xa là mất liên hệ. */
+    +'<span class="ptche" id="ptChe">'
+      +'<button data-c="ai"'+(PT.che==='ai'?' class="on"':'')+'>Ai mua ai bán</button>'
+      +'<button data-c="tong"'+(PT.che==='tong'?' class="on"':'')+'>Khớp lệnh + thoả thuận</button>'
+    +'</span>'
+    +'<span class="cnt">'+num(t.n[i])+' mã</span></div><div class="pb">'
     +'<div class="ptgrid">'
     +box('VN-Index', vn&&vn.c[i]!=null?num2(vn.c[i]):'—',
          pc==null?'':((pc>0?'+':'')+pc.toFixed(2)+'% so với phiên trước'), pc==null?'':cls(pc))
@@ -798,13 +806,28 @@ function ptTop(){
     +(phu?'<div class="ptcsw">'+phu+'</div>':'')
     +'<div class="ptcv" id="ptCvW"><canvas id="ptCv"></canvas>'
       +'<div class="ptcvhl" id="ptHL"></div><div class="pttip" id="ptTip"></div></div>'
-    +'<p class="ptleg"><i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'
+    +'<p class="ptleg">'
+      +(PT.che==='ai'
+        ?('<i class="pkN"></i> khối ngoại &nbsp; <i class="pkT"></i> tự doanh'
+          +' &nbsp; <i class="pkR"></i> còn lại (trong nước)'
+          +' &nbsp;·&nbsp; <b>mỗi phiên hai cột: TRÁI là bên MUA, PHẢI là bên BÁN</b>')
+        :('<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'))
       +' &nbsp; <i class="pk0"></i> phiên kho chưa cào đủ mã &nbsp; <i class="pk3"></i> VN-Index'
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem phiên đó</b></p>'
+    +(PT.che==='ai'
+      ?'<p class="ptnote">Hai nửa cột KHÔNG cộng vào nhau: mỗi lệnh khớp có đúng một người '
+        +'mua và một người bán, nên mỗi nửa đều bằng <b>trọn</b> giá trị khớp lệnh của phiên. '
+        +'Xếp chồng mua và bán vào một cột là đếm hai lần. Khối ngoại phình ở nửa trái mà '
+        +'lép ở nửa phải nghĩa là họ đang gom; ngược lại là đang xả. '
+        +'<b>Trục dọc của chế độ này khác chế độ tổng</b>: nó chỉ đo giá trị khớp lệnh, '
+        +'không gồm thoả thuận, nên đừng so chiều cao cột giữa hai chế độ.</p>':'')
     +'<p class="ptnote">Cột <b>xám</b> là phiên kho chưa cào đủ mã — thấp vì THIẾU DỮ LIỆU chứ '
       +'không phải vì thị trường ế, đừng đọc như một cú sụt thanh khoản. Con số "'+num(t.n[i])+' mã" '
       +'ở trên đếm mã <i>thực sự có giá và khối lượng</i> của phiên này.</p>'
     +'</div></div>';
+  const ch=$('#ptChe');
+  if(ch) ch.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
+    PT.che=b.dataset.c; ptTop(); };
   ptVeChart();
 }
 const num2=n=>n==null||isNaN(n)?'—':n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -855,7 +878,15 @@ function ptVeChart(){
      Vượt 50.000 thì mới nới, và nới theo bước tròn. */
   const TRAN_VOL=50000;
   let dinh=TRAN_VOL, buoc=5000;
-  if(mx>TRAN_VOL){ buoc=ptBuoc(mx); dinh=Math.ceil(mx/buoc)*buoc; }
+  if(PT.che==='ai'){
+    /* CHẾ ĐỘ "AI MUA AI BÁN" ĐO MỘT ĐẠI LƯỢNG KHÁC nên có trục riêng, và điều đó phải nói
+       ra ở chú thích chứ không đổi ngầm. Mỗi nửa cột bằng giá trị KHỚP LỆNH (không gồm
+       thoả thuận), tức chỉ khoảng một nửa cột của chế độ tổng. Giữ nguyên trần 50.000 thì
+       nửa cột cao ~21% khung, mà dải khối ngoại nằm trong đó chỉ còn vài pixel — đúng thứ
+       người xem mở đồ thị ra để tìm thì lại không nhìn thấy. Trần vẫn là số TRÒN. */
+    let mM=0; for(let i=i0;i<i1;i++) mM=Math.max(mM,t.mval[i]||0);
+    buoc=ptBuoc(mM||1); dinh=Math.max(buoc,Math.ceil((mM||1)/buoc)*buoc);
+  } else if(mx>TRAN_VOL){ buoc=ptBuoc(mx); dinh=Math.ceil(mx/buoc)*buoc; }
   /* Chừa chỗ TRÁI cho nhãn trục — đo bằng chính chữ sắp in, đừng đoán: "50,000" và "500"
      rộng khác nhau, ghim cứng một số là hoặc cụt nhãn hoặc phí chỗ. */
   g.font='11px system-ui,sans-serif';
@@ -868,17 +899,45 @@ function ptVeChart(){
     if(v>0) g.fillText(num(v), padL-6, y);
   }
   const n=i1-i0, gap=plotW/n, bw=Math.max(1,gap*0.72);
+  /* Bảng màu cho chế độ "ai mua ai bán". Khối ngoại và tự doanh phải KHÁC HẲN nhau về sắc
+     độ chứ không chỉ khác đậm nhạt — hai nhóm này hay đi ngược chiều nhau, mà đó chính là
+     thứ người xem mở đồ thị ra để tìm. */
+  const cN=dark?'#22d3ee':'#0891b2',      // khối ngoại
+        cT=dark?'#fb923c':'#ea580c',      // tự doanh
+        cR=dark?'rgba(56,189,248,.42)':'rgba(2,132,199,.30)';   // còn lại (trong nước)
+  const xam=dark?'rgba(148,163,184,.40)':'rgba(148,163,184,.50)';
   ptCols=[];
   for(let i=i0;i<i1;i++){
-    const x=padL+(i-i0)*gap+(gap-bw)/2;
-    const a=(t.mval[i]||0)/dinh*plotH, b2=(t.pval[i]||0)/dinh*plotH;
+    const x=padL+(i-i0)*gap+(gap-bw)/2, du=duPhu(i);
     if(t.d[i]===PT.ngay){ g.fillStyle=dark?'rgba(244,63,94,.20)':'rgba(244,63,94,.13)';
       g.fillRect(padL+(i-i0)*gap, padT, gap, plotH); }
-    const du=duPhu(i);
-    g.fillStyle=du?c1:(dark?'rgba(148,163,184,.45)':'rgba(148,163,184,.55)');
-    g.fillRect(x, padT+plotH-a, bw, a);
-    g.fillStyle=du?c2:(dark?'rgba(148,163,184,.28)':'rgba(148,163,184,.32)');
-    g.fillRect(x, padT+plotH-a-b2, bw, b2);
+    if(PT.che==='ai'){
+      /* HAI NỬA CỘT, mỗi nửa bằng TRỌN giá trị khớp lệnh của phiên. Không xếp chồng mua
+         với bán: mỗi lệnh khớp có đúng một bên mua và một bên bán, nên `mua + bán` có thể
+         lên tới 2× giá trị phiên — xếp chồng là đếm hai lần. Tách bằng VỊ TRÍ (trái/phải)
+         và để MÀU nói ai là người mua, ai là người bán. */
+      const mval=t.mval[i]||0;
+      const hw=Math.max(1,(bw-1)/2);
+      const ve=(x0,fn,td)=>{
+        const con=Math.max(0,mval-(fn||0)-(td||0));   // kẹp 0: nhiễu nguồn không được đẻ cột âm
+        let day=0;
+        for(const [v,mau] of [[con,cR],[td||0,cT],[fn||0,cN]]){
+          if(v<=0) continue;
+          const h=v/dinh*plotH;
+          g.fillStyle=du?mau:xam;
+          g.fillRect(x0, padT+plotH-(day+v)/dinh*plotH, hw, Math.max(1,h));
+          day+=v;
+        }
+      };
+      ve(x, t.fnMua?t.fnMua[i]:null, t.tdMua?t.tdMua[i]:null);
+      ve(x+hw+1, t.fnBan?t.fnBan[i]:null, t.tdBan?t.tdBan[i]:null);
+    } else {
+      const a=(t.mval[i]||0)/dinh*plotH, b2=(t.pval[i]||0)/dinh*plotH;
+      g.fillStyle=du?c1:xam;
+      g.fillRect(x, padT+plotH-a, bw, a);
+      g.fillStyle=du?c2:(dark?'rgba(148,163,184,.28)':'rgba(148,163,184,.32)');
+      g.fillRect(x, padT+plotH-a-b2, bw, b2);
+    }
     ptCols.push({x0:padL+(i-i0)*gap, x1:padL+(i-i0+1)*gap, d:t.d[i]});
   }
   /* ĐƯỜNG VN-INDEX CHỒNG LÊN CỘT, TRỤC RIÊNG BÊN PHẢI. Khối lượng và điểm số là hai đại
@@ -933,7 +992,8 @@ function ptVeChart(){
       +'<div class="tpr"><span>Khối lượng khớp</span><i>'+num(t.mv[k])+' nghìn cp</i></div>'
       +((t.fnMua&&t.fnMua[k]!=null)
         ?'<div class="tpr"><span>Khối ngoại ròng</span><i class="'+cls(t.fnMua[k]-t.fnBan[k])+'">'+
-          ((t.fnMua[k]-t.fnBan[k])>0?'+':'')+num(t.fnMua[k]-t.fnBan[k])+' tỷ</i></div>':'')
+          ((t.fnMua[k]-t.fnBan[k])>0?'+':'')+num(t.fnMua[k]-t.fnBan[k])+' tỷ</i></div>'+
+         '<div class="tpr tp2"><span>mua / bán</span><i>'+num(t.fnMua[k])+' / '+num(t.fnBan[k])+' tỷ</i></div>':'')
       +((t.tdMua&&t.tdMua[k]!=null)
         ?'<div class="tpr"><span>Tự doanh ròng</span><i class="'+cls(t.tdMua[k]-t.tdBan[k])+'">'+
           ((t.tdMua[k]-t.tdBan[k])>0?'+':'')+num(t.tdMua[k]-t.tdBan[k])+' tỷ</i></div>':'')

@@ -410,6 +410,15 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pk2{background:#7c3aed}
 .ptleg i.pk0{background:#94a3b8;opacity:.6}
 .ptleg i.pk3{background:#d97706;height:3px;border-radius:2px}
+.ptleg i.pkN{background:#0891b2}
+.ptleg i.pkT{background:#ea580c}
+.ptleg i.pkR{background:rgba(2,132,199,.30)}
+/* Nút chuyển chế độ nằm TRONG hàng tiêu đề panel, cạnh tên — không đẩy xuống hàng riêng:
+   nó đổi cách đọc chính cái đồ thị ngay dưới, để xa là mất liên hệ. */
+.ptche{display:inline-flex;gap:4px;margin-left:12px}
+.ptche button{background:var(--card2);color:var(--faint);border:1px solid var(--line);
+  border-radius:8px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer}
+.ptche button.on{background:var(--rose);border-color:var(--rose);color:#fff}
 /* Dải chỉ số phụ: VN30 / HNX / UPCOM đứng một hàng dưới bốn ô lớn — chúng là thông tin
    phụ, cho lên ô lớn là bốn ô chính mất chỗ mà chẳng ai đọc dòng nào trước dòng nào. */
 .ptcsw{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
@@ -1208,7 +1217,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821d"></script>
+<script defer src="assets/mobi.js?v=20260821g"></script>
 </head>
 <body>
 
@@ -1265,6 +1274,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821d"></script>
+<script src="assets/congcu.js?v=20260821g"></script>
 </body>
 </html>
