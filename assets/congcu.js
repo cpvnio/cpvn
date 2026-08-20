@@ -741,7 +741,7 @@ function ptGiai(id,ten,html){
 function ptBindGiai(){ $$('.ptgt').forEach(d=>{ d.ontoggle=()=>{ PT.giai[d.dataset.g]=d.open; }; }); }
 
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
-          n:60, ma:null, maD:null, nMa:63, maI:null, giai:{},
+          n:60, ma:null, maD:null, nMa:63, maI:null, ghim:null, giai:{},
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -1455,9 +1455,17 @@ function ptVe1(cv, cfg){
      sáu đồ thị mà mỗi cái một mốc riêng thì phải tự dóng bằng mắt qua trục ngày. */
   if(cfg.moc!=null&&cfg.moc>=0&&cfg.moc<n){
     const x=padL+cfg.moc*gap+gap/2;
-    g.strokeStyle=dark?'rgba(244,63,94,.75)':'rgba(225,29,72,.65)';
-    g.lineWidth=1.5; g.setLineDash([3,3]);
+    /* ĐÃ GHIM thì vẽ NÉT LIỀN, dày hơn, kèm tam giác trên đỉnh. Nét đứt = mốc đang chạy
+       theo chuột, nét liền = mốc đứng yên. Không phân biệt được hai trạng thái thì bấm
+       xong không biết mình đã ghim hay chưa, mà đó đúng là câu hỏi duy nhất lúc đó. */
+    g.strokeStyle=dark?'rgba(244,63,94,.9)':'rgba(225,29,72,.8)';
+    g.lineWidth=cfg.ghim?2:1.5;
+    if(!cfg.ghim) g.setLineDash([3,3]);
     g.beginPath(); g.moveTo(x,padT); g.lineTo(x,padT+plotH); g.stroke(); g.setLineDash([]);
+    if(cfg.ghim){
+      g.fillStyle=g.strokeStyle;
+      g.beginPath(); g.moveTo(x-4,padT); g.lineTo(x+4,padT); g.lineTo(x,padT+5); g.fill();
+    }
   }
   g.fillStyle=ct; g.textAlign='left'; g.textBaseline='top';
   g.fillText(cfg.d[0], padL, H-12);
@@ -1476,7 +1484,7 @@ function ptVe1(cv, cfg){
 }
 
 async function ptMoMa(sym){
-  PT.ma=sym; PT.maD=null; PT.maI=null;
+  PT.ma=sym; PT.maD=null; PT.maI=null; PT.ghim=null;
   await ptVe();
   try{ PT.maD=await (await fetch('data/giaodich/'+sym+'.json')).json(); }
   catch(e){ PT.maD={err:1}; }
@@ -1525,7 +1533,10 @@ function ptVeMa(){
     (ghi?'<i>'+ghi+'</i>':'')+'</div>';
   const vg=(PT.phien[PT.ngay]&&PT.phien[PT.ngay].ma&&PT.phien[PT.ngay].ma[PT.ma])||null;
   w.innerHTML=dau
-    +'<div class="panel"><div class="pb"><div class="ptgrid">'
+    /* BẢY Ô -> LƯỚI CHIA CỨNG, y như hàng ô toàn thị trường. `auto-fit minmax(180px)` ở
+       bề ngang 1.364px tính ra đúng 186px/cột nên nó chọn 6 cột, ô thứ 7 rơi xuống hàng
+       dưới đứng một mình — trông như một khối riêng chứ không phải phần đuôi của hàng. */
+    +'<div class="panel"><div class="pb"><div class="ptgrid ptg7m">'
       +box('Giá đóng cửa', num(c[m]), 'phiên <b>'+esc(d[m])+'</b> · '+ph(pcs[m]))
       +box('So 1 tháng', ph(doi(21)), '21 phiên trước')
       +box('So '+d.length+' phiên', ph(doi(d.length-1)), 'cả khung đang xem')
@@ -1567,10 +1578,21 @@ function ptVeMa(){
      thì nó lại đúng — chỉ hỏng đúng nhóm người dùng đổi đèn thủ công. */
   const dark=!isLight();
   const XANH=dark?'#34d399':'#16a34a', DO=dark?'#f87171':'#dc2626';
-  const chon=(i)=>{ if(i===PT.maI) return; PT.maI=i; ptVeMa(); };
+  /* GHIM PHIÊN (user chốt 22/08/2026: *"tao không bấm chọn ... để neo lại được"*).
+     Bản cũ nhận tham số `bam` rồi KHÔNG DÙNG TỚI, mà lượt `mousemove` đã dời mốc tới
+     đúng cột đó trước rồi — nên tới lúc `click` chạy thì `i===PT.maI` và hàm thoát ngay
+     ở dòng đầu. Tức nút bấm có tồn tại nhưng KHÔNG BAO GIỜ làm gì, và mốc thì luôn chạy
+     theo chuột: nhấc tay ra là mất phiên vừa xem.
+     Nay: bấm = ghim/bỏ ghim; đã ghim thì rê chuột không đổi phiên nữa. */
+  const chon=(i,bam)=>{
+    if(bam){ PT.ghim=(PT.ghim===i)?null:i; PT.maI=i; ptVeMa(); return; }
+    if(PT.ghim!=null) return;
+    if(i===PT.maI) return;
+    PT.maI=i; ptVeMa();
+  };
   /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
      giữ nguyên chiều cao là ô thành hình chữ nhật dựng đứng, đường giá bị kéo dốc giả. */
-  const C=(cfg)=>Object.assign({d,moc:PT.maI,chon,cao:136},cfg);
+  const C=(cfg)=>Object.assign({d,moc:PT.maI,ghim:PT.ghim!=null,chon,cao:136},cfg);
   ptVe1($('#mc1'),C({cao:250,kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
     {v:vw,mau:dark?'#fbbf24':'#d97706'}],nhan:num}));
   ptVe1($('#mc2'),C({cao:250,kieu:'bar',chong:1,series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},
@@ -1587,25 +1609,42 @@ function ptVeMa(){
   ptVe1($('#mc8'),C({kieu:'bar',series:[{v:mv,mau:dark?'#94a3b8':'#64748b'}],nhan:num}));
   if(vg) ptVe1($('#mc9'),{d:vg.p.map(x=>num(x)),kieu:'bar',cao:136,
     series:[{v:vg.v,mau:dark?'#38bdf8':'#0284c7'}],nhan:num});
-  const oo=(nhan,gt)=>'<span class="ptdo"><i>'+nhan+'</i><b>'+gt+'</b></span>';
-  $('#ptDoc').innerHTML='<span class="ptdd">'+esc(d[k])+'</span>'
-    +oo('đóng cửa', num(c[k])+' '+ph(pcs[k]))
-    +oo('giá TB', num(vw[k]))
-    +oo('GT khớp lệnh', ptTien(mval[k]))
-    +oo('KL khớp', num(mv[k])+' cp')
-    +oo('NN mua', fnM[k]!=null?ptTien(fnM[k]):'—')
-    +oo('NN bán', fnB[k]!=null?ptTien(fnB[k]):'—')
-    +oo('NN ròng', fnRong[k]!=null?
-        '<span class="'+cls(fnRong[k])+'">'+(fnRong[k]>0?'+':'')+ptTien(fnRong[k])+'</span>':'—')
-    +oo('NN chiếm', fnPc[k]!=null?fnPc[k].toFixed(1)+'%':'—')
-    +oo('Giá thoả thuận', ptt[k]!=null
-        ?(num(ptt[k])+' <span class="'+cls(ptt[k]/c[k]-1)+'">'+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</span>')
-        :'—')
-    +oo('KL thoả thuận', pv[k]?num(pv[k])+' cp':'—')
-    +oo('Tự doanh ròng', tdRong[k]!=null?
-        '<span class="'+cls(tdRong[k])+'">'+(tdRong[k]>0?'+':'')+ptTien(tdRong[k])+'</span>':'—')
-    +oo('vốn hoá', mcap[k]?ptTien(mcap[k]):'—')
-    +'<span class="ptdg">rê chuột hoặc bấm lên bất kỳ đồ thị nào để đổi phiên</span>';
+  /* BẢNG ĐỌC SỐ — SÁU KHỐI CÓ THỨ BẬC, không phải 12 mẩu rời (user chốt 22/08/2026:
+     *"liếc mắt 1 cái là nhìn ra các con số nhanh và đơn giản hơn"*).
+     Bản cũ in 12 `<span>` cùng cỡ cùng màu xếp thành một hàng dài — mọi con số ngang vai
+     nhau nên mắt phải đọc HẾT nhãn mới tìm ra thứ mình cần, mà nhãn thì bé hơn số.
+     Nay mỗi khối trả lời một câu: giá bao nhiêu · giao dịch bao nhiêu tiền · khối ngoại
+     làm gì · tự doanh làm gì · thoả thuận ở giá nào · công ty to cỡ nào. Trong khối thì
+     MỘT con số lớn là câu trả lời, phần còn lại là chú thích cho chính nó. */
+  const oNul='<span class="ptdn">—</span>';
+  const oo=(nhan,gt,phu,cl)=>'<div class="ptdc"><span class="ptdcl">'+nhan+'</span>'
+    +'<b class="ptdcv'+(cl?' '+cl:'')+'">'+gt+'</b>'
+    +(phu?'<span class="ptdcp">'+phu+'</span>':'')+'</div>';
+  const tien=(v)=>v==null?null:((v>0?'+':'')+ptTien(v));
+  $('#ptDoc').innerHTML=
+    '<div class="ptdh"><span class="ptdd">'+esc(d[k])+'</span>'
+      +(PT.ghim!=null
+        ? '<button class="ptdgh on" id="ptBoGhim">đã ghim — bấm để bỏ</button>'
+        : '<span class="ptdg">rê chuột lên đồ thị để xem phiên khác · <b>bấm để ghim</b></span>')
+    +'</div>'
+    +'<div class="ptdw">'
+    +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'giá TB '+num(vw[k]),
+        pcs[k]==null?'':cls(pcs[k]))
+    +oo('Giá trị khớp lệnh', ptTien(mval[k]), num(mv[k])+' cp')
+    +oo('Khối ngoại ròng', fnRong[k]!=null?tien(fnRong[k]):oNul,
+        fnM[k]!=null?('mua <b class="up">'+ptTien(fnM[k])+'</b> · bán <b class="dn">'
+          +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')):'',
+        fnRong[k]!=null?cls(fnRong[k]):'')
+    +oo('Tự doanh ròng', tdRong[k]!=null?tien(tdRong[k]):oNul,
+        tdRong[k]==null?'nguồn không có tự doanh ở mã này':'tiền của chính công ty chứng khoán',
+        tdRong[k]!=null?cls(tdRong[k]):'')
+    +oo('Giá thoả thuận', ptt[k]!=null?num(ptt[k]):oNul,
+        ptt[k]!=null?('<b class="'+cls(ptt[k]/c[k]-1)+'">'+((ptt[k]/c[k]-1)*100).toFixed(1)
+          +'%</b> so giá sàn · '+num(pv[k])+' cp'):'phiên này không có thoả thuận')
+    +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul, sh[k]?num(sh[k])+' cp lưu hành':'')
+    +'</div>';
+  const bg=$('#ptBoGhim');
+  if(bg) bg.onclick=()=>{ PT.ghim=null; ptVeMa(); };
   ptBindMa();
 }
 /* `to=1` -> đồ thị CHIẾM CẢ CHIỀU NGANG và cao hơn. Bản trước cho cả 11 đồ thị cùng một

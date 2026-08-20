@@ -1395,6 +1395,36 @@ Bốn luật, phá cái nào cũng ra số trông hợp lý mà sai:
 > giữa chuỗi, cộng bừa bốn nhãn có sẵn là gộp Q1/24 với Q4/22 rồi gọi đó là bốn quý gần
 > nhất. Phủ 1.181 mã.
 
+### TRANG MỘT MÃ — GHIM PHIÊN, VÀ BẢNG ĐỌC SỐ CÓ THỨ BẬC
+
+**GHIM (22/08/2026).** `ptVe1` gọi `cfg.chon(i, true)` ở `click` và `cfg.chon(i)` ở
+`mousemove`. Bản cũ khai `const chon=(i)=>{ if(i===PT.maI) return; … }` — **nhận tham số
+`bam` rồi không dùng tới**, mà lượt `mousemove` đã dời mốc tới đúng cột đó trước rồi, nên
+tới lúc `click` chạy thì `i===PT.maI` và hàm thoát ngay dòng đầu. Nút bấm có tồn tại
+nhưng **không bao giờ làm gì**, và mốc thì luôn chạy theo chuột: nhấc tay ra là mất phiên
+vừa xem. User bắt đúng chỗ này.
+
+Nay `PT.ghim` giữ chỉ số đang ghim: bấm = ghim/bỏ ghim, đã ghim thì `mousemove` thoát
+ngay. Mốc vẽ **nét đứt khi đang rê, nét liền + tam giác khi đã ghim** — không phân biệt
+được hai trạng thái thì bấm xong không biết mình đã ghim hay chưa, mà đó đúng là câu hỏi
+duy nhất lúc đó. Đổi mã thì `ghim=null`.
+
+> Ghim còn giúp phần hiệu năng: mỗi lần `chon` đổi cột là `ptVeMa()` dựng lại toàn bộ
+> HTML và vẽ lại 11 canvas. Chưa ghim thì việc đó chạy mỗi lần chuột qua một cột; ghim
+> rồi thì thôi hẳn.
+
+**BẢNG ĐỌC SỐ = SÁU KHỐI, KHÔNG PHẢI 12 MẨU NGANG VAI.** Bản cũ in 12 `<span>` cùng cỡ
+cùng màu xếp một hàng dài, nên mắt phải đọc HẾT nhãn mới tìm ra thứ cần — mà nhãn lại bé
+hơn số, đúng ngược. Nay mỗi khối trả lời MỘT câu (giá · tiền · khối ngoại · tự doanh ·
+thoả thuận · vốn hoá), trong khối có một con số lớn là câu trả lời và một dòng chú thích
+cho chính nó. Lưới 2 cột ở khổ hẹp → 3 → 6.
+
+> **LƯỚI Ô ĐẦU TRANG PHẢI CHIA CỨNG, ĐỪNG `auto-fit`.** Hàng ô toàn thị trường có 6 đơn
+> vị (ô chỉ số span 2), hàng ô một mã có 7. `repeat(auto-fit,minmax(180px,1fr))` ở bề
+> ngang 1.364px tính ra 186px/cột nên nó chọn 6 — đơn vị thứ 7 rơi xuống hàng dưới đứng
+> một mình, trông như một khối riêng chứ không phải phần đuôi của hàng. Hai lớp `.ptg7`
+> và `.ptg7m` chia cứng theo ba mốc bề ngang.
+
 ### QUÉT BẤT THƯỜNG + BỘ LỌC TỰ CHỌN
 
 `quet_la.py` ghi **thẳng vào file phiên** (`la` = kết quả quét, `dt`/`dtf` = lát cắt

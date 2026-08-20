@@ -440,6 +440,10 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptg7{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:820px){.ptg7{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(min-width:1120px){.ptg7{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* Hàng ô của TRANG MỘT MÃ có 7 ô (không có ô nào span 2) — chia cứng cùng lý do. */
+.ptg7m{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:820px){.ptg7m{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1180px){.ptg7m{grid-template-columns:repeat(7,minmax(0,1fr))}}
 .ptbox2{grid-column:span 2;justify-content:center}
 .ptbox>b em{font-style:normal;font-size:11px;font-weight:700;color:var(--faint);margin-left:8px}
 .ptcsm{display:flex;gap:16px;align-items:center;min-width:0}
@@ -629,16 +633,35 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkB{background:#d97706;height:3px;border-radius:2px}
 .ptleg i.pkC{background:#16a34a}
 .ptleg i.pkD{background:#dc2626}
-/* THANH ĐỌC SỐ của phiên đang chọn — dính lên đầu khi cuộn, vì lưới 9 đồ thị dài hơn một
-   màn: rê chuột ở đồ thị cuối mà thanh số nằm trên cùng thì không thấy nó đổi. */
-.ptdoc{position:sticky;top:0;z-index:4;display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;
-  background:var(--card);border:1px solid var(--line);border-radius:12px;
-  padding:9px 12px;margin:0 0 12px;font-variant-numeric:tabular-nums}
-.ptdd{font-size:13px;font-weight:800}
-.ptdo{display:flex;gap:5px;align-items:baseline;white-space:nowrap}
-.ptdo>i{font-style:normal;font-size:10.5px;color:var(--faint)}
-.ptdo>b{font-size:12.5px;font-weight:700}
-.ptdg{margin-left:auto;font-size:10.5px;color:var(--faint)}
+/* THANH ĐỌC SỐ của phiên đang chọn — dính lên đầu khi cuộn, vì lưới 11 đồ thị dài hơn
+   một màn: rê chuột ở đồ thị cuối mà thanh số nằm trên cùng thì không thấy nó đổi.
+   SÁU KHỐI CÓ THỨ BẬC, không phải 12 mẩu ngang vai (user chốt 22/08/2026). Mỗi khối:
+   nhãn nhỏ mờ · MỘT con số lớn là câu trả lời · một dòng chú thích cho chính con số đó.
+   Bản cũ để 12 mẩu cùng cỡ cùng màu xếp một hàng dài nên mắt phải đọc hết nhãn mới tìm
+   ra thứ cần, mà nhãn lại bé hơn số — đúng ngược. */
+.ptdoc{position:sticky;top:0;z-index:4;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:10px 13px 11px;margin:0 0 12px;font-variant-numeric:tabular-nums}
+.ptdh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:9px;
+  padding-bottom:8px;border-bottom:1px solid var(--line)}
+.ptdd{font-size:14px;font-weight:800}
+.ptdg{font-size:11px;color:var(--faint);margin-left:auto}
+.ptdg b{color:var(--txt);font-weight:700}
+/* Nút bỏ ghim phải TRÔNG NHƯ NÚT: đã ghim là một trạng thái người dùng tự bật, phải có
+   đường tắt đi ra ngay cạnh, đừng bắt đoán là bấm lại lên đồ thị. */
+.ptdgh{margin-left:auto;background:var(--rose);color:#fff;border:0;border-radius:20px;
+  padding:4px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}
+.ptdgh:hover{opacity:.88}
+.ptdw{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 18px}
+@media(min-width:700px){.ptdw{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1080px){.ptdw{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.ptdc{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ptdcl{font-size:10.5px;font-weight:700;color:var(--faint);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.ptdcv{font-size:17px;font-weight:800;line-height:1.15;white-space:nowrap}
+.ptdcp{font-size:10.5px;color:var(--faint);line-height:1.45}
+.ptdcp b{font-weight:700;color:var(--txt)}
+.ptdcp b.up{color:var(--green)}.ptdcp b.dn{color:var(--red)}.ptdcp b.fl{color:var(--yellow)}
+.ptdn{color:var(--faint);font-weight:600}
 .ptvg1 i{color:var(--faint);font-size:11.5px}
 /* Khổ hẹp: vùng giá và dòng tiền XẾP DỌC — hai cột trong 375px thì cột nào cũng bẹp */
 @media(max-width:760px){
@@ -1348,7 +1371,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822c"></script>
+<script defer src="assets/mobi.js?v=20260822e"></script>
 </head>
 <body>
 
@@ -1405,6 +1428,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822c"></script>
+<script src="assets/congcu.js?v=20260822e"></script>
 </body>
 </html>
