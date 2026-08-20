@@ -1528,6 +1528,36 @@ phiên**, cả trang phân tích trắng bảng và user báo *"sao mất hết 
 > `build_phantich` ghi `n` = số mã trong bảng — **cùng một khoá, hai nghĩa**, lượt nào
 > chạy sau thì thắng. Nay vùng giá dùng `nVG`.
 
+### TRANG MỘT MÃ PHẢI ĐỌC TRƯỜNG SÂU, KHÔNG ĐỌC TRƯỜNG VIETSTOCK
+
+Kho có HAI bộ trường cho khối ngoại và tự doanh, cùng nói một chuyện nhưng khác định
+nghĩa và khác độ sâu:
+
+| | trường | định nghĩa | độ sâu |
+|---|---|---|---|
+| Vietstock | `fnMuaGT` + `fnMuaTTGT` | khớp lệnh **tách** thoả thuận | **249 phiên** |
+| VNDirect | `fnMuaTG` | **tổng** (gồm thoả thuận) | **1.000 phiên** |
+
+`ptVeMa` từng lấy bộ Vietstock, nên mọi đồ thị khối ngoại và tự doanh của trang mã **đứt
+ở tháng 8/2025** dù kho có đủ tới 2022 — user báo đúng chỗ này 22/08/2026. Nay lấy bộ
+**TỔNG** cho đồ thị.
+
+> **CHỌN MỘT ĐỊNH NGHĨA, ĐỪNG GHÉP HAI BỘ.** Ghép (`fnMuaTG ?? fnMuaGT` theo từng ô) thì
+> đường bị **gãy định nghĩa đúng giữa đồ thị** — trước mốc là tổng, sau mốc là khớp lệnh —
+> mà nhìn không ra, còn tệ hơn thiếu dữ liệu. Bản tách vẫn còn nguyên trong kho và vẫn
+> hiện ở **thanh đọc số** cho phiên nào có, kèm chữ "khớp lệnh" / "tổng" để phân biệt.
+
+> **MẪU SỐ PHẢI KHỚP TỬ SỐ.** Ô "% giao dịch phiên là của khối ngoại" lấy tử là TỔNG thì
+> mẫu phải là TỔNG giao dịch (`mval + pval`), không phải riêng `mval` — chia lệch mẫu là
+> thổi tỉ lệ lên đúng bằng phần thoả thuận, mà thoả thuận chiếm **15,1%** giá trị khối
+> ngoại toàn kho.
+
+> **CÒN THIẾU: VỐN HOÁ Ở PHIÊN CŨ.** `sh` (số cổ phiếu) chỉ có từ Vietstock nên dừng ở 249
+> phiên; ô Vốn hoá của phiên cũ hiện `—`. VNDirect **có** nguồn cho việc này —
+> `/v4/ratios` trả `LISTED_SHARES` `OUTSTANDING_SHARES` `TOTAL_SHARES` `MARKETCAP` kèm
+> `FREEFLOAT` và `FOREIGN_OWNERSHIP` theo `reportDate` — nhưng chưa cào, vì đó là chuỗi
+> theo KỲ BÁO CÁO chứ không theo phiên, phải gióng lại trục.
+
 ### VIETSTOCK CÓ Ô SAI ĐƠN VỊ ×1000 — `tools/va_donvi.py`, TRỌNG TÀI LÀ VNDIRECT
 
 User mở khung 300 phiên và thấy **"Tự doanh ròng −363.594 tỷ · chiếm 746,1%"** ở phiên

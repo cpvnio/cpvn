@@ -1620,9 +1620,26 @@ function ptVeMa(){
   const d=o.d.slice(i0), c=lay('c'), tc=lay('tc'), vwN=lay('vwap'),
         op=lay('o'), hi=lay('h'), lo=lay('l'),
         mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), pv=lay('pv'), sh=lay('sh'),
-        fnM=lay('fnMuaGT'), fnB=lay('fnBanGT'), fnMK=lay('fnMuaKL'), fnBK=lay('fnBanKL'),
+        fnKL=lay('fnMuaGT'), fnKB=lay('fnBanGT'), fnMK=lay('fnMuaKL'), fnBK=lay('fnBanKL'),
+        fnMTT=lay('fnMuaTTGT'), fnBTT=lay('fnBanTTGT'),
         fnSH=lay('fnSoHuu'), fnRO=lay('fnRoom'),
-        tdM=lay('tdMuaGT'), tdB=lay('tdBanGT');
+        tdKL=lay('tdMuaGT'), tdKB=lay('tdBanGT'),
+        fnMT=lay('fnMuaTG'), fnBT=lay('fnBanTG'),
+        tdMT=lay('tdMuaTG'), tdBT=lay('tdBanTG');
+  /* DÙNG TRƯỜNG **TỔNG** CỦA VNDIRECT CHO ĐỒ THỊ, KHÔNG DÙNG TRƯỜNG KHỚP LỆNH CỦA
+     VIETSTOCK. Hai trường cùng nói về khối ngoại nhưng khác định nghĩa và khác độ sâu:
+     Vietstock tách khớp lệnh/thoả thuận nhưng bị nguồn chặn ở **249 phiên**, VNDirect cho
+     tổng nhưng đủ **1.000 phiên**.
+     Bản trước lấy trường Vietstock nên mọi đồ thị khối ngoại và tự doanh của trang mã
+     đứt ở tháng 8/2025, dù kho có đủ tới 2022 — user báo đúng chỗ này 22/08/2026.
+     CHỌN TỔNG chứ không ghép hai trường lại: ghép là đường bị GÃY ĐỊNH NGHĨA đúng giữa
+     đồ thị (trước mốc là tổng, sau mốc là khớp lệnh) mà nhìn không ra, còn tệ hơn thiếu.
+     Phần tách khớp lệnh/thoả thuận vẫn còn nguyên trong kho và vẫn hiện ở thanh đọc số
+     cho phiên nào có. */
+  const fnM=fnMT.map((x,i)=>x!=null?x:fnKL[i]);
+  const fnB=fnBT.map((x,i)=>x!=null?x:fnKB[i]);
+  const tdM=tdMT.map((x,i)=>x!=null?x:tdKL[i]);
+  const tdB=tdBT.map((x,i)=>x!=null?x:tdKB[i]);
   /* Giá bình quân của RIÊNG thoả thuận. Để `null` khi phiên không có thoả thuận — vẽ 0 thì
      đường tụt thẳng xuống đáy, đọc ra như giá sập trong khi thực ra hôm đó không có lệnh nào. */
   const ptt=pval.map((x,i)=>(x&&pv[i])?(x/pv[i]):null);
@@ -1640,8 +1657,13 @@ function ptVeMa(){
   const tdRong=tdM.map((x,i)=>(x==null&&tdB[i]==null)?null:((x||0)-(tdB[i]||0)));
   /* % giá trị phiên là của khối ngoại — tính trên (mua+bán)/2 so với giá trị khớp lệnh,
      vì một cổ phiếu khối ngoại mua từ khối ngoại khác thì đếm cả hai vế là đếm hai lần. */
-  const fnPc=mval.map((x,i)=>(x&&(fnM[i]!=null||fnB[i]!=null))
-    ?(((fnM[i]||0)+(fnB[i]||0))/2/x*100):null);
+  /* MẪU SỐ PHẢI KHỚP TỬ SỐ. Tử là TỔNG khối ngoại (gồm thoả thuận) nên mẫu phải là TỔNG
+     giao dịch, không phải riêng khớp lệnh — chia lệch mẫu là thổi tỉ lệ lên đúng bằng
+     phần thoả thuận, mà thoả thuận chiếm 15,1% giá trị khối ngoại toàn kho. */
+  const fnPc=mval.map((x,i)=>{
+    const tg=(x||0)+(pval[i]||0);
+    return (tg&&(fnM[i]!=null||fnB[i]!=null))?(((fnM[i]||0)+(fnB[i]||0))/2/tg*100):null;
+  });
   if(PT.maI==null||PT.maI>m) PT.maI=m;
   const k=PT.maI;
   /* `doi` `tbGT` `tongTT` `tongKL` `fnRongTong` `tdRongTong` ĐÃ XOÁ 22/08/2026 cùng
@@ -1695,11 +1717,12 @@ function ptVeMa(){
            +' &nbsp;·&nbsp; <i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)'
            +' &nbsp;—&nbsp; hai đường đọc ở <b>trục phải</b>', 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
-           '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên')
+           '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
+           +' <b>tổng</b> (gồm thoả thuận)')
       +ptO('Khối ngoại ròng', 'mc4', 'mua trừ bán — cột xanh là mua ròng, đỏ là bán ròng')
       +ptO('Tự doanh ròng', 'mcT', 'tiền của chính công ty chứng khoán — nhóm khác hẳn khối ngoại')
-      +ptO('% giá trị phiên là của khối ngoại', 'mc5',
-           '(mua + bán) ÷ 2 ÷ giá trị khớp lệnh — đếm cả hai vế là đếm hai lần')
+      +ptO('% giao dịch phiên là của khối ngoại', 'mc5',
+           '(mua + bán) ÷ 2 ÷ <b>tổng</b> giao dịch — đếm cả hai vế là đếm hai lần')
       +ptO('% thay đổi giá mỗi phiên', 'mc6', 'so với giá tham chiếu của chính phiên đó')
       +ptO('Giá thoả thuận so với giá sàn', 'mcP',
            '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkP"></i> giá bình quân thoả thuận'
@@ -1791,10 +1814,21 @@ function ptVeMa(){
         (op[k]?('mở <b>'+num(op[k])+'</b>'+(tc[k]&&Math.abs(op[k]/tc[k]-1)>=0.0695
             ?' <b class="'+cls(op[k]-tc[k])+'">'+(op[k]>tc[k]?'kịch trần':'kịch sàn')+'</b>':'')):'')
           +(hi[k]?' · cao <b>'+num(hi[k])+'</b>':'')+(lo[k]?' · thấp <b>'+num(lo[k])+'</b>':''))
+    /* PHIÊN NÀO CÓ BẢN TÁCH (Vietstock, 249 phiên gần nhất) thì in bản tách vì nó nói
+       được nhiều hơn — khớp lệnh riêng, thoả thuận riêng. Phiên xa hơn chỉ có TỔNG của
+       VNDirect thì in tổng và NÓI RA LÀ TỔNG, đừng để người đọc tưởng đó là khớp lệnh. */
     +oo('Khối ngoại ròng', fnRong[k]!=null?tien(fnRong[k]):oNul,
-        fnM[k]!=null?('mua <b class="up">'+ptTien(fnM[k])+'</b> · bán <b class="dn">'
-          +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')
-          +(fnSH[k]!=null?' · sở hữu <b>'+fnSH[k].toFixed(1)+'%</b>':'')):'',
+        fnKL[k]!=null
+          ?('khớp lệnh mua <b class="up">'+ptTien(fnKL[k])+'</b> · bán <b class="dn">'
+            +ptTien(fnKB[k])+'</b>'
+            +((fnMTT[k]||fnBTT[k])?(' · thoả thuận <b>'+ptTien((fnMTT[k]||0)+(fnBTT[k]||0))+'</b>'):'')
+            +(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')
+            +(fnSH[k]!=null?' · sở hữu <b>'+fnSH[k].toFixed(1)+'%</b>':''))
+          :(fnM[k]!=null
+            ?('<b>tổng</b> mua <b class="up">'+ptTien(fnM[k])+'</b> · bán <b class="dn">'
+              +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')
+              +' <i>(gồm thoả thuận)</i>')
+            :''),
         fnRong[k]!=null?cls(fnRong[k]):'')
     /* Ô này từng in một câu giải thích tĩnh ("tiền của chính công ty chứng khoán") —
        chữ đó không đổi theo phiên nên chiếm chỗ mà không nói gì. Nay in mua/bán của
@@ -1803,7 +1837,8 @@ function ptVeMa(){
        chứ không phải đặt cược — không nói ra thì con số này đọc sai bản chất. */
     +oo('Tự doanh ròng', tdRong[k]!=null?tien(tdRong[k]):oNul,
         tdRong[k]==null?'nguồn không có tự doanh ở mã này'
-          :('mua <b class="up">'+ptTien(tdM[k]||0)+'</b> · bán <b class="dn">'
+          :((tdKL[k]!=null?'khớp lệnh ':'<b>tổng</b> ')
+            +'mua <b class="up">'+ptTien(tdM[k]||0)+'</b> · bán <b class="dn">'
             +ptTien(tdB[k]||0)+'</b>'+(cqN?' · <b>'+cqN+' chứng quyền</b> đang lưu hành':'')),
         tdRong[k]!=null?cls(tdRong[k]):'')
     /* THOẢ THUẬN PHẢI CÓ GIÁ TRỊ BẰNG TIỀN (user chốt 22/08/2026). "200.000 cp" không
