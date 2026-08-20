@@ -1528,6 +1528,34 @@ phiên**, cả trang phân tích trắng bảng và user báo *"sao mất hết 
 > `build_phantich` ghi `n` = số mã trong bảng — **cùng một khoá, hai nghĩa**, lượt nào
 > chạy sau thì thắng. Nay vùng giá dùng `nVG`.
 
+### VIETSTOCK CÓ Ô SAI ĐƠN VỊ ×1000 — `tools/va_donvi.py`, TRỌNG TÀI LÀ VNDIRECT
+
+User mở khung 300 phiên và thấy **"Tự doanh ròng −363.594 tỷ · chiếm 746,1%"** ở phiên
+16/12/2025, trong khi cả thị trường phiên đó chỉ khớp 27.803 tỷ. Truy ra **một ô**:
+
+```
+MCH 2025-12-16   tdBanGT (Vietstock)  364.000.000.000.000   <- 364 NGHÌN tỷ
+                 tdBanTG (VNDirect)       364.000.000.000   <- 364 tỷ
+                 tdBanKL / tdBanTKL      2.000.000 cp   (HAI NGUỒN KHỚP NHAU)
+```
+
+2 triệu cp × 213.800đ = 427 tỷ → 364 tỷ là số thật. **Chỉ trường GIÁ TRỊ sai, khối lượng
+của cả hai nguồn khớp nhau** — nên vá đúng trường giá trị, đừng đụng khối lượng.
+
+Toàn kho có **98 ô** như vậy trên 8 mã (BCG, BVB, MCH…): 47 ô gấp 1000 lần, 51 ô nhỏ đi
+1000 lần. Tỉ lệ nhỏ, nhưng **một ô đủ làm hỏng cả một phiên trong kho gộp** vì nó cộng
+thẳng vào tổng toàn thị trường.
+
+> **VÌ SAO SỬA ĐƯỢC MÀ KHÔNG PHẢI ĐOÁN:** hai nguồn độc lập, và đẳng thức
+> `Vietstock(khớp lệnh + thoả thuận) == VNDirect(tổng)` đúng ở **98,8%** ô khối ngoại,
+> **99,5%** ô tự doanh. Tỉ lệ rơi đúng 1000,0 thì không còn cách giải thích nào khác.
+> Chỉ động vào ô có tỉ lệ TRÒN 1000; ô lệch vì lô lẻ để nguyên.
+
+> **BÀI HỌC RỘNG HƠN:** kho một nguồn thì loại lỗi này **không thể phát hiện** — số vẫn
+> hợp lệ, vẫn parse được, chỉ sai. Có nguồn thứ hai mới thành một phép kiểm chạy được
+> trên toàn kho mà không tốn lượt gọi nào. Đây là lý do thật sự đáng giữ hai nguồn, chứ
+> không phải để chạy nhanh hơn.
+
 ### GIÁ KHỚP LỆNH TB TỰ TÍNH — VÀ VÙNG GIÁ PHẢI THEO PHIÊN ĐANG GHIM
 
 **`vw = mval / mv`, KHÔNG lấy `AvrPrice` của nguồn.** Hai số khớp nhau ở phần lớn kho —

@@ -754,7 +754,7 @@ const PT_HIEN={
 };
 
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
-          n:100, ma:null, maD:null, nMa:63, maI:null, ghim:null, giai:{},
+          n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -929,8 +929,9 @@ function ptTop(){
     +'<p class="ptleg"><i class="pk0"></i> phiên kho chưa cào đủ mã'
       +' &nbsp; <i class="pk3"></i> VN-Index (trục phải)'
       +(soChia<t.d.length
-        ?(' &nbsp;·&nbsp; cột chia màu theo khối ở <b>'+num(soChia)+' phiên gần nhất</b>;'
-          +' xa hơn nguồn chỉ cho TỔNG (gồm thoả thuận) nên để một màu')
+        ?(' &nbsp;·&nbsp; <b>'+num(soChia)+' phiên gần nhất</b> chia theo giá trị khớp lệnh;'
+          +' xa hơn nguồn chỉ cho TỔNG nên chia theo tổng giao dịch — cùng ý nghĩa'
+          +' "bao nhiêu phần phiên là của khối đó"')
         :'')
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem chi tiết phiên đó</b></p>'
     +ptGiai('cot','Vì sao màu trên cột lại chia như vậy',
@@ -1039,15 +1040,29 @@ function ptVeChart(){
        giá trị phiên. Chia đôi thì ba phần cộng lại bằng ĐÚNG giá trị khớp lệnh: khối ngoại
        bán cho nhà đầu tư trong nước thì nửa giá trị ghi cho khối ngoại, nửa ghi cho trong
        nước — đúng như thực tế mỗi bên đóng một vai. */
-    /* CHIA MÀU CHỈ KHI CÓ SỐ KHỚP LỆNH CỦA TỪNG KHỐI. Tầng đó lấy từ Vietstock và bị
-       nguồn chặn ở 1 năm, trong khi cột thì sâu 1.000 phiên (VNDirect). Phiên cũ hơn vẫn
-       có TỔNG của khối ngoại (`fnMuaT`) nhưng tổng gồm cả thoả thuận — mà thoả thuận
-       chiếm **15,1%** giá trị khối ngoại toàn kho, nên đem tổng đội lốt khớp lệnh là thổi
-       mức tham gia lên gần một phần năm. Thà vẽ cột một màu và nói ra. */
+    /* CHIA MÀU CHO CẢ 1.000 PHIÊN — hai định nghĩa, nhưng CÙNG MỘT CÂU HỎI.
+       Tầng khớp lệnh tách riêng của Vietstock bị nguồn chặn ở 1 năm; xa hơn chỉ có TỔNG
+       của VNDirect (gồm thoả thuận). Bản trước vì thế bỏ trắng phần cũ — và đó là quyết
+       định SAI: user mở ra tưởng kho không có dữ liệu, trong khi kho có đủ 1.000 phiên.
+       Không hiện gì còn tệ hơn hiện một con số có nhãn.
+       CÁCH LÀM CHO KHÔNG THỔI SỐ: tính TỈ LỆ THAM GIA rồi mới nhân vào chiều cao cột,
+       và mỗi định nghĩa chia cho đúng mẫu số của nó —
+         · có tách  -> (mua+bán)/2 ÷ giá trị KHỚP LỆNH
+         · chỉ tổng -> (mua+bán)/2 ÷ TỔNG giao dịch (khớp lệnh + thoả thuận)
+       Cùng trả lời "bao nhiêu phần giao dịch phiên này là của khối đó", nên đọc liền
+       mạch qua cả khung; và vì chia đúng mẫu, không có chuyện đội lên 15% như khi lấy
+       thẳng tổng gán vào mẫu khớp lệnh. */
     const mval=t.mval[i]||0;
     const coChia=!!(t.nFn&&t.nFn[i]);
-    const fn=coChia?((t.fnMua?t.fnMua[i]||0:0)+(t.fnBan?t.fnBan[i]||0:0))/2:0;
-    const td=coChia?((t.tdMua?t.tdMua[i]||0:0)+(t.tdBan?t.tdBan[i]||0:0))/2:0;
+    const tongGD=mval+(t.pval?t.pval[i]||0:0);
+    let fn=0, td=0;
+    if(coChia){
+      fn=((t.fnMua?t.fnMua[i]||0:0)+(t.fnBan?t.fnBan[i]||0:0))/2;
+      td=((t.tdMua?t.tdMua[i]||0:0)+(t.tdBan?t.tdBan[i]||0:0))/2;
+    }else if(t.nFnT&&t.nFnT[i]&&tongGD>0){
+      fn=((t.fnMuaT[i]||0)+(t.fnBanT[i]||0))/2/tongGD*mval;
+      td=((t.tdMuaT?t.tdMuaT[i]||0:0)+(t.tdBanT?t.tdBanT[i]||0:0))/2/tongGD*mval;
+    }
     const con=Math.max(0,mval-fn-td);      // kẹp 0: nhiễu nguồn không được đẻ cột âm
     let day=0;
     for(const [v,mau] of [[con,cR],[td,cT],[fn,cN]]){
@@ -1585,9 +1600,16 @@ async function ptMoMa(sym){
 function ptVeMa(){
   const w=$('#ptTab'); if(!w||!PT.ma) return;
   const o=PT.maD;
+  /* Ô CHỌN KHUNG RIÊNG CHO TRANG MÃ — user chốt 22/08/2026. Kho nay sâu 1.000 phiên mà
+     trang mã ghim cứng 63 thì phần lớn dữ liệu vừa cào về không có đường nào xem.
+     Dùng chung bộ số với đồ thị toàn thị trường để hai chỗ đọc liền mạch. */
   const dau='<div class="ptmahead"><button id="ptQuay" class="ptnav" title="Quay lại bảng phiên">'+
     ptIc('ve')+'</button>'+
-    '<h2>'+esc(PT.ma)+'</h2><span class="ptbarn">phân tích '+PT.nMa+' phiên gần nhất</span>'+
+    '<h2>'+esc(PT.ma)+'</h2>'+
+    '<span class="ptseg" id="ptKhungMa">'
+      +[100,300,600,1000].map(x=>'<button data-n="'+x+'"'+(PT.nMa===x?' class="on"':'')+'>'
+          +x+'</button>').join('')+'</span>'+
+    '<span class="ptbarn">phiên gần nhất</span>'+
     '<a class="ptlink" href="/cophieu/'+esc(PT.ma)+'">mở trang cổ phiếu →</a></div>';
   if(!o){ w.innerHTML=dau+'<div class="panel"><div class="pb"><div class="empty">Đang nạp…</div></div></div>'; ptBindMa(); return; }
   if(o.err||!o.d||!o.d.length){
@@ -1808,6 +1830,13 @@ function ptO(ten,id,ghi,to){
 }
 function ptBindMa(){
   const b=$('#ptQuay'); if(b) b.onclick=()=>{ PT.ma=null; PT.maD=null; ptVe(); };
+  const k=$('#ptKhungMa');
+  if(k) k.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
+    PT.nMa=+n.dataset.n;
+    /* ĐỔI KHUNG LÀ MỌI CHỈ SỐ DỊCH — mốc đang ghim trỏ vào phiên khác hẳn. Thả ghim và
+       đưa mốc về phiên cuối, đừng giữ một chỉ số cũ rồi để nó trỏ bừa. */
+    PT.maI=null; PT.ghim=null;
+    ptVeMa(); };
 }
 
 /* ---- BẢNG MÃ CỦA PHIÊN ĐANG CHỌN ---- */
