@@ -845,6 +845,7 @@ function ptTop(){
      xuống"; giá trị giao dịch là câu thứ hai. Bản trước không có chỉ số nên nhìn vào
      không biết phiên đó là phiên tăng hay giảm — user chốt 20/08/2026. */
   const vn=cs.VNINDEX, pc=vn&&vn.pc[i];
+  const soChia=(t.nFn||[]).filter(x=>x).length;
   const phu=['VN30','HNX','UPCOM'].map(k=>{
     const x=cs[k]; if(!x||x.c[i]==null) return '';
     const p=x.pc[i];
@@ -927,6 +928,10 @@ function ptTop(){
        nay đã nhét vào chính hai ô đó. */
     +'<p class="ptleg"><i class="pk0"></i> phiên kho chưa cào đủ mã'
       +' &nbsp; <i class="pk3"></i> VN-Index (trục phải)'
+      +(soChia<t.d.length
+        ?(' &nbsp;·&nbsp; cột chia màu theo khối ở <b>'+num(soChia)+' phiên gần nhất</b>;'
+          +' xa hơn nguồn chỉ cho TỔNG (gồm thoả thuận) nên để một màu')
+        :'')
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem chi tiết phiên đó</b></p>'
     +ptGiai('cot','Vì sao màu trên cột lại chia như vậy',
        'Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải mua cộng bán: mỗi '
@@ -1034,9 +1039,15 @@ function ptVeChart(){
        giá trị phiên. Chia đôi thì ba phần cộng lại bằng ĐÚNG giá trị khớp lệnh: khối ngoại
        bán cho nhà đầu tư trong nước thì nửa giá trị ghi cho khối ngoại, nửa ghi cho trong
        nước — đúng như thực tế mỗi bên đóng một vai. */
+    /* CHIA MÀU CHỈ KHI CÓ SỐ KHỚP LỆNH CỦA TỪNG KHỐI. Tầng đó lấy từ Vietstock và bị
+       nguồn chặn ở 1 năm, trong khi cột thì sâu 1.000 phiên (VNDirect). Phiên cũ hơn vẫn
+       có TỔNG của khối ngoại (`fnMuaT`) nhưng tổng gồm cả thoả thuận — mà thoả thuận
+       chiếm **15,1%** giá trị khối ngoại toàn kho, nên đem tổng đội lốt khớp lệnh là thổi
+       mức tham gia lên gần một phần năm. Thà vẽ cột một màu và nói ra. */
     const mval=t.mval[i]||0;
-    const fn=((t.fnMua?t.fnMua[i]||0:0)+(t.fnBan?t.fnBan[i]||0:0))/2;
-    const td=((t.tdMua?t.tdMua[i]||0:0)+(t.tdBan?t.tdBan[i]||0:0))/2;
+    const coChia=!!(t.nFn&&t.nFn[i]);
+    const fn=coChia?((t.fnMua?t.fnMua[i]||0:0)+(t.fnBan?t.fnBan[i]||0:0))/2:0;
+    const td=coChia?((t.tdMua?t.tdMua[i]||0:0)+(t.tdBan?t.tdBan[i]||0:0))/2:0;
     const con=Math.max(0,mval-fn-td);      // kẹp 0: nhiễu nguồn không được đẻ cột âm
     let day=0;
     for(const [v,mau] of [[con,cR],[td,cT],[fn,cN]]){
@@ -1107,10 +1118,14 @@ function ptVeChart(){
       +'<div class="tpr tp2"><span>khớp lệnh</span><i>'+num(t.mval[k])+' tỷ</i></div>'
       +'<div class="tpr tp2"><span>thoả thuận</span><i>'+num(t.pval[k])+' tỷ</i></div>'
       +'<div class="tpr"><span>Khối lượng khớp</span><i>'+num(t.mv[k])+' nghìn cp</i></div>'
-      +((t.fnMua&&t.fnMua[k]!=null)
-        ?'<div class="tpr"><span>Khối ngoại ròng</span><i class="'+cls(t.fnMua[k]-t.fnBan[k])+'">'+
+      +((t.nFn&&t.nFn[k])
+        ?'<div class="tpr"><span>Khối ngoại ròng <b>khớp lệnh</b></span><i class="'+cls(t.fnMua[k]-t.fnBan[k])+'">'+
           ((t.fnMua[k]-t.fnBan[k])>0?'+':'')+num(t.fnMua[k]-t.fnBan[k])+' tỷ</i></div>'+
-         '<div class="tpr tp2"><span>mua / bán</span><i>'+num(t.fnMua[k])+' / '+num(t.fnBan[k])+' tỷ</i></div>':'')
+         '<div class="tpr tp2"><span>mua / bán</span><i>'+num(t.fnMua[k])+' / '+num(t.fnBan[k])+' tỷ</i></div>'
+        :((t.nFnT&&t.nFnT[k])
+          ?'<div class="tpr"><span>Khối ngoại ròng <b>tổng</b></span><i class="'+cls(t.fnMuaT[k]-t.fnBanT[k])+'">'+
+            ((t.fnMuaT[k]-t.fnBanT[k])>0?'+':'')+num(t.fnMuaT[k]-t.fnBanT[k])+' tỷ</i></div>'+
+           '<div class="tpr tp2"><span>gồm cả thoả thuận</span><i>'+num(t.fnMuaT[k])+' / '+num(t.fnBanT[k])+' tỷ</i></div>':''))
       +((t.tdMua&&t.tdMua[k]!=null)
         ?'<div class="tpr"><span>Tự doanh ròng</span><i class="'+cls(t.tdMua[k]-t.tdBan[k])+'">'+
           ((t.tdMua[k]-t.tdBan[k])>0?'+':'')+num(t.tdMua[k]-t.tdBan[k])+' tỷ</i></div>':'')

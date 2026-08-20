@@ -1609,30 +1609,37 @@ nguồn chốt số ở hai thời điểm, hoặc doanh nghiệp đính chính)
 > cùng việc nhưng phải chạy trọn một lượt dựng `finq` (~1.525 mã sang VNDirect) — công
 > thừa khi `finq` đã dựng rồi, và là một lượt cào không cần thiết.
 
-### SỨC DỰ BÁO ĐO ĐƯỢC — để đừng ai phải đo lại
+### SỨC DỰ BÁO — ĐO LẠI TRÊN 999 PHIÊN (22/08/2026). BẢNG 99 PHIÊN CŨ ĐÃ SAI, ĐỪNG TRÍCH.
 
 Rank IC cắt ngang từng phiên, tín hiệu ngày t → lợi suất phiên t+1, lọc mã khớp ≥1 tỷ:
 
 | tín hiệu | rank IC | t | phiên |
 |---|---|---|---|
-| Biên độ ngày (H−L)/C | −0,066 | **−5,66** | 99 |
-| Vòng quay trên free float | −0,043 | −3,29 | 99 |
-| Vòng quay trên toàn bộ CP | −0,036 | −3,18 | 99 |
-| Khối ngoại ròng CHỈ khớp lệnh / GT | +0,031 | +2,50 | 59 |
-| Khối ngoại ròng (gồm thoả thuận) | +0,030 | +2,44 | 59 |
-| Tỉ trọng thoả thuận | +0,018 | +2,51 | 99 |
-| Tự doanh ròng / GT | −0,019 | −1,37 | 60 |
-| Đóng cửa so VWAP | −0,003 | −0,24 | 99 |
+| KL đặt mua / đặt bán (log) | +0,082 | **+12,24** | 248 |
+| Biên độ ngày (H−L)/C | −0,043 | **−8,66** | 999 |
+| % thay đổi hôm nay | +0,024 | **+4,98** | 999 |
+| Khối ngoại ròng khớp lệnh / GT | +0,021 | +2,75 | 248 |
+| Khối ngoại ròng TỔNG (kèm thoả thuận) | +0,021 | +2,72 | 248 |
+| Vòng quay trên free float | −0,015 | −1,29 | 299 |
+| Tự doanh ròng / GT | −0,011 | −1,26 | 242 |
+| Đóng cửa so VWAP | +0,005 | +1,11 | 999 |
+| Tỉ trọng thoả thuận | +0,001 | +0,29 | 999 |
 
-Ba điều đọc ra: **biên độ ngày là tín hiệu mạnh nhất kho này có**, trùng khớp với nghiên
-cứu chu kỳ 08/2026 độc lập ("biến động thấp" đứng đầu bảng chỉ báo hiệu quả); **tách
-thoả thuận ra làm khối ngoại mạnh lên**, đúng lý vì thoả thuận là giao dịch dàn xếp
-trước; **tự doanh ra dấu ÂM** — chưa đủ tin về thống kê nhưng có lời giải, phần lớn tự
-doanh mua trụ lớn là **phòng hộ chứng quyền và chênh lệch ETF**, hành động bắt buộc chứ
-không mang thông tin.
+> **HAI TÍN HIỆU TỪNG "CHẮC" ĐÃ BỐC HƠI KHI CÓ THÊM DỮ LIỆU.** Đo trên 99 phiên thì
+> *vòng quay free float* ra t = −3,29 và *tỉ trọng thoả thuận* ra t = +2,51; đo lại trên
+> 299 và 999 phiên thì còn **−1,29** và **+0,29**. Không phải kho sai — mẫu 99 phiên
+> đơn giản là quá ngắn, đúng cảnh báo đã ghi khi công bố bảng cũ. Đây là bài học đắt hơn
+> bất kỳ con số nào trong bảng: **đừng chốt nhân tố trên vài tháng dữ liệu.**
 
-> **99 PHIÊN LÀ QUÁ NGẮN ĐỂ KẾT LUẬN.** Bảng này chứng minh bộ máy đo chạy được, chưa
-> chứng minh nhân tố nào tồn tại. Đừng trích nó ra như bằng chứng về thị trường.
+> **MỘT LỖI ĐỊNH NGHĨA ĐÃ SỬA.** Bảng cũ có dòng *"khối ngoại ròng CHỈ KHỚP LỆNH t=+2,50,
+> nhỉnh hơn bản gộp +2,44"* — tính bằng `(mua − muaTT) − (bán − bánTT)`, tức **trừ thoả
+> thuận ra khỏi một số vốn không gồm nó**. `fnMuaGT` của Vietstock LÀ khớp lệnh rồi.
+> Nay so đúng: khớp lệnh +2,75 so với tổng +2,72 — **gần như bằng nhau**, tách hay không
+> tách không đổi được sức dự báo.
+
+> **`% thay đổi hôm nay` DƯƠNG nghĩa là ĐÀ chứ không phải ĐẢO CHIỀU** — mã tăng hôm nay
+> có xu hướng tăng tiếp phiên sau. Bảng 99 phiên cho t = +0,70 (vô nghĩa); 999 phiên cho
+> **+4,98**. Đổi hẳn kết luận.
 
 ### TỰ DOANH PHẦN LỚN LÀ PHÒNG HỘ CHỨNG QUYỀN — ĐỪNG ĐỌC NHƯ MỘT QUYẾT ĐỊNH
 

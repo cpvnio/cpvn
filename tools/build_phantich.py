@@ -44,7 +44,10 @@ RA = os.path.join(BASE, "data", "phantich.json")
 # `sec` = ngành, để trang dựng được khối "ngành hút tiền" mà khỏi tải universe.json.
 COT_BANG = ["ex", "sec", "ff", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "sh",
             "fnMuaGT", "fnBanGT", "fnMuaKL", "fnBanKL", "fnSoHuu", "fnRoom",
-            "tdMuaGT", "tdBanGT", "tdMuaKL", "tdBanKL"]
+            "tdMuaGT", "tdBanGT", "tdMuaKL", "tdBanKL",
+            # VNDirect: TỔNG (khớp lệnh + thoả thuận), sâu 1.000 phiên. Trường RIÊNG,
+            # không trộn với mấy cột trên — hai nguồn hai định nghĩa.
+            "fnMuaTG", "fnBanTG", "tdMuaTG", "tdBanTG"]
 # Ba cột KHÔNG nằm trong `data/giaodich` mà ghép từ chỗ khác — `ex`/`sec` từ universe,
 # `ff` từ hồ sơ doanh nghiệp. Tách ra một chỗ để đừng phải nhớ danh sách này ở ba nơi.
 COT_NGOAI = ("ex", "sec", "ff")
@@ -138,7 +141,9 @@ def main():
             t = tt.setdefault(ng, {"n": 0, "mval": 0.0, "pval": 0.0, "mv": 0, "pv": 0,
                                    "mcap": 0.0, "nMcap": 0, "mcapFF": 0.0, "nFF": 0,
                                    "fnMua": 0.0, "fnBan": 0.0, "nFn": 0,
-                                   "tdMua": 0.0, "tdBan": 0.0, "nTd": 0})
+                                   "tdMua": 0.0, "tdBan": 0.0, "nTd": 0,
+                                   "fnMuaT": 0.0, "fnBanT": 0.0, "nFnT": 0,
+                                   "tdMuaT": 0.0, "tdBanT": 0.0, "nTdT": 0})
             t["n"] += 1
             t["mval"] += mval or 0
             t["pval"] += pval or 0
@@ -161,6 +166,20 @@ def main():
                 t["tdMua"] += tm or 0
                 t["tdBan"] += tb2 or 0
                 t["nTd"] += 1
+            # ── TỔNG của VNDirect, đếm RIÊNG. Sâu 1.000 phiên trong khi hai khối trên chỉ
+            # 249 (trần 1 năm của Vietstock). KHÔNG được dùng thay cho nhau: thoả thuận
+            # chiếm **15,1%** giá trị khối ngoại toàn kho, lấy tổng đội lốt khớp lệnh là
+            # thổi mức tham gia lên gần một phần năm.
+            fmT, fbT = col["fnMuaTG"][i], col["fnBanTG"][i]
+            if fmT is not None or fbT is not None:
+                t["fnMuaT"] += fmT or 0
+                t["fnBanT"] += fbT or 0
+                t["nFnT"] += 1
+            tmT, tbT = col["tdMuaTG"][i], col["tdBanTG"][i]
+            if tmT is not None or tbT is not None:
+                t["tdMuaT"] += tmT or 0
+                t["tdBanT"] += tbT or 0
+                t["nTdT"] += 1
             sh = col["sh"][i]
             if sh and c:
                 t["mcap"] += c * sh
@@ -219,7 +238,8 @@ def main():
     # ── chuỗi toàn thị trường ──
     for d in ngays:
         t = tt[d]
-        for k in ("mval", "pval", "mcap", "mcapFF", "fnMua", "fnBan", "tdMua", "tdBan"):
+        for k in ("mval", "pval", "mcap", "mcapFF", "fnMua", "fnBan", "tdMua", "tdBan",
+                  "fnMuaT", "fnBanT", "tdMuaT", "tdBanT"):
             t[k] = round(t[k] / 1e9, 1)
         for k in ("mv", "pv"):
             t[k] = round(t[k] / 1e3)
@@ -243,7 +263,8 @@ def main():
                **{k: [tt[d][k] for d in ngays]
                   for k in ("n", "mval", "pval", "mv", "pv", "mcap", "nMcap",
                             "mcapFF", "nFF",
-                            "fnMua", "fnBan", "nFn", "tdMua", "tdBan", "nTd")}},
+                            "fnMua", "fnBan", "nFn", "tdMua", "tdBan", "nTd",
+                            "fnMuaT", "fnBanT", "nFnT", "tdMuaT", "tdBanT", "nTdT")}},
         "chiso": cs,
     }
     tmp = RA + ".tmp"

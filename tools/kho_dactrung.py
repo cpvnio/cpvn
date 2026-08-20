@@ -223,18 +223,26 @@ def dinh52(sym):
     import datetime
     UTC = datetime.timezone.utc
     t, c = o["t"], o["c"]
+    # ĐỈNH TRƯỢT BẰNG HÀNG ĐỢI GIẢM DẦN, đừng quét lại 252 ô mỗi bước. Vòng lồng cũ là
+    # O(n×252): kho nến 3.400 phiên × 1.529 mã ra ~1,3 TỈ phép so — chấp nhận được hồi kho
+    # còn 100 phiên, nhưng từ 22/08/2026 thì không. Hàng đợi cho O(n): giữ chỉ số theo giá
+    # giảm dần, đầu hàng luôn là đỉnh của cửa sổ hiện tại.
+    import collections
     ra, n = {}, len(t)
+    dq = collections.deque()
     for i in range(n):
-        if c[i] is None or c[i] <= 0:
-            continue
-        j0 = max(0, i - 251)
-        mx = 0
-        for j in range(j0, i + 1):
-            if c[j] and c[j] > mx:
-                mx = c[j]
-        if mx > 0:
-            ng = datetime.datetime.fromtimestamp(t[i], UTC).strftime("%Y-%m-%d")
-            ra[ng] = round((c[i] / mx - 1) * 100, 2)
+        j0 = i - 251
+        while dq and dq[0] < j0:
+            dq.popleft()
+        if c[i] and c[i] > 0:
+            while dq and c[dq[-1]] <= c[i]:
+                dq.pop()
+            dq.append(i)
+        if c[i] and c[i] > 0 and dq:
+            mx = c[dq[0]]
+            if mx > 0:
+                ng = datetime.datetime.fromtimestamp(t[i], UTC).strftime("%Y-%m-%d")
+                ra[ng] = round((c[i] / mx - 1) * 100, 2)
     return ra
 
 
