@@ -32,6 +32,7 @@ BA CƠ CHẾ
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 # Khoảng cách TỐI THIỂU giữa hai lượt gọi tới cùng một host, tính bằng giây.
@@ -130,6 +131,47 @@ def get(url, timeout=20, headers=None, doc=False):
                 raise                     # 400/403/404 -> thử lại cũng vô ích
         except Exception as e:
             loi_cuoi = e                  # timeout, đứt mạng -> thử lại
+        if i < len(LUI):
+            time.sleep(LUI[i])
+    raise loi_cuoi
+
+
+def post(url, data, timeout=25, headers=None):
+    """POST có nhịp — dùng cho các endpoint dữ liệu của Vietstock (chúng chỉ nhận POST).
+
+    `data` là dict, được mã hoá dạng form. Trả về text đã giải mã.
+    Dùng CHUNG bộ đếm nhịp với get(): trần là theo HOST, không theo phương thức — nếu tách
+    riêng thì hai đường cùng gọi một host sẽ nhân đôi tốc độ thật mà bảng trần vẫn báo đúng.
+    """
+    h = _host(url)
+    hd = {"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"}
+    if headers:
+        hd.update(headers)
+    body = urllib.parse.urlencode(data).encode()
+    loi_cuoi = None
+    for i in range(len(LUI) + 1):
+        _cho_den_luot(h)
+        try:
+            rq = urllib.request.Request(url, data=body, headers=hd)
+            with urllib.request.urlopen(rq, timeout=timeout) as r:
+                return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            loi_cuoi = e
+            if e.code == 429:
+                _cham_lai(h, "nguồn trả 429")
+                try:
+                    ra = float(e.headers.get("Retry-After") or 0)
+                except Exception:
+                    ra = 0
+                if ra > 0:
+                    time.sleep(min(ra, 60))
+                    continue
+            elif e.code in (500, 502, 503, 504):
+                pass
+            else:
+                raise
+        except Exception as e:
+            loi_cuoi = e
         if i < len(LUI):
             time.sleep(LUI[i])
     raise loi_cuoi
