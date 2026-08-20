@@ -815,9 +815,10 @@ async function ptVe(){
       +'<select id="ptNgay">'+opt+'</select>'
       +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">'+ptIc('phai')+'</button>'
       +'<span class="ptseg" id="ptKhung">'
-        +[60,100,200,300].map(x=>'<button data-n="'+x+'"'+(PT.n===x?' class="on"':'')+'>'
+        +[100,300,600,1000].map(x=>'<button data-n="'+x+'"'+(PT.n===x?' class="on"':'')+'>'
             +x+'</button>').join('')+'</span>'
-      +'<span class="ptbarn">'+co.length+' phiên có dữ liệu đầy đủ</span></div>'
+      +'<span class="ptbarn">'+co.length+' phiên có bảng mã</span>'
+      +'<span class="ptbaon" id="ptBaoN"></span></div>'
     +'<div id="ptTop"></div><div id="ptTab"></div>';
   ptTop();
   if(PT.ma){ ptVeMa(); } else { await ptBang(); }
@@ -1075,8 +1076,18 @@ function ptVeChart(){
   cv.style.cursor='pointer';
   cv.onclick=e=>{ const r=cv.getBoundingClientRect(), x=e.clientX-r.left;
     const c=ptCols.find(z=>x>=z.x0&&x<z.x1); if(!c) return;
-    /* chỉ nhảy tới phiên CÓ file ngày, bằng không bấm xong bảng trống mà không hiểu vì sao */
-    if(ptCoFile(o).indexOf(c.d)<0) return;
+    /* CHỈ NHẢY TỚI PHIÊN CÓ FILE NGÀY — và khi không có thì PHẢI NÓI RA. Từ khi khung
+       đồ thị lên tới 1.000 phiên mà kho file ngày chỉ dựng 320 phiên gần nhất, phần lớn
+       cột bên trái là bấm không ăn. Im lặng thì đọc ra như nút hỏng, và người ta sẽ bấm
+       lại mấy lần — đúng cái bẫy đã ghi ở hàng bảng mã ("bấm là phải có phản hồi"). */
+    if(ptCoFile(o).indexOf(c.d)<0){
+      const nb=$('#ptBaoN');
+      if(nb){ nb.textContent='Phiên '+c.d+' chưa có bảng mã — kho chỉ dựng bảng cho '
+        +ptCoFile(o).length+' phiên gần nhất. Đồ thị vẫn đủ dữ liệu.';
+        nb.style.display='block'; clearTimeout(PT._bn);
+        PT._bn=setTimeout(()=>{ nb.style.display='none'; },4000); }
+      return;
+    }
     PT.ngay=c.d; PT.mo=null; ptVe(); };
   /* THẺ CHÚ GIẢI TỰ VẼ, KHÔNG DÙNG `title` CỦA TRÌNH DUYỆT. `title` đợi ~1 giây mới hiện,
      hiện ở góc chuột bằng phông hệ thống, và không xuống dòng được — rê dọc một dải 60 cột

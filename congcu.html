@@ -390,6 +390,9 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    từng nút: bốn lựa chọn loại trừ nhau nên phải trông như MỘT bộ chuyển, không phải bốn
    nút bấm độc lập. Chữ số trần trụi (60/100/200/300) vì nhãn "phiên" đã nằm ngay bên
    cạnh ở dòng "… phiên có dữ liệu đầy đủ". */
+/* Lời báo khi bấm vào cột không có bảng mã. Đứng ngay trong thanh chọn phiên chứ không
+   nổi lên giữa màn: nó là câu trả lời cho một cú bấm, không phải một cảnh báo. */
+.ptbaon{display:none;font-size:11.5px;color:var(--rose);font-weight:600;margin-left:auto}
 .ptseg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .ptseg button{background:var(--card);color:var(--faint);border:0;border-right:1px solid var(--line);
   padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;
@@ -1391,7 +1394,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822p"></script>
+<script defer src="assets/mobi.js?v=20260822q"></script>
 </head>
 <body>
 
@@ -1448,6 +1451,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822p"></script>
+<script src="assets/congcu.js?v=20260822q"></script>
 </body>
 </html>

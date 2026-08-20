@@ -271,7 +271,7 @@ def lam(sym, ff):
     # ── theo phiên ──
     vq = [None] * n; vqf = [None] * n; ami = [None] * n; bd = [None] * n
     clm = [None] * n; cl = [None] * n
-    fnr = [None] * n; fnrk = [None] * n; fnp = [None] * n; tdr = [None] * n
+    fnr = [None] * n; fnrTT = [None] * n; fnp = [None] * n; tdr = [None] * n
     ttp = [None] * n; ttl = [None] * n
     mcap = [None] * n; mcapFF = [None] * n; dsh = [None] * n
     for i in range(n):
@@ -296,11 +296,18 @@ def lam(sym, ff):
             if a > 0 and b > 0:
                 clm[i] = round(math.log(a / b), 4)
         if fM[i] is not None or fB[i] is not None:
+            # `fnMuaGT`/`fnBanGT` CỦA NGUỒN LÀ **KHỚP LỆNH THÔI**, KHÔNG GỒM THOẢ THUẬN —
+            # đã chứng minh 22/08/2026, đừng trừ thoả thuận ra lần nữa.
+            # Bản trước tưởng nó là TỔNG nên tính `fnrk = (mua−muaTT) − (bán−bánTT)`, tức
+            # trừ đi một thứ vốn không có trong đó. Bằng chứng: ACB 22/08/2025 có
+            # `fnMuaGT` 464 triệu trong khi `fnMuaTTGT` 57,3 TỶ — thoả thuận lớn gấp 123
+            # lần cái gọi là "tổng", bất khả nếu tổng đã gồm nó. Đối chiếu VNDirect
+            # `/v4/foreigns` (trường `buyVal` LÀ tổng) trên 5 phiên có thoả thuận lớn:
+            # `fnMuaGT + fnMuaTTGT = buyVal` khớp tuyệt đối cả 5.
+            # Vậy `fnr` ĐÃ LÀ ròng khớp lệnh; thêm `fnrTT` cho vế thoả thuận, muốn tổng
+            # thì cộng hai cái.
             fnr[i] = (fM[i] or 0) - (fB[i] or 0)
-            # RÒNG CHỈ KHỚP LỆNH — bỏ thoả thuận ra. Thoả thuận là giao dịch dàn xếp
-            # trước ở giá thương lượng, nó không nói gì về cầu trên sổ lệnh. Đo được
-            # nhỉnh hơn bản gộp (rank IC +0,031 t=+2,50 so với +0,030 t=+2,44).
-            fnrk[i] = ((fM[i] or 0) - (fMT[i] or 0)) - ((fB[i] or 0) - (fBT[i] or 0))
+            fnrTT[i] = (fMT[i] or 0) - (fBT[i] or 0)
             if mval[i]:
                 fnp[i] = round(((fM[i] or 0) + (fB[i] or 0)) / 2 / mval[i] * 100, 3)
         if tM[i] is not None or tB[i] is not None:
@@ -374,7 +381,7 @@ def lam(sym, ff):
         "vq": vq, "vqf": vqf, "vqf20": vqf20, "ami": ami, "bd": bd, "bd20": bd20,
         "vol20": vol20, "cl": cl, "clm": clm, "gt20": gt20, "gtx": gtx,
         "r5": r5, "r20": r20, "r60": r60, "d52": d52,
-        "fnr": fnr, "fnrk": fnrk, "fnp": fnp, "fnr20": fnr20, "tdr": tdr,
+        "fnr": fnr, "fnrTT": fnrTT, "fnp": fnp, "fnr20": fnr20, "tdr": tdr,
         "room": room, "shu": shu, "ttp": ttp, "ttl": ttl,
         "mcap": mcap, "mcapFF": mcapFF, "dsh": dsh, "ep": ep,
         **cbs,
