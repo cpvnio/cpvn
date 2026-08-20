@@ -45,6 +45,14 @@ if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
 if ((Get-Date).DayOfWeek -eq 'Monday') { & $py refresh_daily.py --full 2>&1 }
 else                                   { & $py refresh_daily.py 2>&1 }
 
+# KHO GIAO DỊCH (data/giaodich) — số chốt phiên + SỔ LỆNH KHI CHỐT PHIÊN, từ Vietstock.
+# Chạy Ở ĐÂY chứ không ở lượt 7:30: đây là số CHỐT SỔ, phải sau 15:00 mới có.
+# Hằng ngày chỉ xin trang 1 của mỗi mã (đã có sẵn 20 phiên giá + 30 phiên sổ lệnh) nên
+# ~3.060 lượt ≈ 13 phút ở 4 lượt/giây. Giới hạn tác vụ là 2 giờ, thừa chỗ.
+# Hỏng ở bước này KHÔNG được chặn lượt chạy — universe.json và kho nến mới là thứ bắt buộc.
+& $py tools\kho_giaodich.py --sau 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # Tên commit theo NGÀY PHIÊN trong kho vừa dựng, không theo ngày chạy máy: lượt nào
 # vắt qua nửa đêm mà lấy ngày máy sẽ đặt tên phiên hôm sau cho dữ liệu hôm trước.
 $sess = & $py -c "import json;print(json.load(open('data/health.json'))['date'])" 2>$null
