@@ -158,7 +158,9 @@ def goi(path, data, sym):
 
 # ── tầng 1: số chốt phiên ─────────────────────────────────────────────────────
 COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "shR",
-       "bMua", "bMuaKL", "bBan", "bBanKL", "nMua", "nBan", "qMua", "qBan")
+       "bMua", "bMuaKL", "bBan", "bBanKL", "nMua", "nBan", "qMua", "qBan",
+       "fnMuaKL", "fnMuaGT", "fnBanKL", "fnBanGT", "fnMuaPc", "fnBanPc",
+       "fnSoHuu", "fnRoom")
 
 # DẤU PHIÊN BẢN CỦA CÁCH TÍNH. File nào mang số nhỏ hơn là dựng bằng logic CŨ và
 # phải cào lại — `run_boi_giaodich.ps1` lấy đúng danh sách đó. Có dấu này thì mỗi
@@ -628,6 +630,64 @@ def phien_ghi(ngay, goi_ma):
     return os.path.getsize(p)
 
 
+# ── tầng 3b: KHỐI NGOẠI THEO PHIÊN ───────────────────────────────────────────
+# `KQGDGiaoDichNDTNNStockPaging` — 30 dòng/lượt, cùng họ với thống kê đặt lệnh nên cũng
+# cần `stockID` dạng số. Nguồn tính sẵn PHẦN TRĂM khối lượng và giá trị là của khối ngoại,
+# khỏi phải tự chia — và tự chia thì mẫu số phải chọn giữa khớp lệnh với tổng giao dịch,
+# hai cách ra hai con số khác nhau.
+# ĐƠN VỊ: `BuyVal`/`SellVal` của nguồn là TRIỆU ĐỒNG (đo trên HPG 20/08: 535.600 cp ×
+# ~21.250đ = 11,38 tỷ, nguồn ghi 11.396,825). Kho quy về ĐỒNG cho đồng bộ với `mval`.
+FN = {"BuyVol": "fnMuaKL", "SellVol": "fnBanKL",
+      "PerBuyVol": "fnMuaPc", "PerSellVol": "fnBanPc",
+      "OwnedRatio": "fnSoHuu", "RemainRoom": "fnRoom"}
+FN_TIEN = {"BuyVal": "fnMuaGT", "SellVal": "fnBanGT"}
+
+
+def fn_nap(sym, sid, day_du=False):
+    """Khối ngoại từng phiên: khối lượng và giá trị mua/bán, % của phiên, tỉ lệ sở hữu và
+    room còn lại. Trả về {ngày: bản ghi}."""
+    if not sid:
+        return {}
+    ra, trang, tong = {}, 1, None
+    while True:
+        for lan in (0, 1):
+            tk, ck = tt_token(lan == 1)
+            try:
+                b = nhipmang.post("https://finance.vietstock.vn/data/KQGDGiaoDichNDTNNStockPaging",
+                                  {"page": trang, "pageSize": 200, "catID": 1, "stockID": sid,
+                                   "fromDate": "2000-01-01",
+                                   "toDate": datetime.datetime.now(TZ).strftime("%Y-%m-%d"),
+                                   "__RequestVerificationToken": tk},
+                                  headers={"X-Requested-With": "XMLHttpRequest", "Cookie": ck or "",
+                                           "Referer": "https://finance.vietstock.vn/ket-qua-giao-dich"})
+            except Exception:
+                return ra
+            t = b.lstrip("\ufeff").lstrip()
+            if t[:1] == "[":
+                break
+        else:
+            return ra
+        try:
+            j = json.loads(t)
+        except Exception:
+            return ra
+        rows = j[1] if len(j) > 1 and isinstance(j[1], list) else []
+        if tong is None:
+            tong = (j[2][0] if len(j) > 2 and isinstance(j[2], list) and j[2] else 1)
+        if not rows:
+            break
+        for r in rows:
+            o = {v: r.get(k) for k, v in FN.items()}
+            for k, v in FN_TIEN.items():
+                x = r.get(k)
+                o[v] = round(x * 1e6) if x else 0      # triệu đồng -> đồng
+            ra[_ngay(r["TradingDate"])] = o
+        if trang >= (tong or 1) or trang > 400 or (not day_du and trang >= 2):
+            break
+        trang += 1
+    return ra
+
+
 # ── tầng 4: CHỈ SỐ THEO PHIÊN ────────────────────────────────────────────────
 CHISO = os.path.join(BASE, "data", "chiso.json")
 IDX = ("VNINDEX", "VN30", "HNX", "HNX30", "UPCOM")
@@ -705,10 +765,66 @@ def main():
                     help="với --sau: lấy bao nhiêu trang giá (20 phiên/trang). Mặc định 2")
     ap.add_argument("--vg", action="store_true",
                     help="VÙNG GIÁ khớp lệnh + phân bổ dòng tiền cho --ngay (1 lượt/mã/ngày ×2)")
+    ap.add_argument("--nn", action="store_true",
+                    help="CHỈ cào khối ngoại (dùng lại `sid` đã lưu, 2 lượt/mã)")
     ap.add_argument("--chiso", action="store_true",
                     help="chỉ số theo phiên (VNINDEX/VN30/HNX/HNX30/UPCOM) -> data/chiso.json")
     ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo sau khi chạy")
     a = ap.parse_args()
+
+    if a.nn:
+        # CHỈ KHỐI NGOẠI. `sid` đã nằm sẵn trong file nên khỏi phải gọi lại thống kê giá
+        # chỉ để lấy một con số — 2 lượt/mã thay vì 8, tức 13 phút thay vì 51.
+        u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+        ma = [x["sym"] for x in u]
+        if a.ma:
+            xin = {x.upper() for x in a.ma}
+            ma = [m for m in ma if m in xin]
+        t0 = time.time()
+        ok = loi = khongsid = 0
+        hong = []
+        for i, m in enumerate(ma):
+            p = os.path.join(GD_DIR, m + ".json")
+            if not os.path.exists(p):
+                continue
+            try:
+                sid = json.load(open(p, encoding="utf-8")).get("sid")
+            except Exception:
+                sid = None
+            if not sid:
+                khongsid += 1
+                continue
+            try:
+                r = fn_nap(m, sid, day_du=a.tatca)
+            except Exception:
+                r = None
+            if not r:
+                loi += 1
+                hong.append((m, sid))
+                continue
+            eod_ghi(m, r)
+            ok += 1
+            if (i + 1) % 200 == 0:
+                print(f"    …{i+1}/{len(ma)}  {time.time()-t0:.0f}s", flush=True)
+        if hong:
+            print(f"    thử lại {len(hong)} mã hỏng sau 30s…", flush=True)
+            time.sleep(30)
+            tt_token(ep=True)
+            lai = 0
+            for m, sid in hong:
+                try:
+                    r = fn_nap(m, sid, day_du=a.tatca)
+                except Exception:
+                    r = None
+                if r:
+                    eod_ghi(m, r)
+                    ok += 1
+                    lai += 1
+            loi -= lai
+            print(f"    thử lại cứu được {lai}/{len(hong)} mã", flush=True)
+        print(f"  khối ngoại: ok {ok} · lỗi {loi} · không có sid {khongsid}"
+              f" · {time.time()-t0:.0f}s", flush=True)
+        return 0
 
     if a.chiso:
         n = kho_chiso()
@@ -767,6 +883,7 @@ def main():
         t0 = time.time()
         ok = loi = tong = 0
         sids = {}
+        hong = []
         for i, m in enumerate(ma):
             try:
                 moi, sid = eod_nap(m, day_du=a.tatca, trang_toi=a.trang)
@@ -774,14 +891,18 @@ def main():
                 moi, sid = None, None
             if not moi:
                 loi += 1
+                hong.append(m)
                 continue
             # SỔ LỆNH CHỐT PHIÊN — trộn vào cùng bản ghi ngày, cùng nhịp với giá.
             try:
                 for d, r in (dl_nap(m, sid, day_du=a.tatca) or {}).items():
-                    if d in moi:
-                        moi[d].update(r)
-                    else:
-                        moi[d] = r
+                    moi.setdefault(d, {}).update(r)
+            except Exception:
+                pass
+            # KHỐI NGOẠI — trộn vào cùng bản ghi ngày, cùng nhịp với giá và sổ lệnh.
+            try:
+                for d, r in (fn_nap(m, sid, day_du=a.tatca) or {}).items():
+                    moi.setdefault(d, {}).update(r)
             except Exception:
                 pass
             if sid:
@@ -790,6 +911,36 @@ def main():
             ok += 1
             if (i + 1) % 200 == 0:
                 print(f"    …{i+1}/{len(ma)}  {time.time()-t0:.0f}s", flush=True)
+        # THỬ LẠI MÃ HỎNG MỘT LƯỢT NỮA. Lượt chạy dài bị nguồn từ chối lác đác giữa chừng:
+        # đo 20/08/2026 trên 1.529 mã trong 30 phút thì **818 mã lỗi**, mà thử lại ngay sau
+        # đó thì mã nào cũng trả về đủ 100 phiên. Tức là hỏng TẠM THỜI (nguồn siết nhịp hoặc
+        # phiên hết hạn), không phải mã đó không có dữ liệu.
+        # Không có lượt này thì kho đứng ở độ sâu cũ mà log vẫn báo "ok 711" — nhìn qua như
+        # đã chạy xong. Nghỉ 30 giây cho nguồn nguôi rồi mới thử lại.
+        if hong:
+            print(f"    thử lại {len(hong)} mã hỏng sau 30s…", flush=True)
+            time.sleep(30)
+            token(ep=True)                 # ép làm mới phiên trước khi thử lại
+            lai = 0
+            for m in hong:
+                try:
+                    moi, sid = eod_nap(m, day_du=a.tatca, trang_toi=a.trang)
+                except Exception:
+                    continue
+                if not moi:
+                    continue
+                try:
+                    for d, r in (dl_nap(m, sid, day_du=a.tatca) or {}).items():
+                        moi.setdefault(d, {}).update(r)
+                    for d, r in (fn_nap(m, sid, day_du=a.tatca) or {}).items():
+                        moi.setdefault(d, {}).update(r)
+                except Exception:
+                    pass
+                tong += eod_ghi(m, moi, sid, a.tatca)
+                ok += 1
+                lai += 1
+            loi -= lai
+            print(f"    thử lại cứu được {lai}/{len(hong)} mã", flush=True)
         print(f"  ok {ok} · lỗi {loi} · tổng {tong:,} dòng · {time.time()-t0:.0f}s", flush=True)
         if a.kiem:
             kiem(ma[:40])

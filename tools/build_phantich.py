@@ -42,7 +42,8 @@ RA = os.path.join(BASE, "data", "phantich.json")
 
 # Cột của bảng theo mã — TIỀN đứng trước, khối lượng là phụ.
 # `sec` = ngành, để trang dựng được khối "ngành hút tiền" mà khỏi tải universe.json.
-COT_BANG = ["ex", "sec", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "sh"]
+COT_BANG = ["ex", "sec", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "sh",
+            "fnMuaGT", "fnBanGT", "fnMuaKL", "fnBanKL", "fnSoHuu", "fnRoom"]
 SO_PHIEN_FILE = 120      # dựng file ngày cho ngần này phiên gần nhất
 MIN_MA = 100             # phiên ít mã hơn thì không dựng file ngày
 
@@ -84,12 +85,23 @@ def main():
             if c is None or mval is None:
                 continue
             t = tt.setdefault(ng, {"n": 0, "mval": 0.0, "pval": 0.0, "mv": 0, "pv": 0,
-                                   "mcap": 0.0, "nMcap": 0})
+                                   "mcap": 0.0, "nMcap": 0,
+                                   "fnMua": 0.0, "fnBan": 0.0, "nFn": 0})
             t["n"] += 1
             t["mval"] += mval or 0
             t["pval"] += pval or 0
             t["mv"] += col["mv"][i] or 0
             t["pv"] += col["pv"][i] or 0
+            # KHỐI NGOẠI — cộng riêng và đếm riêng `nFn`. Kho khối ngoại nông hơn kho giá
+            # (nguồn trả 30 dòng/trang, lấy 2 trang = 60 phiên), nên phiên cũ có ít mã có
+            # số khối ngoại hơn hẳn. Dùng chung `n` là đọc ra "khối ngoại chỉ chiếm 2% giá
+            # trị" trong khi sự thật là 2% đó tính trên mẫu số của cả 1.525 mã còn tử số
+            # mới có 300 mã.
+            fm, fb2 = col["fnMuaGT"][i], col["fnBanGT"][i]
+            if fm is not None or fb2 is not None:
+                t["fnMua"] += fm or 0
+                t["fnBan"] += fb2 or 0
+                t["nFn"] += 1
             sh = col["sh"][i]
             if sh and c:
                 t["mcap"] += c * sh
@@ -131,7 +143,7 @@ def main():
     # ── chuỗi toàn thị trường ──
     for d in ngays:
         t = tt[d]
-        for k in ("mval", "pval", "mcap"):
+        for k in ("mval", "pval", "mcap", "fnMua", "fnBan"):
             t[k] = round(t[k] / 1e9, 1)
         for k in ("mv", "pv"):
             t[k] = round(t[k] / 1e3)
@@ -153,7 +165,8 @@ def main():
         "phu": {"docFile": doc, "phien": len(ngays), "fileNgay": ghi},
         "tt": {"d": ngays,
                **{k: [tt[d][k] for d in ngays]
-                  for k in ("n", "mval", "pval", "mv", "pv", "mcap", "nMcap")}},
+                  for k in ("n", "mval", "pval", "mv", "pv", "mcap", "nMcap",
+                            "fnMua", "fnBan", "nFn")}},
         "chiso": cs,
     }
     tmp = RA + ".tmp"
@@ -167,6 +180,9 @@ def main():
     print(f"  phiên {ngays[i]}: {out['tt']['n'][i]:,} mã · khớp lệnh {out['tt']['mval'][i]:,.0f} tỷ"
           f" · thoả thuận {out['tt']['pval'][i]:,.0f} tỷ"
           f" · vốn hoá {out['tt']['mcap'][i]/1000:,.0f} nghìn tỷ", flush=True)
+    print(f"  khối ngoại: mua {out['tt']['fnMua'][i]:,.0f} tỷ · bán {out['tt']['fnBan'][i]:,.0f} tỷ"
+          f" · ròng {out['tt']['fnMua'][i]-out['tt']['fnBan'][i]:+,.0f} tỷ"
+          f" · trên {out['tt']['nFn'][i]:,} mã có số", flush=True)
     return 0
 
 
