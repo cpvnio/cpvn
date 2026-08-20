@@ -42,17 +42,63 @@ RA = os.path.join(BASE, "data", "phantich.json")
 
 # Cột của bảng theo mã — TIỀN đứng trước, khối lượng là phụ.
 # `sec` = ngành, để trang dựng được khối "ngành hút tiền" mà khỏi tải universe.json.
-COT_BANG = ["ex", "sec", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "sh",
+COT_BANG = ["ex", "sec", "ff", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "sh",
             "fnMuaGT", "fnBanGT", "fnMuaKL", "fnBanKL", "fnSoHuu", "fnRoom",
             "tdMuaGT", "tdBanGT", "tdMuaKL", "tdBanKL"]
+# Ba cột KHÔNG nằm trong `data/giaodich` mà ghép từ chỗ khác — `ex`/`sec` từ universe,
+# `ff` từ hồ sơ doanh nghiệp. Tách ra một chỗ để đừng phải nhớ danh sách này ở ba nơi.
+COT_NGOAI = ("ex", "sec", "ff")
+PROFILE = os.path.join(BASE, "data", "profile")
 SO_PHIEN_FILE = 120      # dựng file ngày cho ngần này phiên gần nhất
 MIN_MA = 100             # phiên ít mã hơn thì không dựng file ngày
+
+
+def nap_ff():
+    """TỈ LỆ CỔ PHIẾU TỰ DO CHUYỂN NHƯỢNG (free float), %, từ `data/profile/{MÃ}.json`.
+
+    ĐÃ NẰM SẴN TRONG KHO TỪ LÂU MÀ KHÔNG CHỖ NÀO ĐỌC (phát hiện 21/08/2026). Đây không
+    phải một con số phụ: đo phiên 20/08 thì **vốn hoá toàn bộ 10.167 nghìn tỷ, vốn hoá
+    free float chỉ 2.050 nghìn tỷ — 20,2%**. Và thứ hạng lật hẳn:
+
+        BID  279 nghìn tỷ ->   7   (free float  2,6%)
+        VGI  266          ->   4   (1,3%)
+        VCB  483          ->  30   (6,2%)
+        STB  140          -> 133   (95,0%)
+
+    Tức STB có lượng cổ phiếu mua bán được LỚN GẤP GẦN 20 LẦN BID trong khi vốn hoá danh
+    nghĩa chỉ bằng một nửa. Đó là lời giải cho chuyện ai cũng thấy mà không giải thích
+    được: vì sao mấy mã nhà nước nắm gần hết thì vốn hoá to mà giá gần như không nhúc
+    nhích. Xếp hạng hay cộng tổng theo vốn hoá danh nghĩa là đo một thứ không giao dịch
+    được.
+
+    Kiểm chứng bằng số: vòng quay tính trên free float dự báo lợi suất phiên sau MẠNH HƠN
+    vòng quay tính trên toàn bộ cổ phiếu (rank IC −0,043 t=−3,29 so với −0,036 t=−3,18,
+    đo trên 99 phiên) — đúng khái niệm và đúng cả thực nghiệm.
+
+    THIẾU THÌ ĐỂ `None`, ĐỪNG LẤY 100 LẤP VÀO. 96/1.525 mã nguồn không có số; coi chúng
+    là 100% free float thì đúng nhóm không biết gì lại nhảy lên đầu bảng thanh khoản.
+    """
+    ra = {}
+    if not os.path.isdir(PROFILE):
+        return ra
+    for f in os.listdir(PROFILE):
+        if not f.endswith(".json"):
+            continue
+        try:
+            o = json.load(open(os.path.join(PROFILE, f), encoding="utf-8"))
+        except Exception:
+            continue
+        v = o.get("freeFloat")
+        if isinstance(v, (int, float)) and 0 < v <= 100:
+            ra[f[:-5]] = round(float(v), 2)
+    return ra
 
 
 def main():
     u = json.load(open(UNI, encoding="utf-8"))["stocks"]
     san = {s["sym"]: s.get("ex") or "" for s in u}
     nganh = {s["sym"]: s.get("sector") or "" for s in u}
+    ff = nap_ff()
 
     tt = {}                 # ngày -> tổng toàn thị trường
     bang = {}               # ngày -> {mã: [cột…]}
@@ -72,7 +118,7 @@ def main():
         d = o.get("d") or []
         if not d:
             continue
-        col = {k: (o.get(k) or [None] * n) for k in COT_BANG if k not in ("ex", "sec")}
+        col = {k: (o.get(k) or [None] * n) for k in COT_BANG if k not in COT_NGOAI}
 
         for i, ng in enumerate(d):
             c, mval, pval = col["c"][i], col["mval"][i], col["pval"][i]
@@ -86,7 +132,7 @@ def main():
             if c is None or mval is None:
                 continue
             t = tt.setdefault(ng, {"n": 0, "mval": 0.0, "pval": 0.0, "mv": 0, "pv": 0,
-                                   "mcap": 0.0, "nMcap": 0,
+                                   "mcap": 0.0, "nMcap": 0, "mcapFF": 0.0, "nFF": 0,
                                    "fnMua": 0.0, "fnBan": 0.0, "nFn": 0,
                                    "tdMua": 0.0, "tdBan": 0.0, "nTd": 0})
             t["n"] += 1
@@ -115,8 +161,15 @@ def main():
             if sh and c:
                 t["mcap"] += c * sh
                 t["nMcap"] += 1
-            bang.setdefault(ng, {})[m] = [san.get(m, ""), nganh.get(m, "")] + \
-                [col[k][i] for k in COT_BANG if k not in ("ex", "sec")]
+                # VỐN HOÁ FREE FLOAT — đếm riêng `nFF`, cùng lý do với `nFn`/`nTd`: mã
+                # thiếu free float không góp vào tử số, không nói ra thì tỉ lệ float/tổng
+                # đọc ra như cả thị trường trong khi mẫu số gồm cả mã chưa có số.
+                f = ff.get(m)
+                if f:
+                    t["mcapFF"] += c * sh * f / 100.0
+                    t["nFF"] += 1
+            bang.setdefault(ng, {})[m] = [san.get(m, ""), nganh.get(m, ""), ff.get(m)] + \
+                [col[k][i] for k in COT_BANG if k not in COT_NGOAI]
 
     ngays = sorted(tt)
     if not ngays:
@@ -152,7 +205,7 @@ def main():
     # ── chuỗi toàn thị trường ──
     for d in ngays:
         t = tt[d]
-        for k in ("mval", "pval", "mcap", "fnMua", "fnBan", "tdMua", "tdBan"):
+        for k in ("mval", "pval", "mcap", "mcapFF", "fnMua", "fnBan", "tdMua", "tdBan"):
             t[k] = round(t[k] / 1e9, 1)
         for k in ("mv", "pv"):
             t[k] = round(t[k] / 1e3)
@@ -175,6 +228,7 @@ def main():
         "tt": {"d": ngays,
                **{k: [tt[d][k] for d in ngays]
                   for k in ("n", "mval", "pval", "mv", "pv", "mcap", "nMcap",
+                            "mcapFF", "nFF",
                             "fnMua", "fnBan", "nFn", "tdMua", "tdBan", "nTd")}},
         "chiso": cs,
     }
@@ -189,6 +243,10 @@ def main():
     print(f"  phiên {ngays[i]}: {out['tt']['n'][i]:,} mã · khớp lệnh {out['tt']['mval'][i]:,.0f} tỷ"
           f" · thoả thuận {out['tt']['pval'][i]:,.0f} tỷ"
           f" · vốn hoá {out['tt']['mcap'][i]/1000:,.0f} nghìn tỷ", flush=True)
+    _mc, _ffc = out["tt"]["mcap"][i], out["tt"]["mcapFF"][i]
+    print(f"  free float: vốn hoá giao dịch được {_ffc/1000:,.0f} nghìn tỷ"
+          f" = {(_ffc/_mc*100 if _mc else 0):.1f}% vốn hoá danh nghĩa"
+          f" · {out['tt']['nFF'][i]:,}/{out['tt']['nMcap'][i]:,} mã có tỉ lệ", flush=True)
     print(f"  khối ngoại: mua {out['tt']['fnMua'][i]:,.0f} tỷ · bán {out['tt']['fnBan'][i]:,.0f} tỷ"
           f" · ròng {out['tt']['fnMua'][i]-out['tt']['fnBan'][i]:+,.0f} tỷ"
           f" · trên {out['tt']['nFn'][i]:,} mã có số", flush=True)

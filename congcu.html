@@ -373,9 +373,26 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
   border-radius:9px;padding:9px 12px;font-size:14px;font-weight:800;
   font-variant-numeric:tabular-nums;cursor:pointer;min-width:150px}
 .ptnav{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:9px;
-  width:38px;height:38px;font-size:13px;cursor:pointer;flex:none}
+  width:38px;height:38px;font-size:13px;cursor:pointer;flex:none;
+  display:inline-flex;align-items:center;justify-content:center}
+.ptnav .ic{width:17px;height:17px;color:inherit}
 .ptnav:disabled{opacity:.35;cursor:default}
 .ptbarn{font-size:11.5px;color:var(--faint)}
+/* Icon một nét thay emoji: ăn theo `currentColor` nên nó mang đúng màu của dòng chữ nó
+   đứng cạnh, không tự đem màu riêng vào một trang mà xanh/đỏ đã có nghĩa sẵn. */
+.ic{width:15px;height:15px;flex:none;vertical-align:-2px;color:var(--faint)}
+.panel>.ph .ic{color:var(--rose)}
+/* GHI CHÚ GẤP LẠI. KHÔNG viền đỏ nữa — đỏ ở trang này là màu giảm giá; một mảng đỏ nằm
+   thường trực cạnh bảng số đọc ra như cảnh báo trong khi nó chỉ là lời giải thích. */
+.ptgt{margin:0 0 11px;border:1px solid var(--line);border-radius:9px;background:var(--card2);
+  font-size:12px;overflow:hidden}
+.ptgt>summary{display:flex;align-items:center;gap:7px;padding:7px 11px;cursor:pointer;
+  font-weight:700;color:var(--faint);list-style:none;user-select:none}
+.ptgt>summary::-webkit-details-marker{display:none}
+.ptgt>summary:hover{color:var(--txt)}
+.ptgt[open]>summary{color:var(--txt);border-bottom:1px solid var(--line)}
+.ptgt>div{padding:9px 12px 10px;line-height:1.7;color:var(--txt)}
+.ptdu{margin:9px 0 0}
 .ptnote{margin:0 0 12px;padding:9px 12px;border-radius:9px;background:var(--card2);
   border-left:3px solid var(--rose);color:var(--txt);font-size:12px;line-height:1.65}
 .ptgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
@@ -384,7 +401,32 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptbox .ptlb{font-size:11px;color:var(--faint);font-weight:700}
 .ptbox b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ptbox i{font-style:normal;font-size:11px;color:var(--faint)}
+.ptbox i{font-style:normal;font-size:11px;color:var(--faint);line-height:1.45}
+/* Vốn hoá free float in ĐẬM ngay trong dòng phụ: nó là con số quan trọng hơn con số lớn
+   ở trên, chỉ là chưa quen mắt nên chưa được đứng chỗ chính. */
+.ptbox i b.ptff{color:var(--txt);font-weight:800}
+/* Ô CHỈ SỐ chiếm hai cột và ôm luôn dải VN30/HNX/UPCOM — gộp cái vốn là cùng một câu hỏi
+   vào một ô, bớt được hẳn một tầng số trên trang. Khổ hẹp thì trả về một cột: ép span 2
+   khi lưới chỉ còn một cột sẽ đẻ ra cột ảo và mọi ô bẹp còn một nửa. */
+/* LƯỚI Ô ĐẦU TRANG CHIA CỨNG, KHÔNG `auto-fit`. Ô chỉ số chiếm 2 cột nên tổng là 7 đơn
+   vị; `auto-fit` ở bề ngang 1.180px tự ra 6 cột, đơn vị thứ 7 rơi xuống hàng dưới đứng
+   một mình — đúng cái đã thấy. Chia cứng thì mỗi khổ màn có một cách xếp đọc được. */
+.ptg7{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:820px){.ptg7{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1120px){.ptg7{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.ptbox2{grid-column:span 2;justify-content:center}
+.ptbox>b em{font-style:normal;font-size:11px;font-weight:700;color:var(--faint);margin-left:8px}
+.ptcsm{display:flex;gap:16px;align-items:center;min-width:0}
+.ptcsa{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ptcsa>b{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Ba chỉ số phụ: BỎ VIỀN, BỎ NỀN — bên trong một ô đã có viền rồi, viền lồng viền chỉ tạo
+   thêm ranh giới giả. Xếp dọc để ô không phình ngang. */
+.ptcsm>.ptcsw{flex-direction:column;gap:3px;margin:0;flex:none;flex-wrap:nowrap}
+.ptcsm .ptcs{background:none;border:0;padding:0;font-size:11.5px;display:flex;gap:6px;
+  align-items:baseline;white-space:nowrap}
+.ptcsm .ptcs b{font-size:11px;font-weight:800;color:var(--faint);margin:0;min-width:44px}
+.ptcsm .ptcs i{margin-left:0}
+@media(max-width:640px){.ptbox2{grid-column:auto}.ptcsa>b{font-size:19px}}
 .ptcv{width:100%;position:relative}
 .ptcv canvas{width:100%;display:block}
 /* Vạch nền cột đang rê. `pointer-events:none` là bắt buộc — nó nằm ĐÈ lên canvas, không
@@ -487,7 +529,8 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    ngang; khổ hẹp thành một cột và mỗi cột vẫn đọc được nguyên vẹn. */
 .dsw{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
 .dscol{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 11px;min-width:0}
-.dscol h4{margin:0 0 8px;font-size:12px;font-weight:800;color:var(--txt)}
+.dscol h4{margin:0 0 8px;font-size:12px;font-weight:800;color:var(--txt);
+  display:flex;align-items:center;gap:6px}
 .dsr{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:baseline;
   padding:4px 0;border-bottom:1px solid var(--line);cursor:pointer;min-width:0}
 .dsr:last-of-type{border-bottom:0}
@@ -506,11 +549,19 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptmahead h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em}
 .ptlink{margin-left:auto;font-size:12px;font-weight:700;color:var(--rose);text-decoration:none}
 .ptlink:hover{text-decoration:underline}
-/* Lưới đồ thị: hai cột ở máy bàn, một cột ở khổ hẹp. minmax(320px) vì dưới ngần đó thì
-   nhãn trục và nhãn ngày đè lên nhau, đồ thị thành một vệt không đọc được. */
-.ptbieu{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+/* LƯỚI ĐỒ THỊ CÓ THỨ BẬC. Bản trước: `auto-fit minmax(320px)` cho cả 11 đồ thị cùng cỡ —
+   trên màn rộng ra 3-4 ô đều tăm tắp, không ô nào nổi hơn ô nào, nên "giá đóng cửa" và
+   "vùng giá khớp lệnh" đọc như hai thứ ngang vai.
+   Nay: giá và tiền chiếm CẢ HÀNG (`.ptbig`), chín đồ thị còn lại xếp ba cột nhỏ hơn.
+   Chia cột bằng ngưỡng CỐ ĐỊNH chứ không `auto-fit`: auto-fit ở màn 1.500px sẽ tự ra bốn
+   cột 320px, mà bốn cột thì nhãn trục và nhãn ngày bắt đầu chạm nhau. */
+.ptbieu{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media(min-width:660px){.ptbieu{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1080px){.ptbieu{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .ptbo{margin:0}
 .ptbo canvas{width:100%;display:block}
+.ptbo.ptbig{grid-column:1/-1}
+.ptbo.ptbig>.ph{font-size:13.5px}
 .ptleg i.pkA{background:#0284c7;height:3px;border-radius:2px}
 .ptleg i.pkB{background:#d97706;height:3px;border-radius:2px}
 .ptleg i.pkC{background:#16a34a}
@@ -1234,7 +1285,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821n"></script>
+<script defer src="assets/mobi.js?v=20260821s"></script>
 </head>
 <body>
 
@@ -1291,6 +1342,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821n"></script>
+<script src="assets/congcu.js?v=20260821s"></script>
 </body>
 </html>

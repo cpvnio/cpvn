@@ -1,0 +1,247 @@
+# -*- coding: utf-8 -*-
+"""QUÉT BẤT THƯỜNG — "hôm nay có gì lạ". `data/dactrung/*` -> `data/quetla.json`.
+
+VÌ SAO CÓ FILE NÀY (21/08/2026)
+------------------------------
+Trang phân tích trả lời tốt câu "mã nào to nhất, tiền chảy vào đâu". Nó KHÔNG trả lời
+được câu "có chuyện gì bất thường tôi chưa thấy" — mà đó mới là câu người ngồi soi dữ
+liệu thật sự hỏi. Một bảng 1.525 dòng xếp theo giá trị thì mọi thứ bất thường đều nằm
+lẫn trong đó, và không ai đọc hết 1.525 dòng mỗi ngày.
+
+Quét thử 100 phiên trước khi viết, để chắc là mỗi phép có bắt được gì thật:
+· thoả thuận lệch ≥15% giá sàn, ≥20 tỷ  -> **45 lượt**. TID sang tay BA lô ~230 tỷ trong
+  hai tuần, đều ở **−26%** so với giá sàn. Ba lần cùng một mức chiết khấu không phải ngẫu
+  nhiên — đó là chuyển nhượng nội bộ hoặc xử lý tài sản bảo đảm, và không trang nào ở
+  Việt Nam hiện nó ra.
+· số cổ phiếu nhảy >5% trong một phiên -> **143 lượt** (TET +991%, TRA +100%, F88 +100%).
+  Phát hành thêm là một trong những chỉ báo âm bền nhất đo được trên mọi thị trường.
+
+MÔ TẢ, KHÔNG KHUYẾN NGHỊ. Mỗi mục nói một sự kiện ĐO ĐƯỢC đã xảy ra ("thoả thuận khớp
+thấp hơn giá sàn 26%"), tuyệt đối không kèm suy diễn nên làm gì. Xem mục *Ranh giới pháp
+lý* trong CLAUDE.md — khoản 32 Điều 4 Luật CK 2019.
+
+NGƯỠNG ĐỀU ĐI KÈM CỔNG THANH KHOẢN. Không có cổng thì mọi bảng đều bị mã khớp vài trăm
+nghìn đồng chiếm chỗ: chúng nhảy trần đều đặn, đổi chủ vài lô là "đột biến khối lượng
+20 lần", và đẩy hết thứ đáng đọc xuống dưới.
+
+  python3 tools/quet_la.py               # quét phiên gần nhất
+  python3 tools/quet_la.py --ngay 2026-08-19
+  python3 tools/quet_la.py --sau 100     # quét ngược 100 phiên, in ra để soi
+"""
+import json
+import os
+import sys
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DT = os.path.join(BASE, "data", "dactrung")
+UNI = os.path.join(BASE, "universe.json")
+RA = os.path.join(BASE, "data", "quetla.json")
+
+TOP = 12                 # mỗi mục giữ ngần này dòng — bảng dài hơn thì không ai đọc hết
+MIN_GT = 1e9             # cổng thanh khoản chung: 1 tỷ khớp lệnh trong phiên
+MIN_TT = 20e9            # thoả thuận phải từ 20 tỷ mới đáng gọi là một cú sang tay
+
+
+def doc(p):
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def quet(ngay=None):
+    u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+    ten = {s["sym"]: s.get("name") or "" for s in u}
+    nganh = {s["sym"]: s.get("sector") or "" for s in u}
+
+    hang = []
+    ngays = set()
+    for s in u:
+        m = s["sym"]
+        o = doc(os.path.join(DT, m + ".json"))
+        if not o or not o.get("d"):
+            continue
+        ngays.update(o["d"][-5:])
+        hang.append((m, o))
+    if not hang:
+        return None
+    if not ngay:
+        # PHIÊN GẦN NHẤT MÀ NHIỀU MÃ CÙNG CÓ, không phải phiên xa nhất mà một mã nào đó có.
+        dem = {}
+        for m, o in hang:
+            for x in o["d"][-3:]:
+                dem[x] = dem.get(x, 0) + 1
+        ngay = max((x for x in dem if dem[x] >= 100), default=max(dem))
+
+    r = []
+    for m, o in hang:
+        try:
+            i = o["d"].index(ngay)
+        except ValueError:
+            continue
+        g = lambda k: (o.get(k) or [None] * o["n"])[i]
+        r.append({
+            "sym": m, "ten": ten.get(m, ""), "sec": nganh.get(m, ""),
+            "c": g("c"), "pc": g("pc"), "mval": g("mval") if o.get("mval") else None,
+            "ttl": g("ttl"), "dsh": g("dsh"), "gtx": g("gtx"), "d52": g("d52"),
+            "fnr": g("fnr"), "tdr": g("tdr"), "clm": g("clm"), "room": g("room"),
+            "vqf": g("vqf"), "ep": g("ep"), "roe": g("roe"), "kyCB": g("kyCB"),
+        })
+    # `mval` không nằm trong kho đặc trưng (nó là số thô) — lấy lại từ kho giao dịch
+    GD = os.path.join(BASE, "data", "giaodich")
+    for x in r:
+        o = doc(os.path.join(GD, x["sym"] + ".json"))
+        if not o:
+            continue
+        try:
+            i = o["d"].index(ngay)
+        except (ValueError, KeyError):
+            continue
+        x["mval"] = (o.get("mval") or [None] * len(o["d"]))[i]
+        x["pval"] = (o.get("pval") or [None] * len(o["d"]))[i]
+        x["pv"] = (o.get("pv") or [None] * len(o["d"]))[i]
+
+    co = [x for x in r if x.get("mval")]
+    thanh = [x for x in co if x["mval"] >= MIN_GT]
+
+    def lay(rows, key, nguoc=False, n=TOP):
+        z = [x for x in rows if x.get(key) is not None]
+        z.sort(key=lambda x: x[key], reverse=not nguoc)
+        return [{k: x.get(k) for k in
+                 ("sym", "ten", "sec", "c", "pc", "mval", "pval", "ttl", "dsh",
+                  "gtx", "d52", "fnr", "tdr", "clm", "room")} for x in z[:n]]
+
+    muc = {}
+
+    # ① THOẢ THUẬN LỆCH XA GIÁ SÀN — cú sang tay lô lớn ở giá thương lượng.
+    tt = [x for x in r if x.get("ttl") is not None and x.get("pval")
+          and x["pval"] >= MIN_TT and abs(x["ttl"]) >= 10]
+    tt.sort(key=lambda x: -abs(x["ttl"]))
+    muc["thoathuan"] = [{k: x.get(k) for k in
+                         ("sym", "ten", "sec", "c", "pc", "pval", "pv", "ttl")} for x in tt[:TOP]]
+
+    # ② SỐ CỔ PHIẾU NHẢY BẬC — phát hành thêm, chia thưởng, chuyển đổi.
+    ds = [x for x in r if x.get("dsh") is not None and abs(x["dsh"]) >= 5]
+    ds.sort(key=lambda x: -abs(x["dsh"]))
+    muc["slcp"] = [{k: x.get(k) for k in ("sym", "ten", "sec", "c", "pc", "dsh")} for x in ds[:TOP]]
+
+    # ③ ĐỘT BIẾN THANH KHOẢN — khớp lệnh gấp nhiều lần trung bình 20 phiên TRƯỚC ĐÓ.
+    db = [x for x in thanh if x.get("gtx") and x["gtx"] >= 3]
+    muc["dotbien"] = lay(db, "gtx")
+
+    # ④ KHỐI NGOẠI VÀ TỰ DOANH ĐỐI ĐẦU — hai nhóm lớn đi ngược chiều trên cùng một mã.
+    # Đây là thứ không đọc ra được từ bất kỳ con số tổng nào.
+    dd = []
+    for x in thanh:
+        f, t = x.get("fnr"), x.get("tdr")
+        if f is None or t is None:
+            continue
+        if (f > 0) == (t > 0):
+            continue
+        if min(abs(f), abs(t)) < 5e9:
+            continue
+        y = dict(x)
+        y["doi"] = min(abs(f), abs(t))
+        dd.append(y)
+    dd.sort(key=lambda x: -x["doi"])
+    muc["doidau"] = [{k: x.get(k) for k in
+                      ("sym", "ten", "sec", "c", "pc", "mval", "fnr", "tdr")} for x in dd[:TOP]]
+
+    # ⑤ ROOM NGOẠI CÒN RẤT ÍT — mã khối ngoại gần như không mua thêm được nữa.
+    #  âm đã bị  chuyển thành None (nguồn không biết trần sở hữu),
+    # nên tới đây chỉ còn số thật. Vẫn chặn lại một lần cho chắc.
+    rm = [x for x in thanh if x.get("room") is not None and 0 <= x["room"] <= 1.0]
+    rm.sort(key=lambda x: (x["room"], -(x["mval"] or 0)))
+    muc["room"] = [{k: x.get(k) for k in
+                    ("sym", "ten", "sec", "c", "pc", "mval", "room", "fnr")} for x in rm[:TOP]]
+
+    # ⑥ ĐANG Ở ĐỈNH 52 TUẦN kèm tiền vào — vị trí giá, KHÔNG phải nhận định.
+    dh = [x for x in thanh if x.get("d52") is not None and x["d52"] >= -1
+          and x.get("gtx") and x["gtx"] >= 1.5]
+    dh.sort(key=lambda x: -(x.get("gtx") or 0))
+    muc["dinh"] = [{k: x.get(k) for k in
+                    ("sym", "ten", "sec", "c", "pc", "mval", "d52", "gtx")} for x in dh[:TOP]]
+
+    # ⑦ CỠ LỆNH BÊN BÁN LỚN HƠN HẲN BÊN MUA (và ngược lại). Lệnh to là tổ chức.
+    cl = [x for x in thanh if x.get("clm") is not None and abs(x["clm"]) >= 0.7]
+    cl.sort(key=lambda x: -abs(x["clm"]))
+    muc["colenh"] = [{k: x.get(k) for k in
+                      ("sym", "ten", "sec", "c", "pc", "mval", "clm")} for x in cl[:TOP]]
+
+    return {
+        "ngay": ngay,
+        # `n` là số mã CÓ KHỚP LỆNH trong phiên, không phải số mã có mặt trong kho. Phần
+        # lớn sàn UPCOM không khớp lệnh nào trong một phiên bất kỳ — đếm chúng vào đây là
+        # nói quá độ rộng thị trường lên gần gấp đôi (1.525 so với 849 ở phiên 20/08).
+        "n": len(co),
+        "nThanh": len(thanh),
+        "muc": muc,
+    }
+
+
+def main():
+    av = sys.argv[1:]
+    ngay = None
+    if "--ngay" in av:
+        ngay = av[av.index("--ngay") + 1]
+    if "--sau" in av:
+        # quét ngược nhiều phiên, chỉ IN RA để soi — không ghi file
+        k = int(av[av.index("--sau") + 1])
+        o = doc(os.path.join(DT, "VCB.json")) or doc(os.path.join(DT, "HPG.json"))
+        ds = (o or {}).get("d", [])[-k:]
+        for ng in ds:
+            q = quet(ng)
+            if not q:
+                continue
+            s = " · ".join("{} {}".format(len(v), kk) for kk, v in q["muc"].items() if v)
+            if s:
+                print("  {}  {}".format(ng, s))
+        return 0
+
+    # GHI THẲNG VÀO FILE PHIÊN, không để riêng một file cho phiên gần nhất. Trang phân
+    # tích xoay quanh MỘT phiên đang chọn và đã tải sẵn `data/phien/{NGÀY}.json`; nhét
+    # kết quả quét vào đó thì đổi phiên là quét đổi theo, không tốn thêm lượt tải nào và
+    # không đẻ ra một nguồn thứ hai có thể lệch pha với bảng ngay bên cạnh.
+    if "--phien" in av:
+        k = int(av[av.index("--phien") + 1])
+        PH = os.path.join(BASE, "data", "phien")
+        fs = sorted(f for f in os.listdir(PH) if f.endswith(".json"))[-k:]
+        ghi = 0
+        for f in fs:
+            ng = f[:-5]
+            q = quet(ng)
+            if not q or not any(q["muc"].values()):
+                continue
+            p = os.path.join(PH, f)
+            cu = doc(p) or {}
+            cu["la"] = q
+            tmp = p + ".tmp"
+            json.dump(cu, open(tmp, "w", encoding="utf-8"), ensure_ascii=False,
+                      separators=(",", ":"))
+            os.replace(tmp, p)
+            ghi += 1
+        print("  ghi kết quả quét vào {}/{} file phiên".format(ghi, len(fs)))
+        return 0
+
+    q = quet(ngay)
+    if not q:
+        print("  chưa có data/dactrung — chạy tools/kho_dactrung.py trước")
+        return 1
+    tmp = RA + ".tmp"
+    json.dump(q, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, RA)
+    print("QUÉT BẤT THƯỜNG phiên {} — {:,} mã có khớp lệnh, {:,} qua cổng thanh khoản".format(
+        q["ngay"], q["n"], q["nThanh"]))
+    ten = {"thoathuan": "thoả thuận lệch giá sàn", "slcp": "số cổ phiếu nhảy bậc",
+           "dotbien": "đột biến thanh khoản", "doidau": "ngoại/tự doanh đối đầu",
+           "room": "room ngoại gần cạn", "dinh": "đang ở đỉnh 52 tuần",
+           "colenh": "cỡ lệnh lệch mạnh"}
+    for k, v in q["muc"].items():
+        print("  {:<26s} {:>3d}  {}".format(
+            ten.get(k, k), len(v), " ".join(x["sym"] for x in v[:8])))
+    print("  ghi {} ({:,.0f} KB)".format(RA, os.path.getsize(RA) / 1024))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

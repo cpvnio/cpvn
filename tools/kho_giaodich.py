@@ -190,6 +190,19 @@ def eod_trang(sym, trang, tu, den):
 # phiên so với sổ lệnh, và chỗ hụt đó lặng lẽ thành "phiên không có giá". Lấy 2 trang giá
 # (40 phiên) là phủ trọn, và vẫn chỉ tốn thêm 1 lượt/mã.
 TRANG_NGAY = 2
+# SỐ TRANG CHO TẦNG DÒNG TIỀN (sổ lệnh · khối ngoại · tự doanh). Ba endpoint này trả
+# 30 DÒNG/TRANG, khác 20 của thống kê giá — nên cùng một số trang lại ra độ sâu khác nhau.
+#
+# VÌ SAO CÓ HẰNG SỐ NÀY (21/08/2026): kho mang tiếng "100 phiên" nhưng đo ra thì
+# **giá/khối lượng/thoả thuận/SLCP đủ 100, khối ngoại chỉ 60, sổ lệnh chỉ 30**. Gốc là
+# `dl_nap` thoát ngay sau trang 1 và `_kqgd_nap` thoát sau trang 2 — hai con số viết cứng,
+# không ai chỉnh được từ ngoài. Tức đúng cái tầng HIẾM NHẤT (không nguồn nào cho lại được
+# sau này, phải cào đúng lúc nó còn) lại là tầng mỏng nhất.
+#
+# ĐÂY KHÔNG PHẢI NỚI TRẦN NHỊP MẠNG. Trần vẫn là trần của `nhipmang` (4 lượt/giây với
+# finance.vietstock.vn); xin thêm trang chỉ làm lượt chạy DÀI HƠN chứ không nhanh hơn.
+# Xem luật ở đầu `tools/nhipmang.py` — đừng bao giờ đụng vào `TRAN` để chạy nhanh.
+TRANG_LUONG = 2                    # 2 trang × 30 dòng = 60 phiên, đủ đệm cho lượt EOD hằng ngày
 
 
 def eod_nap(sym, day_du=False, tu="2000-01-01", den=None, trang_toi=None):
@@ -518,7 +531,7 @@ def tt_ngay(ngay):
     return ra
 
 
-def dl_nap(sym, sid, day_du=False):
+def dl_nap(sym, sid, day_du=False, trang_toi=None):
     """SỔ LỆNH KHI CHỐT PHIÊN theo từng mã — `KQGDThongKeDatLenhStockPaging`.
 
     Trả về 30 dòng/lượt (nhiều hơn 20 của bảng giá), có lịch sử, phủ đủ mọi mã. Cần
@@ -561,7 +574,8 @@ def dl_nap(sym, sid, day_du=False):
             break
         for r in rows:
             ra[_ngay(r["TradingDate"])] = {v: r.get(k) for k, v in DL.items()}
-        if not day_du or trang >= (tong or 1) or trang > 400:
+        if trang >= (tong or 1) or trang > 400 or \
+                (not day_du and trang >= (trang_toi or TRANG_LUONG)):
             break
         trang += 1
     return ra
@@ -654,10 +668,10 @@ FN_TIEN = {"BuyVal": "fnMuaGT", "SellVal": "fnBanGT",
            "BuyPutVal": "fnMuaTTGT", "SellPutVal": "fnBanTTGT"}
 
 
-def fn_nap(sym, sid, day_du=False):
+def fn_nap(sym, sid, day_du=False, trang_toi=None):
     """Khối ngoại từng phiên: khối lượng và giá trị mua/bán (khớp lệnh và thoả thuận tách
     riêng), % của phiên, tỉ lệ sở hữu và room còn lại."""
-    return _kqgd_nap("KQGDGiaoDichNDTNNStockPaging", sym, sid, FN, FN_TIEN, day_du)
+    return _kqgd_nap("KQGDGiaoDichNDTNNStockPaging", sym, sid, FN, FN_TIEN, day_du, trang_toi)
 
 
 # ── tầng 3c: TỰ DOANH CÔNG TY CHỨNG KHOÁN THEO PHIÊN ─────────────────────────
@@ -676,7 +690,7 @@ TD_TIEN = {"BuyVal": "tdMuaGT", "SellVal": "tdBanGT",
            "BuyPutVal": "tdMuaTTGT", "SellPutVal": "tdBanTTGT"}
 
 
-def _kqgd_nap(ep, sym, sid, anh, anh_tien, day_du=False):
+def _kqgd_nap(ep, sym, sid, anh, anh_tien, day_du=False, trang_toi=None):
     """Bộ nạp dùng chung cho hai endpoint cùng hình dạng của trang kết quả giao dịch
     (khối ngoại và tự doanh): 30 dòng/lượt, `stockID` số, khối [1] là dữ liệu, [2] là số
     trang, tiền tính bằng TRIỆU ĐỒNG.
@@ -722,14 +736,15 @@ def _kqgd_nap(ep, sym, sid, anh, anh_tien, day_du=False):
                 x = r.get(k)
                 o[v] = round(x * 1e6) if x else 0      # triệu đồng -> đồng
             ra[_ngay(r["TradingDate"])] = o
-        if trang >= (tong or 1) or trang > 400 or (not day_du and trang >= 2):
+        if trang >= (tong or 1) or trang > 400 or \
+                (not day_du and trang >= (trang_toi or TRANG_LUONG)):
             break
         trang += 1
     return ra
 
 
-def td_nap(sym, sid, day_du=False):
-    return _kqgd_nap("KQGDThongKeTuDoanhStockPaging", sym, sid, TD, TD_TIEN, day_du)
+def td_nap(sym, sid, day_du=False, trang_toi=None):
+    return _kqgd_nap("KQGDThongKeTuDoanhStockPaging", sym, sid, TD, TD_TIEN, day_du, trang_toi)
 
 
 # ── tầng 4: CHỈ SỐ THEO PHIÊN ────────────────────────────────────────────────
@@ -949,7 +964,7 @@ def main():
                 continue
             # SỔ LỆNH CHỐT PHIÊN — trộn vào cùng bản ghi ngày, cùng nhịp với giá.
             try:
-                for d, r in (dl_nap(m, sid, day_du=a.tatca) or {}).items():
+                for d, r in (dl_nap(m, sid, day_du=a.tatca, trang_toi=a.trang) or {}).items():
                     moi.setdefault(d, {}).update(r)
             except Exception:
                 pass
@@ -959,7 +974,7 @@ def main():
             # phải gọi lại thống kê giá lần nữa chỉ để lấy một con số.
             for nap in (fn_nap, td_nap):
                 try:
-                    for d, r in (nap(m, sid, day_du=a.tatca) or {}).items():
+                    for d, r in (nap(m, sid, day_du=a.tatca, trang_toi=a.trang) or {}).items():
                         moi.setdefault(d, {}).update(r)
                 except Exception:
                     pass
@@ -988,10 +1003,10 @@ def main():
                 if not moi:
                     continue
                 try:
-                    for d, r in (dl_nap(m, sid, day_du=a.tatca) or {}).items():
+                    for d, r in (dl_nap(m, sid, day_du=a.tatca, trang_toi=a.trang) or {}).items():
                         moi.setdefault(d, {}).update(r)
                     for nap2 in (fn_nap, td_nap):
-                        for d, r in (nap2(m, sid, day_du=a.tatca) or {}).items():
+                        for d, r in (nap2(m, sid, day_du=a.tatca, trang_toi=a.trang) or {}).items():
                             moi.setdefault(d, {}).update(r)
                 except Exception:
                     pass

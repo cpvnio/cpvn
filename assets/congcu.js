@@ -702,8 +702,46 @@ async function renderNiemYet(){
 
    Dữ liệu chia hai tầng: `data/phantich.json` nhẹ (chỉ chuỗi toàn thị trường, tải ngay) và
    `data/phien/{NGÀY}.json` (bảng mã + vùng giá, tải khi chọn phiên). */
+/* ICON MỘT NÉT THAY CHO EMOJI. Luật hình ảnh của dự án (CLAUDE.md) là KHÔNG EMOJI: mỗi hệ
+   điều hành vẽ một kiểu, và chúng mang MÀU RIÊNG chửi nhau với bảng màu — trên một trang
+   mà xanh/đỏ có nghĩa là tăng/giảm thì một cái 📉 đỏ chót cạnh tiêu đề là nhiễu thật sự.
+   Icon nét dùng `currentColor` nên tự đổi theo chủ đề sáng/tối và theo màu chữ chỗ nó đứng.
+   Bản 21/08/2026 gỡ 📊 ✨ 💸 📋 🌏 🏦 💰 📈 📉 🤝 🏭 khỏi mục này. */
+const PTIC={
+  tt:   '<path d="M3 20h18"/><path d="M6.5 20v-7"/><path d="M11 20V5"/><path d="M15.5 20v-10"/><path d="M20 20v-5"/>',
+  tien: '<path d="M4 8h13"/><path d="M14 5l3 3-3 3"/><path d="M20 16H7"/><path d="M10 13l-3 3 3 3"/>',
+  ngoai:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21c-2.4-2.5-3.6-5.5-3.6-9S9.6 5.5 12 3z"/>',
+  bank: '<path d="M3.5 10L12 4.5 20.5 10"/><path d="M6 10.5v8"/><path d="M10 10.5v8"/><path d="M14 10.5v8"/><path d="M18 10.5v8"/><path d="M3.5 19.5h17"/>',
+  sang: '<path d="M11 3.5l1.7 4.6 4.6 1.7-4.6 1.7L11 16.1 9.3 11.5 4.7 9.8l4.6-1.7z"/><path d="M17.6 15.4l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+  xu:   '<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v5.5c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 11.5V17c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-5.5"/>',
+  len:  '<path d="M3 17.5l6-6 3.5 3.5L21 7"/><path d="M15 7h6v6"/>',
+  xuong:'<path d="M3 6.5l6 6 3.5-3.5L21 17"/><path d="M15 17h6v-6"/>',
+  tay:  '<rect x="2.5" y="9" width="6" height="6" rx="1.6"/><rect x="15.5" y="9" width="6" height="6" rx="1.6"/><path d="M9.5 12h5"/><path d="M12.8 10.2l1.8 1.8-1.8 1.8"/>',
+  nganh:'<rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/>',
+  bang: '<rect x="3" y="4.5" width="18" height="15" rx="2.2"/><path d="M3 9.5h18"/><path d="M9.5 9.5v10"/>',
+  bieu: '<path d="M3.5 3.5v17h17"/><path d="M7 15.5l4-5 3 3 5.5-7"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11.2v5"/><path d="M12 7.6v.9"/>',
+  trai: '<path d="M15 5l-7 7 7 7"/>',
+  phai: '<path d="M9 5l7 7-7 7"/>',
+  ve:   '<path d="M20 12H4.5"/><path d="M11 5.5L4.5 12 11 18.5"/>'
+};
+function ptIc(k){
+  return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"'+
+    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(PTIC[k]||'')+'</svg>';
+}
+/* GHI CHÚ GẤP LẠI ĐƯỢC. Bản trước để hai khối ghi chú viền ĐỎ đứng thường trực giữa dữ
+   liệu — mà đỏ trên chính trang này là màu của GIẢM GIÁ, hai mảng đỏ cạnh bảng số đọc ra
+   như báo động. Chữ vẫn còn nguyên chữ, chỉ gấp lại sau một nút.
+   PHẢI NHỚ TRẠNG THÁI: bảng vẽ lại mỗi lần đổi cột xếp hay gõ ô tìm, `<details>` trơn sẽ
+   tự sập đúng vào lúc người ta đang đọc dở. */
+function ptGiai(id,ten,html){
+  return '<details class="ptgt" data-g="'+id+'"'+(PT.giai[id]?' open':'')+'>'
+    +'<summary>'+ptIc('info')+(ten||'Cách đọc')+'</summary><div>'+html+'</div></details>';
+}
+function ptBindGiai(){ $$('.ptgt').forEach(d=>{ d.ontoggle=()=>{ PT.giai[d.dataset.g]=d.open; }; }); }
+
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
-          n:60, ma:null, maD:null, nMa:63, maI:null,
+          n:60, ma:null, maD:null, nMa:63, maI:null, giai:{},
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -720,11 +758,16 @@ async function ptPhien(ng){
 }
 
 async function renderPhanTich(){
-  const el=$('#m-phantich'), m=MODULES.find(x=>x.id==='phantich');
+  /* KHÔNG DỰNG `head(m)` — user chốt 21/08/2026 ("bỏ khối tiêu đề"). Ba dòng "CPVN.IO —
+     công cụ thị trường" / tên mục / câu mô tả chiếm gần một phần ba màn trước khi thấy số
+     đầu tiên, mà tên mục đã nằm sẵn trên thanh điều hướng và trên tiêu đề tab trình duyệt.
+     Cùng một quyết định đã áp cho Thông tin niêm yết cùng ngày — hai mục cùng site thì
+     phải cùng một giọng. */
+  const el=$('#m-phantich');
   el.innerHTML='<div class="empty">Đang nạp…</div>';
   const o=await ptTT();
   if(!o||o.err||!o.tt||!o.tt.d||!o.tt.d.length){
-    el.innerHTML=head(m)+'<div class="panel"><div class="pb"><div class="empty">'+
+    el.innerHTML='<div class="panel"><div class="pb"><div class="empty">'+
       'Chưa có dữ liệu — kho <code>data/giaodich</code> đang được bồi.</div></div></div>';
     return;
   }
@@ -736,7 +779,7 @@ async function renderPhanTich(){
     try{ PT.maD=await (await fetch('data/giaodich/'+PT.ma+'.json')).json(); }
     catch(e){ PT.maD={err:1}; }
   }
-  el.innerHTML=head(m)+'<div id="ptBody"></div>';
+  el.innerHTML='<div id="ptBody"></div>';
   await ptVe();
 }
 
@@ -749,9 +792,9 @@ async function ptVe(){
   const opt=co.slice().reverse().map(d=>'<option'+(d===PT.ngay?' selected':'')+'>'+d+'</option>').join('');
   b.innerHTML=
     '<div class="ptbar">'
-      +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">◀</button>'
+      +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">'+ptIc('trai')+'</button>'
       +'<select id="ptNgay">'+opt+'</select>'
-      +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">▶</button>'
+      +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">'+ptIc('phai')+'</button>'
       +'<span class="ptbarn">'+co.length+' phiên có dữ liệu đầy đủ</span></div>'
     +'<div id="ptTop"></div><div id="ptTab"></div>';
   ptTop();
@@ -778,15 +821,39 @@ function ptTop(){
     return '<span class="ptcs"><b>'+k+'</b> '+num2(x.c[i])+
       '<i class="'+cls(p)+'">'+(p>0?'+':'')+(p==null?'—':p.toFixed(2)+'%')+'</i></span>';
   }).join('');
-  $('#ptTop').innerHTML='<div class="panel"><div class="ph"><span>📊</span>Toàn thị trường — phiên '+
+  /* CHỈ SỐ GỘP THÀNH MỘT Ô RỘNG, KHÔNG CÒN DẢI RIÊNG BÊN DƯỚI. Bản trước xếp ba tầng số
+     chồng nhau — sáu ô lớn, rồi dải VN30/HNX/UPCOM, rồi dải chi tiết khối ngoại/tự doanh —
+     mắt không biết đọc tầng nào trước. VN-Index và ba chỉ số phụ vốn là CÙNG một câu hỏi
+     ("hôm nay thị trường lên hay xuống"), nên chúng thuộc về cùng một ô; gộp lại là bớt
+     hẳn một tầng mà không mất chữ nào. */
+  /* Bên trong ô: VN-Index to bên TRÁI, ba chỉ số phụ xếp dọc gọn bên PHẢI. Xếp dọc chúng
+     xuống dưới thì ô cao gấp đôi năm ô còn lại, và lưới kéo cả năm ô kia cao theo — năm
+     mảng trống to đúng bằng phần chữ. */
+  const boxCS='<div class="ptbox ptbox2"><div class="ptcsm"><div class="ptcsa">'
+    +'<span class="ptlb">VN-Index</span>'
+    +'<b'+(pc==null?'':' class="'+cls(pc)+'"')+'>'+(vn&&vn.c[i]!=null?num2(vn.c[i]):'—')+'</b>'
+    +(pc==null?'':'<i>'+(pc>0?'+':'')+pc.toFixed(2)+'% so với phiên trước</i>')
+    +'</div>'+(phu?'<div class="ptcsw">'+phu+'</div>':'')+'</div></div>';
+  $('#ptTop').innerHTML='<div class="panel"><div class="ph">'+ptIc('tt')+'Toàn thị trường — phiên '+
     esc(PT.ngay)
     +'<span class="cnt">'+num(t.n[i])+' mã</span></div><div class="pb">'
-    +'<div class="ptgrid">'
-    +box('VN-Index', vn&&vn.c[i]!=null?num2(vn.c[i]):'—',
-         pc==null?'':((pc>0?'+':'')+pc.toFixed(2)+'% so với phiên trước'), pc==null?'':cls(pc))
-    +box('Giá trị khớp lệnh', num(kl)+' tỷ', tong?((kl/tong*100).toFixed(1)+'% tổng giao dịch'):'')
-    +box('Giá trị thoả thuận', num(tt)+' tỷ', tong?((tt/tong*100).toFixed(1)+'% tổng giao dịch'):'')
-    +box('Vốn hoá toàn thị trường', num(t.mcap[i]/1000)+' nghìn tỷ', num(t.nMcap[i])+' mã có số cổ phiếu')
+    +'<div class="ptgrid ptg7">'
+    +boxCS
+    /* MỘT Ô CHO CẢ HAI LOẠI GIAO DỊCH, không tách hai ô. Ô lớn đọc được "hôm nay thị
+       trường giao dịch bao nhiêu tiền"; tách khớp lệnh với thoả thuận là chi tiết, thuộc
+       về dòng phụ. Gộp lại còn để lưới xuống 6 đơn vị — 7 đơn vị thì mỗi ô hẹp tới mức
+       "10.167 nghìn tỷ" bị cắt cụt, mà con số bị cắt thì mất nghĩa hoàn toàn. */
+    +box('Giá trị giao dịch', num(tong)+' tỷ',
+         'khớp lệnh <b class="ptff">'+num(kl)+'</b> · thoả thuận '+num(tt)+' tỷ')
+    /* HAI CON SỐ, KHÔNG PHẢI MỘT. Vốn hoá danh nghĩa 10.167 nghìn tỷ nghe như quy mô
+       thị trường, nhưng phần THỰC SỰ MUA BÁN ĐƯỢC chỉ 2.049 — 20,1%. Phần chênh nằm ở
+       tay nhà nước và cổ đông chiến lược, không bao giờ ra sàn. Hiện mỗi con số đầu là
+       nói quá quy mô thị trường lên 5 lần. */
+    +box('Vốn hoá thị trường', num(t.mcap[i]/1000)+' nghìn tỷ',
+         (t.mcapFF&&t.mcapFF[i]!=null)
+           ?('giao dịch được <b class="ptff">'+num(t.mcapFF[i]/1000)+' nghìn tỷ</b> · '
+             +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'% free float')
+           :(num(t.nMcap[i])+' mã có số cổ phiếu'))
     /* KHỐI NGOẠI và TỰ DOANH: hiện RÒNG làm số chính, mua/bán làm phụ. `nFn`/`nTd` phải nói
        ra vì hai tầng này phủ khác nhau — tự doanh phiên 20/08 chỉ có 62 mã trong khi khối
        ngoại có 1.525, mà phần lớn 1.463 mã kia KHÔNG PHẢI thiếu dữ liệu: chúng không có
@@ -804,7 +871,6 @@ function ptTop(){
          (t.tdMua&&t.tdMua[i]!=null)
            ?('mua '+num(t.tdMua[i])+' · bán '+num(t.tdBan[i])+' tỷ · '+num(t.nTd[i])+' mã có'):'kho chưa có')
     +'</div>'
-    +(phu?'<div class="ptcsw">'+phu+'</div>':'')
     +'<div class="ptcv" id="ptCvW"><canvas id="ptCv"></canvas>'
       +'<div class="ptcvhl" id="ptHL"></div><div class="pttip" id="ptTip"></div></div>'
     +'<p class="ptleg"><i class="pkN"></i> khối ngoại &nbsp; <i class="pkT"></i> tự doanh'
@@ -815,14 +881,16 @@ function ptTop(){
     /* DẢI CHI TIẾT của phiên đang chọn — đây là chỗ trả lời "mua bán ròng bao nhiêu", tách
        hẳn khỏi cột. Cột chỉ nói ĐỘ MẠNH, dải này mới nói CHIỀU. */
     +'<div class="ptct">'+ptChiTiet(t,i)+'</div>'
-    +'<p class="ptnote">Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải '
-      +'mua cộng bán: mỗi lệnh khớp có đúng một người mua và một người bán, cộng thẳng cả hai '
-      +'vế là đếm hai lần. Chia đôi thì ba mảng cộng lại bằng đúng giá trị khớp lệnh của phiên. '
-      +'Cột <b>xám</b> là phiên kho chưa cào đủ mã — thấp vì thiếu dữ liệu chứ không phải vì ế.</p>'
+    +ptGiai('cot','Vì sao màu trên cột lại chia như vậy',
+       'Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải mua cộng bán: mỗi '
+      +'lệnh khớp có đúng một người mua và một người bán, cộng thẳng cả hai vế là đếm hai '
+      +'lần. Chia đôi thì ba mảng cộng lại bằng đúng giá trị khớp lệnh của phiên. '
+      +'Cột <b>xám</b> là phiên kho chưa cào đủ mã — thấp vì thiếu dữ liệu chứ không phải vì ế.')
     +'</div></div>';
   const ch=$('#ptChe');
   if(ch) ch.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
     PT.che=b.dataset.c; ptTop(); };
+  ptBindGiai();
   ptVeChart();
 }
 function ptChiTiet(t,i){
@@ -1030,19 +1098,76 @@ function ptDongTien(r){
     ' · bán '+ptTien(x.ban)+'"><b>'+esc(x.sym)+'</b>'+
     '<span class="dsn">'+esc(shortName(x.sec||''))+'</span>'+
     '<span class="dsv '+cls(x.rong)+'">'+(x.rong>0?'+':'')+ptTien(x.rong)+'</span></div>';
-  const cot=(ic,ten,rows,ghi)=>'<div class="dscol"><h4>'+ic+' '+ten+'</h4>'+
+  const cot=(ic,ten,rows,ghi)=>'<div class="dscol"><h4>'+ptIc(ic)+ten+'</h4>'+
     (rows.length?rows:'<div class="dse">không có mã nào</div>')+
     (ghi?'<p class="dsg">'+ghi+'</p>':'')+'</div>';
   const top=(a,chieu)=>a.slice().sort((x,y)=>chieu*(y.rong-x.rong))
     .filter(x=>chieu>0?x.rong>0:x.rong<0).slice(0,8).map(dong).join('');
   if(!fn.length&&!td.length) return '';
-  return '<div class="panel"><div class="ph"><span>💸</span>Khối ngoại và tự doanh mua bán gì — phiên '+
+  return '<div class="panel"><div class="ph">'+ptIc('tien')+'Khối ngoại và tự doanh mua bán gì — phiên '+
     esc(PT.ngay)+'</div><div class="pb"><div class="dsw">'
-    +cot('🌏','Khối ngoại MUA ròng', top(fn,1), 'rê chuột để xem mua/bán từng mã')
-    +cot('🌏','Khối ngoại BÁN ròng', top(fn,-1), '')
-    +cot('🏦','Tự doanh MUA ròng', top(td,1), 'tổng tự doanh toàn thị trường — nguồn KHÔNG tách theo công ty chứng khoán')
-    +cot('🏦','Tự doanh BÁN ròng', top(td,-1), '')
+    +cot('ngoai','Khối ngoại MUA ròng', top(fn,1), 'rê chuột để xem mua/bán từng mã')
+    +cot('ngoai','Khối ngoại BÁN ròng', top(fn,-1), '')
+    +cot('bank','Tự doanh MUA ròng', top(td,1), 'tổng tự doanh toàn thị trường — nguồn KHÔNG tách theo công ty chứng khoán')
+    +cot('bank','Tự doanh BÁN ròng', top(td,-1), '')
     +'</div></div></div>';
+}
+
+/* QUÉT BẤT THƯỜNG — "phiên này có gì lạ". Đọc khối `la` mà `tools/quet_la.py` ghi sẵn
+   vào chính file phiên, nên đổi phiên là quét đổi theo mà không tốn thêm lượt tải nào.
+
+   VÌ SAO KHỐI NÀY ĐỨNG ĐẦU, TRÊN CẢ DÒNG TIỀN VÀ ĐIỂM SÁNG: hai khối kia trả lời "mã nào
+   to nhất, tiền chảy đi đâu" — câu hỏi của người đã biết mình tìm gì. Khối này trả lời
+   "có chuyện gì tôi chưa thấy", và đó là câu duy nhất mà một bảng 1.525 dòng không bao
+   giờ trả lời được, vì thứ bất thường nằm lẫn trong đó chứ không nổi lên.
+
+   MÔ TẢ SỰ KIỆN ĐÃ XẢY RA, KHÔNG SUY DIỄN. Mỗi dòng là một con số đo được ("thoả thuận
+   khớp thấp hơn giá sàn 26%"), không kèm một chữ nào về nên làm gì — xem mục Ranh giới
+   pháp lý trong CLAUDE.md. */
+const QL=[
+  ['thoathuan','tay','Thoả thuận lệch xa giá sàn',
+   'sang tay lô lớn ở giá thương lượng, từ 20 tỷ và lệch từ 10%',
+   x=>ptTien(x.pval), x=>x.ttl, x=>(x.ttl>0?'+':'')+x.ttl.toFixed(1)+'% so giá sàn'],
+  ['slcp','nganh','Số cổ phiếu vừa nhảy bậc',
+   'phát hành thêm · chia thưởng · chuyển đổi — từ 5% trong một phiên',
+   x=>(x.dsh>0?'+':'')+x.dsh.toFixed(1)+'%', x=>x.dsh, null],
+  ['dotbien','len','Đột biến thanh khoản',
+   'giá trị khớp lệnh so với trung bình 20 phiên TRƯỚC đó',
+   x=>'×'+x.gtx.toFixed(1), x=>x.pc, x=>ptTien(x.mval)],
+  ['doidau','tien','Khối ngoại và tự doanh đối đầu',
+   'hai nhóm đi ngược chiều trên cùng một mã, mỗi bên từ 5 tỷ',
+   x=>((x.fnr>0?'NN +':'NN ')+ptTien(x.fnr)), x=>x.fnr,
+   x=>(x.tdr>0?'TD +':'TD ')+ptTien(x.tdr)],
+  ['room','ngoai','Room ngoại gần cạn',
+   'khối ngoại gần như không mua thêm được nữa',
+   x=>x.room.toFixed(2)+'%', x=>x.pc, x=>ptTien(x.mval)],
+  ['dinh','sang','Đang ở đỉnh 52 tuần',
+   'vị trí giá kèm tiền vào — là phép đo, không phải nhận định',
+   x=>x.d52.toFixed(1)+'%', x=>x.pc, x=>'×'+x.gtx.toFixed(1)+' thanh khoản'],
+  ['colenh','bang','Cỡ lệnh hai bên lệch mạnh',
+   'khối lượng đặt chia cho SỐ LỆNH — lệnh to là tổ chức, nhỏ là cá nhân',
+   x=>(x.clm>0?'mua to hơn':'bán to hơn'), x=>x.clm,
+   x=>'×'+Math.exp(Math.abs(x.clm)).toFixed(1)],
+];
+function ptQuetLa(p){
+  const q=p&&p.la; if(!q||!q.muc) return '';
+  const cot=QL.map(([k,ic,ten,ghi,chinh,mau,phu])=>{
+    const rows=q.muc[k]||[]; if(!rows.length) return '';
+    return '<div class="dscol"><h4>'+ptIc(ic)+ten+'</h4>'
+      +rows.slice(0,8).map(x=>'<div class="dsr" data-sym="'+x.sym+'" title="'+esc(x.ten||'')+'">'
+        +'<b>'+esc(x.sym)+'</b>'
+        +'<span class="dsn">'+esc(phu?phu(x):shortName(x.sec||''))+'</span>'
+        +'<span class="dsv '+(mau?cls(mau(x)):'')+'">'+chinh(x)+'</span></div>').join('')
+      +'<p class="dsg">'+ghi+'</p></div>';
+  }).join('');
+  if(!cot) return '';
+  return '<div class="panel"><div class="ph">'+ptIc('info')+'Phiên này có gì lạ — '+esc(q.ngay)
+    +'<span class="cnt">'+num(q.n)+' mã có khớp lệnh</span></div><div class="pb">'
+    +ptGiai('quetla','Mấy bảng này đọc thế nào',
+       'Đây là <b>mô tả sự kiện đã xảy ra</b>, đo thẳng từ số chốt phiên — không phải nhận '
+      +'định và không phải gợi ý. Mọi bảng đều lọc mã khớp dưới 1 tỷ đồng: không lọc thì '
+      +'đầu bảng toàn mã đổi chủ vài lô, nhảy trần đều đặn và đẩy hết thứ đáng đọc xuống dưới.')
+    +'<div class="dsw">'+cot+'</div></div></div>';
 }
 
 /* ĐIỂM SÁNG TRONG NGÀY — user chốt 20/08/2026: *"cách sắp xếp dữ liệu đang khó nhìn làm tao
@@ -1059,7 +1184,7 @@ function ptDiemSang(r){
   const dong=(x,ph)=>'<div class="dsr" data-sym="'+x.sym+'"><b>'+esc(x.sym)+'</b>'+
     '<span class="dsn">'+esc(shortName(x.sec||''))+'</span>'+
     '<span class="dsv '+(x.pc==null?'':cls(x.pc))+'">'+ph+'</span></div>';
-  const cot=(ic,ten,ghi,rows)=>'<div class="dscol"><h4>'+ic+' '+ten+'</h4>'+
+  const cot=(ic,ten,ghi,rows)=>'<div class="dscol"><h4>'+ptIc(ic)+ten+'</h4>'+
     (rows.length?rows:'<div class="dse">không có mã nào</div>')+
     (ghi?'<p class="dsg">'+ghi+'</p>':'')+'</div>';
 
@@ -1086,13 +1211,13 @@ function ptDiemSang(r){
       '<span class="dsv">'+ptTien(g.v)+'<i>'+(g.v/tongV*100).toFixed(1)+'%</i></span></div>';
   }).join('');
 
-  return '<div class="panel"><div class="ph"><span>✨</span>Điểm sáng phiên '+esc(PT.ngay)+
+  return '<div class="panel"><div class="ph">'+ptIc('sang')+'Điểm sáng phiên '+esc(PT.ngay)+
     '</div><div class="pb"><div class="dsw">'
-    +cot('💰','Hút tiền nhất','', tien)
-    +cot('📈','Tăng mạnh nhất','lọc mã khớp từ '+ptTien(DS_MIN)+' trở lên', tang)
-    +cot('📉','Giảm mạnh nhất','lọc mã khớp từ '+ptTien(DS_MIN)+' trở lên', giam)
-    +cot('🤝','Thoả thuận lớn nhất','giao dịch ngoài sổ lệnh', tt)
-    +cot('🏭','Ngành hút tiền','▲▼ = số mã tăng/giảm trong ngành', nganh)
+    +cot('xu','Hút tiền nhất','', tien)
+    +cot('len','Tăng mạnh nhất','lọc mã khớp từ '+ptTien(DS_MIN)+' trở lên', tang)
+    +cot('xuong','Giảm mạnh nhất','lọc mã khớp từ '+ptTien(DS_MIN)+' trở lên', giam)
+    +cot('tay','Thoả thuận lớn nhất','giao dịch ngoài sổ lệnh', tt)
+    +cot('nganh','Ngành hút tiền','▲▼ = số mã tăng/giảm trong ngành', nganh)
     +'</div></div></div>';
 }
 
@@ -1187,7 +1312,8 @@ async function ptMoMa(sym){
 function ptVeMa(){
   const w=$('#ptTab'); if(!w||!PT.ma) return;
   const o=PT.maD;
-  const dau='<div class="ptmahead"><button id="ptQuay" class="ptnav">←</button>'+
+  const dau='<div class="ptmahead"><button id="ptQuay" class="ptnav" title="Quay lại bảng phiên">'+
+    ptIc('ve')+'</button>'+
     '<h2>'+esc(PT.ma)+'</h2><span class="ptbarn">phân tích '+PT.nMa+' phiên gần nhất</span>'+
     '<a class="ptlink" href="/cophieu/'+esc(PT.ma)+'">mở trang cổ phiếu →</a></div>';
   if(!o){ w.innerHTML=dau+'<div class="panel"><div class="pb"><div class="empty">Đang nạp…</div></div></div>'; ptBindMa(); return; }
@@ -1240,9 +1366,9 @@ function ptVeMa(){
     +'<div class="ptdoc" id="ptDoc"></div>'
     +'<div class="ptbieu">'
       +ptO('Giá đóng cửa và giá trung bình', 'mc1',
-           '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)')
+           '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)', 1)
       +ptO('Giá trị giao dịch mỗi phiên', 'mc2',
-           '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận')
+           '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận', 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên')
       +ptO('Khối ngoại ròng', 'mc4', 'mua trừ bán — cột xanh là mua ròng, đỏ là bán ròng')
@@ -1262,10 +1388,12 @@ function ptVeMa(){
     (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
   const XANH=dark?'#34d399':'#16a34a', DO=dark?'#f87171':'#dc2626';
   const chon=(i)=>{ if(i===PT.maI) return; PT.maI=i; ptVeMa(); };
-  const C=(cfg)=>Object.assign({d,moc:PT.maI,chon},cfg);
-  ptVe1($('#mc1'),C({kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
+  /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
+     giữ nguyên chiều cao là ô thành hình chữ nhật dựng đứng, đường giá bị kéo dốc giả. */
+  const C=(cfg)=>Object.assign({d,moc:PT.maI,chon,cao:136},cfg);
+  ptVe1($('#mc1'),C({cao:250,kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
     {v:vw,mau:dark?'#fbbf24':'#d97706'}],nhan:num}));
-  ptVe1($('#mc2'),C({kieu:'bar',chong:1,series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},
+  ptVe1($('#mc2'),C({cao:250,kieu:'bar',chong:1,series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},
     {v:pval,mau:dark?'#a78bfa':'#7c3aed'}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
@@ -1277,7 +1405,7 @@ function ptVeMa(){
     {v:ptt,mau:dark?'#c084fc':'#7c3aed'}],nhan:num}));
   ptVe1($('#mc7'),C({kieu:'line',series:[{v:mcap,mau:XANH}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc8'),C({kieu:'bar',series:[{v:mv,mau:dark?'#94a3b8':'#64748b'}],nhan:num}));
-  if(vg) ptVe1($('#mc9'),{d:vg.p.map(x=>num(x)),kieu:'bar',
+  if(vg) ptVe1($('#mc9'),{d:vg.p.map(x=>num(x)),kieu:'bar',cao:136,
     series:[{v:vg.v,mau:dark?'#38bdf8':'#0284c7'}],nhan:num});
   const oo=(nhan,gt)=>'<span class="ptdo"><i>'+nhan+'</i><b>'+gt+'</b></span>';
   $('#ptDoc').innerHTML='<span class="ptdd">'+esc(d[k])+'</span>'
@@ -1300,8 +1428,13 @@ function ptVeMa(){
     +'<span class="ptdg">rê chuột hoặc bấm lên bất kỳ đồ thị nào để đổi phiên</span>';
   ptBindMa();
 }
-function ptO(ten,id,ghi){
-  return '<div class="panel ptbo"><div class="ph"><span>📈</span>'+ten+'</div><div class="pb">'+
+/* `to=1` -> đồ thị CHIẾM CẢ CHIỀU NGANG và cao hơn. Bản trước cho cả 11 đồ thị cùng một
+   cỡ, nên "giá đóng cửa" và "vùng giá khớp lệnh" ngang vai nhau — lưới 11 ô đều tăm tắp
+   thì không ô nào là câu trả lời đầu tiên, mắt phải đọc hết tên từng ô mới biết nhìn đâu.
+   Giá và tiền là hai câu hỏi chính của mọi mã, cho chúng đứng riêng một hàng. */
+function ptO(ten,id,ghi,to){
+  return '<div class="panel ptbo'+(to?' ptbig':'')+'"><div class="ph">'+ptIc('bieu')+ten+
+    '</div><div class="pb">'+
     '<canvas id="'+id+'"></canvas>'+(ghi?'<p class="ptleg">'+ghi+'</p>':'')+'</div></div>';
 }
 function ptBindMa(){
@@ -1329,6 +1462,14 @@ const PTC=[
   {k:'ptt', t:'Giá thoả thuận', n:1},
   {k:'mv',  t:'KL khớp lệnh',   n:1},
   {k:'mcap',t:'Vốn hoá',        n:1, tien:1},
+  /* FREE FLOAT — tỉ lệ cổ phiếu thực sự chuyển nhượng được, và vốn hoá tương ứng.
+     Nằm sẵn trong `data/profile` từ lâu mà tới 21/08/2026 mới có chỗ nào đọc.
+     Vì sao đáng một cột riêng: BID vốn hoá 279 nghìn tỷ mà free float 2,6% -> chỉ 7
+     nghìn tỷ mua bán được, trong khi STB 140 nghìn tỷ với 95% -> 133. Xếp bảng theo cột
+     `mcapFF` là ra một thứ hạng KHÁC HẲN cột `mcap`, và đó mới là thứ hạng nói được vì
+     sao mã này chạy còn mã kia đứng im. */
+  {k:'ff',  t:'Free float',     n:1},
+  {k:'mcapFF',t:'Vốn hoá FF',   n:1, tien:1},
 ];
 
 async function ptBang(){
@@ -1339,7 +1480,7 @@ async function ptBang(){
     /* KHÔNG gọi ptDiemSang ở đây — `rDay` chỉ được dựng sau khi đọc xong file phiên, gọi
        ở nhánh thoát sớm này là ReferenceError và cả trang trắng. Mà cũng vô nghĩa: không
        có file thì không có mã nào để tìm điểm sáng. */
-    w.innerHTML='<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
+    w.innerHTML='<div class="panel"><div class="ph">'+ptIc('bang')+'Bảng mã — phiên '+esc(PT.ngay)+
       '</div><div class="pb"><div class="empty">Phiên này chưa có file dữ liệu. '+
       'Kho chỉ dựng file cho phiên có từ 100 mã trở lên.</div></div></div>';
     return;
@@ -1352,6 +1493,7 @@ async function ptBang(){
     r.push({sym, ex:g('ex')||'', sec:g('sec')||'', c, tc, vwap:g('vwap'), mval:g('mval')||0, pval:g('pval')||0,
             mv:g('mv')||0, mcap:(c&&sh)?c*sh:null, pc:(c&&tc)?((c/tc-1)*100):null,
             ptt:(g('pv')&&g('pval'))?(g('pval')/g('pv')):null,
+            ff:g('ff'), mcapFF:(c&&sh&&g('ff'))?c*sh*g('ff')/100:null,
             fnM:g('fnMuaGT'), fnB:g('fnBanGT'), tdM:g('tdMuaGT'), tdB:g('tdBanGT'),
             vg:(p.ma&&p.ma[sym])||null});
   }
@@ -1377,6 +1519,7 @@ async function ptBang(){
       if(c.k==='ex')  return '<td>'+esc(x.ex)+'</td>';
       if(v==null) return '<td class="r">—</td>';
       if(c.k==='pc') return '<td class="r '+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</td>';
+      if(c.k==='ff') return '<td class="r">'+v.toFixed(1)+'%</td>';
       if(c.tien) return '<td class="r">'+ptTien(v)+'</td>';
       /* Giá thoả thuận: kèm CHÊNH so với giá đóng cửa. Bản thân mức giá không nói được gì
          nếu không biết nó lệch bao xa — LPB 23/06 thoả thuận ở 46.122 trong khi sàn đóng
@@ -1394,13 +1537,14 @@ async function ptBang(){
         'khoảng 09/2025; phiên nào đã cào thì dòng có dấu ▾.</i></div>')+'</td></tr>';
     return tr;
   }).join('');
-  w.innerHTML=ptDongTien(rDay)+ptDiemSang(rDay)+
-    '<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
+  w.innerHTML=ptQuetLa(p)+ptDongTien(rDay)+ptDiemSang(rDay)+
+    '<div class="panel"><div class="ph">'+ptIc('bang')+'Bảng mã — phiên '+esc(PT.ngay)+
     '<span class="cnt">'+num(r.length)+' mã</span></div><div class="pb">'
-    +'<p class="ptnote">Xếp theo <b>giá trị</b> chứ không theo khối lượng: một mã khớp mấy triệu '
-      +'cổ phiếu giá 3.000đ chỉ là vài tỷ, còn mã khớp vài trăm nghìn cổ phiếu giá 200.000đ mới là '
-      +'tiền thật. '+(coVG?'Bấm vào dòng có dấu ▾ để xem <b>vùng giá khớp lệnh</b> của mã đó trong phiên này.'
-        :'<i>Vùng giá khớp lệnh của phiên này chưa cào — bảng vẫn đầy đủ.</i>')+'</p>'
+    +ptGiai('bang','Vì sao bảng xếp theo tiền chứ không theo khối lượng',
+       'Một mã khớp mấy triệu cổ phiếu giá 3.000đ chỉ là vài tỷ, còn mã khớp vài trăm nghìn '
+      +'cổ phiếu giá 200.000đ mới là tiền thật. '
+      +(coVG?'Bấm vào dòng có dấu ▾ để xem <b>vùng giá khớp lệnh</b> của mã đó trong phiên này.'
+        :'Vùng giá khớp lệnh của phiên này chưa cào — bảng vẫn đầy đủ.'))
     +'<div class="nybar"><div class="nyseg" id="ptEx">'+chip('all','Tất cả')
       +chip('HOSE','HOSE'+(dem.HOSE?' '+dem.HOSE:''))+chip('HNX','HNX'+(dem.HNX?' '+dem.HNX:''))
       +chip('UPCOM','UPCOM'+(dem.UPCOM?' '+dem.UPCOM:''))+'</div>'
@@ -1408,7 +1552,7 @@ async function ptBang(){
     +'<div class="pttw"><table class="pttb"><thead><tr>'+th+'</tr></thead><tbody>'+
       (body||'<tr><td colspan="'+PTC.length+'"><div class="empty">Không có mã nào</div></td></tr>')+
       '</tbody></table></div>'
-    +(r.length>400?'<p class="ptnote">Hiện 400 mã đầu theo thứ tự đang xếp — còn '+num(r.length-400)+' mã nữa.</p>':'')
+    +(r.length>400?'<p class="ptbarn ptdu">Hiện 400 mã đầu theo thứ tự đang xếp — còn '+num(r.length-400)+' mã nữa.</p>':'')
     +'</div></div>';
   ptBind();
 }
@@ -1454,6 +1598,7 @@ function ptVungGia(x){
 }
 
 function ptBind(){
+  ptBindGiai();
   const ex=$('#ptEx'); if(ex) ex.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
     PT.ex=b.dataset.ex; ptBang(); };
   const q=$('#ptQ');
