@@ -99,6 +99,12 @@ if ($LASTEXITCODE -ne 0) { "kho_rolichsu EXIT $LASTEXITCODE - bo qua, chay tiep"
 & $py tools\va_dau_fin.py 2>&1
 if ($LASTEXITCODE -ne 0) { "va_dau_fin EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# GIAO DỊCH NGƯỜI NỘI BỘ — đọc tiêu đề CBTT của HOSE/HNX đã có trong data/news, KHÔNG
+# gọi mạng. PHẢI CHẠY MỖI NGÀY và kho PHẢI GOM DỒN: data/news chỉ giữ tin trong 30 ngày,
+# bỏ một tuần là mất hẳn tuần đó, không lấy lại được.
+& $py tools\kho_noibo.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_noibo EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # KHO ĐẶC TRƯNG — vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, và chỉ
 # tiêu cơ bản GẮN THEO NGÀY CÔNG BỐ BCTC. Không gọi mạng, ~40 giây.
 # Phải chạy SAU build_phantich (không phụ thuộc, nhưng để thứ tự đọc xuôi) và TRƯỚC

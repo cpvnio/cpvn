@@ -71,6 +71,16 @@ def nap_kho():
             gd[m] = g
     _KHO["hang"] = hang
     _KHO["gd"] = gd
+    # GIAO DỊCH NGƯỜI NỘI BỘ, gom theo NGÀY. Kho này bồi dần (data/news chỉ giữ 30 ngày)
+    # nên phiên cũ hơn khoảng bồi sẽ không có gì — đó là thiếu THẬT, không phải lỗi.
+    nb = {}
+    try:
+        for r in (doc(os.path.join(BASE, "data", "noibo.json")) or {}).get("gd", []):
+            if r.get("d") and r.get("xong"):
+                nb.setdefault(r["d"], []).append(r)
+    except Exception:
+        nb = {}
+    _KHO["nb"] = nb
     return _KHO
 
 
@@ -175,7 +185,26 @@ def quet(ngay=None):
     muc["dinh"] = [{k: x.get(k) for k in
                     ("sym", "ten", "sec", "c", "pc", "mval", "d52", "gtx")} for x in dh[:TOP]]
 
-    # ⑦ CỠ LỆNH BÊN BÁN LỚN HƠN HẲN BÊN MUA (và ngược lại). Lệnh to là tổ chức.
+    # ⑦ NGƯỜI NỘI BỘ VỪA CÔNG BỐ ĐÃ MUA / ĐÃ BÁN. Ghép với ① là ra bức tranh đủ: mã vừa
+    # có lô thoả thuận sang tay dưới giá sàn *và* có người nội bộ bán ra thì hai dấu vết
+    # đó nói cùng một chuyện. Đo được ngay lượt đầu: CLI có hai lô thoả thuận −14,9% và
+    # −14,6% cuối tháng 6, rồi Chủ tịch HĐQT bán 4.000.000 CP ngày 14/08.
+    gia = {x["sym"]: x for x in r}
+    nb = []
+    for z in (K.get("nb") or {}).get(ngay, []):
+        y = dict(z)
+        g = gia.get(z["sym"]) or {}
+        y["c"] = g.get("c")
+        y["pc"] = g.get("pc")
+        y["mval"] = g.get("mval")
+        y["gt"] = (g.get("c") or 0) * z["sl"] or None
+        nb.append(y)
+    nb.sort(key=lambda x: -(x.get("gt") or 0))
+    muc["noibo"] = [{k: x.get(k) for k in
+                     ("sym", "ten", "chuc", "chieu", "sl", "gt", "c", "pc", "lq")}
+                    for x in nb[:TOP]]
+
+    # ⑧ CỠ LỆNH BÊN BÁN LỚN HƠN HẲN BÊN MUA (và ngược lại). Lệnh to là tổ chức.
     cl = [x for x in thanh if x.get("clm") is not None and abs(x["clm"]) >= 0.7]
     cl.sort(key=lambda x: -abs(x["clm"]))
     muc["colenh"] = [{k: x.get(k) for k in
@@ -285,7 +314,7 @@ def main():
     ten = {"thoathuan": "thoả thuận lệch giá sàn", "slcp": "số cổ phiếu nhảy bậc",
            "dotbien": "đột biến thanh khoản", "doidau": "ngoại/tự doanh đối đầu",
            "room": "room ngoại gần cạn", "dinh": "đang ở đỉnh 52 tuần",
-           "colenh": "cỡ lệnh lệch mạnh"}
+           "noibo": "người nội bộ mua/bán", "colenh": "cỡ lệnh lệch mạnh"}
     for k, v in q["muc"].items():
         print("  {:<26s} {:>3d}  {}".format(
             ten.get(k, k), len(v), " ".join(x["sym"] for x in v[:8])))

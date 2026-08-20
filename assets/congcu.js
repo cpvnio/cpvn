@@ -1302,6 +1302,10 @@ const QL=[
   ['dinh','sang','Đang ở đỉnh 52 tuần',
    'vị trí giá kèm tiền vào — là phép đo, không phải nhận định',
    x=>x.d52.toFixed(1)+'%', x=>x.pc, x=>'×'+x.gtx.toFixed(1)+' thanh khoản'],
+  ['noibo','ngoai','Người nội bộ vừa mua / bán',
+   'công bố theo Điều 127 Luật CK — ghép với cột thoả thuận là ra bức tranh đủ',
+   x=>(x.chieu==='bán'?'bán ':'mua ')+num(x.sl)+' CP', x=>(x.chieu==='bán'?-1:1),
+   x=>esc(x.chuc||'')],
   ['colenh','bang','Cỡ lệnh hai bên lệch mạnh',
    'khối lượng đặt chia cho SỐ LỆNH — lệnh to là tổ chức, nhỏ là cá nhân',
    x=>(x.clm>0?'mua to hơn':'bán to hơn'), x=>x.clm,
@@ -1312,9 +1316,10 @@ function ptQuetLa(p){
   const cot=QL.map(([k,ic,ten,ghi,chinh,mau,phu])=>{
     const rows=q.muc[k]||[]; if(!rows.length) return '';
     return '<div class="dscol"><h4>'+ptIc(ic)+ten+'</h4>'
-      +rows.slice(0,8).map(x=>'<div class="dsr" data-sym="'+x.sym+'" title="'+esc(x.ten||'')+'">'
+      +rows.slice(0,8).map(x=>'<div class="dsr" data-sym="'+x.sym+'" title="'+
+          esc(x.ten||'')+(x.gt?(' — ước '+ptTien(x.gt)):'')+'">'
         +'<b>'+esc(x.sym)+'</b>'
-        +'<span class="dsn">'+esc(phu?phu(x):shortName(x.sec||''))+'</span>'
+        +'<span class="dsn">'+(phu?phu(x):esc(shortName(x.sec||'')))+'</span>'
         +'<span class="dsv '+(mau?cls(mau(x)):'')+'">'+chinh(x)+'</span></div>').join('')
       +'<p class="dsg">'+ghi+'</p></div>';
   }).join('');

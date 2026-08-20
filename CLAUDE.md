@@ -43,6 +43,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/va_dau_fin.py` | 120 | Vá dấu lưu chuyển tiền tệ trong `data/fin`, lấy dấu từ `data/finq`. KHÔNG gọi mạng, **chạy mỗi ngày** |
 | `tools/kho_chungquyen.py` | 110 | Cào `data/chungquyen.json`. ĐÚNG 1 lượt gọi |
 | `tools/kho_rolichsu.py` | 90 | Cào `data/rolichsu.json` (gồm mã đã rời sàn). 2 lượt gọi |
+| `tools/kho_noibo.py` | 150 | Bóc giao dịch người nội bộ từ `data/news`. KHÔNG gọi mạng, **gom dồn** |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -63,6 +64,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
 | `data/chungquyen.json` | **328 chứng quyền đang lưu hành** trên 20 cổ phiếu cơ sở, kèm tổ chức phát hành. MỘT lượt gọi. Dùng để đọc con số tự doanh cho đúng — xem mục *Phân tích dữ liệu* |
 | `data/rolichsu.json` | **Rổ mã lịch sử: 1.968 mã, trong đó 443 ĐÃ RỜI SÀN** kèm ngày niêm yết / huỷ niêm yết. Chống sống sót sai lệch |
+| `data/noibo.json` | **Giao dịch của người nội bộ** đọc từ tiêu đề CBTT trong `data/news`. KHO GOM DỒN — `data/news` chỉ giữ 30 ngày |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
@@ -1479,6 +1481,36 @@ Giao diện gắn nhãn **CQ** cạnh mã có chứng quyền, CHỈ ở cột t
 phát hành chứng quyền nên nhãn đó vô nghĩa ở đó). **Nguồn không công bố vị thế phòng
 hộ** nên không tách được bao nhiêu phần là phòng hộ — nói được đúng một điều: mã có nhãn
 CQ thì đọc dè dặt, mã không có thì gần với một quyết định thật hơn.
+
+### GIAO DỊCH NGƯỜI NỘI BỘ — GHÉP VỚI QUÉT THOẢ THUẬN MỚI RA BỨC TRANH ĐỦ
+
+Kho quét được *"TID sang tay ba lô ~230 tỷ trong hai tuần, đều ở −26% so giá sàn"* nhưng
+không biết **ai** bán. Tiêu đề CBTT của HOSE/HNX đã nằm sẵn trong `data/news` và có dạng
+rất chuẩn — mã · người · **CHỨC VỤ** · chiều · số lượng:
+
+```
+DKG: Đặng Đức Minh - Chủ tịch HĐQT - đã bán 1.375.000 CP
+BHK: Vũ Văn Tiến - người có liên quan đến Phó Giám đốc; Ủy viên HĐQT - đã mua 85.105 CP
+```
+
+Ghép hai phép quét lại là ra ngay: **CLI** có hai lô thoả thuận −14,9% và −14,6% cuối
+tháng 6, rồi Chủ tịch HĐQT bán 4.000.000 CP ngày 14/08. **XMC** thoả thuận −15,0% và
+−22,1%, người liên quan Phó Chủ tịch bán. **TNW** một người liên quan Chủ tịch bán đúng
+330.000 CP còn người khác mua đúng 330.000 CP cùng ngày.
+
+> **VÌ SAO GIỮ ĐƯỢC TÊN Ở ĐÂY, TRONG KHI `data/profile` PHẢI LỌC CỔ ĐÔNG DƯỚI 5%.**
+> Lập luận bảo vệ *"đã công khai theo nghĩa vụ pháp luật"* chỉ áp cho cổ đông lớn ≥5% —
+> nên cổ đông cá nhân nhỏ bị lọc khỏi hồ sơ. Mục này KHÁC: **người nội bộ và người có
+> liên quan phải công bố giao dịch BẤT KỂ TỈ LỆ** (Điều 127 Luật CK 2019, Thông tư
+> 96/2020). Và **chính chức vụ trong tiêu đề là thứ chứng minh nghĩa vụ đó** — đúng cái
+> mà mục *Cổ đông* ghi là "giới hạn đã biết: nguồn Simplize không trả trường chức vụ".
+> **Bản ghi nào không đọc ra chức vụ thì BỎ**, đừng giữ "cho đủ": không có chức vụ thì
+> không chứng minh được nghĩa vụ công bố, và đó đúng là ranh giới.
+
+> **KHO PHẢI GOM DỒN, KHÔNG ĐƯỢC GHI ĐÈ.** `data/news` chỉ giữ tin trong 30 ngày (ba
+> cổng lọc). Ghi đè là mỗi lượt xoá sạch phần cũ và kho vĩnh viễn đứng ở 30 ngày; bỏ một
+> tuần không chạy là mất hẳn tuần đó, không lấy lại được. Khoá gom:
+> `(mã, ngày, chiều, số lượng, tên)`.
 
 ### SỐNG SÓT SAI LỆCH — `data/rolichsu.json` mới chỉ làm nó ĐẾM ĐƯỢC
 
