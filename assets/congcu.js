@@ -729,6 +729,13 @@ async function renderPhanTich(){
     return;
   }
   if(!PT.ngay) PT.ngay=o.tt.d[o.tt.d.length-1];
+  /* Vào thẳng bằng `?sym=` (link từ trang cổ phiếu) thì NẠP LUÔN dữ liệu mã đó trước khi
+     vẽ. Không nạp thì `ptVeMa` chạy với `PT.maD` rỗng và trang đứng im ở "Đang nạp…" —
+     vì hàm gọi fetch là `ptMoMa`, mà đường vào bằng URL không đi qua nó. */
+  if(PT.ma&&!PT.maD){
+    try{ PT.maD=await (await fetch('data/giaodich/'+PT.ma+'.json')).json(); }
+    catch(e){ PT.maD={err:1}; }
+  }
   el.innerHTML=head(m)+'<div id="ptBody"></div>';
   await ptVe();
 }
@@ -3722,6 +3729,11 @@ async function init(){
   const t0=new URLSearchParams(location.search).get('t');
   if(t0==='phien'||t0==='vb') radarTab=t0;   // 'cd' (chủ điểm) đã bỏ — link cũ rơi về 'phien'
   if(t0==='dca'||t0==='dua') RA.mode=(t0==='dca'?'dca':'race');
+  /* `?sym=XXX` mở thẳng trang phân tích của một mã — trang cổ phiếu trỏ sang bằng đường này.
+     Đọc ở đây chứ không đọc trong renderPhanTich: `showMod` chỉ gọi render MỘT LẦN cho mỗi
+     module (`done[id]`), nên đọc muộn hơn là lần thứ hai vào mục sẽ không mở mã nữa. */
+  const s0=(new URLSearchParams(location.search).get('sym')||'').trim().toUpperCase();
+  if(s0&&/^[A-Z0-9]{3,10}$/.test(s0)) PT.ma=s0;
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
   showMod(MODULES.some(m=>m.id===start)?start:'radar');
