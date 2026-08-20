@@ -773,12 +773,6 @@ function ptTop(){
   }).join('');
   $('#ptTop').innerHTML='<div class="panel"><div class="ph"><span>📊</span>Toàn thị trường — phiên '+
     esc(PT.ngay)
-    /* Nút chuyển cách đọc đồ thị đặt NGAY CẠNH TÊN, không đẩy xuống hàng riêng: nó đổi ý
-       nghĩa của chính cái đồ thị ngay dưới, để xa là mất liên hệ. */
-    +'<span class="ptche" id="ptChe">'
-      +'<button data-c="ai"'+(PT.che==='ai'?' class="on"':'')+'>Ai mua ai bán</button>'
-      +'<button data-c="tong"'+(PT.che==='tong'?' class="on"':'')+'>Khớp lệnh + thoả thuận</button>'
-    +'</span>'
     +'<span class="cnt">'+num(t.n[i])+' mã</span></div><div class="pb">'
     +'<div class="ptgrid">'
     +box('VN-Index', vn&&vn.c[i]!=null?num2(vn.c[i]):'—',
@@ -806,29 +800,40 @@ function ptTop(){
     +(phu?'<div class="ptcsw">'+phu+'</div>':'')
     +'<div class="ptcv" id="ptCvW"><canvas id="ptCv"></canvas>'
       +'<div class="ptcvhl" id="ptHL"></div><div class="pttip" id="ptTip"></div></div>'
-    +'<p class="ptleg">'
-      +(PT.che==='ai'
-        ?('<i class="pkN"></i> khối ngoại &nbsp; <i class="pkT"></i> tự doanh'
-          +' &nbsp; <i class="pkR"></i> còn lại (trong nước)'
-          +' &nbsp;·&nbsp; <b>mỗi phiên hai cột: TRÁI là bên MUA, PHẢI là bên BÁN</b>')
-        :('<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'))
-      +' &nbsp; <i class="pk0"></i> phiên kho chưa cào đủ mã &nbsp; <i class="pk3"></i> VN-Index'
-      +' &nbsp;·&nbsp; <b>bấm vào cột để xem phiên đó</b></p>'
-    +(PT.che==='ai'
-      ?'<p class="ptnote">Hai nửa cột KHÔNG cộng vào nhau: mỗi lệnh khớp có đúng một người '
-        +'mua và một người bán, nên mỗi nửa đều bằng <b>trọn</b> giá trị khớp lệnh của phiên. '
-        +'Xếp chồng mua và bán vào một cột là đếm hai lần. Khối ngoại phình ở nửa trái mà '
-        +'lép ở nửa phải nghĩa là họ đang gom; ngược lại là đang xả. '
-        +'<b>Trục dọc của chế độ này khác chế độ tổng</b>: nó chỉ đo giá trị khớp lệnh, '
-        +'không gồm thoả thuận, nên đừng so chiều cao cột giữa hai chế độ.</p>':'')
-    +'<p class="ptnote">Cột <b>xám</b> là phiên kho chưa cào đủ mã — thấp vì THIẾU DỮ LIỆU chứ '
-      +'không phải vì thị trường ế, đừng đọc như một cú sụt thanh khoản. Con số "'+num(t.n[i])+' mã" '
-      +'ở trên đếm mã <i>thực sự có giá và khối lượng</i> của phiên này.</p>'
+    +'<p class="ptleg"><i class="pkN"></i> khối ngoại &nbsp; <i class="pkT"></i> tự doanh'
+      +' &nbsp; <i class="pkR"></i> còn lại (trong nước) &nbsp; <i class="pk0"></i> phiên kho chưa cào đủ mã'
+      +' &nbsp; <i class="pk3"></i> VN-Index'
+      +' &nbsp;·&nbsp; cột = <b>tổng giá trị khớp lệnh</b>, chia theo mức tham gia của từng khối'
+      +' &nbsp;·&nbsp; <b>bấm vào cột để xem chi tiết phiên đó</b></p>'
+    /* DẢI CHI TIẾT của phiên đang chọn — đây là chỗ trả lời "mua bán ròng bao nhiêu", tách
+       hẳn khỏi cột. Cột chỉ nói ĐỘ MẠNH, dải này mới nói CHIỀU. */
+    +'<div class="ptct">'+ptChiTiet(t,i)+'</div>'
+    +'<p class="ptnote">Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải '
+      +'mua cộng bán: mỗi lệnh khớp có đúng một người mua và một người bán, cộng thẳng cả hai '
+      +'vế là đếm hai lần. Chia đôi thì ba mảng cộng lại bằng đúng giá trị khớp lệnh của phiên. '
+      +'Cột <b>xám</b> là phiên kho chưa cào đủ mã — thấp vì thiếu dữ liệu chứ không phải vì ế.</p>'
     +'</div></div>';
   const ch=$('#ptChe');
   if(ch) ch.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
     PT.che=b.dataset.c; ptTop(); };
   ptVeChart();
+}
+function ptChiTiet(t,i){
+  const o=(nhan,mua,ban,mau)=>{
+    if(mua==null) return '';
+    const rong=mua-ban, tong=mua+ban;
+    return '<div class="ptcti"><span class="ptctn"><i class="'+mau+'"></i>'+nhan+'</span>'
+      +'<span class="ptctv">mua <b>'+num(mua)+'</b></span>'
+      +'<span class="ptctv">bán <b>'+num(ban)+'</b></span>'
+      +'<span class="ptctv">ròng <b class="'+cls(rong)+'">'+(rong>0?'+':'')+num(rong)+'</b></span>'
+      +'<span class="ptctv ptctp">chiếm <b>'+(t.mval[i]?(tong/2/t.mval[i]*100).toFixed(1):'—')+'%</b></span></div>';
+  };
+  return o('Khối ngoại', t.fnMua?t.fnMua[i]:null, t.fnBan?t.fnBan[i]:null,'pkN')
+    +o('Tự doanh', t.tdMua?t.tdMua[i]:null, t.tdBan?t.tdBan[i]:null,'pkT')
+    +'<div class="ptcti"><span class="ptctn"><i class="pk2"></i>Thoả thuận</span>'
+      +'<span class="ptctv">giá trị <b>'+num(t.pval[i])+'</b></span>'
+      +'<span class="ptctv">khối lượng <b>'+num(t.pv[i])+'</b> nghìn cp</span>'
+      +'<span class="ptctv ptctp">nằm NGOÀI cột (cột chỉ là khớp lệnh)</span></div>';
 }
 const num2=n=>n==null||isNaN(n)?'—':n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -864,7 +869,7 @@ function ptVeChart(){
   const c1=dark?'#38bdf8':'#0284c7', c2=dark?'#a78bfa':'#7c3aed',
         cg=dark?'rgba(148,163,184,.20)':'rgba(100,116,139,.18)', ct=dark?'#94a3b8':'#64748b';
   let mx=0, nMax=0;
-  for(let i=i0;i<i1;i++){ mx=Math.max(mx,(t.mval[i]||0)+(t.pval[i]||0)); nMax=Math.max(nMax,t.n[i]||0); }
+  for(let i=i0;i<i1;i++){ mx=Math.max(mx,t.mval[i]||0); nMax=Math.max(nMax,t.n[i]||0); }
   if(mx<=0) mx=1;
   /* PHIÊN THIẾU PHỦ PHẢI TRÔNG KHÁC HẲN PHIÊN Ế. Kho bồi dần nên phiên cũ có ít mã hơn,
      cột thấp theo — mà nhìn cột thì không tài nào biết thấp vì thị trường ế hay vì kho
@@ -878,15 +883,7 @@ function ptVeChart(){
      Vượt 50.000 thì mới nới, và nới theo bước tròn. */
   const TRAN_VOL=50000;
   let dinh=TRAN_VOL, buoc=5000;
-  if(PT.che==='ai'){
-    /* CHẾ ĐỘ "AI MUA AI BÁN" ĐO MỘT ĐẠI LƯỢNG KHÁC nên có trục riêng, và điều đó phải nói
-       ra ở chú thích chứ không đổi ngầm. Mỗi nửa cột bằng giá trị KHỚP LỆNH (không gồm
-       thoả thuận), tức chỉ khoảng một nửa cột của chế độ tổng. Giữ nguyên trần 50.000 thì
-       nửa cột cao ~21% khung, mà dải khối ngoại nằm trong đó chỉ còn vài pixel — đúng thứ
-       người xem mở đồ thị ra để tìm thì lại không nhìn thấy. Trần vẫn là số TRÒN. */
-    let mM=0; for(let i=i0;i<i1;i++) mM=Math.max(mM,t.mval[i]||0);
-    buoc=ptBuoc(mM||1); dinh=Math.max(buoc,Math.ceil((mM||1)/buoc)*buoc);
-  } else if(mx>TRAN_VOL){ buoc=ptBuoc(mx); dinh=Math.ceil(mx/buoc)*buoc; }
+  if(mx>TRAN_VOL){ buoc=ptBuoc(mx); dinh=Math.ceil(mx/buoc)*buoc; }
   /* Chừa chỗ TRÁI cho nhãn trục — đo bằng chính chữ sắp in, đừng đoán: "50,000" và "500"
      rộng khác nhau, ghim cứng một số là hoặc cụt nhãn hoặc phí chỗ. */
   g.font='11px system-ui,sans-serif';
@@ -911,32 +908,25 @@ function ptVeChart(){
     const x=padL+(i-i0)*gap+(gap-bw)/2, du=duPhu(i);
     if(t.d[i]===PT.ngay){ g.fillStyle=dark?'rgba(244,63,94,.20)':'rgba(244,63,94,.13)';
       g.fillRect(padL+(i-i0)*gap, padT, gap, plotH); }
-    if(PT.che==='ai'){
-      /* HAI NỬA CỘT, mỗi nửa bằng TRỌN giá trị khớp lệnh của phiên. Không xếp chồng mua
-         với bán: mỗi lệnh khớp có đúng một bên mua và một bên bán, nên `mua + bán` có thể
-         lên tới 2× giá trị phiên — xếp chồng là đếm hai lần. Tách bằng VỊ TRÍ (trái/phải)
-         và để MÀU nói ai là người mua, ai là người bán. */
-      const mval=t.mval[i]||0;
-      const hw=Math.max(1,(bw-1)/2);
-      const ve=(x0,fn,td)=>{
-        const con=Math.max(0,mval-(fn||0)-(td||0));   // kẹp 0: nhiễu nguồn không được đẻ cột âm
-        let day=0;
-        for(const [v,mau] of [[con,cR],[td||0,cT],[fn||0,cN]]){
-          if(v<=0) continue;
-          const h=v/dinh*plotH;
-          g.fillStyle=du?mau:xam;
-          g.fillRect(x0, padT+plotH-(day+v)/dinh*plotH, hw, Math.max(1,h));
-          day+=v;
-        }
-      };
-      ve(x, t.fnMua?t.fnMua[i]:null, t.tdMua?t.tdMua[i]:null);
-      ve(x+hw+1, t.fnBan?t.fnBan[i]:null, t.tdBan?t.tdBan[i]:null);
-    } else {
-      const a=(t.mval[i]||0)/dinh*plotH, b2=(t.pval[i]||0)/dinh*plotH;
-      g.fillStyle=du?c1:xam;
-      g.fillRect(x, padT+plotH-a, bw, a);
-      g.fillStyle=du?c2:(dark?'rgba(148,163,184,.28)':'rgba(148,163,184,.32)');
-      g.fillRect(x, padT+plotH-a-b2, bw, b2);
+    /* MỘT CỘT = TỔNG GIÁ TRỊ KHỚP LỆNH của phiên, tô theo MỨC THAM GIA của từng khối.
+       User chốt 21/08/2026: hai cột cạnh nhau (mua/bán) rối mắt — cột cứ hiện tổng, màu
+       nói khối nào mạnh, bấm vào mới xem chi tiết mua/bán/ròng.
+
+       MỨC THAM GIA = (mua + bán) ÷ 2, KHÔNG phải mua + bán. Mỗi lệnh khớp có đúng một
+       người mua và một người bán, nên cộng thẳng cả hai vế là đếm hai lần và tổng sẽ vượt
+       giá trị phiên. Chia đôi thì ba phần cộng lại bằng ĐÚNG giá trị khớp lệnh: khối ngoại
+       bán cho nhà đầu tư trong nước thì nửa giá trị ghi cho khối ngoại, nửa ghi cho trong
+       nước — đúng như thực tế mỗi bên đóng một vai. */
+    const mval=t.mval[i]||0;
+    const fn=((t.fnMua?t.fnMua[i]||0:0)+(t.fnBan?t.fnBan[i]||0:0))/2;
+    const td=((t.tdMua?t.tdMua[i]||0:0)+(t.tdBan?t.tdBan[i]||0:0))/2;
+    const con=Math.max(0,mval-fn-td);      // kẹp 0: nhiễu nguồn không được đẻ cột âm
+    let day=0;
+    for(const [v,mau] of [[con,cR],[td,cT],[fn,cN]]){
+      if(v<=0) continue;
+      g.fillStyle=du?mau:xam;
+      g.fillRect(x, padT+plotH-(day+v)/dinh*plotH, bw, Math.max(1,v/dinh*plotH));
+      day+=v;
     }
     ptCols.push({x0:padL+(i-i0)*gap, x1:padL+(i-i0+1)*gap, d:t.d[i]});
   }
@@ -1167,10 +1157,13 @@ function ptVeMa(){
   const n=o.n||o.d.length, i0=Math.max(0,n-PT.nMa);
   const lay=k=>(o[k]||[]).slice(i0);
   const d=o.d.slice(i0), c=lay('c'), tc=lay('tc'), vw=lay('vwap'),
-        mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), sh=lay('sh'),
+        mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), pv=lay('pv'), sh=lay('sh'),
         fnM=lay('fnMuaGT'), fnB=lay('fnBanGT'), fnMK=lay('fnMuaKL'), fnBK=lay('fnBanKL'),
         fnSH=lay('fnSoHuu'), fnRO=lay('fnRoom'),
         tdM=lay('tdMuaGT'), tdB=lay('tdBanGT');
+  /* Giá bình quân của RIÊNG thoả thuận. Để `null` khi phiên không có thoả thuận — vẽ 0 thì
+     đường tụt thẳng xuống đáy, đọc ra như giá sập trong khi thực ra hôm đó không có lệnh nào. */
+  const ptt=pval.map((x,i)=>(x&&pv[i])?(x/pv[i]):null);
   const m=d.length-1;
   const mcap=c.map((x,i)=>(x&&sh[i])?x*sh[i]:null);
   const pcs=c.map((x,i)=>(x&&tc[i])?((x/tc[i]-1)*100):null);
@@ -1217,6 +1210,9 @@ function ptVeMa(){
       +ptO('% giá trị phiên là của khối ngoại', 'mc5',
            '(mua + bán) ÷ 2 ÷ giá trị khớp lệnh — đếm cả hai vế là đếm hai lần')
       +ptO('% thay đổi giá mỗi phiên', 'mc6', 'so với giá tham chiếu của chính phiên đó')
+      +ptO('Giá thoả thuận so với giá sàn', 'mcP',
+           '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkP"></i> giá bình quân thoả thuận'
+           +' &nbsp;·&nbsp; chỉ vẽ phiên CÓ thoả thuận')
       +ptO('Vốn hoá', 'mc7', 'giá đóng cửa × số cổ phiếu lưu hành của chính phiên đó')
       +ptO('Khối lượng khớp lệnh', 'mc8', 'cổ phiếu')
       +ptO('Vùng giá khớp lệnh — phiên '+esc(PT.ngay), 'mc9',
@@ -1237,6 +1233,8 @@ function ptVeMa(){
   ptVe1($('#mc5'),C({kieu:'bar',series:[{v:fnPc,mau:dark?'#22d3ee':'#0891b2'}],
     nhan:v=>v.toFixed(1)+'%'}));
   ptVe1($('#mc6'),C({kieu:'bar',series:[{v:pcs,mau:XANH,mauAm:DO}],nhan:v=>v.toFixed(1)+'%'}));
+  ptVe1($('#mcP'),C({kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
+    {v:ptt,mau:dark?'#c084fc':'#7c3aed'}],nhan:num}));
   ptVe1($('#mc7'),C({kieu:'line',series:[{v:mcap,mau:XANH}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc8'),C({kieu:'bar',series:[{v:mv,mau:dark?'#94a3b8':'#64748b'}],nhan:num}));
   if(vg) ptVe1($('#mc9'),{d:vg.p.map(x=>num(x)),kieu:'bar',
@@ -1252,6 +1250,10 @@ function ptVeMa(){
     +oo('NN ròng', fnRong[k]!=null?
         '<span class="'+cls(fnRong[k])+'">'+(fnRong[k]>0?'+':'')+ptTien(fnRong[k])+'</span>':'—')
     +oo('NN chiếm', fnPc[k]!=null?fnPc[k].toFixed(1)+'%':'—')
+    +oo('Giá thoả thuận', ptt[k]!=null
+        ?(num(ptt[k])+' <span class="'+cls(ptt[k]/c[k]-1)+'">'+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</span>')
+        :'—')
+    +oo('KL thoả thuận', pv[k]?num(pv[k])+' cp':'—')
     +oo('Tự doanh ròng', tdRong[k]!=null?
         '<span class="'+cls(tdRong[k])+'">'+(tdRong[k]>0?'+':'')+ptTien(tdRong[k])+'</span>':'—')
     +oo('vốn hoá', mcap[k]?ptTien(mcap[k]):'—')
@@ -1277,6 +1279,14 @@ const PTC=[
   {k:'vwap',t:'Giá TB',         n:1},
   {k:'mval',t:'GT khớp lệnh',   n:1, tien:1},
   {k:'pval',t:'GT thoả thuận',  n:1, tien:1},
+  /* GIÁ BÌNH QUÂN CỦA RIÊNG THOẢ THUẬN = GT thoả thuận ÷ KL thoả thuận.
+     Không nguồn nào tao dò được có CHI TIẾT TỪNG LỆNH thoả thuận (đã thử Vietstock, VPS,
+     HOSE, CafeF, Simplize, Fireant, 24hMoney — 15 endpoint, 404 hoặc rơi về trang tổng
+     quan). Nhưng con số bình quân này trả lời được câu hỏi thực tế: thoả thuận hôm đó
+     khớp quanh vùng giá nào và lệch bao xa so với giá sàn.
+     Ra số TRÒN TUYỆT ĐỐI (46.000, 52.000…) nghĩa là cả phiên chỉ khớp ở ĐÚNG MỘT giá —
+     tự nó là một tín hiệu, thường là một cú sang tay trọn lô. */
+  {k:'ptt', t:'Giá thoả thuận', n:1},
   {k:'mv',  t:'KL khớp lệnh',   n:1},
   {k:'mcap',t:'Vốn hoá',        n:1, tien:1},
 ];
@@ -1298,6 +1308,7 @@ async function ptBang(){
     const c=g('c'), tc=g('tc'), sh=g('sh');
     r.push({sym, ex:g('ex')||'', sec:g('sec')||'', c, tc, vwap:g('vwap'), mval:g('mval')||0, pval:g('pval')||0,
             mv:g('mv')||0, mcap:(c&&sh)?c*sh:null, pc:(c&&tc)?((c/tc-1)*100):null,
+            ptt:(g('pv')&&g('pval'))?(g('pval')/g('pv')):null,
             vg:(p.ma&&p.ma[sym])||null});
   }
   /* Điểm sáng dựng từ rổ ĐẦY ĐỦ của phiên, KHÔNG theo bộ lọc sàn / ô tìm đang bật:
@@ -1323,6 +1334,11 @@ async function ptBang(){
       if(v==null) return '<td class="r">—</td>';
       if(c.k==='pc') return '<td class="r '+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</td>';
       if(c.tien) return '<td class="r">'+ptTien(v)+'</td>';
+      /* Giá thoả thuận: kèm CHÊNH so với giá đóng cửa. Bản thân mức giá không nói được gì
+         nếu không biết nó lệch bao xa — LPB 23/06 thoả thuận ở 46.122 trong khi sàn đóng
+         52.600, tức sang tay rẻ hơn 12,3%; đó mới là con số đáng đọc. */
+      if(c.k==='ptt') return '<td class="r">'+num(v)+
+        (x.c?' <i class="ptcl '+cls(v/x.c-1)+'">'+((v/x.c-1)*100).toFixed(1)+'%</i>':'')+'</td>';
       return '<td class="r">'+num(v)+'</td>';
     }).join('')+'</tr>';
     /* BẤM LÀ PHẢI CÓ PHẢN HỒI, kể cả khi chưa có vùng giá. Bản trước chỉ bung hàng khi

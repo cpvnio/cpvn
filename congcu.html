@@ -413,12 +413,29 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkN{background:#0891b2}
 .ptleg i.pkT{background:#ea580c}
 .ptleg i.pkR{background:rgba(2,132,199,.30)}
+.ptleg i.pkP{background:#7c3aed;height:3px;border-radius:2px}
+/* Chênh lệch giá thoả thuận so với giá sàn — nhỏ và mờ hơn con số chính, vì nó là chú
+   thích cho con số đó chứ không phải một đại lượng riêng. */
+.pttb .ptcl{font-style:normal;font-size:10.5px;font-weight:700;margin-left:5px}
 /* Nút chuyển chế độ nằm TRONG hàng tiêu đề panel, cạnh tên — không đẩy xuống hàng riêng:
    nó đổi cách đọc chính cái đồ thị ngay dưới, để xa là mất liên hệ. */
 .ptche{display:inline-flex;gap:4px;margin-left:12px}
 .ptche button{background:var(--card2);color:var(--faint);border:1px solid var(--line);
   border-radius:8px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer}
 .ptche button.on{background:var(--rose);border-color:var(--rose);color:#fff}
+/* DẢI CHI TIẾT phiên đang chọn. Đặt NGAY DƯỚI đồ thị: cột nói độ mạnh, dải này nói chiều —
+   để xa nhau là phải nhớ con số rồi cuộn đi tìm. */
+.ptct{margin:10px 0 4px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ptcti{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;
+  padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;
+  font-variant-numeric:tabular-nums}
+.ptcti:last-child{border-bottom:0}
+.ptctn{display:flex;gap:6px;align-items:center;font-weight:800;min-width:104px}
+.ptctn>i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.ptctn>i.pkN{background:#0891b2}.ptctn>i.pkT{background:#ea580c}.ptctn>i.pk2{background:#7c3aed}
+.ptctv{color:var(--faint)}
+.ptctv>b{color:var(--txt);font-weight:700;margin-left:3px}
+.ptctp{margin-left:auto;font-size:11px}
 /* Dải chỉ số phụ: VN30 / HNX / UPCOM đứng một hàng dưới bốn ô lớn — chúng là thông tin
    phụ, cho lên ô lớn là bốn ô chính mất chỗ mà chẳng ai đọc dòng nào trước dòng nào. */
 .ptcsw{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
@@ -1217,7 +1234,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821g"></script>
+<script defer src="assets/mobi.js?v=20260821j"></script>
 </head>
 <body>
 
@@ -1274,6 +1291,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821g"></script>
+<script src="assets/congcu.js?v=20260821j"></script>
 </body>
 </html>
