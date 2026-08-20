@@ -783,7 +783,8 @@ function ptTop(){
     +box('Vốn hoá toàn thị trường', num(t.mcap[i]/1000)+' nghìn tỷ', num(t.nMcap[i])+' mã có số cổ phiếu')
     +'</div>'
     +(phu?'<div class="ptcsw">'+phu+'</div>':'')
-    +'<div class="ptcv"><canvas id="ptCv"></canvas></div>'
+    +'<div class="ptcv" id="ptCvW"><canvas id="ptCv"></canvas>'
+      +'<div class="ptcvhl" id="ptHL"></div><div class="pttip" id="ptTip"></div></div>'
     +'<p class="ptleg"><i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'
       +' &nbsp; <i class="pk0"></i> phiên kho chưa cào đủ mã &nbsp; <i class="pk3"></i> VN-Index'
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem phiên đó</b></p>'
@@ -899,12 +900,40 @@ function ptVeChart(){
     /* chỉ nhảy tới phiên CÓ file ngày, bằng không bấm xong bảng trống mà không hiểu vì sao */
     if(ptCoFile(o).indexOf(c.d)<0) return;
     PT.ngay=c.d; PT.mo=null; ptVe(); };
-  cv.onmousemove=e=>{ const r=cv.getBoundingClientRect(), x=e.clientX-r.left;
+  /* THẺ CHÚ GIẢI TỰ VẼ, KHÔNG DÙNG `title` CỦA TRÌNH DUYỆT. `title` đợi ~1 giây mới hiện,
+     hiện ở góc chuột bằng phông hệ thống, và không xuống dòng được — rê dọc một dải 60 cột
+     thì gần như không bao giờ kịp thấy. Thẻ tự vẽ hiện tức thì và xếp được số theo cột.
+     Vạch nền `#ptHL` tô cột đang rê bằng một thẻ RIÊNG chứ không vẽ lại canvas: vẽ lại cả
+     đồ thị theo từng lượt `mousemove` là 60 cột × mỗi pixel chuột đi qua. */
+  const wrap=$('#ptCvW'), hl=$('#ptHL'), tip=$('#ptTip');
+  const hien=(x,ep)=>{
     const c=ptCols.find(z=>x>=z.x0&&x<z.x1);
-    if(!c){ cv.title=''; return; }
-    const k=t.d.indexOf(c.d);
-    cv.title=c.d+' — khớp lệnh '+num(t.mval[k])+' tỷ · thoả thuận '+num(t.pval[k])+' tỷ · '+
-      num(t.n[k])+' mã'+(duPhu(k)?'':'  (KHO CHƯA CÀO ĐỦ — cột thấp vì thiếu mã, không phải vì ế)'); };
+    if(!c){ if(hl) hl.style.display='none'; if(tip) tip.style.display='none'; return; }
+    const k=t.d.indexOf(c.d), cs=(o.chiso&&o.chiso.VNINDEX)||null;
+    const tongGD=(t.mval[k]||0)+(t.pval[k]||0), pc=cs?cs.pc[k]:null;
+    if(hl){ hl.style.display='block'; hl.style.left=c.x0+'px'; hl.style.width=(c.x1-c.x0)+'px'; }
+    if(!tip) return;
+    tip.innerHTML='<b>'+esc(c.d)+'</b>'
+      +'<div class="tpr"><span>Tổng giao dịch</span><i>'+num(tongGD)+' tỷ</i></div>'
+      +'<div class="tpr tp2"><span>khớp lệnh</span><i>'+num(t.mval[k])+' tỷ</i></div>'
+      +'<div class="tpr tp2"><span>thoả thuận</span><i>'+num(t.pval[k])+' tỷ</i></div>'
+      +'<div class="tpr"><span>Khối lượng khớp</span><i>'+num(t.mv[k])+' nghìn cp</i></div>'
+      +(cs&&cs.c[k]!=null?'<div class="tpr"><span>VN-Index</span><i>'+num2(cs.c[k])+
+         (pc==null?'':' <b class="'+cls(pc)+'">'+(pc>0?'+':'')+pc.toFixed(2)+'%</b>')+'</i></div>':'')
+      +'<div class="tpr"><span>Số mã có số</span><i>'+num(t.n[k])+'</i></div>'
+      +(duPhu(k)?'':'<div class="tpw">kho chưa cào đủ mã — cột thấp vì thiếu dữ liệu, không phải vì ế</div>');
+    tip.style.display='block';
+    /* Lật sang trái khi gần mép phải, bằng không thẻ tràn khỏi khung và bị xén */
+    const W2=wrap.clientWidth, tw=tip.offsetWidth, giua=(c.x0+c.x1)/2;
+    tip.style.left=Math.max(0,Math.min(W2-tw, giua-tw/2))+'px';
+    tip.style.top=(ep||8)+'px';
+  };
+  cv.onmousemove=e=>{ const r=cv.getBoundingClientRect(); hien(e.clientX-r.left, e.clientY-r.top+14); };
+  cv.onmouseleave=()=>{ if(hl) hl.style.display='none'; if(tip) tip.style.display='none'; };
+  /* Màn cảm ứng: chạm và rê cũng ra thẻ. `passive:true` vì không chặn cuộn — đồ thị này
+     nằm trong dòng chảy của trang, giành lấy cử chỉ dọc là khoá luôn việc cuộn trang. */
+  cv.ontouchstart=cv.ontouchmove=e=>{ const tch=e.touches&&e.touches[0]; if(!tch) return;
+    const r=cv.getBoundingClientRect(); hien(tch.clientX-r.left, 8); };
 }
 
 /* ĐIỂM SÁNG TRONG NGÀY — user chốt 20/08/2026: *"cách sắp xếp dữ liệu đang khó nhìn làm tao
