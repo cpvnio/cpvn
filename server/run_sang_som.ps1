@@ -15,6 +15,12 @@ $ErrorActionPreference = 'Continue'
 Set-Location 'C:\cpvn'
 $git = 'C:\Program Files\Git\cmd\git.exe'
 $log = 'C:\cpvn\server\sang_som.log'
+# BẮT BUỘC — console Windows mặc định là cp1252, không in được tiếng Việt có dấu. Thiếu dòng
+# này thì MỌI công cụ ở đây chết ngay dòng `print` đầu tiên với UnicodeEncodeError, tác vụ
+# trả LastResult=1 và cả lượt chạy không làm gì cả. Đã dính đúng vậy ở lượt chạy thử đầu
+# tiên 20/08/2026 (sang_som.py, ký tự 'ớ'). `run_refresh.ps1` có dòng này từ lâu; file này
+# viết sau nên bị sót — sao y, đừng bỏ.
+$env:PYTHONIOENCODING = 'utf-8'
 
 # BẮT BUỘC — sao y run_refresh/run_gia_phien. Tác vụ chạy dưới SYSTEM, mà SYSTEM không có
 # ~/.ssh/config, không có known_hosts của github.com, và khoá deploy mang tên KHÔNG mặc
