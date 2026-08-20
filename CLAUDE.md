@@ -60,7 +60,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/profile/` | Hồ sơ DN, cổ đông, công ty con. **`freeFloat` ở đây là nguồn free float duy nhất** — 1.429/1.525 mã, xem mục *Phân tích dữ liệu* |
 | `data/giaodich/{MÃ}.json` | Số chốt phiên theo mã: OHLC, VWAP, **khớp lệnh tách khỏi thoả thuận** (KL và GT), sổ lệnh lúc đóng cửa, SLCP, khối ngoại (kèm sở hữu + room), tự doanh. `kho_giaodich.py --sau` |
 | `data/dactrung/{MÃ}.json` | **Kho đặc trưng** (~41MB): vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, đỉnh 52 tuần, và chỉ tiêu cơ bản **gắn theo NGÀY CÔNG BỐ BCTC**. `kho_dactrung.py` |
-| `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt` lát cắt ngang cho bộ lọc. **BỐN lượt ghi khác nhau — phải TRỘN, đừng ghi đè** |
+| `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang`+`f` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt`+`dtf` lát cắt ngang cho bộ lọc. **FILE NHIỀU CHỦ — MỌI LƯỢT GHI PHẢI TRỘN.** Đã trả giá 21/08/2026, xem mục *Phân tích dữ liệu* |
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
 | `data/chungquyen.json` | **328 chứng quyền đang lưu hành** trên 20 cổ phiếu cơ sở, kèm tổ chức phát hành. MỘT lượt gọi. Dùng để đọc con số tự doanh cho đúng — xem mục *Phân tích dữ liệu* |
 | `data/rolichsu.json` | **Rổ mã lịch sử: 1.968 mã, trong đó 443 ĐÃ RỜI SÀN** kèm ngày niêm yết / huỷ niêm yết. Chống sống sót sai lệch |
@@ -1470,6 +1470,31 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > **NHƯNG NÓ KHÔNG DỰ BÁO ĐƯỢC GÌ — đã đo, đừng dùng nhầm.** "Đóng cửa so VWAP" làm tín
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
+
+### FILE PHIÊN CÓ BỐN CHỦ — MỌI LƯỢT GHI PHẢI TRỘN (đã trả giá 21/08/2026)
+
+```
+ma          vùng giá khớp lệnh        <- kho_giaodich.py --vg  (phien_ghi)
+bang + f    bảng mã của phiên         <- build_phantich.py
+la          quét bất thường           <- quet_la.py --phien
+dt + dtf    lát cắt ngang cho bộ lọc  <- quet_la.py --phien
+```
+
+`phien_ghi` từng đọc lại đúng `.get("ma")` rồi ghi ra `{date, n, ma}` — **vứt sạch ba
+khối kia**. Không lộ ra suốt nhiều tuần vì trong lượt EOD, `--vg` chạy **trước**
+`build_phantich` nên bảng được dựng lại ngay sau đó. Chạy TAY sau lượt EOD thì không có
+gì dựng lại: một lượt `--vg --ma PNJ --tu … --den …` xoá `bang`/`la`/`dt` của **63 file
+phiên**, cả trang phân tích trắng bảng và user báo *"sao mất hết data rồi"*.
+
+> **KHÔNG LỖI NÀO BÁO** — file vẫn hợp lệ, vẫn có khối `ma`, `json.load` vẫn chạy. Client
+> chỉ thấy `p.bang` rỗng rồi in "phiên này chưa có file dữ liệu", tức **báo sai nguyên
+> nhân**: nghe như chưa cào bao giờ, trong khi thật ra vừa bị xoá.
+> **Chữa:** `phien_ghi` nay đọc TRỌN file rồi chỉ thay khối `ma`. Ai thêm khối thứ năm
+> cũng không phải đụng lại hàm này. Dựng lại bằng `build_phantich.py` +
+> `quet_la.py --phien 100`, cả hai đều không gọi mạng.
+> **Kèm một va chạm khoá đã sửa luôn:** `phien_ghi` ghi `n` = số mã có vùng giá, còn
+> `build_phantich` ghi `n` = số mã trong bảng — **cùng một khoá, hai nghĩa**, lượt nào
+> chạy sau thì thắng. Nay vùng giá dùng `nVG`.
 
 ### GIÁ KHỚP LỆNH TB TỰ TÍNH — VÀ VÙNG GIÁ PHẢI THEO PHIÊN ĐANG GHIM
 

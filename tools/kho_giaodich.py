@@ -630,16 +630,40 @@ def dong_tien(sym, ngay):
 
 
 def phien_ghi(ngay, goi_ma):
+    """Ghi khối `ma` (vùng giá) vào file phiên — **TRỘN VÀO FILE CŨ, KHÔNG GHI ĐÈ NÓ.**
+
+    FILE PHIÊN CÓ BỐN KHỐI DO BỐN LƯỢT KHÁC NHAU GHI:
+      · `ma`        vùng giá khớp lệnh        <- chính hàm này (`--vg`)
+      · `bang`+`f`  bảng mã của phiên         <- build_phantich.py
+      · `la`        quét bất thường           <- quet_la.py --phien
+      · `dt`+`dtf`  lát cắt ngang cho bộ lọc  <- quet_la.py --phien
+
+    Bản cũ đọc lại đúng `.get("ma")` rồi ghi ra `{date, n, ma}` — **vứt sạch ba khối
+    kia**. Trước giờ không lộ ra vì trong lượt EOD, `--vg` chạy TRƯỚC `build_phantich`
+    nên bảng được dựng lại ngay sau đó. Chạy TAY sau lượt EOD thì không có gì dựng lại:
+    21/08/2026 một lượt `--vg --ma PNJ --tu … --den …` xoá `bang`/`la`/`dt` của **63 file
+    phiên**, và trang phân tích trắng bảng — *"sao mất hết data rồi"*. Không lỗi nào báo,
+    vì file vẫn hợp lệ và vẫn có khối `ma`.
+
+    Luật chung của cả thư mục này (đã ghi trong CLAUDE.md): **file phiên nhiều chủ, mọi
+    lượt ghi phải TRỘN.** Ai thêm khối thứ năm cũng không phải đụng lại hàm này.
+    """
     os.makedirs(PHIEN_DIR, exist_ok=True)
     p = os.path.join(PHIEN_DIR, f"{ngay}.json")
-    cu = {}
+    doc = {}
     if os.path.exists(p):
         try:
-            cu = json.load(open(p, encoding="utf-8")).get("ma") or {}
+            doc = json.load(open(p, encoding="utf-8")) or {}
         except Exception:
-            cu = {}
+            doc = {}
+    cu = doc.get("ma") or {}
     cu.update(goi_ma)
-    doc = {"date": ngay, "n": len(cu), "ma": cu}
+    doc["date"] = ngay
+    doc["ma"] = cu
+    # `nVG` chứ KHÔNG phải `n`: `build_phantich` cũng ghi `n` nhưng nghĩa là SỐ MÃ TRONG
+    # BẢNG, còn ở đây là số mã có vùng giá. Dùng chung một khoá thì lượt nào chạy sau
+    # thắng, và con số hiện trên trang đổi nghĩa tuỳ thứ tự chạy.
+    doc["nVG"] = len(cu)
     tmp = p + ".tmp"
     json.dump(doc, open(tmp, "w", encoding="utf-8"), ensure_ascii=False,
               separators=(",", ":"))
