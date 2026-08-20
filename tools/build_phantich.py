@@ -49,7 +49,11 @@ COT_BANG = ["ex", "sec", "ff", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "s
 # `ff` từ hồ sơ doanh nghiệp. Tách ra một chỗ để đừng phải nhớ danh sách này ở ba nơi.
 COT_NGOAI = ("ex", "sec", "ff")
 PROFILE = os.path.join(BASE, "data", "profile")
-SO_PHIEN_FILE = 120      # dựng file ngày cho ngần này phiên gần nhất
+# Dựng file ngày cho ngần này phiên gần nhất. Nâng 120 -> 320 khi kho lên 300 phiên
+# (22/08/2026): ô chọn khung cho phép xem tới 300 phiên trên đồ thị, mà bấm vào một cột
+# là nhảy tới phiên đó — không có file thì bấm xong ra bảng trống.
+# `ptCoFile` bên client cắt ở 320, HAI SỐ NÀY PHẢI KHỚP NHAU.
+SO_PHIEN_FILE = 320
 MIN_MA = 100             # phiên ít mã hơn thì không dựng file ngày
 
 

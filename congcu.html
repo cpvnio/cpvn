@@ -386,6 +386,17 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptnav .ic{width:17px;height:17px;color:inherit}
 .ptnav:disabled{opacity:.35;cursor:default}
 .ptbarn{font-size:11.5px;color:var(--faint)}
+/* Ô CHỌN KHUNG PHIÊN cho đồ thị toàn thị trường. Dán liền thành một khối chứ không rời
+   từng nút: bốn lựa chọn loại trừ nhau nên phải trông như MỘT bộ chuyển, không phải bốn
+   nút bấm độc lập. Chữ số trần trụi (60/100/200/300) vì nhãn "phiên" đã nằm ngay bên
+   cạnh ở dòng "… phiên có dữ liệu đầy đủ". */
+.ptseg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.ptseg button{background:var(--card);color:var(--faint);border:0;border-right:1px solid var(--line);
+  padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  font-variant-numeric:tabular-nums}
+.ptseg button:last-child{border-right:0}
+.ptseg button:hover{color:var(--txt)}
+.ptseg button.on{background:var(--rose);color:#fff}
 /* Icon một nét thay emoji: ăn theo `currentColor` nên nó mang đúng màu của dòng chữ nó
    đứng cạnh, không tự đem màu riêng vào một trang mà xanh/đỏ đã có nghĩa sẵn. */
 .ic{width:15px;height:15px;flex:none;vertical-align:-2px;color:var(--faint)}
@@ -1380,7 +1391,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822n"></script>
+<script defer src="assets/mobi.js?v=20260822p"></script>
 </head>
 <body>
 
@@ -1437,6 +1448,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822n"></script>
+<script src="assets/congcu.js?v=20260822p"></script>
 </body>
 </html>

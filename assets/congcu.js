@@ -754,7 +754,7 @@ const PT_HIEN={
 };
 
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
-          n:60, ma:null, maD:null, nMa:63, maI:null, ghim:null, giai:{},
+          n:100, ma:null, maD:null, nMa:63, maI:null, ghim:null, giai:{},
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -800,7 +800,10 @@ async function renderPhanTich(){
 }
 
 /* Phiên nào CÓ file ngày thì mới chọn được — phiên thưa mã không dựng file (xem build_phantich) */
-function ptCoFile(o){ const t=o.tt, k=t.d.length; return t.d.filter((d,i)=>t.n[i]>=100).slice(-120); }
+/* Phiên nào CÓ file ngày thì mới chọn được. Trần 320 khớp `SO_PHIEN_FILE` của
+   `build_phantich.py` — hai chỗ lệch nhau thì hoặc ô chọn bày ra phiên không có file
+   (bấm vào bảng trống), hoặc giấu mất phiên đã có file. */
+function ptCoFile(o){ const t=o.tt; return t.d.filter((d,i)=>t.n[i]>=100).slice(-320); }
 
 async function ptVe(){
   const o=PT.tt, b=$('#ptBody'); if(!b) return;
@@ -811,10 +814,20 @@ async function ptVe(){
       +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">'+ptIc('trai')+'</button>'
       +'<select id="ptNgay">'+opt+'</select>'
       +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">'+ptIc('phai')+'</button>'
+      +'<span class="ptseg" id="ptKhung">'
+        +[60,100,200,300].map(x=>'<button data-n="'+x+'"'+(PT.n===x?' class="on"':'')+'>'
+            +x+'</button>').join('')+'</span>'
       +'<span class="ptbarn">'+co.length+' phiên có dữ liệu đầy đủ</span></div>'
     +'<div id="ptTop"></div><div id="ptTab"></div>';
   ptTop();
   if(PT.ma){ ptVeMa(); } else { await ptBang(); }
+  /* ĐỔI KHUNG THÌ CHỈ VẼ LẠI ĐỒ THỊ, đừng dựng lại cả trang: bảng mã và mấy khối dưới
+     không phụ thuộc khung, dựng lại chúng là mất chỗ đang cuộn và mất cả ô tìm đang gõ. */
+  const kh=$('#ptKhung');
+  if(kh) kh.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
+    PT.n=+b.dataset.n;
+    $$('#ptKhung button').forEach(x=>x.classList.toggle('on',x===b));
+    ptVeChart(); };
   $('#ptNgay').onchange=e=>{ PT.ngay=e.target.value; PT.mo=null; ptVe(); };
   $('#ptTruoc').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>0){ PT.ngay=co[j-1]; PT.mo=null; ptVe(); } };
   $('#ptSau').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>=0&&j<co.length-1){ PT.ngay=co[j+1]; PT.mo=null; ptVe(); } };
