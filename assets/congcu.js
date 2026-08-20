@@ -591,6 +591,10 @@ function nyBang(){
     +'ca). Giá nền bị bỏ khi chuỗi giá sâu của nguồn không nối liền được với kho nến CPVN tại '
     +'phiên giao nhau. Thà để trống còn hơn hiện một con số không kiểm được.</div>';
 }
+/* KHÔNG CÒN NƠI GỌI từ 21/08/2026 — thẻ "Cổ phiếu sắp niêm yết" đã bỏ theo yêu cầu user.
+   Giữ lại vì dữ liệu `NY.sap`/`NY.ny` vẫn được `kho_niemyet.py` cào mỗi lượt 7:30 và vẫn
+   đúng; bật lại chỉ là cắm một thẻ, khỏi phải dựng lại gì. Xoá hàm này thì lần sau muốn
+   bật lại phải viết lại từ đầu. */
 function nyLichHTML(){
   /* ================= LỊCH NIÊM YẾT MỚI =========================================
      NGUỒN: `finfo/v4/events` nhóm `stockAlert`, type `listedHose`/`listedUpcom`/`listedHnx`.
@@ -649,25 +653,23 @@ function nyLichHTML(){
 }
 async function renderNiemYet(){
   const el=$('#m-niemyet'); const m=MODULES.find(x=>x.id==='niemyet');
-  el.innerHTML=head(m)+'<div class="empty">Đang nạp…</div>';
+  el.innerHTML='<div class="empty">Đang nạp…</div>';
   await nyLoad();
-  const nam=(NY.ma||[]).length;
   const sanDem={};
   for(const r of NY.ma||[]) sanDem[r.ex]=(sanDem[r.ex]||0)+1;
   const chip=(v,t)=>'<button data-ex="'+v+'"'+(nyLoc.ex===v?' class="on"':'')+'>'+t+'</button>';
-  /* HAI THẺ, lịch niêm yết KHÔNG hiện sẵn ở đầu trang (user chốt 20/08/2026): người vào đây
-     chủ yếu để tra mã đang niêm yết, còn lịch mã mới là thứ thỉnh thoảng mới ngó. Để nó chình
-     ình trên đầu là mỗi lần vào đều phải cuộn qua. */
-  el.innerHTML=head(m)
-    +'<div class="nytab" id="nyTab">'
-      +'<button data-t="ds" class="on">Toàn bộ mã đang niêm yết</button>'
-      +'<button data-t="lich">Cổ phiếu sắp niêm yết</button></div>'
-    +'<div class="card nypane on" id="ny-ds">'
+  /* MỘT BẢNG, KHÔNG TIÊU ĐỀ, KHÔNG THẺ CHUYỂN (user chốt 21/08/2026: *"để 1 bảng các mã
+     đã niêm yết là đủ rồi vào là hiểu ngay"*). Đã bỏ:
+     · khối `head(m)` — dòng "CPVN.IO — công cụ thị trường" + "🔔 Thông tin niêm yết". Tên
+       mục đã nằm trên thanh điều hướng và trên tiêu đề tab trình duyệt rồi; lặp lần nữa
+       chỉ đẩy bảng xuống dưới một màn.
+     · thẻ "Cổ phiếu sắp niêm yết". `nyLichHTML()` và dữ liệu `NY.sap`/`NY.ny` VẪN CÒN
+       trong kho và trong mã nguồn — muốn bật lại chỉ việc cắm lại một thẻ, khỏi cào lại. */
+  el.innerHTML='<div class="card" id="ny-ds">'
     +'<div class="nybar"><div class="nyseg" id="nyEx">'+chip('all','Tất cả')
       +Object.keys(sanDem).sort().map(k=>chip(k,k+' '+sanDem[k])).join('')+'</div>'
     +'<input id="nyTim" placeholder="Tìm mã hoặc tên…" value="'+esc(nyLoc.tim)+'"></div>'
-    +'<div id="nyBody">'+nyBang()+'</div></div>'
-    +'<div class="card nypane" id="ny-lich">'+nyLichHTML()+'</div>';
+    +'<div id="nyBody">'+nyBang()+'</div></div>';
   const ve=()=>{ $('#nyBody').innerHTML=nyBang(); gan(); };
   const gan=()=>{
     $$('#nyBody .nyh').forEach(t=>t.onclick=()=>{
@@ -677,11 +679,6 @@ async function renderNiemYet(){
     });
   };
   gan();
-  $$('#nyTab button').forEach(b=>b.onclick=()=>{
-    $$('#nyTab button').forEach(x=>x.classList.toggle('on',x===b));
-    $$('.nypane').forEach(x=>x.classList.remove('on'));
-    $('#ny-'+b.dataset.t).classList.add('on');
-  });
   $$('#nyEx button').forEach(b=>b.onclick=()=>{
     nyLoc.ex=b.dataset.ex;
     $$('#nyEx button').forEach(x=>x.classList.toggle('on',x===b));
@@ -723,7 +720,7 @@ async function ptPhien(ng){
 
 async function renderPhanTich(){
   const el=$('#m-phantich'), m=MODULES.find(x=>x.id==='phantich');
-  el.innerHTML=head(m)+'<div class="empty">Đang nạp…</div>';
+  el.innerHTML='<div class="empty">Đang nạp…</div>';
   const o=await ptTT();
   if(!o||o.err||!o.tt||!o.tt.d||!o.tt.d.length){
     el.innerHTML=head(m)+'<div class="panel"><div class="pb"><div class="empty">'+
