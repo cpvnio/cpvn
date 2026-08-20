@@ -51,13 +51,33 @@ if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
 & $git fetch origin main 2>&1 | Add-Content $log
 & $git reset --hard origin/main 2>&1 | Add-Content $log
 
-# Danh sách mã CÒN THIẾU. Đọc bằng python cho khỏi phải parse JSON trong PowerShell.
+# Danh sách mã CÒN THIẾU.
+#
+# ĐỪNG CHỈ HỎI "FILE CÓ TỒN TẠI KHÔNG" — đã trả giá 20/08/2026. Lượt EOD 15:15 chạy
+# `--sau` (KHÔNG có `--tatca`) nên nó tạo đủ 1.529 file nhưng mỗi file chỉ có ~30 phiên
+# của trang 1. Lượt cào bù sau đó thấy "file có rồi" nên bỏ qua sạch — kho đứng ở 30
+# phiên vĩnh viễn, mà không có gì báo. User phát hiện, không phải phép kiểm nào.
+#
+# Nên hỏi BA điều, thiếu điều nào cũng để lọt một loại file dở:
+#   · chưa có file
+#   · có nhưng `day` khác 1  -> mới cào trang 1, chưa cào hết lịch sử
+#   · có nhưng `v` < PBAN    -> dựng bằng cách tính CŨ, phải làm lại (kho tự lành dần)
 $conthieu = & $py -c @"
-import json, os
+import json, os, sys
+sys.path.insert(0, 'tools')
+from kho_giaodich import PBAN
 u = json.load(open('universe.json', encoding='utf-8'))['stocks']
 d = os.path.join('data', 'giaodich')
-print(' '.join(s['sym'] for s in u
-                if not os.path.exists(os.path.join(d, s['sym'] + '.json'))))
+def thieu(sym):
+    p = os.path.join(d, sym + '.json')
+    if not os.path.exists(p):
+        return True
+    try:
+        o = json.load(open(p, encoding='utf-8'))
+    except Exception:
+        return True
+    return (o.get('day') != 1) or ((o.get('v') or 0) < PBAN)
+print(' '.join(s['sym'] for s in u if thieu(s['sym'])))
 "@
 $ma = ($conthieu -split '\s+') | Where-Object { $_ }
 Ghi "Con thieu $($ma.Count) ma"

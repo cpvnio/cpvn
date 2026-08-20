@@ -53,6 +53,12 @@ else                                   { & $py refresh_daily.py 2>&1 }
 & $py tools\kho_giaodich.py --sau 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# VÙNG GIÁ KHỚP LỆNH của phiên vừa chốt — khối lượng gộp theo từng mức giá, kèm phân bổ
+# dòng tiền. 2 lượt/mã = ~3.060 lượt ≈ 13 phút. Chỉ làm PHIÊN HÔM NAY; muốn bồi lịch sử
+# thì chạy tay `--vg --tu ... --den ...` (kho vùng giá của nguồn chỉ có từ ~09/2025).
+& $py tools\kho_giaodich.py --vg 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_giaodich --vg EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # Gộp kho giao dịch thành MỘT file cho trang /phantich. Không gọi mạng, vài giây.
 # Phải chạy SAU kho_giaodich, và mỗi ngày — kho đổi mà file gộp không đổi thì trang
 # hiện số của hôm qua mà không có dấu hiệu gì.

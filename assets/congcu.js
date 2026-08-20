@@ -694,214 +694,277 @@ async function renderNiemYet(){
 
 /* ---------------------------------------------------------------- đăng ký */
 /* ==================================================== 5. PHÂN TÍCH DỮ LIỆU */
-/* Trang này đọc `data/phantich.json` do `tools/build_phantich.py` dựng từ `data/giaodich`.
-   ĐƠN VỊ KHÁC NHAU GIỮA HAI KHỐI, đừng trộn: chuỗi toàn thị trường (`tt`) để TỶ đồng và
-   NGHÌN cổ phiếu; bảng theo mã (`ma`) giữ ĐỒNG và CỔ PHIẾU y như trong kho.
+/* THIẾT KẾ LẠI 20/08/2026 theo đúng bốn điều user chốt:
+   ① PHÂN THEO NGÀY — cả trang xoay quanh MỘT phiên đang chọn, đổi phiên bằng nút ◀ ▶,
+     ô chọn, hoặc BẤM THẲNG VÀO CỘT trên đồ thị. Bản trước chỉ có phiên gần nhất.
+   ② TIỀN CHỨ KHÔNG PHẢI CỔ PHIẾU — "nhiều cổ phiếu khớp nhiều nhưng thực tế chỉ vài trăm
+     triệu nếu quy ra tiền". Bảng xếp mặc định theo GIÁ TRỊ khớp lệnh; khối lượng là cột phụ.
+   ③ BỎ KHỐI LƯỢNG ĐẶT MUA / ĐẶT BÁN khỏi giao diện — "chỉ làm nhiễu". Kho vẫn lưu đủ.
+   ④ THÊM VÙNG GIÁ KHỚP LỆNH — bấm một mã là bung ra biểu đồ khối lượng theo từng mức giá
+     của chính phiên đang chọn, kèm phân bổ dòng tiền.
 
-   KHO ĐANG ĐƯỢC BỒI DẦN nên mỗi phiên có số mã góp vào khác nhau — `tt.n` giữ con số đó và
-   giao diện PHẢI hiện ra. Không hiện thì một phiên có 40 mã trông y hệt một phiên có 1.500
-   mã, và đường GTGD dốc lên chỉ vì kho dày lên chứ không phải vì thị trường sôi động hơn. */
-const PT={d:null, sort:'mval', dir:-1, ex:'all', n:60, tab:'tt'};
+   Dữ liệu chia hai tầng: `data/phantich.json` nhẹ (chỉ chuỗi toàn thị trường, tải ngay) và
+   `data/phien/{NGÀY}.json` (bảng mã + vùng giá, tải khi chọn phiên). */
+const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null, n:60};
 
-async function ptLoad(){
-  if(PT.d) return PT.d;
-  try{ PT.d=await (await fetch('data/phantich.json')).json(); }
-  catch(e){ PT.d={err:1}; }
-  return PT.d;
+async function ptTT(){
+  if(PT.tt) return PT.tt;
+  try{ PT.tt=await (await fetch('data/phantich.json')).json(); }catch(e){ PT.tt={err:1}; }
+  return PT.tt;
 }
-function ptCot(o){ const f=o.ma.f, ix={}; f.forEach((k,i)=>ix[k]=i); return ix; }
+/* Mỗi phiên một file, đệm lại theo ngày — đổi qua đổi lại giữa hai phiên không gọi mạng lần hai */
+async function ptPhien(ng){
+  if(PT.phien[ng]!==undefined) return PT.phien[ng];
+  try{ PT.phien[ng]=await (await fetch('data/phien/'+ng+'.json')).json(); }
+  catch(e){ PT.phien[ng]=null; }
+  return PT.phien[ng];
+}
 
 async function renderPhanTich(){
   const el=$('#m-phantich'), m=MODULES.find(x=>x.id==='phantich');
   el.innerHTML=head(m)+'<div class="empty">Đang nạp…</div>';
-  const o=await ptLoad();
+  const o=await ptTT();
   if(!o||o.err||!o.tt||!o.tt.d||!o.tt.d.length){
     el.innerHTML=head(m)+'<div class="panel"><div class="pb"><div class="empty">'+
-      'Chưa có dữ liệu — kho <code>data/giaodich</code> đang được bồi. '+
-      'Trang sẽ có số ngay khi lượt cào đầu tiên lên kho.</div></div></div>';
+      'Chưa có dữ liệu — kho <code>data/giaodich</code> đang được bồi.</div></div></div>';
     return;
   }
-  el.innerHTML=head(m)
-    +'<div class="nytab" id="ptTab">'
-      +'<button data-t="tt" class="on">Toàn thị trường</button>'
-      +'<button data-t="ma">Áp lực đặt lệnh theo mã</button>'
-      +'<button data-t="tt2">Thoả thuận</button></div>'
-    +'<div id="ptBody"></div>';
-  $('#ptTab').onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
-    PT.tab=b.dataset.t; $$('#ptTab button').forEach(x=>x.classList.toggle('on',x===b)); ptBody(); };
-  ptBody();
+  if(!PT.ngay) PT.ngay=o.tt.d[o.tt.d.length-1];
+  el.innerHTML=head(m)+'<div id="ptBody"></div>';
+  await ptVe();
 }
 
-function ptPhu(o){
-  const t=o.tt, i=t.d.length-1;
-  return '<p class="ptnote">Kho đang được bồi dần: phiên <b>'+esc(t.d[i])+'</b> có <b>'+
-    num(t.n[i])+'</b> mã góp số trên tổng <b>'+num(o.phu&&o.phu.docFile)+'</b> mã đã cào xong. '+
-    'Mọi con số toàn thị trường dưới đây là tổng của <i>đúng số mã đó</i>, không phải của cả sàn — '+
-    'đừng so hai phiên có số mã chênh nhau.</p>';
+/* Phiên nào CÓ file ngày thì mới chọn được — phiên thưa mã không dựng file (xem build_phantich) */
+function ptCoFile(o){ const t=o.tt, k=t.d.length; return t.d.filter((d,i)=>t.n[i]>=100).slice(-120); }
+
+async function ptVe(){
+  const o=PT.tt, b=$('#ptBody'); if(!b) return;
+  const co=ptCoFile(o), i=co.indexOf(PT.ngay);
+  const opt=co.slice().reverse().map(d=>'<option'+(d===PT.ngay?' selected':'')+'>'+d+'</option>').join('');
+  b.innerHTML=
+    '<div class="ptbar">'
+      +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">◀</button>'
+      +'<select id="ptNgay">'+opt+'</select>'
+      +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">▶</button>'
+      +'<span class="ptbarn">'+co.length+' phiên có dữ liệu đầy đủ</span></div>'
+    +'<div id="ptTop"></div><div id="ptTab"></div>';
+  ptTop();
+  await ptBang();
+  $('#ptNgay').onchange=e=>{ PT.ngay=e.target.value; PT.mo=null; ptVe(); };
+  $('#ptTruoc').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>0){ PT.ngay=co[j-1]; PT.mo=null; ptVe(); } };
+  $('#ptSau').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>=0&&j<co.length-1){ PT.ngay=co[j+1]; PT.mo=null; ptVe(); } };
 }
 
-function ptBody(){
-  const o=PT.d, b=$('#ptBody'); if(!o||!b) return;
-  if(PT.tab==='tt'){ b.innerHTML=ptToanTT(o); ptVeChart(); }
-  else b.innerHTML=ptBang(o, PT.tab==='tt2');
-  if(PT.tab!=='tt') ptBindBang();
-}
-
-function ptToanTT(o){
-  const t=o.tt, i=t.d.length-1;
-  const box=(nhan,gt,ghi)=>'<div class="ptbox"><span class="ptlb">'+nhan+'</span>'+
-    '<b>'+gt+'</b>'+(ghi?'<i>'+ghi+'</i>':'')+'</div>';
+function ptTop(){
+  const o=PT.tt, t=o.tt, i=t.d.indexOf(PT.ngay);
+  if(i<0) return;
   const kl=t.mval[i], tt=t.pval[i], tong=kl+tt;
-  const dm=t.qMua[i], db=t.qBan[i];
-  return '<div class="panel"><div class="ph"><span>📊</span>Phiên '+esc(t.d[i])+
-    '<span class="cnt">'+num(t.n[i])+' mã</span></div><div class="pb">'
-    +ptPhu(o)
+  const box=(nhan,gt,ghi)=>'<div class="ptbox"><span class="ptlb">'+nhan+'</span><b>'+gt+'</b>'+
+    (ghi?'<i>'+ghi+'</i>':'')+'</div>';
+  $('#ptTop').innerHTML='<div class="panel"><div class="ph"><span>📊</span>Toàn thị trường — phiên '+
+    esc(PT.ngay)+'<span class="cnt">'+num(t.n[i])+' mã</span></div><div class="pb">'
     +'<div class="ptgrid">'
-    +box('Giá trị khớp lệnh', num(kl)+' tỷ', tong?((kl/tong*100).toFixed(1)+'% tổng'):'')
-    +box('Giá trị thoả thuận', num(tt)+' tỷ', tong?((tt/tong*100).toFixed(1)+'% tổng'):'')
-    +box('Vốn hoá cộng lại', num(t.mcap[i]/1000)+' nghìn tỷ', num(t.nMcap[i])+' mã có số cổ phiếu')
-    +box('Khối lượng đặt mua', dm==null?'—':num(dm)+' nghìn cp', dm==null?'nguồn chưa có':'')
-    +box('Khối lượng đặt bán', db==null?'—':num(db)+' nghìn cp',
-         (dm&&db)?('mua/bán '+(dm/db).toFixed(2)+'×'):'')
-    /* SỐ LỆNH = 0 TRONG KHI KHỐI LƯỢNG ĐẶT > 0 NGHĨA LÀ CHƯA CÔNG BỐ, KHÔNG PHẢI KHÔNG AI
-       ĐẶT. Nguồn ra `TotalBuyTrade` trễ hơn `TotalBuyVol` — phiên 20/08/2026 đo được
-       qMua 18,5 triệu cp mà số lệnh vẫn 0. Hiện thẳng "0 / 0" là nói sai một chuyện có
-       thật thành chuyện ngược lại. Mã đứng im cả phiên thì cả hai cùng 0, không mâu thuẫn. */
-    +box('Số lệnh mua / bán',
-         (t.nMua[i]==null||(!t.nMua[i]&&dm))?'—':num(t.nMua[i])+' / '+num(t.nBan[i]),
-         t.nMua[i]==null?'nguồn chưa có':(!t.nMua[i]&&dm)?'nguồn chưa công bố':'')
+    +box('Giá trị khớp lệnh', num(kl)+' tỷ', tong?((kl/tong*100).toFixed(1)+'% tổng giao dịch'):'')
+    +box('Giá trị thoả thuận', num(tt)+' tỷ', tong?((tt/tong*100).toFixed(1)+'% tổng giao dịch'):'')
+    +box('Vốn hoá toàn thị trường', num(t.mcap[i]/1000)+' nghìn tỷ', num(t.nMcap[i])+' mã có số cổ phiếu')
+    +box('Khối lượng khớp lệnh', num(t.mv[i])+' nghìn cp', 'thoả thuận '+num(t.pv[i])+' nghìn cp')
     +'</div>'
     +'<div class="ptcv"><canvas id="ptCv"></canvas></div>'
-    +'<p class="ptleg"><i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'+
-      ' &nbsp;·&nbsp; cột = giá trị giao dịch từng phiên (tỷ đồng), '+PT.n+' phiên gần nhất</p>'
+    +'<p class="ptleg"><i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'
+      +' &nbsp;·&nbsp; <b>bấm vào cột để xem phiên đó</b> · giá trị giao dịch từng phiên (tỷ đồng)</p>'
+    +'<p class="ptnote">Kho đang được bồi dần nên mỗi phiên có số mã góp vào khác nhau — con số '
+      +'"'+num(t.n[i])+' mã" ở trên là số mã THỰC SỰ có dữ liệu của phiên này. Đừng so hai phiên '
+      +'có số mã chênh nhau: cột thấp có thể chỉ vì kho chưa cào tới, không phải vì thị trường ế.</p>'
     +'</div></div>';
+  ptVeChart();
 }
 
-/* Đồ thị cột chồng: khớp lệnh dưới, thoả thuận trên. Vẽ THẲNG lên canvas như chart.js chứ
-   không dùng thư viện — dự án không có thư viện đồ thị nào và không định thêm. */
+/* Đồ thị cột chồng, BẤM ĐƯỢC. Toạ độ từng cột nhớ lại trong `ptCols` để đổi x -> ngày;
+   tính lại mỗi lượt vẽ vì bề ngang canvas đổi theo khổ màn. */
+let ptCols=[];
 function ptVeChart(){
   const cv=$('#ptCv'); if(!cv) return;
-  const o=PT.d, t=o.tt, n=Math.min(PT.n, t.d.length);
-  const i0=t.d.length-n;
-  const dpr=devicePixelRatio||1, W=cv.clientWidth||800, H=180;
+  const o=PT.tt, t=o.tt;
+  const iSel=t.d.indexOf(PT.ngay);
+  const i1=Math.min(t.d.length, Math.max(iSel+1, PT.n)), i0=Math.max(0, i1-PT.n);
+  const dpr=devicePixelRatio||1, W=cv.clientWidth||800, H=190;
   cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
   const dark=document.documentElement.classList.contains('theme-dark')||
-             matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light');
+    (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
   const c1=dark?'#38bdf8':'#0284c7', c2=dark?'#a78bfa':'#7c3aed',
-        cg=dark?'rgba(148,163,184,.18)':'rgba(100,116,139,.18)',
-        ct=dark?'#94a3b8':'#64748b';
-  let mx=0; for(let i=i0;i<t.d.length;i++) mx=Math.max(mx,(t.mval[i]||0)+(t.pval[i]||0));
+        cg=dark?'rgba(148,163,184,.18)':'rgba(100,116,139,.18)', ct=dark?'#94a3b8':'#64748b';
+  let mx=0; for(let i=i0;i<i1;i++) mx=Math.max(mx,(t.mval[i]||0)+(t.pval[i]||0));
   if(mx<=0) mx=1;
-  const padB=18, plotH=H-padB-6, bw=Math.max(1,W/n*0.72), gap=W/n;
+  const n=i1-i0, padB=18, plotH=H-padB-8, bw=Math.max(1,W/n*0.72), gap=W/n;
   g.strokeStyle=cg; g.lineWidth=1;
-  for(let k=0;k<=3;k++){ const y=6+plotH*k/3; g.beginPath(); g.moveTo(0,y+.5); g.lineTo(W,y+.5); g.stroke(); }
-  for(let i=i0;i<t.d.length;i++){
+  for(let k=0;k<=3;k++){ const y=8+plotH*k/3; g.beginPath(); g.moveTo(0,y+.5); g.lineTo(W,y+.5); g.stroke(); }
+  ptCols=[];
+  for(let i=i0;i<i1;i++){
     const x=(i-i0)*gap+(gap-bw)/2;
-    const a=(t.mval[i]||0)/mx*plotH, b=(t.pval[i]||0)/mx*plotH;
-    g.fillStyle=c1; g.fillRect(x, 6+plotH-a, bw, a);
-    g.fillStyle=c2; g.fillRect(x, 6+plotH-a-b, bw, b);
+    const a=(t.mval[i]||0)/mx*plotH, b2=(t.pval[i]||0)/mx*plotH;
+    if(t.d[i]===PT.ngay){ g.fillStyle=dark?'rgba(244,63,94,.20)':'rgba(244,63,94,.13)';
+      g.fillRect((i-i0)*gap, 0, gap, 8+plotH); }
+    g.fillStyle=c1; g.fillRect(x, 8+plotH-a, bw, a);
+    g.fillStyle=c2; g.fillRect(x, 8+plotH-a-b2, bw, b2);
+    ptCols.push({x0:(i-i0)*gap, x1:(i-i0+1)*gap, d:t.d[i]});
   }
   g.fillStyle=ct; g.font='11px system-ui,sans-serif'; g.textBaseline='top';
   g.fillText(t.d[i0], 0, H-14);
-  g.textAlign='right'; g.fillText(t.d[t.d.length-1], W, H-14);
-  g.textAlign='left'; g.fillText(num(mx)+' tỷ', 2, 8);
+  g.textAlign='right'; g.fillText(t.d[i1-1], W, H-14);
+  g.textAlign='left'; g.fillText(num(mx)+' tỷ', 2, 0);
+  cv.style.cursor='pointer';
+  cv.onclick=e=>{ const r=cv.getBoundingClientRect(), x=e.clientX-r.left;
+    const c=ptCols.find(z=>x>=z.x0&&x<z.x1); if(!c) return;
+    /* chỉ nhảy tới phiên CÓ file ngày, bằng không bấm xong bảng trống mà không hiểu vì sao */
+    if(ptCoFile(o).indexOf(c.d)<0) return;
+    PT.ngay=c.d; PT.mo=null; ptVe(); };
+  cv.onmousemove=e=>{ const r=cv.getBoundingClientRect(), x=e.clientX-r.left;
+    const c=ptCols.find(z=>x>=z.x0&&x<z.x1);
+    cv.title=c?(c.d+' — khớp lệnh '+num(t.mval[t.d.indexOf(c.d)])+' tỷ, thoả thuận '+
+      num(t.pval[t.d.indexOf(c.d)])+' tỷ, '+num(t.n[t.d.indexOf(c.d)])+' mã'):''; };
 }
 
-/* ---- bảng theo mã ---- */
-const PT_COT=[
-  {k:'sym',  t:'Mã',            s:0},
-  {k:'ex',   t:'Sàn',           s:0},
-  {k:'c',    t:'Giá',           n:1},
-  {k:'vwap', t:'Giá TB',        n:1},
-  {k:'mv',   t:'KL khớp',       n:1},
-  {k:'qMua', t:'KL đặt mua',    n:1},
-  {k:'qBan', t:'KL đặt bán',    n:1},
-  {k:'ap',   t:'Mua/Bán',       n:1, tinh:1},
-  {k:'nMua', t:'Lệnh mua',      n:1},
-  {k:'nBan', t:'Lệnh bán',      n:1},
-  {k:'cq',   t:'KL/lệnh mua',   n:1, tinh:1},
-];
-const PT_COT_TT=[
-  {k:'sym',  t:'Mã',            s:0},
-  {k:'ex',   t:'Sàn',           s:0},
-  {k:'c',    t:'Giá',           n:1},
-  {k:'mval', t:'GT khớp lệnh',  n:1},
-  {k:'pval', t:'GT thoả thuận', n:1},
-  {k:'ttp',  t:'% thoả thuận',  n:1, tinh:1},
-  {k:'pv',   t:'KL thoả thuận', n:1},
+/* ---- BẢNG MÃ CỦA PHIÊN ĐANG CHỌN ---- */
+/* CỘT TIỀN ĐỨNG TRƯỚC CỘT KHỐI LƯỢNG. Không có khối lượng đặt mua/đặt bán — user chốt là
+   nhiễu. Muốn bật lại thì thêm vào đây và vào COT_BANG của build_phantich.py. */
+const PTC=[
+  {k:'sym', t:'Mã'},
+  {k:'ex',  t:'Sàn'},
+  {k:'c',   t:'Giá',            n:1},
+  {k:'pc',  t:'±%',             n:1},
+  {k:'vwap',t:'Giá TB',         n:1},
+  {k:'mval',t:'GT khớp lệnh',   n:1, tien:1},
+  {k:'pval',t:'GT thoả thuận',  n:1, tien:1},
+  {k:'mv',  t:'KL khớp lệnh',   n:1},
+  {k:'mcap',t:'Vốn hoá',        n:1, tien:1},
 ];
 
-function ptDong(o){
-  const ix=ptCot(o), out=[];
-  for(const sym in o.ma.d){
-    const v=o.ma.d[sym];
-    const g=k=>v[ix[k]];
-    const qm=g('qMua'), qb=g('qBan'), nm=g('nMua');
-    const mval=g('mval')||0, pval=g('pval')||0, tong=mval+pval;
-    out.push({sym, ex:g('ex')||'', c:g('c'), vwap:g('vwap'), mv:g('mv'),
-      mval:mval, pval:pval, pv:g('pv'),
-      qMua:qm, qBan:qb,
-      /* cùng luật với ô tổng ở trên: 0 lệnh mà có khối lượng đặt = chưa công bố */
-      nMua:(!nm&&qm)?null:nm, nBan:(!g('nBan')&&qb)?null:g('nBan'),
-      ap:(qm&&qb)?qm/qb:null,
-      cq:(qm&&nm)?qm/nm:null,
-      ttp:tong?pval/tong*100:null});
+async function ptBang(){
+  const w=$('#ptTab'); if(!w) return;
+  w.innerHTML='<div class="panel"><div class="pb"><div class="empty">Đang nạp phiên '+esc(PT.ngay)+'…</div></div></div>';
+  const p=await ptPhien(PT.ngay);
+  if(!p||!p.bang){
+    w.innerHTML='<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
+      '</div><div class="pb"><div class="empty">Phiên này chưa có file dữ liệu. '+
+      'Kho chỉ dựng file cho phiên có từ 100 mã trở lên.</div></div></div>';
+    return;
   }
-  return out;
-}
-
-function ptBang(o, laTT){
-  const cot=laTT?PT_COT_TT:PT_COT;
-  let r=ptDong(o);
+  const ix={}; (p.f||[]).forEach((k,i)=>ix[k]=i);
+  let r=[];
+  for(const sym in p.bang){
+    const v=p.bang[sym], g=k=>v[ix[k]];
+    const c=g('c'), tc=g('tc'), sh=g('sh');
+    r.push({sym, ex:g('ex')||'', c, tc, vwap:g('vwap'), mval:g('mval')||0, pval:g('pval')||0,
+            mv:g('mv')||0, mcap:(c&&sh)?c*sh:null, pc:(c&&tc)?((c/tc-1)*100):null,
+            vg:(p.ma&&p.ma[sym])||null});
+  }
   if(PT.ex!=='all') r=r.filter(x=>x.ex===PT.ex);
-  if(laTT) r=r.filter(x=>x.pval>0);
+  if(PT.q){ const q=PT.q.toUpperCase(); r=r.filter(x=>x.sym.indexOf(q)>=0); }
   const s=PT.sort, dir=PT.dir;
   r.sort((a,b)=>{ const x=a[s], y=b[s];
     if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1;
     return typeof x==='string'?dir*x.localeCompare(y):dir*(x-y); });
-  const dem={}; for(const x of ptDong(o)) dem[x.ex]=(dem[x.ex]||0)+1;
+  const dem={}; for(const sym in p.bang) dem[p.bang[sym][ix['ex']]]=(dem[p.bang[sym][ix['ex']]]||0)+1;
   const chip=(v,t)=>'<button data-ex="'+v+'"'+(PT.ex===v?' class="on"':'')+'>'+t+'</button>';
-  const th=cot.map(c=>'<th data-k="'+c.k+'" class="'+(c.n?'r':'')+(s===c.k?' sorted '+(dir<0?'d':'a'):'')+'">'+c.t+'</th>').join('');
-  const body=r.slice(0,300).map(x=>'<tr data-sym="'+x.sym+'">'+cot.map(c=>{
-    let v=x[c.k];
-    if(c.k==='sym') return '<td><b>'+esc(x.sym)+'</b></td>';
-    if(c.k==='ex')  return '<td>'+esc(x.ex)+'</td>';
-    if(v==null) return '<td class="r">—</td>';
-    if(c.k==='ap'||c.k==='cq') return '<td class="r">'+v.toFixed(2)+(c.k==='ap'?'×':'')+'</td>';
-    if(c.k==='ttp') return '<td class="r">'+v.toFixed(1)+'%</td>';
-    if(c.k==='mval'||c.k==='pval') return '<td class="r">'+num(v/1e9)+' tỷ</td>';
-    return '<td class="r">'+num(v)+'</td>';
-  }).join('')+'</tr>').join('');
-  return '<div class="panel"><div class="ph"><span>'+(laTT?'🤝':'⚖️')+'</span>'+
-    (laTT?'Giao dịch thoả thuận':'Áp lực đặt lệnh')+
+  const th=PTC.map(c=>'<th data-k="'+c.k+'" class="'+(c.n?'r':'')+
+    (s===c.k?' sorted '+(dir<0?'d':'a'):'')+'">'+c.t+'</th>').join('');
+  const coVG=!!(p.ma&&Object.keys(p.ma).length);
+  const body=r.slice(0,400).map(x=>{
+    const mo=PT.mo===x.sym;
+    let tr='<tr data-sym="'+x.sym+'" class="'+(mo?'ptmo':'')+(x.vg?' ptco':'')+'">'+PTC.map(c=>{
+      const v=x[c.k];
+      if(c.k==='sym') return '<td><b>'+esc(x.sym)+'</b>'+(x.vg?'<i class="ptdau">▾</i>':'')+'</td>';
+      if(c.k==='ex')  return '<td>'+esc(x.ex)+'</td>';
+      if(v==null) return '<td class="r">—</td>';
+      if(c.k==='pc') return '<td class="r '+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</td>';
+      if(c.tien) return '<td class="r">'+ptTien(v)+'</td>';
+      return '<td class="r">'+num(v)+'</td>';
+    }).join('')+'</tr>';
+    /* BẤM LÀ PHẢI CÓ PHẢN HỒI, kể cả khi chưa có vùng giá. Bản trước chỉ bung hàng khi
+       CÓ dữ liệu, nên bấm vào mã chưa cào thì trang đứng im — người dùng không phân biệt
+       được "không có dữ liệu" với "nút hỏng", và sẽ bấm lại mấy lần. */
+    if(mo) tr+='<tr class="ptvgr"><td colspan="'+PTC.length+'">'+
+      (x.vg?ptVungGia(x):'<div class="ptvg1"><b>'+esc(x.sym)+'</b> — phiên '+esc(PT.ngay)+
+        ' chưa cào vùng giá khớp lệnh.<br><i>Kho vùng giá lấy riêng từng phiên và chỉ có từ '+
+        'khoảng 09/2025; phiên nào đã cào thì dòng có dấu ▾.</i></div>')+'</td></tr>';
+    return tr;
+  }).join('');
+  w.innerHTML='<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
     '<span class="cnt">'+num(r.length)+' mã</span></div><div class="pb">'
-    +ptPhu(o)
-    +(laTT?'<p class="ptnote">Thoả thuận là giao dịch hai bên đã bắt tay xong ngoài sổ lệnh, '+
-        'nên nó KHÔNG nói gì về cung cầu trên sàn. Tách riêng ra để đừng lẫn vào thanh khoản thật.</p>'
-      :'<p class="ptnote">Khối lượng ĐẶT là tổng lệnh treo cả phiên, luôn lớn hơn khối lượng '+
-        'KHỚP. Tỉ lệ mua/bán trên 1× nghĩa là bên mua treo nhiều hơn — đây là thống kê mô tả '+
-        'phiên đã qua, không phải dự báo.</p>')
+    +'<p class="ptnote">Xếp theo <b>giá trị</b> chứ không theo khối lượng: một mã khớp mấy triệu '
+      +'cổ phiếu giá 3.000đ chỉ là vài tỷ, còn mã khớp vài trăm nghìn cổ phiếu giá 200.000đ mới là '
+      +'tiền thật. '+(coVG?'Bấm vào dòng có dấu ▾ để xem <b>vùng giá khớp lệnh</b> của mã đó trong phiên này.'
+        :'<i>Vùng giá khớp lệnh của phiên này chưa cào — bảng vẫn đầy đủ.</i>')+'</p>'
     +'<div class="nybar"><div class="nyseg" id="ptEx">'+chip('all','Tất cả')
       +chip('HOSE','HOSE'+(dem.HOSE?' '+dem.HOSE:''))+chip('HNX','HNX'+(dem.HNX?' '+dem.HNX:''))
-      +chip('UPCOM','UPCOM'+(dem.UPCOM?' '+dem.UPCOM:''))+'</div></div>'
+      +chip('UPCOM','UPCOM'+(dem.UPCOM?' '+dem.UPCOM:''))+'</div>'
+      +'<input id="ptQ" class="ptq" placeholder="tìm mã…" value="'+esc(PT.q)+'"></div>'
     +'<div class="pttw"><table class="pttb"><thead><tr>'+th+'</tr></thead><tbody>'+
-      (body||'<tr><td colspan="'+cot.length+'"><div class="empty">Không có mã nào</div></td></tr>')+
+      (body||'<tr><td colspan="'+PTC.length+'"><div class="empty">Không có mã nào</div></td></tr>')+
       '</tbody></table></div>'
-    +(r.length>300?'<p class="ptnote">Hiện 300 mã đầu theo thứ tự đang xếp — còn '+num(r.length-300)+' mã nữa.</p>':'')
+    +(r.length>400?'<p class="ptnote">Hiện 400 mã đầu theo thứ tự đang xếp — còn '+num(r.length-400)+' mã nữa.</p>':'')
     +'</div></div>';
+  ptBind();
 }
 
-function ptBindBang(){
+/* Tiền: đổi bậc cho dễ đọc. Cột tiền đứng cạnh nhau nên phải CÙNG một bậc trong một cột —
+   trộn "tỷ" với "triệu" trong cùng cột là mắt không so thẳng được nữa. Ngưỡng 1 tỷ. */
+function ptTien(v){
+  if(v==null) return '—';
+  if(Math.abs(v)>=1e9) return num(v/1e9)+' tỷ';
+  if(Math.abs(v)>=1e6) return (v/1e6).toFixed(1)+' tr';
+  return num(v);
+}
+
+/* VÙNG GIÁ KHỚP LỆNH — dựng bằng thẻ HTML chứ không vẽ canvas: nó nằm trong một hàng bảng
+   bung ra, bề ngang đổi theo cột, và cần rê chuột ra số. Thẻ thật thì được cả hai miễn phí. */
+function ptVungGia(x){
+  const vg=x.vg; if(!vg||!vg.p||!vg.p.length) return '<div class="empty">Không có dữ liệu</div>';
+  let mx=0; for(const v of vg.v) mx=Math.max(mx,v);
+  const tong=vg.v.reduce((a,b)=>a+b,0);
+  const cot=vg.p.map((g,i)=>{
+    const h=mx?vg.v[i]/mx*100:0;
+    const tien=g*vg.v[i];
+    return '<div class="ptvgc" title="'+num(g)+'đ — '+num(vg.v[i])+' cp ('+
+      (tong?(vg.v[i]/tong*100).toFixed(1):0)+'%) ≈ '+ptTien(tien)+'">'+
+      '<span style="height:'+h.toFixed(1)+'%"></span><i>'+num(g)+'</i></div>';
+  }).join('');
+  let cf='';
+  if(vg.cf&&vg.cf.length===3){
+    const [u,f,d]=vg.cf, t=u+f+d;
+    const bar=(nhan,v,cl)=>'<div class="ptcfc"><span class="'+cl+'" style="height:'+
+      (t?Math.max(2,v/Math.max(u,f,d,1)*100):0).toFixed(1)+'%"></span>'+
+      '<i>'+nhan+'</i><b>'+ptTien(v*1e6)+'</b></div>';
+    cf='<div class="ptcf"><h4>Phân bổ dòng tiền</h4><div class="ptcfw">'+
+       bar('Tăng',u,'up')+bar('Không đổi',f,'fl')+bar('Giảm',d,'dn')+'</div>'+
+       '<p class="ptcfn">Giá trị khớp lệnh tách theo hướng giá của lệnh so với lệnh liền trước — '+
+       'tăng = bên mua chủ động nâng giá, giảm = bên bán chủ động hạ giá.</p></div>';
+  }
+  return '<div class="ptvg"><div class="ptvgl"><h4>Vùng giá khớp lệnh — '+esc(x.sym)+
+    ' phiên '+esc(PT.ngay)+'</h4><div class="ptvgw">'+cot+'</div>'+
+    '<p class="ptcfn">Cột = khối lượng khớp tại mức giá đó. Tổng '+num(tong)+' cp'+
+    (x.mv&&tong!==x.mv?' <b>(lệch với KL cả phiên '+num(x.mv)+')</b>':' — khớp đúng KL cả phiên')+
+    '. Rê vào cột để xem số.</p></div>'+cf+'</div>';
+}
+
+function ptBind(){
   const ex=$('#ptEx'); if(ex) ex.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
-    PT.ex=b.dataset.ex; ptBody(); };
+    PT.ex=b.dataset.ex; ptBang(); };
+  const q=$('#ptQ');
+  if(q) q.oninput=()=>{ clearTimeout(PT._t); const v=q.value;
+    /* giữ tiêu điểm và vị trí con trỏ qua lượt vẽ lại — cùng bài học với #vbQ của Về bờ */
+    const pos=q.selectionStart;
+    PT._t=setTimeout(async()=>{ PT.q=v.trim(); await ptBang();
+      const n=$('#ptQ'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} } },220); };
   const tb=$('.pttb'); if(!tb) return;
   tb.querySelectorAll('th[data-k]').forEach(th=>{ th.onclick=()=>{
     const k=th.dataset.k;
     if(PT.sort===k) PT.dir=-PT.dir; else { PT.sort=k; PT.dir=(k==='sym'||k==='ex')?1:-1; }
-    ptBody(); }; });
+    ptBang(); }; });
   tb.querySelectorAll('tr[data-sym]').forEach(tr=>{ tr.onclick=()=>{
-    location.href='/cophieu/'+tr.dataset.sym; }; });
+    const s=tr.dataset.sym;
+    PT.mo=(PT.mo===s)?null:s; ptBang(); }; });
 }
 
 const MODULES=[

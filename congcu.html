@@ -366,25 +366,32 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .nytt.ok{background:rgba(34,201,138,.15);color:var(--green)}
 .nytab{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 /* ---- PHÂN TÍCH DỮ LIỆU ---- */
-/* Lời cảnh báo về ĐỘ PHỦ phải đứng TRÊN số chứ không phải dưới bảng: kho đang bồi dần nên
-   mỗi phiên có số mã khác nhau, ai đọc số trước rồi mới đọc ghi chú thì đã hiểu sai rồi. */
+/* Thanh chọn phiên đứng TRÊN CÙNG: cả trang xoay quanh một phiên, nên thứ đầu tiên mắt
+   gặp phải là "đang xem phiên nào". */
+.ptbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.ptbar select{background:var(--card);color:var(--txt);border:1px solid var(--line);
+  border-radius:9px;padding:9px 12px;font-size:14px;font-weight:800;
+  font-variant-numeric:tabular-nums;cursor:pointer;min-width:150px}
+.ptnav{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:9px;
+  width:38px;height:38px;font-size:13px;cursor:pointer;flex:none}
+.ptnav:disabled{opacity:.35;cursor:default}
+.ptbarn{font-size:11.5px;color:var(--faint)}
 .ptnote{margin:0 0 12px;padding:9px 12px;border-radius:9px;background:var(--card2);
   border-left:3px solid var(--rose);color:var(--txt);font-size:12px;line-height:1.65}
 .ptgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
 .ptbox{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
   display:flex;flex-direction:column;gap:3px;min-width:0}
-.ptbox .ptlb{font-size:11px;color:var(--faint);font-weight:700;letter-spacing:.02em}
+.ptbox .ptlb{font-size:11px;color:var(--faint);font-weight:700}
 .ptbox b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ptbox i{font-style:normal;font-size:11px;color:var(--faint)}
 .ptcv{width:100%}
 .ptcv canvas{width:100%;display:block}
-.ptleg{margin:6px 0 0;font-size:11.5px;color:var(--faint)}
+.ptleg{margin:6px 0 10px;font-size:11.5px;color:var(--faint)}
 .ptleg i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px}
 .ptleg i.pk1{background:#0284c7}
 .ptleg i.pk2{background:#7c3aed}
-/* BẢNG CUỘN NGANG TRONG CHÍNH NÓ — 11 cột không nhét vừa màn hẹp, mà cắt bớt cột thì mất
-   đúng mấy con số người ta mở trang này ra để soi. Thân trang tuyệt đối không được tràn. */
+/* BẢNG CUỘN NGANG TRONG CHÍNH NÓ — thân trang tuyệt đối không được tràn */
 .pttw{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pttb{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
 .pttb th,.pttb td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -394,11 +401,41 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .pttb th.sorted{color:var(--rose)}
 .pttb th.sorted::after{content:'▾';margin-left:4px;font-size:9px}
 .pttb th.sorted.a::after{content:'▴'}
-.pttb tbody tr{cursor:pointer}
-.pttb tbody tr:hover{background:var(--card2)}
-.nytab button{background:var(--card);color:var(--faint);border:1px solid var(--line);
-  border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:800;cursor:pointer}
-.nytab button.on{background:var(--rose);border-color:var(--rose);color:#fff}
+.pttb tbody tr[data-sym]{cursor:pointer}
+.pttb tbody tr[data-sym]:hover{background:var(--card2)}
+.pttb tbody tr.ptmo{background:var(--card2)}
+.ptdau{font-style:normal;color:var(--rose);font-size:9px;margin-left:5px}
+.pttb tbody tr.ptmo .ptdau{transform:rotate(180deg);display:inline-block}
+.ptq{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:9px;
+  padding:8px 12px;font-size:13px;width:130px}
+/* Hàng bung ra: KHÔNG dùng chung padding của ô bảng, nó cần cả bề ngang */
+.pttb td[colspan]{padding:0}
+.ptvgr>td{background:var(--card2);border-bottom:2px solid var(--line)}
+.ptvg{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:16px;padding:14px}
+.ptvg h4{margin:0 0 10px;font-size:12.5px;font-weight:800;color:var(--txt)}
+/* Cột vùng giá neo ĐÁY, cao theo tỉ lệ khối lượng — cùng cách đọc với biểu đồ của nguồn */
+.ptvgw{display:flex;align-items:flex-end;gap:2px;height:130px;overflow-x:auto;padding-bottom:2px}
+.ptvgc{flex:1 0 26px;min-width:26px;display:flex;flex-direction:column;justify-content:flex-end;
+  align-items:center;height:100%;cursor:default}
+.ptvgc>span{width:100%;background:#38bdf8;border-radius:3px 3px 0 0;min-height:2px}
+.ptvgc>i{font-style:normal;font-size:8.5px;color:var(--faint);margin-top:3px;
+  writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+.ptcfw{display:flex;align-items:flex-end;gap:10px;height:130px}
+.ptcfc{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.ptcfc>span{width:100%;border-radius:3px 3px 0 0;min-height:2px}
+.ptcfc>span.up{background:#16a34a}
+.ptcfc>span.fl{background:#94a3b8}
+.ptcfc>span.dn{background:#dc2626}
+.ptcfc>i{font-style:normal;font-size:10px;color:var(--faint);margin-top:4px}
+.ptcfc>b{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
+.ptcfn{margin:8px 0 0;font-size:11px;line-height:1.6;color:var(--faint)}
+.ptvg1{padding:14px;font-size:12.5px;line-height:1.7;color:var(--txt)}
+.ptvg1 i{color:var(--faint);font-size:11.5px}
+/* Khổ hẹp: vùng giá và dòng tiền XẾP DỌC — hai cột trong 375px thì cột nào cũng bẹp */
+@media(max-width:760px){
+  .ptvg{grid-template-columns:1fr;gap:14px;padding:12px}
+  .ptbar select{flex:1;min-width:0}
+}
 .nypane{display:none}
 .nypane.on{display:block}
 .nynote{margin-top:9px;font-size:11.5px;line-height:1.6;color:var(--faint)}
@@ -1102,7 +1139,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260820j"></script>
+<script defer src="assets/mobi.js?v=20260820k"></script>
 </head>
 <body>
 
@@ -1159,6 +1196,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260820j"></script>
+<script src="assets/congcu.js?v=20260820k"></script>
 </body>
 </html>

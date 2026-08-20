@@ -157,8 +157,14 @@ def goi(path, data, sym):
 
 
 # ── tầng 1: số chốt phiên ─────────────────────────────────────────────────────
-COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "sh",
+COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "shR",
        "bMua", "bMuaKL", "bBan", "bBanKL", "nMua", "nBan", "qMua", "qBan")
+
+# DẤU PHIÊN BẢN CỦA CÁCH TÍNH. File nào mang số nhỏ hơn là dựng bằng logic CŨ và
+# phải cào lại — `run_boi_giaodich.ps1` lấy đúng danh sách đó. Có dấu này thì mỗi
+# lần sửa cách tính, kho TỰ LÀNH dần thay vì phải nhớ chạy tay một script vá.
+# v2 (20/08/2026): `sh` đổi từ "chia ngược quãng trước" sang "neo đuôi vào SLCP thật".
+PBAN = 2
 
 
 def eod_trang(sym, trang, tu, den):
@@ -196,8 +202,12 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
                 # KHÔNG lưu MarketCap của nguồn — nó chỉ là `giá × SLCP`, không mang thêm
                 # thông tin nào ngoài SLCP. Lưu SLCP vừa gọn hơn nhiều (10 chữ số thay vì
                 # 15) vừa là thứ VÁ ĐƯỢC khi nguồn sai, còn vốn hoá thì không.
-                "sh": (round(r["MarketCap"] / r["ClosePrice"])
-                       if r.get("MarketCap") and r.get("ClosePrice") else None),
+                # LƯU SỐ THÔ CỦA NGUỒN (`shR`), `sh` là số đã vá và được TÍNH LẠI mỗi lần
+                # ghi. Bản trước lưu thẳng số đã vá nên khi phát hiện vá sai chiều thì
+                # không còn đường nào quay lại ngoài cào lại cả kho — đúng cái giá đang
+                # phải trả. Số thô thì mọi cách tính về sau đều dựng lại được tại chỗ.
+                "shR": (round(r["MarketCap"] / r["ClosePrice"])
+                        if r.get("MarketCap") and r.get("ClosePrice") else None),
             }
         if not day_du or len(ra) >= (tong or 0) or trang > 400:
             break
@@ -205,40 +215,53 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
     return ra, sid[0]
 
 
-def sua_slcp(d, shv, ev):
-    """VÁ SLCP suy từ nguồn. Vietstock CÓ ghi các bậc SLCP trong quá khứ (VCB 14 bậc trên
-    4.279 phiên), nhưng cập nhật bậc mới có ĐỘ TRỄ — nên với mã vừa có sự kiện quyền, SLCP
-    hôm nay bị áp ngược cho cả quãng TRƯỚC sự kiện.
+def neo_slcp(d, shv, ev, sh_that):
+    """NEO ĐUÔI CHUỖI SLCP VÀO SỐ THẬT HÔM NAY.
 
-    Đo được 20/08/2026 trên VHM (chia cổ phiếu 1:1 ngày 06/08): nguồn giữ nguyên
-    4.107.412.004 cổ phiếu suốt từ 27/11/2024 tới nay, nên vốn hoá 04/08 hiện ra 628 nghìn
-    tỷ rồi tụt còn 300 nghìn tỷ ngay hôm sau — trong khi thực tế chỉ là chia đôi mệnh giá,
-    vốn hoá gần như không đổi. SLCP đúng của ngày 04/08 phải là 2.053.706.002.
+    CHẨN SAI LẦN ĐẦU, ghi lại để đừng ai đi lại đường cũ. Bản trước (`sua_slcp`) cho rằng
+    nguồn "áp SLCP hôm nay ngược về quá khứ" nên CHIA quãng trước sự kiện. Sai chiều:
+    nguồn không áp gì ngược cả, nó chỉ đơn giản là **CŨ** — chưa cập nhật đợt phát hành
+    gần nhất. Đo 20/08/2026 trên 1.529 mã, so với `universe.json` (Simplize, làm mới mỗi
+    7:30): **1.427 mã khớp trong ±1%**, ~100 mã lệch và lệch đúng bằng tỉ lệ một sự kiện
+    quyền — VHM ×2,000 (chia 1:1 ngày 06/08), MBB ×1,250, SSI ×1,200, BID ×1,068.
+    Tức quãng TRƯỚC sự kiện của nguồn vốn đã ĐÚNG, và bản vá cũ đã bẻ gãy nó: vốn hoá VHM
+    ra 285.465 tỷ trong khi thật là ~567.644 tỷ.
 
-    Cách vá: với mỗi sự kiện làm đổi số cổ phiếu, xem chuỗi SLCP của nguồn CÓ bậc ở đúng
-    ngày GDKHQ không. Có rồi thì để yên. Không có thì chia ngược toàn bộ quãng trước đó.
-    Đi từ sự kiện MỚI NHẤT về trước để các hệ số nhân dồn đúng thứ tự.
+    Cách đúng: giữ nguyên chuỗi của nguồn (nó có cả những đợt phát hành riêng lẻ mà
+    `data/sukien` không ghi), rồi NHÂN TỚI TRƯỚC từ ngày sự kiện mà nguồn chưa kịp ghi.
+    Số thật hôm nay lấy từ `universe.json` vì lượt 7:30 làm mới nó mỗi ngày giao dịch.
     """
-    sh = [float(x) if x else None for x in shv]
-    if not sh:
+    if not shv or not sh_that or not shv[-1]:
         return shv, 0
+    r = sh_that / shv[-1]
+    if abs(r - 1) <= 0.01:
+        return shv, 0
+    # Bậc cuối của nguồn: lùi tới chỗ giá trị đổi lần cuối.
+    j = len(shv) - 1
+    while j > 0 and shv[j - 1] == shv[j]:
+        j -= 1
+    moc = d[j]
     su = sorted((e for e in ev
-                 if e.get("k") in ("cp", "thuong", "quyenmua") and e.get("tl")),
-                key=lambda e: e["d"], reverse=True)
+                 if e.get("k") in ("cp", "thuong", "quyenmua") and e.get("tl")
+                 and e["d"] > moc), key=lambda e: e["d"])
+    sh = [float(x) if x else None for x in shv]
     va = 0
     for e in su:
-        i = bisect.bisect_left(d, e["d"])          # phiên đầu tiên KỂ TỪ ngày GDKHQ
-        if i <= 0 or i >= len(sh):
-            continue
-        truoc, sau = shv[i - 1], shv[i]
-        if not truoc or not sau:
-            continue
         f = 1 + e["tl"] / 100.0
-        if abs((sau / truoc) / f - 1) <= 0.02:
-            continue                              # nguồn đã ghi nhận bậc này rồi
-        for j in range(i):
-            if sh[j]:
-                sh[j] /= f
+        i = bisect.bisect_left(d, e["d"])
+        for k in range(i, len(sh)):
+            if sh[k]:
+                sh[k] *= f
+        va += 1
+    # CÒN LỆCH SAU KHI ÁP HẾT SỰ KIỆN = có đợt phát hành `data/sukien` không ghi (riêng lẻ,
+    # ESOP, chuyển đổi trái phiếu). Neo thẳng đuôi vào số thật, và ĐẾM là một lần vá — số
+    # thật hôm nay đáng tin hơn hẳn một chuỗi tự nó mâu thuẫn với chính hôm nay.
+    if sh[-1] and abs(sh_that / sh[-1] - 1) > 0.01:
+        f = sh_that / sh[-1]
+        i = bisect.bisect_left(d, moc)
+        for k in range(i, len(sh)):
+            if sh[k]:
+                sh[k] *= f
         va += 1
     return [round(x) if x else x for x in sh], va
 
@@ -279,6 +302,22 @@ def bac_la(d, sh, ev):
     return la
 
 
+_UNI = {}
+
+
+def _slcp_that(sym):
+    """SLCP THẬT hôm nay, lấy từ `universe.json` — lượt 7:30 làm mới nó mỗi ngày giao dịch
+    từ Simplize, nên nó mới hơn hẳn chuỗi của Vietstock."""
+    if not _UNI:
+        try:
+            for s in json.load(open(UNI, encoding="utf-8"))["stocks"]:
+                if s.get("shares"):
+                    _UNI[s["sym"]] = s["shares"]
+        except Exception:
+            _UNI["_"] = 0
+    return _UNI.get(sym)
+
+
 def _sukien(sym):
     p = os.path.join(BASE, "data", "sukien", f"{sym}.json")
     try:
@@ -287,7 +326,7 @@ def _sukien(sym):
         return []
 
 
-def eod_ghi(sym, moi, sid=None):
+def eod_ghi(sym, moi, sid=None, day_du=False):
     """Trộn vào file cũ. GIỮ ngày cũ, chỉ thêm/cập nhật ngày có trong `moi`."""
     p = os.path.join(GD_DIR, f"{sym}.json")
     cu, cu_sid = {}, sid
@@ -315,7 +354,15 @@ def eod_ghi(sym, moi, sid=None):
     if cu_sid:
         doc["sid"] = cu_sid
     ev = _sukien(sym)
-    doc["sh"], doc["shVa"] = sua_slcp(ngay, doc["sh"], ev)
+    doc["v"] = PBAN
+    if day_du:
+        doc["day"] = 1                    # đã cào ĐẦY ĐỦ, không phải chỉ trang 1
+    elif os.path.exists(p):
+        try:
+            doc["day"] = json.load(open(p, encoding="utf-8")).get("day") or 0
+        except Exception:
+            pass
+    doc["sh"], doc["shVa"] = neo_slcp(ngay, doc["shR"], ev, _slcp_that(sym))
     la = bac_la(ngay, doc["sh"], ev)
     if la:
         doc["shLa"] = la[:20]
@@ -445,8 +492,8 @@ def tt_ngay(ngay):
                             "c": r.get("ClosePrice"), "vwap": r.get("AvrPrice"),
                             "mv": r.get("M_TotalVol"), "mval": r.get("M_TotalVal"),
                             "pv": r.get("PT_TotalVol"), "pval": r.get("PT_TotalVal"),
-                            "sh": (round(r["MarketCap"] / r["ClosePrice"])
-                                   if r.get("MarketCap") and r.get("ClosePrice") else None),
+                            "shR": (round(r["MarketCap"] / r["ClosePrice"])
+                                    if r.get("MarketCap") and r.get("ClosePrice") else None),
                         })
                     else:
                         for k, v in DL.items():
@@ -506,6 +553,72 @@ def dl_nap(sym, sid, day_du=False):
     return ra
 
 
+# ── tầng 3: VÙNG GIÁ KHỚP LỆNH + phân bổ dòng tiền ───────────────────────────
+PHIEN_DIR = os.path.join(BASE, "data", "phien")
+
+
+def vung_gia(sym, ngay):
+    """KHỐI LƯỢNG KHỚP LỆNH GỘP THEO TỪNG MỨC GIÁ trong một phiên — "vùng giá khớp lệnh".
+
+    Nguồn không có sẵn bảng này; nó nằm trong chuỗi nến 1 PHÚT (`interval=1`, mỗi điểm có
+    `Price` và `Vol`). Gộp `Vol` theo `Price` là ra đúng biểu đồ Vietstock vẽ. Một lượt gọi
+    cho cả phiên, và kết quả gọn hơn nến 1 phút nhiều: VCB 226 nến rút còn ~25 mức giá.
+
+    KHÔNG lưu chuỗi 1 phút thô — user không cần lịch sử trong phiên, chỉ cần vùng giá.
+    """
+    j = goi("/Data/GetStockDealDetailChartByDate",
+            {"code": sym, "interval": 1, "tradingDate": ngay}, sym)
+    if not isinstance(j, dict):
+        return None
+    r = j.get("Deal_DetailChart_Results") or []
+    if not r:
+        return {}
+    gom = {}
+    for x in r:
+        p = int(x.get("Price") or 0)
+        v = int(x.get("Vol") or 0)
+        if p > 0 and v > 0:
+            gom[p] = gom.get(p, 0) + v
+    if not gom:
+        return {}
+    gia = sorted(gom)
+    return {"p": gia, "v": [gom[g] for g in gia]}
+
+
+def dong_tien(sym, ngay):
+    """PHÂN BỔ DÒNG TIỀN — giá trị khớp lệnh tách theo hướng giá của lệnh (`StateChange`
+    +1 tăng / 0 không đổi / −1 giảm). Đi kèm miễn phí ở trang 1 của endpoint từng lệnh,
+    nên 1 lượt/mã/ngày. Tổng ba phần bằng đúng `mval` của phiên đó (đã kiểm 5 cặp).
+    Trả về [tăng, không đổi, giảm] tính bằng TRIỆU đồng cho gọn."""
+    j = goi("/data/GetStockDealDetailPagingByDate_v2",
+            {"code": sym, "page": 1, "pageSize": 20, "tradingDate": ngay}, sym)
+    if not isinstance(j, dict):
+        return None
+    cf = {x.get("StateChange"): x.get("CashFlow")
+          for x in ((j.get("result") or {}).get("Deal_CashFlow_Results") or [])}
+    if not cf:
+        return None
+    return [round((cf.get(k) or 0) / 1e6) for k in (1, 0, -1)]
+
+
+def phien_ghi(ngay, goi_ma):
+    os.makedirs(PHIEN_DIR, exist_ok=True)
+    p = os.path.join(PHIEN_DIR, f"{ngay}.json")
+    cu = {}
+    if os.path.exists(p):
+        try:
+            cu = json.load(open(p, encoding="utf-8")).get("ma") or {}
+        except Exception:
+            cu = {}
+    cu.update(goi_ma)
+    doc = {"date": ngay, "n": len(cu), "ma": cu}
+    tmp = p + ".tmp"
+    json.dump(doc, open(tmp, "w", encoding="utf-8"), ensure_ascii=False,
+              separators=(",", ":"))
+    os.replace(tmp, p)
+    return os.path.getsize(p)
+
+
 # ── đối chiếu ─────────────────────────────────────────────────────────────────
 def entrade(sym, t0, t1):
     """Nguồn ĐỘC LẬP để soi lại: chart API của Entrade (nền tảng của DNSE), mở, không cần
@@ -534,8 +647,51 @@ def main():
     ap.add_argument("--sau", action="store_true",
                     help="đường HỎI TỪNG MÃ — chỉ dùng cho lịch sử SÂU hơn cửa sổ ~09/2025")
     ap.add_argument("--tatca", action="store_true", help="với --sau: lật HẾT trang")
+    ap.add_argument("--vg", action="store_true",
+                    help="VÙNG GIÁ khớp lệnh + phân bổ dòng tiền cho --ngay (1 lượt/mã/ngày ×2)")
     ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo sau khi chạy")
     a = ap.parse_args()
+
+    if a.vg:
+        u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+        ma = [x["sym"] for x in u]
+        if a.ma:
+            xin = {x.upper() for x in a.ma}
+            ma = [m for m in ma if m in xin]
+        ngays = a.ngay or [datetime.datetime.now(TZ).strftime("%Y-%m-%d")]
+        if a.tu:
+            d0 = datetime.datetime.strptime(a.tu, "%Y-%m-%d").date()
+            d1 = datetime.datetime.strptime(a.den or a.tu, "%Y-%m-%d").date()
+            ngays = []
+            while d0 <= d1:
+                if d0.weekday() < 5:
+                    ngays.append(d0.strftime("%Y-%m-%d"))
+                d0 += datetime.timedelta(days=1)
+            ngays.reverse()
+        for ng in ngays:
+            t0 = time.time()
+            goi_ma, ok, rong = {}, 0, 0
+            for m in ma:
+                vg = vung_gia(m, ng)
+                if vg is None:
+                    continue
+                if not vg:
+                    rong += 1
+                    continue
+                dt = dong_tien(m, ng)
+                if dt:
+                    vg["cf"] = dt
+                goi_ma[m] = vg
+                ok += 1
+            if not ok:
+                print(f"  {ng}: không mã nào khớp lệnh (nghỉ, hoặc ngoài cửa sổ ~09/2025)",
+                      flush=True)
+                continue
+            kb = phien_ghi(ng, goi_ma) / 1024
+            muc = sum(len(x["p"]) for x in goi_ma.values())
+            print(f"  {ng}: {ok:,} mã có vùng giá · {rong:,} mã không khớp lệnh"
+                  f" · {muc:,} mức giá · {kb:,.0f} KB · {time.time()-t0:.0f}s", flush=True)
+        return 0
 
     if a.sau:
         # ĐƯỜNG CHẬM, chỉ để bồi lịch sử sâu: 20 dòng/lượt, 214 trang cho một mã như VCB.
@@ -567,7 +723,7 @@ def main():
                 pass
             if sid:
                 sids[m] = sid
-            tong += eod_ghi(m, moi, sid)
+            tong += eod_ghi(m, moi, sid, a.tatca)
             ok += 1
             if (i + 1) % 200 == 0:
                 print(f"    …{i+1}/{len(ma)}  {time.time()-t0:.0f}s", flush=True)
