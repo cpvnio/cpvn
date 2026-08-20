@@ -485,8 +485,12 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
   padding:5px 10px;font-size:12px;font-variant-numeric:tabular-nums}
 .ptcs b{font-weight:800;margin-right:6px}
 .ptcs i{font-style:normal;font-weight:700;margin-left:6px}
-/* BẢNG CUỘN NGANG TRONG CHÍNH NÓ — thân trang tuyệt đối không được tràn */
-.pttw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* BẢNG CUỘN TRONG CHÍNH NÓ — cả NGANG lẫn DỌC. Thân trang tuyệt đối không được tràn
+   ngang; còn trần chiều cao là để trang đừng dài vô tận: 400 dòng × 30px = 12.000px, tức
+   một mình bảng này chiếm 79% chiều cao cả trang và đẩy mọi thứ khác thành thứ người ta
+   không bao giờ cuộn tới. Hàng tiêu đề đã `position:sticky` sẵn nên cuộn trong khung vẫn
+   đọc được tên cột. Cùng lối với `.nywrap` của Thông tin niêm yết. */
+.pttw{max-height:70vh;overflow:auto;-webkit-overflow-scrolling:touch}
 .pttb{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
 .pttb th,.pttb td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
 .pttb th{position:sticky;top:0;background:var(--card);color:var(--faint);font-size:11px;
@@ -1311,7 +1315,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821u"></script>
+<script defer src="assets/mobi.js?v=20260821v"></script>
 </head>
 <body>
 
@@ -1368,6 +1372,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821u"></script>
+<script src="assets/congcu.js?v=20260821v"></script>
 </body>
 </html>
