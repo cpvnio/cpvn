@@ -1426,13 +1426,34 @@ function ptVe1(cv, cfg){
   else { const b=(hi-lo)*0.10||1; lo-=b; hi+=b; }
   if(hi<=lo) hi=lo+1;
   g.font='10px system-ui,sans-serif';
+  /* TRỤC PHẢI (`cfg.phai`) — cho đồ thị GỘP cột-tiền với đường-giá. Hai đại lượng khác
+     đơn vị hoàn toàn, ép chung một trục là một trong hai bẹp dí; và trục phải KHÔNG kéo
+     về 0 (giá dao động quanh một mức cao, kéo về 0 là đường thẳng đơ). Cùng cách
+     `ptVeChart` đã làm với VN-Index. */
+  const P2=cfg.phai&&cfg.phai.series?cfg.phai.series.filter(x=>x&&x.v):null;
+  let lo2=Infinity, hi2=-Infinity;
+  if(P2&&P2.length){
+    for(const s2 of P2) for(let i=0;i<n;i++){ const v=s2.v[i];
+      if(v!=null&&!isNaN(v)){ lo2=Math.min(lo2,v); hi2=Math.max(hi2,v); } }
+    if(hi2>lo2){ const b2=(hi2-lo2)*0.10; lo2-=b2; hi2+=b2; }
+    else if(hi2>-Infinity){ lo2=hi2*0.98; hi2=hi2*1.02; }
+  }
+  const coP2=P2&&P2.length&&hi2>lo2;
+  const nhanP=v=>cfg.phai&&cfg.phai.nhan?cfg.phai.nhan(v):num(v);
   const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14, padT=6;
-  const plotH=H-padB-padT, plotW=W-padL;
+  const padR=coP2?Math.ceil(g.measureText(nhanP(hi2)).width)+8:0;
+  const plotH=H-padB-padT, plotW=W-padL-padR;
   const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
   g.strokeStyle=cg; g.lineWidth=1; g.fillStyle=ct; g.textAlign='right'; g.textBaseline='middle';
   for(let k=0;k<=3;k++){ const v=lo+(hi-lo)*k/3, yy=y(v);
-    g.beginPath(); g.moveTo(padL,yy+.5); g.lineTo(W,yy+.5); g.stroke();
+    g.beginPath(); g.moveTo(padL,yy+.5); g.lineTo(W-padR,yy+.5); g.stroke();
     g.fillText(cfg.nhan?cfg.nhan(v):num(v), padL-4, yy); }
+  if(coP2){
+    g.textAlign='left';
+    for(let k=0;k<=3;k++){ const v=lo2+(hi2-lo2)*k/3;
+      g.fillText(nhanP(v), W-padR+4, padT+plotH-(v-lo2)/(hi2-lo2)*plotH); }
+    g.textAlign='right';
+  }
   const gap=plotW/n, bw=Math.max(1,gap*0.7);
   if(cfg.kieu==='line'){
     for(const s of S){ g.strokeStyle=s.mau; g.lineWidth=1.8; g.beginPath(); let dau=true;
@@ -1449,6 +1470,17 @@ function ptVe1(cv, cfg){
         const a=y(day), b=y(day+v);
         g.fillRect(padL+i*gap+(gap-bw)/2, Math.min(a,b), bw, Math.max(1,Math.abs(b-a)));
         if(cfg.chong) day+=v; } }
+  }
+  if(coP2){
+    const y2=v=>padT+plotH-(v-lo2)/(hi2-lo2)*plotH;
+    for(const s2 of P2){
+      g.strokeStyle=s2.mau; g.lineWidth=1.8; g.beginPath(); let dau=true;
+      for(let i=0;i<n;i++){ const v=s2.v[i];
+        if(v==null||isNaN(v)){ dau=true; continue; }
+        const x=padL+i*gap+gap/2;
+        if(dau){ g.moveTo(x,y2(v)); dau=false; } else g.lineTo(x,y2(v)); }
+      g.stroke();
+    }
   }
   /* MỐC ĐÁNH DẤU DÙNG CHUNG cho cả sáu đồ thị. User chốt 20/08/2026: bấm một cột ở đồ thị
      khối lượng thì phải thấy luôn giá đóng cửa và % của chính phiên đó ở các đồ thị khác —
@@ -1469,7 +1501,7 @@ function ptVe1(cv, cfg){
   }
   g.fillStyle=ct; g.textAlign='left'; g.textBaseline='top';
   g.fillText(cfg.d[0], padL, H-12);
-  g.textAlign='right'; g.fillText(cfg.d[n-1], W, H-12);
+  g.textAlign='right'; g.fillText(cfg.d[n-1], W-padR, H-12);
   if(cfg.chon){
     const chi=e=>{ const r=cv.getBoundingClientRect();
       const i=Math.floor((e.clientX-r.left-padL)/gap);
@@ -1540,10 +1572,15 @@ function ptVeMa(){
        rê chuột trên đồ thị mà số hiện ở cuối trang thì mắt phải nhảy đi nhảy lại. */
     +'<div class="ptdoc" id="ptDoc"></div>'
     +'<div class="ptbieu">'
-      +ptO('Giá đóng cửa và giá trung bình', 'mc1',
-           '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)', 1)
-      +ptO('Giá trị giao dịch mỗi phiên', 'mc2',
-           '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận', 1)
+      /* GỘP GIÁ VÀ TIỀN LÀM MỘT (user chốt 22/08/2026). Hai đồ thị rời thì phải tự dóng
+         bằng mắt qua trục ngày để hỏi câu duy nhất người ta hỏi ở đây: *phiên tiền vào
+         nhiều là phiên giá đi đâu*. Chồng lên nhau thì đọc thẳng — cột cao mà giá tụt là
+         phân phối, cột cao mà giá bật là gom. Đường giá đi TRỤC PHẢI vì tiền và giá khác
+         đơn vị hoàn toàn. */
+      +ptO('Giá và giá trị giao dịch mỗi phiên', 'mc1',
+           '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'
+           +' &nbsp;·&nbsp; <i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)'
+           +' &nbsp;—&nbsp; hai đường đọc ở <b>trục phải</b>', 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên')
       +ptO('Khối ngoại ròng', 'mc4', 'mua trừ bán — cột xanh là mua ròng, đỏ là bán ròng')
@@ -1583,10 +1620,11 @@ function ptVeMa(){
   /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
      giữ nguyên chiều cao là ô thành hình chữ nhật dựng đứng, đường giá bị kéo dốc giả. */
   const C=(cfg)=>Object.assign({d,moc:PT.maI,ghim:PT.ghim!=null,chon,cao:136},cfg);
-  ptVe1($('#mc1'),C({cao:250,kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
-    {v:vw,mau:dark?'#fbbf24':'#d97706'}],nhan:num}));
-  ptVe1($('#mc2'),C({cao:250,kieu:'bar',chong:1,series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},
-    {v:pval,mau:dark?'#a78bfa':'#7c3aed'}],nhan:v=>ptTien(v)}));
+  ptVe1($('#mc1'),C({cao:300,kieu:'bar',chong:1,
+    series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
+    nhan:v=>ptTien(v),
+    phai:{nhan:num,series:[{v:c,mau:dark?'#f8fafc':'#0f172a'},
+                           {v:vw,mau:dark?'#fbbf24':'#d97706'}]}}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mcT'),C({kieu:'bar',series:[{v:tdRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));

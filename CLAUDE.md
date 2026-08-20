@@ -1441,6 +1441,36 @@ cho chính nó. Lưới 2 cột ở khổ hẹp → 3 → 6.
 > một mình, trông như một khối riêng chứ không phải phần đuôi của hàng. Hai lớp `.ptg7`
 > và `.ptg7m` chia cứng theo ba mốc bề ngang.
 
+### GIÁ VÀ TIỀN TRÊN CÙNG MỘT ĐỒ THỊ — `ptVe1` CÓ TRỤC PHẢI
+
+Gộp 22/08/2026 (user chốt: *"đưa giá đóng cửa và giá trung bình vào ô giá trị giao dịch,
+gộp 2 ô lại thành 1 sẽ hay hơn"*). Hai đồ thị rời thì phải tự dóng bằng mắt qua trục
+ngày để hỏi đúng câu người ta hỏi ở đây: **phiên tiền vào nhiều là phiên giá đi đâu**.
+Chồng lên nhau thì đọc thẳng — cột cao mà giá tụt là phân phối, cột cao mà giá bật là gom.
+
+`cfg.phai = {series:[…], nhan}` vẽ trên **thang riêng, trục bên phải**, và **không kéo về
+0** (giá dao động quanh một mức cao, kéo về 0 là đường thẳng đơ). Cùng cách `ptVeChart`
+đã làm với VN-Index. `padR` đo bằng chính chuỗi sắp in, và mọi thứ chạm mép phải
+(vạch lưới, nhãn ngày cuối) phải trừ `padR` — quên là chúng chui xuống dưới nhãn trục.
+
+> **ĐƯỜNG ĐÓNG CỬA PHẢI TƯƠNG PHẢN VỚI CỘT, VÀ PHẢI ĐỔI THEO CHỦ ĐỀ.** Nó nay chạy ĐÈ LÊN
+> cột chứ không đứng ở đồ thị riêng, nên để màu cùng họ xanh với cột là nó chìm vào chính
+> cái nền nó đang chồng lên. Dùng `--pkA`: gần-đen ở nền sáng, gần-trắng ở nền tối. Viết
+> cứng một màu là một trong hai chế độ mất hẳn đường đó lẫn ô chú thích của nó.
+
+### GIÁ TRUNG BÌNH (VWAP) — MÔ TẢ PHIÊN, KHÔNG DỰ BÁO PHIÊN SAU
+
+`vwap` = trường `AvrPrice` của nguồn = tổng giá trị khớp lệnh ÷ tổng khối lượng khớp lệnh.
+Bốn điều nó nói được mà giá đóng cửa không nói: ① đóng cửa chỉ là giá của MỘT lệnh cuối
+(hoặc ATC), một lệnh nhỏ phút chót đẩy đi được, còn VWAP có trọng số theo tiền · ② so hai
+mức là đo **ai thắng trong phiên** — đóng cửa trên VWAP là bên mua đẩy lên về cuối, dưới
+là bên bán ép · ③ đây là mốc tổ chức chấm chất lượng thực thi lệnh · ④ với mã mỏng, VWAP
+lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
+
+> **NHƯNG NÓ KHÔNG DỰ BÁO ĐƯỢC GÌ — đã đo, đừng dùng nhầm.** "Đóng cửa so VWAP" làm tín
+> hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
+> Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
+
 ### QUÉT BẤT THƯỜNG + BỘ LỌC TỰ CHỌN
 
 `quet_la.py` ghi **thẳng vào file phiên** (`la` = kết quả quét, `dt`/`dtf` = lát cắt
