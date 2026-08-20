@@ -1087,11 +1087,13 @@ function ptVeMa(){
   const d=o.d.slice(i0), c=lay('c'), tc=lay('tc'), vw=lay('vwap'),
         mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), sh=lay('sh'),
         fnM=lay('fnMuaGT'), fnB=lay('fnBanGT'), fnMK=lay('fnMuaKL'), fnBK=lay('fnBanKL'),
-        fnSH=lay('fnSoHuu'), fnRO=lay('fnRoom');
+        fnSH=lay('fnSoHuu'), fnRO=lay('fnRoom'),
+        tdM=lay('tdMuaGT'), tdB=lay('tdBanGT');
   const m=d.length-1;
   const mcap=c.map((x,i)=>(x&&sh[i])?x*sh[i]:null);
   const pcs=c.map((x,i)=>(x&&tc[i])?((x/tc[i]-1)*100):null);
   const fnRong=fnM.map((x,i)=>(x==null&&fnB[i]==null)?null:((x||0)-(fnB[i]||0)));
+  const tdRong=tdM.map((x,i)=>(x==null&&tdB[i]==null)?null:((x||0)-(tdB[i]||0)));
   /* % giá trị phiên là của khối ngoại — tính trên (mua+bán)/2 so với giá trị khớp lệnh,
      vì một cổ phiếu khối ngoại mua từ khối ngoại khác thì đếm cả hai vế là đếm hai lần. */
   const fnPc=mval.map((x,i)=>(x&&(fnM[i]!=null||fnB[i]!=null))
@@ -1102,6 +1104,7 @@ function ptVeMa(){
   const tbGT=mval.filter(x=>x).reduce((a,b)=>a+b,0)/Math.max(mval.filter(x=>x).length,1);
   const tongTT=pval.reduce((a,b)=>a+(b||0),0), tongKL=mval.reduce((a,b)=>a+(b||0),0);
   const fnRongTong=fnRong.reduce((a,b)=>a+(b||0),0);
+  const tdRongTong=tdRong.reduce((a,b)=>a+(b||0),0);
   const ph=(v)=>v==null?'—':'<span class="'+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</span>';
   const box=(nhan,gt,ghi)=>'<div class="ptbox"><span class="ptlb">'+nhan+'</span><b>'+gt+'</b>'+
     (ghi?'<i>'+ghi+'</i>':'')+'</div>';
@@ -1115,6 +1118,7 @@ function ptVeMa(){
       +box('Vốn hoá', mcap[m]?ptTien(mcap[m]):'—', sh[m]?num(sh[m])+' cp':'')
       +box('Khối ngoại ròng', fnRongTong?ptTien(fnRongTong):'—',
            'cả khung'+(fnSH[m]!=null?' · sở hữu '+fnSH[m].toFixed(1)+'%':''))
+      +box('Tự doanh ròng', tdRongTong?ptTien(tdRongTong):'—', 'cả khung · CTCK tự mua bán')
     +'</div></div></div>'
     /* THANH ĐỌC SỐ CỦA PHIÊN ĐANG CHỌN — đứng NGAY TRÊN lưới đồ thị, không nhét xuống dưới:
        rê chuột trên đồ thị mà số hiện ở cuối trang thì mắt phải nhảy đi nhảy lại. */
@@ -1127,6 +1131,7 @@ function ptVeMa(){
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên')
       +ptO('Khối ngoại ròng', 'mc4', 'mua trừ bán — cột xanh là mua ròng, đỏ là bán ròng')
+      +ptO('Tự doanh ròng', 'mcT', 'tiền của chính công ty chứng khoán — nhóm khác hẳn khối ngoại')
       +ptO('% giá trị phiên là của khối ngoại', 'mc5',
            '(mua + bán) ÷ 2 ÷ giá trị khớp lệnh — đếm cả hai vế là đếm hai lần')
       +ptO('% thay đổi giá mỗi phiên', 'mc6', 'so với giá tham chiếu của chính phiên đó')
@@ -1146,6 +1151,7 @@ function ptVeMa(){
     {v:pval,mau:dark?'#a78bfa':'#7c3aed'}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
+  ptVe1($('#mcT'),C({kieu:'bar',series:[{v:tdRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc5'),C({kieu:'bar',series:[{v:fnPc,mau:dark?'#22d3ee':'#0891b2'}],
     nhan:v=>v.toFixed(1)+'%'}));
   ptVe1($('#mc6'),C({kieu:'bar',series:[{v:pcs,mau:XANH,mauAm:DO}],nhan:v=>v.toFixed(1)+'%'}));
@@ -1164,6 +1170,8 @@ function ptVeMa(){
     +oo('NN ròng', fnRong[k]!=null?
         '<span class="'+cls(fnRong[k])+'">'+(fnRong[k]>0?'+':'')+ptTien(fnRong[k])+'</span>':'—')
     +oo('NN chiếm', fnPc[k]!=null?fnPc[k].toFixed(1)+'%':'—')
+    +oo('Tự doanh ròng', tdRong[k]!=null?
+        '<span class="'+cls(tdRong[k])+'">'+(tdRong[k]>0?'+':'')+ptTien(tdRong[k])+'</span>':'—')
     +oo('vốn hoá', mcap[k]?ptTien(mcap[k]):'—')
     +'<span class="ptdg">rê chuột hoặc bấm lên bất kỳ đồ thị nào để đổi phiên</span>';
   ptBindMa();

@@ -160,7 +160,10 @@ def goi(path, data, sym):
 COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "shR",
        "bMua", "bMuaKL", "bBan", "bBanKL", "nMua", "nBan", "qMua", "qBan",
        "fnMuaKL", "fnMuaGT", "fnBanKL", "fnBanGT", "fnMuaPc", "fnBanPc",
-       "fnSoHuu", "fnRoom")
+       "fnMuaTTKL", "fnMuaTTGT", "fnBanTTKL", "fnBanTTGT",
+       "fnSoHuu", "fnRoom",
+       "tdMuaKL", "tdMuaGT", "tdBanKL", "tdBanGT",
+       "tdMuaTTKL", "tdMuaTTGT", "tdBanTTKL", "tdBanTTGT")
 
 # DẤU PHIÊN BẢN CỦA CÁCH TÍNH. File nào mang số nhỏ hơn là dựng bằng logic CŨ và
 # phải cào lại — `run_boi_giaodich.ps1` lấy đúng danh sách đó. Có dấu này thì mỗi
@@ -637,15 +640,46 @@ def phien_ghi(ngay, goi_ma):
 # hai cách ra hai con số khác nhau.
 # ĐƠN VỊ: `BuyVal`/`SellVal` của nguồn là TRIỆU ĐỒNG (đo trên HPG 20/08: 535.600 cp ×
 # ~21.250đ = 11,38 tỷ, nguồn ghi 11.396,825). Kho quy về ĐỒNG cho đồng bộ với `mval`.
+# TÁCH THOẢ THUẬN RA KHỎI KHỚP LỆNH, ĐỪNG GỘP. Đối chiếu 19/08 với `data/eod` (bảng giá
+# VPS, nguồn độc lập hẳn): **1.477/1.526 mã khớp tuyệt đối**, 49 mã lệch — và cả 49 giải
+# thích được đến từng cổ phiếu. HPG: khớp lệnh mua 1.395.500, thoả thuận mua 762.822,
+# tổng 2.158.322, trong khi eod ghi 2.158.340 (chênh 18 = lô lẻ). Tức bảng giá VPS gộp cả
+# ba thứ làm một. Gộp như vậy là lặp lại đúng con bệnh của `data/hist` đã phải gỡ ở đầu
+# phiên: một đại lượng, hai định nghĩa, không ai biết mình đang cầm cái nào.
 FN = {"BuyVol": "fnMuaKL", "SellVol": "fnBanKL",
       "PerBuyVol": "fnMuaPc", "PerSellVol": "fnBanPc",
+      "BuyPutVol": "fnMuaTTKL", "SellPutVol": "fnBanTTKL",
       "OwnedRatio": "fnSoHuu", "RemainRoom": "fnRoom"}
-FN_TIEN = {"BuyVal": "fnMuaGT", "SellVal": "fnBanGT"}
+FN_TIEN = {"BuyVal": "fnMuaGT", "SellVal": "fnBanGT",
+           "BuyPutVal": "fnMuaTTGT", "SellPutVal": "fnBanTTGT"}
 
 
 def fn_nap(sym, sid, day_du=False):
-    """Khối ngoại từng phiên: khối lượng và giá trị mua/bán, % của phiên, tỉ lệ sở hữu và
-    room còn lại. Trả về {ngày: bản ghi}."""
+    """Khối ngoại từng phiên: khối lượng và giá trị mua/bán (khớp lệnh và thoả thuận tách
+    riêng), % của phiên, tỉ lệ sở hữu và room còn lại."""
+    return _kqgd_nap("KQGDGiaoDichNDTNNStockPaging", sym, sid, FN, FN_TIEN, day_du)
+
+
+# ── tầng 3c: TỰ DOANH CÔNG TY CHỨNG KHOÁN THEO PHIÊN ─────────────────────────
+# `KQGDThongKeTuDoanhStockPaging` — cùng hình dạng với khối ngoại: 30 dòng/lượt, cần
+# `stockID` dạng số, `*Val` là TRIỆU ĐỒNG.
+# Vì sao đáng lấy: tự doanh là tiền của chính công ty chứng khoán, và nó KHÔNG nằm trong
+# bất kỳ con số nào kho đang có — khối ngoại là một nhóm khác hẳn, còn tổng khớp lệnh thì
+# gộp tất cả làm một. Đo HPG 19/08: tự doanh mua ròng 66,5 tỷ trong khi khối ngoại bán
+# ròng 52,7 tỷ — hai dòng tiền ngược chiều nhau trong cùng một phiên, mà nhìn tổng khớp
+# lệnh thì không thấy gì cả.
+# TÁCH THOẢ THUẬN RA, cùng lý do với khối ngoại: `KLBuy_Total` của nguồn = khớp lệnh +
+# thoả thuận, gộp sẵn. Lưu gộp là mất khả năng phân biệt về sau.
+TD = {"BuyVol": "tdMuaKL", "SellVol": "tdBanKL",
+      "BuyPutVol": "tdMuaTTKL", "SellPutVol": "tdBanTTKL"}
+TD_TIEN = {"BuyVal": "tdMuaGT", "SellVal": "tdBanGT",
+           "BuyPutVal": "tdMuaTTGT", "SellPutVal": "tdBanTTGT"}
+
+
+def _kqgd_nap(ep, sym, sid, anh, anh_tien, day_du=False):
+    """Bộ nạp dùng chung cho hai endpoint cùng hình dạng của trang kết quả giao dịch
+    (khối ngoại và tự doanh): 30 dòng/lượt, `stockID` số, khối [1] là dữ liệu, [2] là số
+    trang, tiền tính bằng TRIỆU ĐỒNG."""
     if not sid:
         return {}
     ra, trang, tong = {}, 1, None
@@ -653,7 +687,7 @@ def fn_nap(sym, sid, day_du=False):
         for lan in (0, 1):
             tk, ck = tt_token(lan == 1)
             try:
-                b = nhipmang.post("https://finance.vietstock.vn/data/KQGDGiaoDichNDTNNStockPaging",
+                b = nhipmang.post("https://finance.vietstock.vn/data/" + ep,
                                   {"page": trang, "pageSize": 200, "catID": 1, "stockID": sid,
                                    "fromDate": "2000-01-01",
                                    "toDate": datetime.datetime.now(TZ).strftime("%Y-%m-%d"),
@@ -677,8 +711,8 @@ def fn_nap(sym, sid, day_du=False):
         if not rows:
             break
         for r in rows:
-            o = {v: r.get(k) for k, v in FN.items()}
-            for k, v in FN_TIEN.items():
+            o = {v: r.get(k) for k, v in anh.items()}
+            for k, v in anh_tien.items():
                 x = r.get(k)
                 o[v] = round(x * 1e6) if x else 0      # triệu đồng -> đồng
             ra[_ngay(r["TradingDate"])] = o
@@ -686,6 +720,10 @@ def fn_nap(sym, sid, day_du=False):
             break
         trang += 1
     return ra
+
+
+def td_nap(sym, sid, day_du=False):
+    return _kqgd_nap("KQGDThongKeTuDoanhStockPaging", sym, sid, TD, TD_TIEN, day_du)
 
 
 # ── tầng 4: CHỈ SỐ THEO PHIÊN ────────────────────────────────────────────────
@@ -767,13 +805,17 @@ def main():
                     help="VÙNG GIÁ khớp lệnh + phân bổ dòng tiền cho --ngay (1 lượt/mã/ngày ×2)")
     ap.add_argument("--nn", action="store_true",
                     help="CHỈ cào khối ngoại (dùng lại `sid` đã lưu, 2 lượt/mã)")
+    ap.add_argument("--td", action="store_true",
+                    help="CHỈ cào tự doanh CTCK (dùng lại `sid` đã lưu, 2 lượt/mã)")
     ap.add_argument("--chiso", action="store_true",
                     help="chỉ số theo phiên (VNINDEX/VN30/HNX/HNX30/UPCOM) -> data/chiso.json")
     ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo sau khi chạy")
     a = ap.parse_args()
 
-    if a.nn:
-        # CHỈ KHỐI NGOẠI. `sid` đã nằm sẵn trong file nên khỏi phải gọi lại thống kê giá
+    if a.nn or a.td:
+        nap = fn_nap if a.nn else td_nap
+        ten = "khối ngoại" if a.nn else "tự doanh"
+        # CHỈ MỘT TẦNG. `sid` đã nằm sẵn trong file nên khỏi phải gọi lại thống kê giá
         # chỉ để lấy một con số — 2 lượt/mã thay vì 8, tức 13 phút thay vì 51.
         u = json.load(open(UNI, encoding="utf-8"))["stocks"]
         ma = [x["sym"] for x in u]
@@ -795,7 +837,7 @@ def main():
                 khongsid += 1
                 continue
             try:
-                r = fn_nap(m, sid, day_du=a.tatca)
+                r = nap(m, sid, day_du=a.tatca)
             except Exception:
                 r = None
             if not r:
@@ -813,7 +855,7 @@ def main():
             lai = 0
             for m, sid in hong:
                 try:
-                    r = fn_nap(m, sid, day_du=a.tatca)
+                    r = nap(m, sid, day_du=a.tatca)
                 except Exception:
                     r = None
                 if r:
@@ -822,7 +864,7 @@ def main():
                     lai += 1
             loi -= lai
             print(f"    thử lại cứu được {lai}/{len(hong)} mã", flush=True)
-        print(f"  khối ngoại: ok {ok} · lỗi {loi} · không có sid {khongsid}"
+        print(f"  {ten}: ok {ok} · lỗi {loi} · không có sid {khongsid}"
               f" · {time.time()-t0:.0f}s", flush=True)
         return 0
 

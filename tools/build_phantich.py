@@ -43,7 +43,8 @@ RA = os.path.join(BASE, "data", "phantich.json")
 # Cột của bảng theo mã — TIỀN đứng trước, khối lượng là phụ.
 # `sec` = ngành, để trang dựng được khối "ngành hút tiền" mà khỏi tải universe.json.
 COT_BANG = ["ex", "sec", "c", "tc", "vwap", "mval", "pval", "mv", "pv", "sh",
-            "fnMuaGT", "fnBanGT", "fnMuaKL", "fnBanKL", "fnSoHuu", "fnRoom"]
+            "fnMuaGT", "fnBanGT", "fnMuaKL", "fnBanKL", "fnSoHuu", "fnRoom",
+            "tdMuaGT", "tdBanGT", "tdMuaKL", "tdBanKL"]
 SO_PHIEN_FILE = 120      # dựng file ngày cho ngần này phiên gần nhất
 MIN_MA = 100             # phiên ít mã hơn thì không dựng file ngày
 
@@ -86,7 +87,8 @@ def main():
                 continue
             t = tt.setdefault(ng, {"n": 0, "mval": 0.0, "pval": 0.0, "mv": 0, "pv": 0,
                                    "mcap": 0.0, "nMcap": 0,
-                                   "fnMua": 0.0, "fnBan": 0.0, "nFn": 0})
+                                   "fnMua": 0.0, "fnBan": 0.0, "nFn": 0,
+                                   "tdMua": 0.0, "tdBan": 0.0, "nTd": 0})
             t["n"] += 1
             t["mval"] += mval or 0
             t["pval"] += pval or 0
@@ -102,6 +104,13 @@ def main():
                 t["fnMua"] += fm or 0
                 t["fnBan"] += fb2 or 0
                 t["nFn"] += 1
+            # TỰ DOANH — đếm riêng `nTd` y như khối ngoại, cùng lý do: hai tầng cào bởi
+            # hai lượt khác nhau nên độ phủ khác nhau, dùng chung mẫu số là ra tỉ lệ bịa.
+            tm, tb2 = col["tdMuaGT"][i], col["tdBanGT"][i]
+            if tm is not None or tb2 is not None:
+                t["tdMua"] += tm or 0
+                t["tdBan"] += tb2 or 0
+                t["nTd"] += 1
             sh = col["sh"][i]
             if sh and c:
                 t["mcap"] += c * sh
@@ -143,7 +152,7 @@ def main():
     # ── chuỗi toàn thị trường ──
     for d in ngays:
         t = tt[d]
-        for k in ("mval", "pval", "mcap", "fnMua", "fnBan"):
+        for k in ("mval", "pval", "mcap", "fnMua", "fnBan", "tdMua", "tdBan"):
             t[k] = round(t[k] / 1e9, 1)
         for k in ("mv", "pv"):
             t[k] = round(t[k] / 1e3)
@@ -166,7 +175,7 @@ def main():
         "tt": {"d": ngays,
                **{k: [tt[d][k] for d in ngays]
                   for k in ("n", "mval", "pval", "mv", "pv", "mcap", "nMcap",
-                            "fnMua", "fnBan", "nFn")}},
+                            "fnMua", "fnBan", "nFn", "tdMua", "tdBan", "nTd")}},
         "chiso": cs,
     }
     tmp = RA + ".tmp"
@@ -183,6 +192,9 @@ def main():
     print(f"  khối ngoại: mua {out['tt']['fnMua'][i]:,.0f} tỷ · bán {out['tt']['fnBan'][i]:,.0f} tỷ"
           f" · ròng {out['tt']['fnMua'][i]-out['tt']['fnBan'][i]:+,.0f} tỷ"
           f" · trên {out['tt']['nFn'][i]:,} mã có số", flush=True)
+    print(f"  tự doanh  : mua {out['tt']['tdMua'][i]:,.0f} tỷ · bán {out['tt']['tdBan'][i]:,.0f} tỷ"
+          f" · ròng {out['tt']['tdMua'][i]-out['tt']['tdBan'][i]:+,.0f} tỷ"
+          f" · trên {out['tt']['nTd'][i]:,} mã có số", flush=True)
     return 0
 
 
