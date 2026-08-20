@@ -24,7 +24,7 @@ nó đúng NGHĨA CỦA NÓ (vốn hoá phần được niêm yết), nhưng Đ�
     python3 tools/kho_chaosan.py VCB HPG   # vài mã
     python3 tools/kho_chaosan.py --thu     # chỉ in, không ghi
 """
-import json, os, re, sys, time, html, threading, collections
+import json, os, re, sys, time, html, datetime, threading, collections
 import concurrent.futures as cf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -34,11 +34,21 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT  = os.path.join(BASE, "data", "niemyet.json")
 SUKIEN = os.path.join(BASE, "data", "sukien")
 URL  = "https://finance.vietstock.vn/{}/ho-so-doanh-nghiep.htm"
+VSH  = "https://api.vietstock.vn/tvnew/history"
 THU  = "--thu" in sys.argv
 NHAN = {"nd": "Ngày giao dịch đầu tiên", "gc": "Giá chào sàn",
         "kl0": "Khối lượng niêm yết lần đầu", "kln": "Khối lượng niêm yết"}
 lock = threading.Lock()
 dem  = collections.Counter()
+
+
+def ymd(ts):
+    return datetime.datetime.fromtimestamp(int(ts), datetime.UTC).strftime("%Y-%m-%d")
+
+
+def ngayVN(ts):
+    """Mốc Vietstock đọc ở UTC+7 mới ra đúng ngày phiên — cùng bài học với kho_sukien."""
+    return datetime.datetime.fromtimestamp(int(ts) + 7 * 3600, datetime.UTC).strftime("%Y-%m-%d")
 
 
 def so(x):
@@ -110,10 +120,13 @@ def main():
         # `gcx` = đã cào rồi và bị PHÉP KIỂM loại (xem `hop_le` bên dưới). Không cào lại
         # mỗi ngày để rồi loại lại — nguồn sẽ không tự sửa, mà mỗi lượt tốn 300KB/mã.
         syms = [k for k, v in ma.items() if not v.get("gc") and not v.get("gcx")]
-        if not syms:
-            print("  không mã nào thiếu giá chào sàn — không cào gì (dùng --tatca để làm mới hết)")
-            return 0
-    print(f"  {len(syms)} mã · giá chào sàn + KL niêm yết lần đầu (finance.vietstock.vn)"
+    # KHÔNG ĐƯỢC THOÁT SỚM KHI `syms` RỖNG. Bước cào là tăng dần (ngày thường 0 mã), nhưng
+    # phần tính `x = giá nay / giá nền` ở CUỐI hàm thì phải chạy MỖI NGÀY — `x` so với giá
+    # hôm nay nên không tính lại là nó cũ đi ngay hôm sau. Bản đầu `return 0` ở đây và phép
+    # so "chạy lại cả dây chuyền" cho ra 0 ô khác — trông như tái tạo hoàn hảo, thực ra là
+    # vì không có gì được tính lại cả.
+    print(f"  cào giá chào sàn: {len(syms)} mã"
+          + (" (không mã nào thiếu — chỉ tính lại tổng lợi suất)" if not syms else "")
           + ("  [CHẠY THỬ]" if THU else ""))
     t0 = time.time()
 
@@ -161,38 +174,63 @@ def main():
             r["d"] = nd2                    # ngày giao dịch đầu tiên
             dem["đổi sang ngày Vietstock"] += 1
 
-    # ---- TỔNG LỢI SUẤT TRÊN MỘT CỔ PHIẾU, tính từ GIÁ CHÀO SÀN THẬT ----
-    # x = (giá nay × số cp mà 1 cp gốc đã nhân lên  +  cổ tức tiền đã nhận trên 1 cp gốc)
-    #     / giá chào sàn
-    # KHÔNG tính quyền mua vào `nh`: nhận thêm cổ phiếu kiểu đó phải BỎ THÊM TIỀN, gộp vào
-    # là tính lãi cho phần vốn góp thêm. Đây cũng là chỗ con số này thấp hơn cột cũ (dựng từ
-    # chuỗi hạ nền): chuỗi đó có hạ nền theo quyền mua, tức ngầm giả định có tham gia.
-    # Đo chênh lệch: VIC 30,46 vs 78,66 · REE 17,05 vs 65,48 · VCB 4,06 vs 6,32.
+    # ---- GIÁ NỀN QUY ĐỔI (`g`) VÀ TỔNG LỢI SUẤT (`x`) ----------------------------
+    # Tính Ở ĐÂY chứ không ở kho_niemyet, vì `d` chỉ chốt xong SAU bước đổi ngày ngay trên
+    # (52 mã chuyển sàn đổi `d` sang ngày của Vietstock). Tính trước là đo giá ở sai ngày.
+    #
+    #   g = giá đóng cửa phiên đầu tiên, QUY VỀ NỀN HÔM NAY (chuỗi kho đã hạ nền sẵn)
+    #   x = giá hôm nay / g
+    #
+    # `x` ĐỌC LÀ TỔNG LỢI SUẤT có tái đầu tư cổ tức VÀ có tham gia mọi đợt chào bán —
+    # user chốt 20/08 đó là cách hợp lý nhất. ĐỪNG đổi lại thành
+    # `(giá nay × số cp nhân lên + cổ tức)/giá chào sàn`: cách đó giả định KHÔNG tham gia
+    # quyền mua nên ra số khác hẳn (VIC 30,46 vs 78,66 · REE 17,05 vs 65,48), và trang
+    # đang hiện con số theo nền quy đổi.
     try:
         lat = {r["sym"]: r for r in json.load(
             open(os.path.join(BASE, "data", "eod", "latest.json"), encoding="utf-8"))["data"]}
     except Exception:
         lat = {}
-    SK = os.path.join(BASE, "data", "sukien")
+    HIST = os.path.join(BASE, "data", "hist")
     for r in d["ma"]:
-        for k in ("g", "gd", "gt", "q", "nv", "mc", "sh"): r.pop(k, None)
-        gc = r.get("gc")
-        if not gc or gc < 10: r.pop("x", None); continue
+        for k in ("gd", "gt", "q", "nv", "mc", "sh", "nh", "ct"): r.pop(k, None)
+        s0, d0 = r["s"], r["d"]
+        p = (lat.get(s0) or {}).get("close") or 0
+        if not p: r.pop("g", None); r.pop("x", None); continue
+        adj = None
         try:
-            ev = [e for e in json.load(open(os.path.join(SK, r["s"] + ".json"),
-                                            encoding="utf-8"))["ev"] if e["d"] >= r["d"]]
+            h = json.load(open(os.path.join(HIST, s0 + ".json"), encoding="utf-8"))
+            k = 1000 if abs(h["c"][-1] * 1000 - p) < abs(h["c"][-1] - p) else 1
+            for i2, tt in enumerate(h["t"]):
+                if ymd(tt) >= d0:
+                    if (datetime.date.fromisoformat(ymd(tt))
+                            - datetime.date.fromisoformat(d0)).days <= 5:
+                        adj = h["c"][i2] * k
+                    break
         except Exception:
-            ev = []
-        ev.sort(key=lambda e: e["d"])
-        nhan, tien = 1.0, 0.0
-        for e in ev:
-            if e["k"] in ("cp", "thuong") and (e.get("tl") or 0) > 0: nhan *= 1 + e["tl"] / 100
-            elif e["k"] == "tien" and (e.get("tien") or 0) > 0: tien += e["tien"] * nhan
-        p = (lat.get(r["s"]) or {}).get("close") or 0
-        if not p: r.pop("x", None); continue
-        r["nh"] = round(nhan, 4)              # 1 cp gốc nay thành mấy cp
-        r["ct"] = round(tien)                 # cổ tức tiền đã nhận trên 1 cp gốc
-        r["x"] = round((p * nhan + tien) / gc, 2)
+            pass
+        if adj is None:            # kho nến không với tới -> hỏi Vietstock cửa sổ hẹp
+            try:
+                a0 = int(datetime.datetime.fromisoformat(d0).replace(tzinfo=datetime.UTC).timestamp())
+                v = json.loads(nhipmang.get(
+                    f"{VSH}?symbol={s0}&resolution=D&from={a0-86400*7}&to={a0+86400*53}",
+                    timeout=30, headers={"Referer": "https://stockchart.vietstock.vn/"}))
+                if v.get("s") == "ok" and v.get("t"):
+                    for i2, tt in enumerate(v["t"]):
+                        d1 = ngayVN(tt)
+                        if d1 >= d0:
+                            if (datetime.date.fromisoformat(d1)
+                                    - datetime.date.fromisoformat(d0)).days <= 5:
+                                adj = v["c"][i2]
+                            break
+            except Exception:
+                pass
+        # CHẶN GIÁ < 10đ: nguồn trả 0 cho vài mã (VNX), mà `x` chia cho nó ra ×1818 đứng
+        # đầu bảng "tăng mạnh nhất" — sai mà lại ở chỗ dễ thấy nhất.
+        if not adj or adj < 10:
+            r.pop("g", None); r.pop("x", None); dem["không có giá nền"] += 1; continue
+        r["g"] = round(adj)
+        r["x"] = round(p / adj, 2)
         dem["tính được tổng lợi suất"] += 1
 
     lech = [r for r in d["ma"] if r.get("dS")]

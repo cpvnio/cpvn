@@ -84,7 +84,7 @@ BỐN NGUỒN, mỗi thứ một chỗ — đã dò rồi mới chọn:
     python3 tools/kho_niemyet.py          # dựng thật
     python3 tools/kho_niemyet.py --thu    # chỉ in, không ghi
 """
-import json, os, sys, time, datetime, collections, ssl, urllib.request
+import json, os, re, sys, time, datetime, collections, ssl, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nhipmang
@@ -125,52 +125,6 @@ def qk(lb):
     return (2000 + int(y)) * 4 + int(q[1])
 
 
-def buoc_gia(p, ex):
-    """Bước giá của sàn — dùng làm phép TỰ KIỂM cho giá thô dựng ngược, không cần nguồn thứ hai."""
-    if ex == "HOSE": return 10 if p < 10000 else (50 if p < 50000 else 100)
-    return 100
-
-
-def chuoi_go(sk, h, k):
-    """Mốc (ngày, M) để gỡ hạ nền: giá THÔ = giá kho × M(ngày). Đi NGƯỢC từ nay về trước,
-    mỗi sự kiện nhân thêm nghịch đảo hệ số hạ nền của nó. Giống hệt `bangSLCP` trên trang
-    cổ phiếu — nếu sửa một bên thì phải sửa cả hai, bằng không hai chỗ ra hai con số."""
-    if not sk: return []
-    ngay = [ymd(t) for t in h["t"]]
-    def dong_truoc(d):                       # giá kho phiên ngay TRƯỚC ngày d
-        v = None
-        for i, dd in enumerate(ngay):
-            if dd < d: v = h["c"][i]
-            else: break
-        return v
-    moc = []; M = 1.0
-    for e in sorted(sk, key=lambda x: x["d"], reverse=True):
-        if e.get("k") in ("bctc", "khac"): continue
-        moc.append((e["d"], M))              # M này áp cho MỌI ngày TRƯỚC sự kiện
-        adj = dong_truoc(e["d"])
-        if not adj: continue
-        P = adj * k * M; nd = 1.0
-        r = (e.get("tl") or 0) / 100.0
-        if e["k"] in ("cp", "thuong") and r > 0: nd = 1 + r
-        elif e["k"] == "tien" and (e.get("tien") or 0) > 0:
-            d0 = e["tien"]
-            if P > 0 and d0 / P <= 0.30: nd = P / (P - d0)
-        elif e["k"] == "quyenmua" and r > 0 and (e.get("gia") or 0) > 0:
-            if P > 0: nd = (1 + r) * P / (P + r * e["gia"])
-        if nd > 0: M *= nd
-    moc.append(("0000-00-00", M))
-    moc.reverse()
-    return moc
-
-
-def M_tai(moc, d):
-    v = 1.0
-    for dd, m in moc:
-        if dd <= d: v = m
-        else: break
-    return v
-
-
 def hsx(sid):
     """Đường ống niêm yết mới của HOSE. Chứng chỉ của họ hay lệch chuỗi nên bỏ verify —
     đây là dữ liệu công bố công khai, không gửi gì đi nên không có gì để lộ."""
@@ -193,6 +147,8 @@ def hsx(sid):
 
 def main():
     t0 = time.time()
+    nay = datetime.date.today().isoformat()   # khai báo Ở ĐẦU: khối ④b cũ (đã thay) từng
+                                              # giữ nó, dời khối là mất luôn -> NameError
     uni = json.load(open(UNI, encoding="utf-8"))["stocks"]
     syms = [s["sym"] for s in uni]
     print(f"  {len(syms)} mã" + ("  [CHẠY THỬ]" if THU else ""))
@@ -216,88 +172,40 @@ def main():
 
     ma = []
     dem = collections.Counter()
+    try:
+        cu = {r["s"]: r for r in json.load(open(OUT, encoding="utf-8"))["ma"]}
+    except Exception:
+        cu = {}
     for s in syms:
         x = info.get(s)
         if not x: dem["thiếu ngày"] += 1; continue
         dd = x["listedDate"]
-        r = {"s": s, "d": dd, "ex": x.get("floor") or "", "st": x.get("status") or ""}
-        # ---------- ② giá ngày lên sàn ----------
-        try:
-            h = json.load(open(os.path.join(HIST, s + ".json"), encoding="utf-8"))
-        except Exception:
-            h = None
-        if h and h.get("t"):
-            # HỆ SỐ ĐƠN VỊ THEO TỪNG MÃ — xem bẫy ở đầu file
-            k = 1
-            if dong.get(s) and h["c"][-1]:
-                k = 1000 if abs(h["c"][-1] * 1000 - dong[s]) < abs(h["c"][-1] - dong[s]) else 1
-            try:
-                sk = json.load(open(os.path.join(SUKIEN, s + ".json"), encoding="utf-8")).get("ev") or []
-            except Exception:
-                sk = []
-            moc = chuoi_go(sk, h, k)
-            for i, tt in enumerate(h["t"]):
-                if ymd(tt) >= dd:
-                    if (datetime.date.fromisoformat(ymd(tt))
-                            - datetime.date.fromisoformat(dd)).days <= 5:
-                        adj = h["c"][i] * k
-                        r["g"] = round(adj)                      # trên NỀN HÔM NAY — chắc chắn
-                        r["gd"] = ymd(tt)
-                        gt = adj * M_tai(moc, ymd(tt))           # giá thị trường thật — ƯỚC TÍNH
-                        r["gt"] = round(gt)
-                        b = buoc_gia(gt, r["ex"])
-                        r["q"] = 1 if abs(gt - round(gt / b) * b) < b * 0.01 else 0
-                        if h["c"][-1]:
-                            r["x"] = round(h["c"][-1] / h["c"][i], 2)   # tăng mấy lần, cùng nền
-                    break
-        # BÙ TỪ VIETSTOCK cho mã kho nến không với tới — xem chú thích ② ở đầu file
-        if "g" not in r and h and h.get("t"):
-            try:
-                a0 = int(datetime.datetime.fromisoformat(dd).replace(tzinfo=datetime.UTC).timestamp())
-                vs = json.loads(nhipmang.get(
-                    f"{VS}?symbol={s}&resolution=D&from={a0-86400*7}&to={a0+86400*53}",
-                    timeout=30, headers={"Referer": "https://stockchart.vietstock.vn/"}))
-                if vs.get("s") == "ok" and vs.get("t"):
-                    for i, tt in enumerate(vs["t"]):
-                        d1 = ngayVN(tt)
-                        if d1 >= dd:
-                            if (datetime.date.fromisoformat(d1)
-                                    - datetime.date.fromisoformat(dd)).days <= 5:
-                                r["g"] = round(vs["c"][i]); r["gd"] = d1; r["nv"] = 1
-                                if h["c"][-1]: r["x"] = round(h["c"][-1] * k / vs["c"][i], 2)
-                            break
-            except Exception:
-                pass
-        # CHẶN GIÁ VÔ NGHĨA. Nguồn trả 0 cho vài mã (VNX toàn phiên đầu = 0), mà `x` thì
-        # chia cho nó -> ra ×1818 đứng đầu bảng "tăng mạnh nhất": sai mà lại ở chỗ dễ thấy
-        # nhất. Dưới 10đ là dưới bước giá nhỏ nhất của mọi sàn nên chắc chắn không phải giá
-        # thật; bỏ cả cụm thay vì hiện một con số không đọc được.
-        if r.get("g") is not None and r["g"] < 10:
-            for kk in ("g", "gd", "gt", "q", "x", "mc", "nv"): r.pop(kk, None)
-            dem["bỏ vì giá < 10đ"] += 1
-        if "g" in r: dem["có giá"] += 1
-        if r.get("nv"): dem["  trong đó bù từ Vietstock"] += 1
-        # ---------- ③ số cổ phiếu + vốn hoá lúc lên sàn ----------
-        try:
-            Q = (json.load(open(os.path.join(FINX, s + ".json"), encoding="utf-8")).get("Q") or {})
-            vg = next((row for row in Q.get("rows") or []
-                       if row.get("g") == "OWNERS_EQUITY" and "ốn góp" in (row.get("n") or "")), None)
-            if vg:
-                mk = int(dd[:4]) * 4 + (int(dd[5:7]) - 1) // 3 + 1
-                best = None
-                for lb, v in zip(Q.get("labels") or [], vg["v"]):
-                    if v and qk(lb) <= mk and (best is None or qk(lb) > best[0]): best = (qk(lb), v)
-                if best: r["sh"] = round(best[1] * 1e9 / 1e4)
-        except Exception:
-            pass
-        # VỐN HOÁ ngày lên sàn dùng GIÁ THÔ (`gt`), không dùng `g`: `g` nằm trên nền hôm nay
-        # nên nhân với số cổ phiếu LÚC ĐÓ là trộn hai thời điểm, ra số vô nghĩa.
-        if r.get("gt") and r.get("sh"):
-            r["mc"] = round(r["gt"] * r["sh"] / 1e9, 1)    # tỷ đồng
-            dem["có vốn hoá"] += 1
+        # CHỈ GHI BỐN TRƯỜNG NÀY, GIỮ NGUYÊN PHẦN CÒN LẠI của bản ghi cũ.
+        # Trước đây hàm này dựng lại `ma` từ số 0 nên mỗi lượt chạy là xoá sạch `gc`/`kl0`/
+        # `mcny`/`gcx`/`dS` do `kho_chaosan` đắp vào — mà `gcx` mất thì lượt sau cào lại cả
+        # 1.529 trang HTML (460 MB) rồi lại loại đúng ngần ấy mã.
+        # Chia chủ sở hữu cho rành mạch, đừng để hai công cụ cùng ghi một trường:
+        #   kho_niemyet  -> d (theo VNDirect) · ex · st · sap · sapLoi · ny
+        #   kho_chaosan  -> gc · kl0 · mcny · gcx · dS · d (ghi đè theo Vietstock) · g · x
+        r = cu.get(s) or {}
+        truoc = r.get("d")
+        r.update({"s": s, "ex": x.get("floor") or "", "st": x.get("status") or ""})
+        if r.get("dS"):
+            # MÃ CHUYỂN SÀN — `d` đang là ngày giao dịch ĐẦU TIÊN (Vietstock), ghép cặp với
+            # `gc`. Ghi đè bằng `listedDate` của VNDirect là phá cặp đó và `gc` thành số lạc
+            # (ITA: ngày 2025 của VNDirect đi với giá 54.000đ của lần niêm yết 2006).
+            # Giữ `d`, còn ngày của VNDirect cho vào `dS` = ngày lên sàn HIỆN TẠI.
+            r["d"] = truoc or dd
+            r["dS"] = dd
+        else:
+            r["d"] = dd
         ma.append(r)
     ma.sort(key=lambda r: r["d"], reverse=True)
-    print(f"  giá ngày lên sàn: {dem['có giá']:,} · vốn hoá ngày lên sàn: {dem['có vốn hoá']:,}")
+    # `g`/`x` nay do kho_chaosan tính (nó mới biết ngày CUỐI CÙNG sau bước đổi ngày), nên
+    # ở đây chỉ báo lại phần đang giữ để thấy ngay nếu một lượt chạy làm mất dữ liệu cũ.
+    print(f"  giữ lại từ lượt trước: giá chào sàn {sum(1 for r in ma if r.get('gc')):,}"
+          f" · giá nền {sum(1 for r in ma if r.get('g')):,}"
+          f" · tổng lợi suất {sum(1 for r in ma if r.get('x')):,}")
 
     # ---------- ④a đường ống HOSE ----------
     sap = []
@@ -315,26 +223,35 @@ def main():
     sap.sort(key=lambda r: r["d"], reverse=True)
     print(f"  HOSE sắp niêm yết: {len(sap)} hồ sơ")
 
-    # ---------- ④b giao dịch bổ sung đã có ngày ----------
-    nay = datetime.date.today().isoformat()
-    bosung = []
+    # ---------- ④b LỊCH NIÊM YẾT LẦN ĐẦU ----------
+    # `group:stockAlert`, type `listedHose`/`listedUpcom`/`listedHnx`. Mỗi bản ghi có mã ·
+    # ngày niêm yết · sàn (suy từ type) · ngày công bố · và GIÁ THAM CHIẾU nằm trong `note`.
+    # ĐÃ BỎ `bosung` (type LISTED = giao dịch bổ sung của mã đã niêm yết): user xoá khỏi
+    # giao diện 20/08 vì bị đọc nhầm thành "mã mới lên sàn" hai lần. Đừng ghi lại vào kho.
+    SAN = {"listedHose": "HOSE", "listedUpcom": "UPCOM", "listedHnx": "HNX"}
+    ny = []
     try:
         d = json.loads(nhipmang.get(
-            f"{VND}/events?q=type:LISTED~effectiveDate:gte:{nay}&sort=effectiveDate:asc&size=200",
-            timeout=45))
+            f"{VND}/events?q=group:stockAlert~type:listedHose,listedUpcom,listedHnx"
+            f"&size=500&sort=effectiveDate:desc", timeout=45))
         seen = set()
         for x in d.get("data") or []:
-            if (x.get("locale") or "VN") != "VN": continue     # nguồn trả cả bản EN, lọc kẻo nhân đôi
-            key = (x.get("code"), x.get("effectiveDate"), x.get("note"))
-            if key in seen: continue
-            seen.add(key)
-            bosung.append({"s": x.get("code"), "d": x.get("effectiveDate"),
-                           "cb": x.get("disclosureDate") or "",       # ngày công bố
-                           "kl": round(x.get("numberOfShares") or 0),
-                           "gc": (x.get("note") or "").strip()})
+            if (x.get("locale") or "VN") != "VN": continue
+            c0, dd0 = x.get("code"), x.get("effectiveDate")
+            if not c0 or not dd0 or (c0, dd0) in seen: continue
+            seen.add((c0, dd0))
+            m = re.search(r"([\d.,]+)\s*đ/cp", str(x.get("note") or ""))
+            gtc = None
+            if m:
+                try: gtc = int(m.group(1).replace(".", "").replace(",", ""))
+                except Exception: pass
+            ny.append({"s": c0, "d": dd0, "ex": SAN.get(x.get("type"), ""),
+                       "cb": x.get("disclosureDate") or "", "gtc": gtc})
+        ny.sort(key=lambda z: z["d"], reverse=True)
     except Exception as e:
-        print(f"  GD bổ sung: lỗi {type(e).__name__}")
-    print(f"  GD bổ sung sắp tới: {len(bosung)} đợt")
+        print(f"  lịch niêm yết: lỗi {type(e).__name__}")
+    print(f"  lịch niêm yết lần đầu: {len(ny)} sự kiện"
+          + (f" · sắp tới {sum(1 for z in ny if z['d'] >= nay)}" if ny else ""))
 
     # GIỮ LẠI DANH SÁCH CŨ KHI LẤY HỎNG. API của HOSE chập chờn thật (đo 20/08: đầu phiên
     # gọi được 9 hồ sơ, cuối phiên nghẽn liên tục suốt 5 phút). Ghi đè bằng mảng rỗng là mục
@@ -347,7 +264,7 @@ def main():
         except Exception:
             sap = []
     out = {"generated": nay, "n": len(ma), "ma": ma, "sap": sap,
-           "sapLoi": bool(sapLoi), "bosung": bosung}
+           "sapLoi": bool(sapLoi), "ny": ny}
     if not THU:
         jdump(out, OUT)
         print(f"  đã ghi {OUT} ({os.path.getsize(OUT)/1024:.0f} KB) · {time.time()-t0:.0f}s")
