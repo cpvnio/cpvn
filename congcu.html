@@ -41,6 +41,11 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   --greenD:rgba(34,201,138,.14); --redD:rgba(240,80,92,.14);
   --shadow:0 24px 60px rgba(0,0,0,.5);
   --r:18px;
+  /* MÀU CỦA TỪNG KHỐI TRÊN ĐỒ THỊ PHÂN TÍCH — khai MỘT chỗ vì nay có hai nơi dùng:
+     chấm trên nhãn ô (`.ptbox .ptlb i`) và hàng chú thích (`.ptleg i`). Phải khớp đúng
+     màu `ptVeChart` tô lên canvas, mà hàm đó chọn màu theo chủ đề — nên hai bộ này cũng
+     phải đổi theo chủ đề, bằng không đổi đèn một cái là chấm chỉ sai khối. */
+  --pkN:#22d3ee; --pkT:#fb923c; --pkR:rgba(56,189,248,.42);
 }
 html[data-theme="light"]{
   --bg:#eef0f4; --bg2:#f7f8fa;
@@ -51,6 +56,7 @@ html[data-theme="light"]{
   --green:#0a9e63; --red:#dc3644; --yellow:#a16207; --purple:#9333ea;
   --greenD:rgba(10,158,99,.11); --redD:rgba(220,54,68,.1);
   --shadow:0 18px 44px rgba(15,23,42,.12);
+  --pkN:#0891b2; --pkT:#ea580c; --pkR:rgba(2,132,199,.30);
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--txt);
@@ -408,7 +414,23 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptbox i{font-style:normal;font-size:11px;color:var(--faint);line-height:1.45}
 /* Vốn hoá free float in ĐẬM ngay trong dòng phụ: nó là con số quan trọng hơn con số lớn
    ở trên, chỉ là chưa quen mắt nên chưa được đứng chỗ chính. */
-.ptbox i b.ptff{color:var(--txt);font-weight:800}
+/* SỐ TRONG DÒNG PHỤ: IN ĐẬM VÀ ĂN MÀU THEO CHIỀU MUA/BÁN (user chốt 22/08/2026).
+   Dòng phụ cố ý xám nhạt để không tranh chỗ với con số chính, nhưng chính mấy con số
+   nằm trong đó mới là thứ người ta dừng lại đọc — "mua 1.011 · bán 1.594" mà cùng một
+   sắc xám thì phải đọc CHỮ mới biết vế nào là vế nào, trong khi cả trang đã quy ước
+   xanh = mua/tăng, đỏ = bán/giảm. */
+.ptbox i b{color:var(--txt);font-weight:800;font-variant-numeric:tabular-nums}
+.ptbox i b.up{color:var(--green)}
+.ptbox i b.dn{color:var(--red)}
+.ptbox i b.fl{color:var(--yellow)}
+/* CHẤM MÀU TRÊN NHÃN Ô = ĐÚNG MÀU CỘT TRÊN ĐỒ THỊ. Nhìn ô là biết cột màu nào là khối
+   nào, khỏi dóng xuống hàng chú thích rồi dóng ngược lên. Đây là thứ thay cho dải chi
+   tiết đã gỡ. */
+.ptbox .ptlb i{display:inline-block;width:9px;height:9px;border-radius:3px;
+  margin-right:6px;vertical-align:0;flex:none}
+.ptbox .ptlb i.pkN{background:var(--pkN)}
+.ptbox .ptlb i.pkT{background:var(--pkT)}
+.ptbox .ptlb i.pkR{background:var(--pkR)}
 /* Ô CHỈ SỐ chiếm hai cột và ôm luôn dải VN30/HNX/UPCOM — gộp cái vốn là cùng một câu hỏi
    vào một ô, bớt được hẳn một tầng số trên trang. Khổ hẹp thì trả về một cột: ép span 2
    khi lưới chỉ còn một cột sẽ đẻ ra cột ảo và mọi ô bẹp còn một nửa. */
@@ -474,9 +496,9 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pk2{background:#7c3aed}
 .ptleg i.pk0{background:#94a3b8;opacity:.6}
 .ptleg i.pk3{background:#d97706;height:3px;border-radius:2px}
-.ptleg i.pkN{background:#0891b2}
-.ptleg i.pkT{background:#ea580c}
-.ptleg i.pkR{background:rgba(2,132,199,.30)}
+.ptleg i.pkN{background:var(--pkN)}
+.ptleg i.pkT{background:var(--pkT)}
+.ptleg i.pkR{background:var(--pkR)}
 .ptleg i.pkP{background:#7c3aed;height:3px;border-radius:2px}
 /* Chênh lệch giá thoả thuận so với giá sàn — nhỏ và mờ hơn con số chính, vì nó là chú
    thích cho con số đó chứ không phải một đại lượng riêng. */
@@ -487,19 +509,8 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptche button{background:var(--card2);color:var(--faint);border:1px solid var(--line);
   border-radius:8px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer}
 .ptche button.on{background:var(--rose);border-color:var(--rose);color:#fff}
-/* DẢI CHI TIẾT phiên đang chọn. Đặt NGAY DƯỚI đồ thị: cột nói độ mạnh, dải này nói chiều —
-   để xa nhau là phải nhớ con số rồi cuộn đi tìm. */
-.ptct{margin:10px 0 4px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.ptcti{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;
-  padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;
-  font-variant-numeric:tabular-nums}
-.ptcti:last-child{border-bottom:0}
-.ptctn{display:flex;gap:6px;align-items:center;font-weight:800;min-width:104px}
-.ptctn>i{width:10px;height:10px;border-radius:3px;display:inline-block}
-.ptctn>i.pkN{background:#0891b2}.ptctn>i.pkT{background:#ea580c}.ptctn>i.pk2{background:#7c3aed}
-.ptctv{color:var(--faint)}
-.ptctv>b{color:var(--txt);font-weight:700;margin-left:3px}
-.ptctp{margin-left:auto;font-size:11px}
+/* CSS của dải chi tiết (`.ptct`/`.ptcti`/`.ptctn`/`.ptctv`/`.ptctp`) ĐÃ XOÁ 22/08/2026
+   cùng hàm `ptChiTiet` — xem chú thích ở đó. */
 /* Dải chỉ số phụ: VN30 / HNX / UPCOM đứng một hàng dưới bốn ô lớn — chúng là thông tin
    phụ, cho lên ô lớn là bốn ô chính mất chỗ mà chẳng ai đọc dòng nào trước dòng nào. */
 .ptcsw{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
@@ -1337,7 +1348,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822a"></script>
+<script defer src="assets/mobi.js?v=20260822c"></script>
 </head>
 <body>
 
@@ -1394,6 +1405,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822a"></script>
+<script src="assets/congcu.js?v=20260822c"></script>
 </body>
 </html>

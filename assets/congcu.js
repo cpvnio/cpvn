@@ -835,7 +835,8 @@ function ptTop(){
   const boxCS='<div class="ptbox ptbox2"><div class="ptcsm"><div class="ptcsa">'
     +'<span class="ptlb">VN-Index</span>'
     +'<b'+(pc==null?'':' class="'+cls(pc)+'"')+'>'+(vn&&vn.c[i]!=null?num2(vn.c[i]):'—')+'</b>'
-    +(pc==null?'':'<i>'+(pc>0?'+':'')+pc.toFixed(2)+'% so với phiên trước</i>')
+    +(pc==null?'':'<i><b class="'+cls(pc)+'">'+(pc>0?'+':'')+pc.toFixed(2)
+      +'%</b> so với phiên trước</i>')
     +'</div>'+(phu?'<div class="ptcsw">'+phu+'</div>':'')+'</div></div>';
   $('#ptTop').innerHTML='<div class="panel"><div class="ph">'+ptIc('tt')+'Toàn thị trường — phiên '+
     esc(PT.ngay)
@@ -846,44 +847,53 @@ function ptTop(){
        trường giao dịch bao nhiêu tiền"; tách khớp lệnh với thoả thuận là chi tiết, thuộc
        về dòng phụ. Gộp lại còn để lưới xuống 6 đơn vị — 7 đơn vị thì mỗi ô hẹp tới mức
        "10.167 nghìn tỷ" bị cắt cụt, mà con số bị cắt thì mất nghĩa hoàn toàn. */
-    +box('Giá trị giao dịch', num(tong)+' tỷ',
-         'khớp lệnh <b class="ptff">'+num(kl)+'</b> · thoả thuận '+num(tt)+' tỷ')
+    /* Ô này mang màu "còn lại (trong nước)" vì cột trên đồ thị chính là giá trị khớp
+       lệnh; phần thoả thuận nằm NGOÀI cột nên nói ngay ở đây, khỏi chú thích riêng. */
+    +box('<i class="pkR"></i>Giá trị giao dịch', num(tong)+' tỷ',
+         'khớp lệnh <b>'+num(kl)+'</b> = chiều cao cột · thoả thuận <b>'+num(tt)
+         +'</b> tỷ nằm ngoài cột')
     /* HAI CON SỐ, KHÔNG PHẢI MỘT. Vốn hoá danh nghĩa 10.167 nghìn tỷ nghe như quy mô
        thị trường, nhưng phần THỰC SỰ MUA BÁN ĐƯỢC chỉ 2.049 — 20,1%. Phần chênh nằm ở
        tay nhà nước và cổ đông chiến lược, không bao giờ ra sàn. Hiện mỗi con số đầu là
        nói quá quy mô thị trường lên 5 lần. */
     +box('Vốn hoá thị trường', num(t.mcap[i]/1000)+' nghìn tỷ',
          (t.mcapFF&&t.mcapFF[i]!=null)
-           ?('giao dịch được <b class="ptff">'+num(t.mcapFF[i]/1000)+' nghìn tỷ</b> · '
-             +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'% free float')
-           :(num(t.nMcap[i])+' mã có số cổ phiếu'))
+           ?('giao dịch được <b>'+num(t.mcapFF[i]/1000)+' nghìn tỷ</b> · <b>'
+             +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'%</b> free float')
+           :('<b>'+num(t.nMcap[i])+'</b> mã có số cổ phiếu'))
     /* KHỐI NGOẠI và TỰ DOANH: hiện RÒNG làm số chính, mua/bán làm phụ. `nFn`/`nTd` phải nói
        ra vì hai tầng này phủ khác nhau — tự doanh phiên 20/08 chỉ có 62 mã trong khi khối
        ngoại có 1.525, mà phần lớn 1.463 mã kia KHÔNG PHẢI thiếu dữ liệu: chúng không có
        tự doanh thật. Không ghi số mã thì "+508 tỷ" đọc như của cả thị trường. */
-    +box('Khối ngoại ròng',
+    +box('<i class="pkN"></i>Khối ngoại ròng',
          (t.fnMua&&t.fnMua[i]!=null)
            ?('<span class="'+cls(t.fnMua[i]-t.fnBan[i])+'">'+((t.fnMua[i]-t.fnBan[i])>0?'+':'')
              +num(t.fnMua[i]-t.fnBan[i])+' tỷ</span>'):'—',
          (t.fnMua&&t.fnMua[i]!=null)
-           ?('mua '+num(t.fnMua[i])+' · bán '+num(t.fnBan[i])+' tỷ · '+num(t.nFn[i])+' mã'):'kho chưa có')
-    +box('Tự doanh ròng',
+           ?('mua <b class="up">'+num(t.fnMua[i])+'</b> · bán <b class="dn">'+num(t.fnBan[i])
+             +'</b> tỷ · chiếm <b>'+(t.mval[i]?((t.fnMua[i]+t.fnBan[i])/2/t.mval[i]*100).toFixed(1):'—')
+             +'%</b> · <b>'+num(t.nFn[i])+'</b> mã'):'kho chưa có')
+    +box('<i class="pkT"></i>Tự doanh ròng',
          (t.tdMua&&t.tdMua[i]!=null)
            ?('<span class="'+cls(t.tdMua[i]-t.tdBan[i])+'">'+((t.tdMua[i]-t.tdBan[i])>0?'+':'')
              +num(t.tdMua[i]-t.tdBan[i])+' tỷ</span>'):'—',
          (t.tdMua&&t.tdMua[i]!=null)
-           ?('mua '+num(t.tdMua[i])+' · bán '+num(t.tdBan[i])+' tỷ · '+num(t.nTd[i])+' mã có'):'kho chưa có')
+           ?('mua <b class="up">'+num(t.tdMua[i])+'</b> · bán <b class="dn">'+num(t.tdBan[i])
+             +'</b> tỷ · chiếm <b>'+(t.mval[i]?((t.tdMua[i]+t.tdBan[i])/2/t.mval[i]*100).toFixed(1):'—')
+             +'%</b> · <b>'+num(t.nTd[i])+'</b> mã có'):'kho chưa có')
     +'</div>'
     +'<div class="ptcv" id="ptCvW"><canvas id="ptCv"></canvas>'
       +'<div class="ptcvhl" id="ptHL"></div><div class="pttip" id="ptTip"></div></div>'
-    +'<p class="ptleg"><i class="pkN"></i> khối ngoại &nbsp; <i class="pkT"></i> tự doanh'
-      +' &nbsp; <i class="pkR"></i> còn lại (trong nước) &nbsp; <i class="pk0"></i> phiên kho chưa cào đủ mã'
-      +' &nbsp; <i class="pk3"></i> VN-Index'
-      +' &nbsp;·&nbsp; cột = <b>tổng giá trị khớp lệnh</b>, chia theo mức tham gia của từng khối'
+    /* CHÚ THÍCH CHỈ CÒN THỨ HÀNG Ô TRÊN KHÔNG NÓI. Ba màu chính (khối ngoại · tự doanh ·
+       còn lại) nay nằm ngay trên chính cái ô mang con số của khối đó, nên nhìn ô là biết
+       cột màu nào là ai — khỏi dóng xuống hàng chú thích rồi dóng ngược lên.
+       DẢI CHI TIẾT ĐÃ GỠ (user chốt 22/08/2026: *"ở trên đã có rồi, tại sao phía dưới lại
+       nhắc lại"*): nó in đúng `mua · bán · ròng · chiếm %` của khối ngoại và tự doanh,
+       trùng TỪNG CON SỐ với hai ô ngay phía trên. Thứ duy nhất nó nói thêm là "chiếm %",
+       nay đã nhét vào chính hai ô đó. */
+    +'<p class="ptleg"><i class="pk0"></i> phiên kho chưa cào đủ mã'
+      +' &nbsp; <i class="pk3"></i> VN-Index (trục phải)'
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem chi tiết phiên đó</b></p>'
-    /* DẢI CHI TIẾT của phiên đang chọn — đây là chỗ trả lời "mua bán ròng bao nhiêu", tách
-       hẳn khỏi cột. Cột chỉ nói ĐỘ MẠNH, dải này mới nói CHIỀU. */
-    +'<div class="ptct">'+ptChiTiet(t,i)+'</div>'
     +ptGiai('cot','Vì sao màu trên cột lại chia như vậy',
        'Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải mua cộng bán: mỗi '
       +'lệnh khớp có đúng một người mua và một người bán, cộng thẳng cả hai vế là đếm hai '
@@ -896,23 +906,12 @@ function ptTop(){
   ptBindGiai();
   ptVeChart();
 }
-function ptChiTiet(t,i){
-  const o=(nhan,mua,ban,mau)=>{
-    if(mua==null) return '';
-    const rong=mua-ban, tong=mua+ban;
-    return '<div class="ptcti"><span class="ptctn"><i class="'+mau+'"></i>'+nhan+'</span>'
-      +'<span class="ptctv">mua <b>'+num(mua)+'</b></span>'
-      +'<span class="ptctv">bán <b>'+num(ban)+'</b></span>'
-      +'<span class="ptctv">ròng <b class="'+cls(rong)+'">'+(rong>0?'+':'')+num(rong)+'</b></span>'
-      +'<span class="ptctv ptctp">chiếm <b>'+(t.mval[i]?(tong/2/t.mval[i]*100).toFixed(1):'—')+'%</b></span></div>';
-  };
-  return o('Khối ngoại', t.fnMua?t.fnMua[i]:null, t.fnBan?t.fnBan[i]:null,'pkN')
-    +o('Tự doanh', t.tdMua?t.tdMua[i]:null, t.tdBan?t.tdBan[i]:null,'pkT')
-    +'<div class="ptcti"><span class="ptctn"><i class="pk2"></i>Thoả thuận</span>'
-      +'<span class="ptctv">giá trị <b>'+num(t.pval[i])+'</b></span>'
-      +'<span class="ptctv">khối lượng <b>'+num(t.pv[i])+'</b> nghìn cp</span>'
-      +'<span class="ptctv ptctp">nằm NGOÀI cột (cột chỉ là khớp lệnh)</span></div>';
-}
+/* `ptChiTiet` ĐÃ XOÁ 22/08/2026 — nó dựng dải `mua · bán · ròng · chiếm %` cho khối
+   ngoại và tự doanh ngay dưới đồ thị, mà hàng ô ở trên đã in đúng từng con số đó. User
+   chốt: *"ở trên đã có rồi, tại sao phía dưới lại nhắc lại"*. Phần "chiếm %" đã chuyển
+   vào chính hai ô ấy, còn màu của từng khối nay nằm trên nhãn ô (chấm `.pkN`/`.pkT`)
+   nên nhìn ô là biết cột màu nào là ai. CSS `.ptct`/`.ptcti`/`.ptctn`/`.ptctv`/`.ptctp`
+   cũng xoá theo. */
 const num2=n=>n==null||isNaN(n)?'—':n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 /* BƯỚC CHIA TRÒN CHO TRỤC DỌC. Mốc phải rơi vào số người ta đọc được — 5.000, 10.000,
@@ -942,8 +941,14 @@ function ptVeChart(){
   const H=W<560?240:330;
   cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-  const dark=document.documentElement.classList.contains('theme-dark')||
-    (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
+  /* DÒ CHỦ ĐỀ BẰNG `isLight()`, ĐỪNG DÒ BẰNG `classList`. Trang đặt chủ đề vào
+     `document.documentElement.dataset.theme` (xem đoạn inline đầu congcu.html và nút đổi
+     đèn), KHÔNG bao giờ gắn class `theme-dark`/`theme-light` — nên nhánh classList cũ
+     LUÔN sai và cả biểu thức rơi về `prefers-color-scheme` của hệ điều hành. Hậu quả đo
+     được: máy để hệ điều hành TỐI mà bấm trang sang SÁNG thì đồ thị vẫn vẽ bảng màu tối
+     lên nền sáng, và ngược lại. Im lặng hoàn toàn vì trên máy có OS và trang cùng chế độ
+     thì nó lại đúng — chỉ hỏng đúng nhóm người dùng đổi đèn thủ công. */
+  const dark=!isLight();
   const c1=dark?'#38bdf8':'#0284c7', c2=dark?'#a78bfa':'#7c3aed',
         cg=dark?'rgba(148,163,184,.20)':'rgba(100,116,139,.18)', ct=dark?'#94a3b8':'#64748b';
   let mx=0, nMax=0;
@@ -1396,8 +1401,14 @@ function ptVe1(cv, cfg){
   const dpr=devicePixelRatio||1, W=cv.clientWidth||600, H=cfg.cao||150;
   cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-  const dark=document.documentElement.classList.contains('theme-dark')||
-    (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
+  /* DÒ CHỦ ĐỀ BẰNG `isLight()`, ĐỪNG DÒ BẰNG `classList`. Trang đặt chủ đề vào
+     `document.documentElement.dataset.theme` (xem đoạn inline đầu congcu.html và nút đổi
+     đèn), KHÔNG bao giờ gắn class `theme-dark`/`theme-light` — nên nhánh classList cũ
+     LUÔN sai và cả biểu thức rơi về `prefers-color-scheme` của hệ điều hành. Hậu quả đo
+     được: máy để hệ điều hành TỐI mà bấm trang sang SÁNG thì đồ thị vẫn vẽ bảng màu tối
+     lên nền sáng, và ngược lại. Im lặng hoàn toàn vì trên máy có OS và trang cùng chế độ
+     thì nó lại đúng — chỉ hỏng đúng nhóm người dùng đổi đèn thủ công. */
+  const dark=!isLight();
   const cg=dark?'rgba(148,163,184,.20)':'rgba(100,116,139,.16)', ct=dark?'#94a3b8':'#64748b';
   const S=cfg.series.filter(x=>x&&x.v);
   if(!S.length) return;
@@ -1509,19 +1520,19 @@ function ptVeMa(){
   const tongTT=pval.reduce((a,b)=>a+(b||0),0), tongKL=mval.reduce((a,b)=>a+(b||0),0);
   const fnRongTong=fnRong.reduce((a,b)=>a+(b||0),0);
   const tdRongTong=tdRong.reduce((a,b)=>a+(b||0),0);
-  const ph=(v)=>v==null?'—':'<span class="'+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</span>';
+  const ph=(v)=>v==null?'—':'<b class="'+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</b>';
   const box=(nhan,gt,ghi)=>'<div class="ptbox"><span class="ptlb">'+nhan+'</span><b>'+gt+'</b>'+
     (ghi?'<i>'+ghi+'</i>':'')+'</div>';
   const vg=(PT.phien[PT.ngay]&&PT.phien[PT.ngay].ma&&PT.phien[PT.ngay].ma[PT.ma])||null;
   w.innerHTML=dau
     +'<div class="panel"><div class="pb"><div class="ptgrid">'
-      +box('Giá đóng cửa', num(c[m]), 'phiên '+esc(d[m])+' · '+ph(pcs[m]))
+      +box('Giá đóng cửa', num(c[m]), 'phiên <b>'+esc(d[m])+'</b> · '+ph(pcs[m]))
       +box('So 1 tháng', ph(doi(21)), '21 phiên trước')
       +box('So '+d.length+' phiên', ph(doi(d.length-1)), 'cả khung đang xem')
       +box('GT khớp lệnh TB', ptTien(tbGT), 'mỗi phiên trong khung')
-      +box('Vốn hoá', mcap[m]?ptTien(mcap[m]):'—', sh[m]?num(sh[m])+' cp':'')
+      +box('Vốn hoá', mcap[m]?ptTien(mcap[m]):'—', sh[m]?'<b>'+num(sh[m])+'</b> cp':'')
       +box('Khối ngoại ròng', fnRongTong?ptTien(fnRongTong):'—',
-           'cả khung'+(fnSH[m]!=null?' · sở hữu '+fnSH[m].toFixed(1)+'%':''))
+           'cả khung'+(fnSH[m]!=null?' · sở hữu <b>'+fnSH[m].toFixed(1)+'%</b>':''))
       +box('Tự doanh ròng', tdRongTong?ptTien(tdRongTong):'—', 'cả khung · CTCK tự mua bán')
     +'</div></div></div>'
     /* THANH ĐỌC SỐ CỦA PHIÊN ĐANG CHỌN — đứng NGAY TRÊN lưới đồ thị, không nhét xuống dưới:
@@ -1547,8 +1558,14 @@ function ptVeMa(){
       +ptO('Vùng giá khớp lệnh — phiên '+esc(PT.ngay), 'mc9',
            vg?'khối lượng gộp theo từng mức giá':'phiên này chưa cào vùng giá cho mã này')
     +'</div>';
-  const dark=document.documentElement.classList.contains('theme-dark')||
-    (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
+  /* DÒ CHỦ ĐỀ BẰNG `isLight()`, ĐỪNG DÒ BẰNG `classList`. Trang đặt chủ đề vào
+     `document.documentElement.dataset.theme` (xem đoạn inline đầu congcu.html và nút đổi
+     đèn), KHÔNG bao giờ gắn class `theme-dark`/`theme-light` — nên nhánh classList cũ
+     LUÔN sai và cả biểu thức rơi về `prefers-color-scheme` của hệ điều hành. Hậu quả đo
+     được: máy để hệ điều hành TỐI mà bấm trang sang SÁNG thì đồ thị vẫn vẽ bảng màu tối
+     lên nền sáng, và ngược lại. Im lặng hoàn toàn vì trên máy có OS và trang cùng chế độ
+     thì nó lại đúng — chỉ hỏng đúng nhóm người dùng đổi đèn thủ công. */
+  const dark=!isLight();
   const XANH=dark?'#34d399':'#16a34a', DO=dark?'#f87171':'#dc2626';
   const chon=(i)=>{ if(i===PT.maI) return; PT.maI=i; ptVeMa(); };
   /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
