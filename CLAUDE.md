@@ -1558,6 +1558,34 @@ nghĩa và khác độ sâu:
 > `FREEFLOAT` và `FOREIGN_OWNERSHIP` theo `reportDate` — nhưng chưa cào, vì đó là chuỗi
 > theo KỲ BÁO CÁO chứ không theo phiên, phải gióng lại trục.
 
+### ĐÃ XOÁ KHỎI `data/giaodich` (22/08/2026) — `tools/gon_kho.py`, ĐỪNG THÊM LẠI
+
+| trường | MB | vì sao xoá |
+|---|---|---|
+| `fnMuaPc` `fnBanPc` | 14,9 | **suy ra được**: `fnMuaGT ÷ mval × 100`. Đo 10.623 mẫu, lệch trung vị **0,0000**, p99 0,17% |
+| `bMua` `bBan` `bMuaKL` `bBanKL` | 27,9 | giá tốt nhất LÚC ĐÓNG CỬA. Không chỗ nào đọc, không nằm trong tín hiệu nào đã đo, và là ảnh chụp MỘT thời điểm nên không dựng được chuỗi |
+
+Kho **335 → 289 MB**. `kho_giaodich.py` cũng thôi lấy chúng (`FN`, `DL`, `COT`) — bằng
+không lượt EOD hôm sau ghi về hết.
+
+**GIỮ LẠI, và đây mới là phần đáng nói — đừng xoá tiếp mấy thứ này:**
+
+- `qMua` `qBan` `nMua` `nBan` (sổ lệnh, 27,5 MB) — **VNDirect KHÔNG CÓ**, và tỉ lệ đặt
+  mua/đặt bán là tín hiệu mạnh nhất kho đo được (rank IC +0,082, **t = +12,24**).
+- `*TTGT` `*TTKL` (tách thoả thuận, 35,6 MB) — VNDirect chỉ cho TỔNG. Không có bộ này thì
+  vĩnh viễn không trả lời được *"khối ngoại mua 130 tỷ nhưng bao nhiêu là sang tay"*.
+- `fnSoHuu` `fnRoom` (16,1 MB) — thử suy từ `fnRoomV/sh` và `(fnRoomTong−fnRoomV)/sh`:
+  trung vị khớp (0,001 và 0,004) **nhưng p95 lệch 8,9 và 17,4**. Suy ra được "gần đúng"
+  thì không phải là suy ra được.
+- `sh` `shR` — VNDirect `stock_prices` không có SLCP lẫn vốn hoá.
+
+> **LỰC ĐÒN LỚN NHẤT CÒN LẠI CHƯA DÙNG: 39% KHO LÀ CHỮ `null`.** Đo mẫu 200 file: 38,0 MB
+> thì 14,7 MB là chữ `null` — vì cột Vietstock chỉ phủ 249 phiên cuối trong mảng 1.000 ô,
+> 751 ô còn lại là `null,null,null…`. Cách gỡ là lưu cột thưa theo dạng `{"o":751,"v":[…]}`
+> rồi bung ra lúc đọc — **tiết kiệm ~109 MB mà không mất một con số nào**. Chưa làm vì
+> phải sửa 5 nơi đọc (`ptVeMa`, `kho_dactrung`, `quet_la`, `build_phantich`, `kho_vnd`)
+> và đó là đổi hợp đồng dữ liệu, cần làm cẩn thận chứ không chen ngang.
+
 ### FILE PHIÊN LÊN 1.000 — VÀ BỎ CỘT RỖNG THEO TỪNG PHIÊN
 
 `SO_PHIEN_FILE` 120 → 320 → **1000** (22/08/2026), khớp với `ptCoFile` bên client. **Hai

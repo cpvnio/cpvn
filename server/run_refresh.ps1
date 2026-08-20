@@ -61,6 +61,19 @@ else                                   { & $py refresh_daily.py 2>&1 }
 & $py tools\kho_giaodich.py --sau 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# BỒI TỪ VNDIRECT — tầng giá + khối ngoại + tự doanh, sâu 1.000 phiên, ~45 phút.
+# Phải chạy SAU kho_giaodich (nó chỉ ĐIỀN CHỖ TRỐNG, giữ nguyên số Vietstock để còn đối
+# chiếu) và TRƯỚC build_phantich.
+# Đây nay là NGUỒN CHÍNH của tầng dòng tiền: Vietstock chặn cứng 1 năm, làm tròn mất lô
+# lẻ, và có 112 ô sai đơn vị ×1000. Xem mục Phân tích dữ liệu trong CLAUDE.md.
+& $py tools\kho_vnd.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_vnd EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# VÁ Ô SAI ĐƠN VỊ ×1000 — hai luật: đối chiếu VNDirect, và tự đối chiếu KL × giá.
+# KHÔNG gọi mạng, vài giây. Phải chạy SAU kho_vnd (luật 1 cần số của VNDirect).
+& $py tools\va_donvi.py 2>&1
+if ($LASTEXITCODE -ne 0) { "va_donvi EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # CHỈ SỐ THEO PHIÊN (data/chiso.json) — VNINDEX/VN30/HNX/HNX30/UPCOM, điểm đóng cửa và
 # % thay đổi, sâu tới 2017. Đúng 5 lượt gọi, vài giây. `data/idx.json` của pipeline chỉ
 # giữ ~15 phiên và không có % thay đổi nên không thay được cái này.

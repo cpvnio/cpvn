@@ -157,9 +157,14 @@ def goi(path, data, sym):
 
 
 # ── tầng 1: số chốt phiên ─────────────────────────────────────────────────────
+# ĐÃ BỎ 22/08/2026 (xem `tools/gon_kho.py`): `bMua` `bMuaKL` `bBan` `bBanKL` (giá tốt
+# nhất lúc đóng cửa — không ai đọc, không nằm trong tín hiệu nào, và là ảnh chụp MỘT thời
+# điểm nên không dựng được chuỗi) và `fnMuaPc` `fnBanPc` (suy ra được: `GT ÷ mval × 100`,
+# lệch trung vị 0,0000 trên 10.623 mẫu). Tổng 42,8 MB.
+# ĐỪNG THÊM LẠI — nếu cần thì tính tại chỗ, đừng lưu.
 COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "shR",
-       "bMua", "bMuaKL", "bBan", "bBanKL", "nMua", "nBan", "qMua", "qBan",
-       "fnMuaKL", "fnMuaGT", "fnBanKL", "fnBanGT", "fnMuaPc", "fnBanPc",
+       "nMua", "nBan", "qMua", "qBan",
+       "fnMuaKL", "fnMuaGT", "fnBanKL", "fnBanGT",
        "fnMuaTTKL", "fnMuaTTGT", "fnBanTTKL", "fnBanTTGT",
        "fnSoHuu", "fnRoom",
        "tdMuaKL", "tdMuaGT", "tdBanKL", "tdBanGT",
@@ -432,8 +437,12 @@ TT_TRANG = 200                                # trần cứng, xin 1000 vẫn tr
 
 # Cột lấy từ THỐNG KÊ ĐẶT LỆNH — đây là "sổ lệnh khi chốt phiên": giá và khối lượng ở
 # bước giá tốt nhất lúc đóng cửa, số lệnh đặt mua/bán, tổng khối lượng đặt mua/bán.
-DL = {"BestBuy": "bMua", "BestBidVol": "bMuaKL", "BestSell": "bBan", "BestSellVol": "bBanKL",
-      "TotalBuyTrade": "nMua", "TotalSellTrade": "nBan",
+# `BestBid`/`BestSell` và khối lượng ở bước giá tốt nhất ĐÃ THÔI LẤY 22/08/2026: không
+# chỗ nào trong site đọc, không nằm trong tín hiệu nào đã đo, và bản thân nó là ảnh chụp
+# MỘT thời điểm (lúc đóng cửa) nên không dựng được chuỗi gì có nghĩa. 27,9 MB.
+# `TotalBuyVol`/`TotalSellVol`/`TotalBuyTrade`/`TotalSellTrade` thì GIỮ — VNDirect không
+# có, và tỉ lệ đặt mua/đặt bán là tín hiệu mạnh nhất kho đo được (t = +12,24).
+DL = {"TotalBuyTrade": "nMua", "TotalSellTrade": "nBan",
       "TotalBuyVol": "qMua", "TotalSellVol": "qBan"}
 
 _tt = {"v": None, "ck": None, "luc": 0}
@@ -698,8 +707,10 @@ def phien_ghi(ngay, goi_ma):
 # tổng 2.158.322, trong khi eod ghi 2.158.340 (chênh 18 = lô lẻ). Tức bảng giá VPS gộp cả
 # ba thứ làm một. Gộp như vậy là lặp lại đúng con bệnh của `data/hist` đã phải gỡ ở đầu
 # phiên: một đại lượng, hai định nghĩa, không ai biết mình đang cầm cái nào.
+# `PerBuyVol`/`PerSellVol` ĐÃ THÔI LẤY 22/08/2026 — chúng chỉ là `fnMuaGT ÷ mval × 100`,
+# đo 10.623 mẫu thì lệch trung vị 0,0000. Nguồn tính sẵn cho tiện chứ không mang thêm
+# thông tin nào, mà nằm trong kho thì tốn 14,9 MB. Xem `tools/gon_kho.py`.
 FN = {"BuyVol": "fnMuaKL", "SellVol": "fnBanKL",
-      "PerBuyVol": "fnMuaPc", "PerSellVol": "fnBanPc",
       "BuyPutVol": "fnMuaTTKL", "SellPutVol": "fnBanTTKL",
       "OwnedRatio": "fnSoHuu", "RemainRoom": "fnRoom"}
 FN_TIEN = {"BuyVal": "fnMuaGT", "SellVal": "fnBanGT",
