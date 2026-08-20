@@ -399,7 +399,11 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptbox{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
   display:flex;flex-direction:column;gap:3px;min-width:0}
 .ptbox .ptlb{font-size:11px;color:var(--faint);font-weight:700}
-.ptbox b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;
+/* `>` CHỨ KHÔNG PHẢI DẤU CÁCH. Bộ chọn hậu duệ `.ptbox b` ăn cả thẻ `<b>` NẰM TRONG
+   dòng phụ `<i>` — nên chữ nhấn trong "khớp lệnh **10.577**" bị kéo lên 19px, to ngang
+   con số chính, đọc ra như hai con số cùng hạng. Cùng cái bẫy đã dính với `.ptbox2 b`
+   (nó kéo cả nhãn VN30/HNX/UPCOM lên 23px). */
+.ptbox>b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ptbox i{font-style:normal;font-size:11px;color:var(--faint);line-height:1.45}
 /* Vốn hoá free float in ĐẬM ngay trong dòng phụ: nó là con số quan trọng hơn con số lớn
@@ -426,7 +430,25 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
   align-items:baseline;white-space:nowrap}
 .ptcsm .ptcs b{font-size:11px;font-weight:800;color:var(--faint);margin:0;min-width:44px}
 .ptcsm .ptcs i{margin-left:0}
-@media(max-width:640px){.ptbox2{grid-column:auto}.ptcsa>b{font-size:19px}}
+/* Khổ hẹp: ô chỉ số GIỮ span 2 = chiếm trọn bề ngang (lưới ở đó là 2 cột cứng nên span 2
+   luôn hợp lệ). Trả nó về một cột 160px thì ruột rộng 168px trong khung 132px — tràn ra
+   ngoài, mà `.ptbox` không cuộn nên phần tràn bị XÉN MẤT, không có dấu hiệu gì.
+   Một ô rộng cho chỉ số cũng đúng thứ tự đọc: câu đầu tiên của một phiên là thị trường
+   lên hay xuống. */
+@media(max-width:640px){
+  /* Bên trong ô chỉ số phải XẾP DỌC. Để hai cột ngang thì `.ptcsa` bị bóp còn ~80px:
+     nhãn "VN-Index" gãy làm hai dòng, còn con số (đang `nowrap`) tràn ra rồi bị xén —
+     mất hẳn con số chính mà không có dấu hiệu gì, đúng lỗi chụp được 21/08/2026. */
+  .ptcsm{flex-direction:column;align-items:stretch;gap:8px}
+  .ptcsa{width:100%}
+  .ptcsa>b{font-size:22px}
+  .ptcsa>.ptlb{white-space:nowrap}
+  .ptcsm>.ptcsw{flex-direction:row;flex-wrap:wrap;gap:4px 14px;width:100%}
+  .ptcsm .ptcs b{min-width:0}
+  /* Ô thường chỉ rộng ~160px ở khổ này: "10.167 nghìn tỷ" ở 19px là 168px -> bị cắt
+     thành "10,167 ngh…". Số bị cắt là mất nghĩa hoàn toàn, hạ một bậc chữ là vừa. */
+  .ptbox>b{font-size:16px}
+}
 .ptcv{width:100%;position:relative}
 .ptcv canvas{width:100%;display:block}
 /* Vạch nền cột đang rê. `pointer-events:none` là bắt buộc — nó nằm ĐÈ lên canvas, không
@@ -1315,7 +1337,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821w"></script>
+<script defer src="assets/mobi.js?v=20260822a"></script>
 </head>
 <body>
 
@@ -1372,6 +1394,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821w"></script>
+<script src="assets/congcu.js?v=20260822a"></script>
 </body>
 </html>
