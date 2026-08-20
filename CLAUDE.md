@@ -1546,6 +1546,32 @@ kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45
 > ở hai thời điểm khác nhau. Kho nay giữ `d` = ngày giao dịch đầu tiên (khớp cặp với `gc`) và
 > `dS` = ngày lên sàn hiện tại; giao diện đánh dấu ↷.
 
+**HỆ SỐ HẠ NỀN CỔ TỨC TIỀN PHẢI LÀM TRÒN THEO BƯỚC GIÁ (20/08/2026).** Công thức `P/(P−d)`
+THIẾU một bước: sở lấy giá tham chiếu mới = `P−d` rồi **làm tròn về bước giá** trước khi dùng
+làm nền. Đo trên đúng 4 mã chốt quyền ngày 20/08, so nguồn sống với `data/eod`:
+
+| mã | sàn | P (19/08) | sự kiện | P−d | tròn | hệ số tính | hệ số ĐO |
+|---|---|---|---|---|---|---|---|
+| BTW | HNX | 85.000 | tiền 900 | 84.100 | 84.100 | 1,0107 | **1,0107** |
+| HBH | UPCOM | 6.200 | tiền 260 | 5.940 | **5.900** | 1,0508 | **1,0508** |
+| THN | UPCOM | 5.300 | tiền 1.335 | 3.965 | **4.000** | 1,3250 | **1,3250** |
+| VIX | HOSE | 13.100 | cp 5% | — | — | 1,0500 | **1,0500** |
+
+Cả bốn về **0,00%**. Không làm tròn thì THN lệch **0,88% chỉ trong MỘT sự kiện**, sai số dồn
+qua từng lần chia — mã giá thấp chia nhiều lần là lệch hẳn. Mã giá cao gần như không ảnh hưởng.
+> **CỔ TỨC CỔ PHIẾU thì KHÔNG làm tròn** — nguồn dùng thẳng tỉ lệ (VIX 5% → đúng 1,0500 chứ
+> không phải 13.100/12.500). Đừng "sửa" cho hai loại giống nhau.
+> Bước giá: HOSE <10k = 10đ · 10–50k = 50đ · ≥50k = 100đ; HNX và UPCOM luôn 100đ.
+> Hàm `lamTron` trong `bangSLCP` (`cophieu.html`).
+
+**KIỂM CƠ CHẾ HẠ NỀN — HCC/TVS ngày 19/08/2026, ĐÃ XONG.** Dự đoán trước: HCC → 22.599,
+TVS → 13.505. Kho ghi đúng cả hai ở **phiên 18/08** (phiên cuối trước ngày chốt quyền — tao
+từng nói nhầm là phiên 19/08). Hệ số đo được **giữ nguyên suốt 13 phiên**: HCC 1,2346 (lý
+thuyết 1,10 × 27.900/24.900 = 1,2325, lệch 0,17%), TVS 1,0700 (lý thuyết 1,07, khớp tuyệt
+đối). Phiên 19/08 tỷ lệ thô/kho = **1,0000** ở cả hai → không bị trừ hai lần.
+Ghi chú cũ *"HCC thiếu một sự kiện quyền trong cotuc.json"* nay đã bịt: `data/sukien` có đủ
+cả `tiền 3.000đ` lẫn `cp 10%` cùng ngày 19/08, và hai cái đó giải thích đúng hệ số đo được.
+
 **TỔNG LỢI SUẤT = GIÁ NAY ÷ GIÁ NỀN QUY ĐỔI (user chốt 20/08/2026).**
 ```
 x = giá hôm nay / g          g = giá phiên đầu tiên trên NỀN HÔM NAY
