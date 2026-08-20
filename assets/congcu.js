@@ -740,6 +740,19 @@ function ptGiai(id,ten,html){
 }
 function ptBindGiai(){ $$('.ptgt').forEach(d=>{ d.ontoggle=()=>{ PT.giai[d.dataset.g]=d.open; }; }); }
 
+/* CÔNG TẮC BẬT/TẮT TỪNG KHỐI CỦA TRANG PHÂN TÍCH (user chốt 22/08/2026: *"tạm ẩn đi 4
+   mục"*). Đổi `false` -> `true` là khối đó hiện lại, không phải sửa gì thêm — MỌI mạch
+   dựng, dữ liệu và CSS của bốn khối này VẪN CÒN NGUYÊN trong mã nguồn và trong kho
+   (`data/phien/*.json` vẫn mang `la`, `dt`, `dtf`; `tools/quet_la.py` vẫn chạy trong
+   lượt EOD). Đây là ẩn, không phải gỡ.
+   Cùng lối với cờ `HIEN_MORONG` của `cophieu.html` — xem CLAUDE.md. */
+const PT_HIEN={
+  quetla:   false,   // "Phiên này có gì lạ"
+  dongtien: false,   // "Khối ngoại và tự doanh mua bán gì"
+  diemsang: false,   // "Điểm sáng phiên"
+  boloc:    false,   // "Bộ lọc đặc trưng"
+};
+
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
           n:60, ma:null, maD:null, nMa:63, maI:null, ghim:null, giai:{},
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
@@ -1847,7 +1860,10 @@ async function ptBang(){
         'khoảng 09/2025; phiên nào đã cào thì dòng có dấu ▾.</i></div>')+'</td></tr>';
     return tr;
   }).join('');
-  w.innerHTML=ptQuetLa(p)+ptDongTien(rDay)+ptDiemSang(rDay)+ptBoLoc(p)+
+  w.innerHTML=(PT_HIEN.quetla?ptQuetLa(p):'')
+    +(PT_HIEN.dongtien?ptDongTien(rDay):'')
+    +(PT_HIEN.diemsang?ptDiemSang(rDay):'')
+    +(PT_HIEN.boloc?ptBoLoc(p):'')+
     '<div class="panel"><div class="ph">'+ptIc('bang')+'Bảng mã — phiên '+esc(PT.ngay)+
     '<span class="cnt">'+num(r.length)+' mã</span></div><div class="pb">'
     +ptGiai('bang','Vì sao bảng xếp theo tiền chứ không theo khối lượng',
@@ -1865,7 +1881,7 @@ async function ptBang(){
     +(r.length>400?'<p class="ptbarn ptdu">Hiện 400 mã đầu theo thứ tự đang xếp — còn '+num(r.length-400)+' mã nữa.</p>':'')
     +'</div></div>';
   ptBind();
-  ptLocBind(p);
+  if(PT_HIEN.boloc) ptLocBind(p);
 }
 
 /* Tiền: đổi bậc cho dễ đọc. Cột tiền đứng cạnh nhau nên phải CÙNG một bậc trong một cột —

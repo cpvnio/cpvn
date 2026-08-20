@@ -1471,6 +1471,22 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
 
+### BỐN KHỐI ĐANG TẮT — `PT_HIEN` ở đầu module (22/08/2026)
+
+```js
+const PT_HIEN={quetla:false, dongtien:false, diemsang:false, boloc:false};
+```
+
+Tắt "Phiên này có gì lạ" · "Khối ngoại và tự doanh mua bán gì" · "Điểm sáng phiên" ·
+"Bộ lọc đặc trưng". Trang phân tích nay chỉ còn **Toàn thị trường** và **Bảng mã**.
+
+> **ĐÂY LÀ ẨN, KHÔNG PHẢI GỠ.** Mọi mạch dựng (`ptQuetLa` `ptDongTien` `ptDiemSang`
+> `ptBoLoc` `ptLocVe` `ptLocBind`), CSS, và **cả dữ liệu trong kho vẫn còn nguyên**:
+> `data/phien/*.json` vẫn mang `la`/`dt`/`dtf`, và `tools/quet_la.py` vẫn chạy trong lượt
+> EOD. Đổi một cờ thành `true` là khối đó hiện lại, không phải dựng lại gì.
+> **Đừng "dọn rác" bằng cách xoá mấy hàm đang tắt** — cùng lối với cờ `HIEN_MORONG` của
+> `cophieu.html`, và với `nyLichHTML()` của Thông tin niêm yết.
+
 ### FILE PHIÊN CÓ BỐN CHỦ — MỌI LƯỢT GHI PHẢI TRỘN (đã trả giá 21/08/2026)
 
 ```
