@@ -158,7 +158,7 @@ def goi(path, data, sym):
 
 # ── tầng 1: số chốt phiên ─────────────────────────────────────────────────────
 COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "sh",
-       "cfU", "cfF", "cfD")
+       "bMua", "bMuaKL", "bBan", "bBanKL", "nMua", "nBan", "qMua", "qBan")
 
 
 def eod_trang(sym, trang, tu, den):
@@ -178,7 +178,7 @@ def eod_trang(sym, trang, tu, den):
 def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
     """Trả về dict {ngày: bản ghi}. day_du=True thì lật hết trang."""
     den = den or datetime.datetime.now(TZ).strftime("%Y-%m-%d")
-    ra, trang, tong = {}, 1, None
+    ra, trang, tong, sid = {}, 1, None, [None]
     while True:
         rows, t = eod_trang(sym, trang, tu, den)
         if tong is None:
@@ -186,6 +186,8 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
         if not rows:
             break
         for r in rows:
+            if sid[0] is None:
+                sid[0] = r.get("StockID")     # cần cho `dl_nap`, nguồn chỉ nhận stockID số
             ra[_ngay(r["TradingDate"])] = {
                 "tc": r.get("BasicPrice"), "o": r.get("OpenPrice"), "h": r.get("HighestPrice"),
                 "l": r.get("LowestPrice"), "c": r.get("ClosePrice"), "vwap": r.get("AvrPrice"),
@@ -200,7 +202,7 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
         if not day_du or len(ra) >= (tong or 0) or trang > 400:
             break
         trang += 1
-    return ra
+    return ra, sid[0]
 
 
 def sua_slcp(d, shv, ev):
@@ -285,13 +287,14 @@ def _sukien(sym):
         return []
 
 
-def eod_ghi(sym, moi):
+def eod_ghi(sym, moi, sid=None):
     """Trộn vào file cũ. GIỮ ngày cũ, chỉ thêm/cập nhật ngày có trong `moi`."""
     p = os.path.join(GD_DIR, f"{sym}.json")
-    cu = {}
+    cu, cu_sid = {}, sid
     if os.path.exists(p):
         try:
             o = json.load(open(p, encoding="utf-8"))
+            cu_sid = cu_sid or o.get("sid")
             for i, d in enumerate(o.get("d") or []):
                 cu[d] = {k: (o.get(k) or [None] * len(o["d"]))[i] for k in COT if k != "d"}
         except Exception:
@@ -309,6 +312,8 @@ def eod_ghi(sym, moi):
         if k == "d":
             continue
         doc[k] = [cu[d].get(k) for d in ngay]
+    if cu_sid:
+        doc["sid"] = cu_sid
     ev = _sukien(sym)
     doc["sh"], doc["shVa"] = sua_slcp(ngay, doc["sh"], ev)
     la = bac_la(ngay, doc["sh"], ev)
@@ -330,72 +335,175 @@ def eod_ghi(sym, moi):
     return len(ngay)
 
 
-# ── tầng 2: nến 1 phút của các lệnh đã khớp ───────────────────────────────────
-def phien_mot(sym, ngay):
-    """Nến 1 phút cho một mã một ngày. interval=1 là BẮT BUỘC — thiếu nó nguồn trả về
-    nguyên trang HTML chứ không báo lỗi.
+# ── tầng 2: TOÀN THỊ TRƯỜNG THEO NGÀY — một lượt gọi cho ~200 mã ──────────────
+# Trang `finance.vietstock.vn/ket-qua-giao-dich` dùng bộ endpoint KHÁC hẳn bộ của trang
+# từng mã: khi không chỉ định mã, nó hỏi theo SÀN + NGÀY và trả về cả trăm mã một lượt.
+# Tìm ra bằng cách tải `/bundles/kqgd/jsx` rồi lần theo `vst.io.post("/data/"+u, ...)`.
+#
+# CHI PHÍ ĐỔI HẲN BẬC: 3 sàn × ~4 trang × 2 endpoint = ~20 lượt cho CẢ THỊ TRƯỜNG một
+# ngày, thay vì 1.529 lượt/ngày của đường hỏi từng mã. Cào bù cả cửa sổ lịch sử (~250
+# phiên) chỉ còn ~5.000 lượt ≈ 21 phút.
+TT_SAN = {1: "HOSE", 2: "HNX", 3: "UPCOM"}   # catID; 4 = VN30 (tập con, đừng lấy)
+TT_TRANG = 200                                # trần cứng, xin 1000 vẫn trả 200
 
-    KHÔNG LƯU `IsBuy` — nó KHÔNG phải cờ bên chủ động, dù tên gọi đúng như vậy. Đo
-    20/08/2026: endpoint nến 1 phút trả `true` cho **226/226** điểm của VCB, HPG và VHM;
-    endpoint từng lệnh khớp trả `false` cho **108/108** lệnh lấy rải rác 6 trang (1, 50,
-    120, 200, 300, 371) — và cùng lúc `Change` cũng là hằng số −600 = chênh so với THAM
-    CHIẾU cả phiên. Tức đây là cờ tô màu dòng theo giá so với tham chiếu, không phải bên
-    nào chủ động khớp. Lưu nó vào kho là mọi phép đo lực mua/bán về sau đọc ra "100% mua
-    chủ động". Lực mua bán thật lấy ở `dongtien()`.
+# Cột lấy từ THỐNG KÊ ĐẶT LỆNH — đây là "sổ lệnh khi chốt phiên": giá và khối lượng ở
+# bước giá tốt nhất lúc đóng cửa, số lệnh đặt mua/bán, tổng khối lượng đặt mua/bán.
+DL = {"BestBuy": "bMua", "BestBidVol": "bMuaKL", "BestSell": "bBan", "BestSellVol": "bBanKL",
+      "TotalBuyTrade": "nMua", "TotalSellTrade": "nBan",
+      "TotalBuyVol": "qMua", "TotalSellVol": "qBan"}
+
+_tt = {"v": None, "ck": None, "luc": 0}
+
+
+def tt_token(ep=False):
+    """Token của trang kết quả giao dịch — KHÁC token của trang từng mã, đừng dùng lẫn.
+
+    PHẢI LẤY KÈM COOKIE. Token chống giả mạo chỉ có giá trị cùng cookie phiên đã cấp ra nó;
+    gửi token trần thì nguồn KHÔNG báo lỗi mà trả về nguyên trang HTML 216 KB — đọc ra
+    thành "ngày này không có dữ liệu", đúng thứ khiến cả lượt cào bù im lặng bỏ trắng.
     """
-    j = goi("/Data/GetStockDealDetailChartByDate",
-            {"code": sym, "interval": 1, "tradingDate": ngay}, sym)
-    if not isinstance(j, dict):
-        return None
-    r = j.get("Deal_DetailChart_Results") or []
-    if not r:
-        return {}                      # mã không khớp lệnh nào hôm đó — khác với LỖI
-    t, p, v = [], [], []
-    for x in r:
-        t.append(_phut(x["TradingDate"]))
-        p.append(int(x.get("Price") or 0))
-        v.append(int(x.get("Vol") or 0))
-    return {"t": t, "p": p, "v": v}
+    if _tt["v"] and not ep and time.time() - _tt["luc"] < 1800:
+        return _tt["v"], _tt["ck"]
+    import urllib.request
+    rq = urllib.request.Request("https://finance.vietstock.vn/ket-qua-giao-dich",
+                                headers={"User-Agent": nhipmang.UA})
+    with urllib.request.urlopen(rq, timeout=30) as r:
+        html = r.read().decode("utf-8", "replace")
+        ck = "; ".join(v.split(";")[0] for k, v in r.getheaders()
+                       if k.lower() == "set-cookie")
+    m = re.search(r"name=__RequestVerificationToken type=hidden value=([A-Za-z0-9_-]+)", html)
+    if not m:
+        raise RuntimeError("không tìm thấy token trên trang ket-qua-giao-dich")
+    _tt.update(v=m.group(1), ck=ck, luc=time.time())
+    return _tt["v"], _tt["ck"]
 
 
-def dongtien(sym, ngay):
-    """LỰC MUA / BÁN THẬT — giá trị khớp lệnh tách theo HƯỚNG GIÁ của lệnh.
+def tt_trang(ep, cat, ngay, trang):
+    """Một trang của một sàn một ngày. Trả về (danh sách dòng, tổng số trang).
 
-    `Deal_CashFlow_Results` chia giá trị cả phiên làm ba theo `StateChange`: +1 khớp ở giá
-    CAO HƠN lệnh trước (bên mua chủ động nâng giá) · 0 đứng giá · −1 khớp ở giá THẤP HƠN
-    (bên bán chủ động hạ giá).
+    NGUỒN KHÔNG BÁO LỖI KHI NGÀY NGOÀI CỬA SỔ — nó trả về LẶNG LẼ số của HÔM NAY.
+    Đo 20/08/2026: xin 2019-06-12, 2024-06-12, 2025-06-16 đều nhận lại dữ liệu mang
+    `TradingDate` = 2026-08-20. Cào bù mà không kiểm là điền cả mấy năm lịch sử BỊA mà
+    trông y như thật — không ô nào trống, không con số nào vô lý.
+    Cửa sổ đo được: 2025-09-16 còn đúng, 2025-08-19 đã rơi ra ngoài.
 
-    Nó đi KÈM MIỄN PHÍ ở trang 1 của endpoint từng lệnh khớp, nên tốn đúng 1 lượt/mã/ngày
-    thay vì 372 trang. Đã kiểm 20/08/2026 trên 5 cặp (mã, ngày): tổng ba phần bằng ĐÚNG
-    `M_TotalVal` của phiên đó — tỉ lệ 1,000× cả 5 — và biến thiên có nghĩa (VCB 19/08 bán
-    xuống 210 tỷ, 18/08 mua lên 89 tỷ). Nó tính trên KHỚP LỆNH, KHÔNG gồm thoả thuận —
-    HPG 19/08: dòng tiền 322,00 tỷ = `mval` 322,00 tỷ, trong khi `pval` 31,75 tỷ đứng ngoài.
-
-    NGHI VẤN CHƯA GIẢI THÍCH ĐƯỢC — `kiem()` phép ④ canh chỗ này. HCC ngày 19/08 ra
-    **1,231×** thay vì 1,000×, và 19/08 đúng là ngày HCC chốt quyền (tiền 3.000đ + cp 10%),
-    hệ số hạ nền đo được của nó là 1,2346. Hai số gần nhau nhưng KHÔNG trùng (lệch 0,3%),
-    và mới có MỘT mẫu — nên đừng chép lại thành "nguyên nhân là hạ nền". Nếu phép ④ cho
-    thấy chỗ lệch luôn rơi vào ngày GDKHQ thì mới kết luận được.
+    PHÂN TRANG BỊ CHẶN — trang 2 trở đi LUÔN trả về `[]`, dù chính nguồn báo "3 trang".
+    Đã thử hết: pageSize 20/30/50/100/200, phiên mới cho từng trang, `code=0`, `stockID=0`,
+    `pageIndex`, `orderBy`, `from`/`to`, ngày dạng dd/MM/yyyy. Nên một lượt chỉ lấy được
+    **200 mã đầu theo bảng chữ cái** của mỗi sàn — HOSE chỉ tới IMP, tức A→I.
+    Vì thế đường này KHÔNG đủ để phủ thị trường; nó dùng cho ① TỔNG TOÀN THỊ TRƯỜNG (khối
+    [1] là số của cả sàn, không bị trần) và ② đối chiếu chéo miễn phí cho 600 mã nó có.
+    Phủ đủ 1.529 mã thì phải đi đường hỏi từng mã.
     """
-    j = goi("/data/GetStockDealDetailPagingByDate_v2",
-            {"code": sym, "page": 1, "pageSize": 20, "tradingDate": ngay}, sym)
-    if not isinstance(j, dict):
-        return None
-    cf = {x.get("StateChange"): x.get("CashFlow")
-          for x in ((j.get("result") or {}).get("Deal_CashFlow_Results") or [])}
-    if not cf:
-        return None
-    return {"cfU": cf.get(1) or 0, "cfF": cf.get(0) or 0, "cfD": cf.get(-1) or 0}
+    for lan in (0, 1):
+        tk, ck = tt_token(lan == 1)
+        try:
+            b = nhipmang.post("https://finance.vietstock.vn/data/" + ep,
+                              {"page": trang, "pageSize": TT_TRANG, "catID": cat,
+                               "date": ngay, "__RequestVerificationToken": tk},
+                              headers={"X-Requested-With": "XMLHttpRequest",
+                                       "Cookie": ck or "",
+                                       "Referer": "https://finance.vietstock.vn/ket-qua-giao-dich"})
+        except Exception:
+            return [], 0
+        t = b.lstrip("\ufeff").lstrip()
+        if t[:1] != "[":
+            continue
+        try:
+            j = json.loads(t)
+        except Exception:
+            return [], 0
+        rows = j[2] if len(j) > 2 and isinstance(j[2], list) else []
+        sotrang = (j[3][0] if len(j) > 3 and isinstance(j[3], list) and j[3] else 0)
+        # CỔNG NGÀY — bỏ CẢ trang nếu nguồn trả về ngày khác ngày xin.
+        rows = [r for r in rows if _ngay(r.get("TradingDate") or "") == ngay]
+        return rows, sotrang
+    return [], 0
 
 
-def phien_ghi(ngay, goi_ma):
-    os.makedirs(PHIEN_DIR, exist_ok=True)
-    p = os.path.join(PHIEN_DIR, f"{ngay}.json")
-    doc = {"date": ngay, "n": len(goi_ma), "ma": goi_ma}
-    tmp = p + ".tmp"
-    json.dump(doc, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    os.replace(tmp, p)
-    return os.path.getsize(p)
+def tt_ngay(ngay):
+    """Cả thị trường một ngày: gộp thống kê giá + thống kê đặt lệnh. Trả về {mã: bản ghi}."""
+    ra = {}
+    for cat in TT_SAN:
+        for ep, lay in (("KQGDThongKeGiaPaging", "gia"), ("KQGDThongKeDatLenhPaging", "dl")):
+            trang, tong = 1, None
+            while True:
+                rows, st = tt_trang(ep, cat, ngay, trang)
+                if tong is None:
+                    tong = st or 1
+                if not rows:
+                    break
+                for r in rows:
+                    m = r.get("StockCode")
+                    if not m:
+                        continue
+                    o = ra.setdefault(m, {})
+                    if lay == "gia":
+                        o.update({
+                            "tc": r.get("BasicPrice"), "o": r.get("OpenPrice"),
+                            "h": r.get("HighestPrice"), "l": r.get("LowestPrice"),
+                            "c": r.get("ClosePrice"), "vwap": r.get("AvrPrice"),
+                            "mv": r.get("M_TotalVol"), "mval": r.get("M_TotalVal"),
+                            "pv": r.get("PT_TotalVol"), "pval": r.get("PT_TotalVal"),
+                            "sh": (round(r["MarketCap"] / r["ClosePrice"])
+                                   if r.get("MarketCap") and r.get("ClosePrice") else None),
+                        })
+                    else:
+                        for k, v in DL.items():
+                            o[v] = r.get(k)
+                if trang >= tong:
+                    break
+                trang += 1
+    return ra
+
+
+def dl_nap(sym, sid, day_du=False):
+    """SỔ LỆNH KHI CHỐT PHIÊN theo từng mã — `KQGDThongKeDatLenhStockPaging`.
+
+    Trả về 30 dòng/lượt (nhiều hơn 20 của bảng giá), có lịch sử, phủ đủ mọi mã. Cần
+    `stockID` dạng SỐ chứ không phải mã chữ — số đó nằm sẵn trong phản hồi của
+    `GetStockDeal_ListPriceByTimeFrame` (trường `StockID`), nên `eod_nap` nhặt luôn.
+
+    Cột lấy về là đúng thứ user hỏi: giá và khối lượng ở bước giá tốt nhất lúc đóng cửa,
+    SỐ LỆNH đặt mua/bán, và TỔNG KHỐI LƯỢNG đặt mua/bán. HPG 19/08: đặt mua 36.500.971 cp
+    qua 14.196 lệnh, đặt bán 24.483.888 cp qua 5.904 lệnh, trong khi khớp được 15.312.500.
+    """
+    if not sid:
+        return {}
+    ra, trang, tong = {}, 1, None
+    while True:
+        for lan in (0, 1):
+            tk, ck = tt_token(lan == 1)
+            try:
+                b = nhipmang.post("https://finance.vietstock.vn/data/KQGDThongKeDatLenhStockPaging",
+                                  {"page": trang, "pageSize": 200, "catID": 1, "stockID": sid,
+                                   "fromDate": "2000-01-01",
+                                   "toDate": datetime.datetime.now(TZ).strftime("%Y-%m-%d"),
+                                   "__RequestVerificationToken": tk},
+                                  headers={"X-Requested-With": "XMLHttpRequest", "Cookie": ck or "",
+                                           "Referer": "https://finance.vietstock.vn/ket-qua-giao-dich"})
+            except Exception:
+                return ra
+            t = b.lstrip("\ufeff").lstrip()
+            if t[:1] == "[":
+                break
+        else:
+            return ra
+        try:
+            j = json.loads(t)
+        except Exception:
+            return ra
+        rows = j[1] if len(j) > 1 and isinstance(j[1], list) else []
+        if tong is None:
+            tong = (j[2][0] if len(j) > 2 and isinstance(j[2], list) and j[2] else 1)
+        if not rows:
+            break
+        for r in rows:
+            ra[_ngay(r["TradingDate"])] = {v: r.get(k) for k, v in DL.items()}
+        if not day_du or trang >= (tong or 1) or trang > 400:
+            break
+        trang += 1
+    return ra
 
 
 # ── đối chiếu ─────────────────────────────────────────────────────────────────
@@ -418,92 +526,90 @@ def entrade(sym, t0, t1):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ma", nargs="*", help="giới hạn ở vài mã (để chạy thử)")
-    ap.add_argument("--eod", action="store_true", help="chỉ làm tầng số chốt phiên")
-    ap.add_argument("--phien", action="store_true", help="chỉ làm tầng nến 1 phút")
-    ap.add_argument("--tatca", action="store_true",
-                    help="cào bù EOD: lật HẾT trang (~22 giờ cho cả thị trường)")
-    ap.add_argument("--ngay", help="nến 1 phút cho ngày này (mặc định: phiên gần nhất)")
-    ap.add_argument("--tu", help="cào bù nến 1 phút từ ngày này")
+    ap.add_argument("--ma", nargs="*", help="giới hạn ở vài mã (chỉ áp cho đường hỏi từng mã)")
+    ap.add_argument("--ngay", nargs="*",
+                    help="cào TOÀN THỊ TRƯỜNG các ngày này (mặc định: hôm nay)")
+    ap.add_argument("--tu", help="cào bù toàn thị trường từ ngày này")
     ap.add_argument("--den", help="… tới ngày này")
-    ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo với Entrade sau khi chạy")
+    ap.add_argument("--sau", action="store_true",
+                    help="đường HỎI TỪNG MÃ — chỉ dùng cho lịch sử SÂU hơn cửa sổ ~09/2025")
+    ap.add_argument("--tatca", action="store_true", help="với --sau: lật HẾT trang")
+    ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo sau khi chạy")
     a = ap.parse_args()
-    lam_eod = a.eod or not a.phien
-    lam_phien = a.phien or not a.eod
 
-    u = json.load(open(UNI, encoding="utf-8"))["stocks"]
-    ma = [s["sym"] for s in u]
-    if a.ma:
-        xin = {x.upper() for x in a.ma}
-        ma = [m for m in ma if m in xin]
-    print(f"  {len(ma)} mã", flush=True)
-
-    if lam_eod:
+    if a.sau:
+        # ĐƯỜNG CHẬM, chỉ để bồi lịch sử sâu: 20 dòng/lượt, 214 trang cho một mã như VCB.
+        u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+        ma = [x["sym"] for x in u]
+        if a.ma:
+            xin = {x.upper() for x in a.ma}
+            ma = [m for m in ma if m in xin]
+        print(f"  [đường sâu] {len(ma)} mã", flush=True)
         t0 = time.time()
-        ok = loi = 0
-        tong_ngay = 0
+        ok = loi = tong = 0
+        sids = {}
         for i, m in enumerate(ma):
             try:
-                moi = eod_nap(m, day_du=a.tatca)
+                moi, sid = eod_nap(m, day_du=a.tatca)
             except Exception:
-                loi += 1
-                continue
+                moi, sid = None, None
             if not moi:
                 loi += 1
                 continue
-            tong_ngay += eod_ghi(m, moi)
+            # SỔ LỆNH CHỐT PHIÊN — trộn vào cùng bản ghi ngày, cùng nhịp với giá.
+            try:
+                for d, r in (dl_nap(m, sid, day_du=a.tatca) or {}).items():
+                    if d in moi:
+                        moi[d].update(r)
+                    else:
+                        moi[d] = r
+            except Exception:
+                pass
+            if sid:
+                sids[m] = sid
+            tong += eod_ghi(m, moi, sid)
             ok += 1
             if (i + 1) % 200 == 0:
                 print(f"    …{i+1}/{len(ma)}  {time.time()-t0:.0f}s", flush=True)
-        print(f"  số chốt phiên: ok {ok} · lỗi {loi} · tổng {tong_ngay:,} dòng"
+        print(f"  ok {ok} · lỗi {loi} · tổng {tong:,} dòng · {time.time()-t0:.0f}s", flush=True)
+        if a.kiem:
+            kiem(ma[:40])
+        return 0
+
+    # ĐƯỜNG CHÍNH: toàn thị trường theo ngày.
+    ngays = []
+    if a.tu:
+        d0 = datetime.datetime.strptime(a.tu, "%Y-%m-%d").date()
+        d1 = datetime.datetime.strptime(a.den or a.tu, "%Y-%m-%d").date()
+        while d0 <= d1:
+            if d0.weekday() < 5:
+                ngays.append(d0.strftime("%Y-%m-%d"))
+            d0 += datetime.timedelta(days=1)
+        ngays.reverse()                  # mới trước — hỏng giữa chừng vẫn có phần gần đây
+    else:
+        ngays = a.ngay or [datetime.datetime.now(TZ).strftime("%Y-%m-%d")]
+
+    tong_ma = 0
+    for ng in ngays:
+        t0 = time.time()
+        try:
+            ra = tt_ngay(ng)
+        except Exception as e:
+            print(f"  {ng}: LỖI {type(e).__name__} {str(e)[:80]}", flush=True)
+            continue
+        if not ra:
+            print(f"  {ng}: không có dữ liệu (nghỉ, hoặc ngoài cửa sổ ~09/2025)", flush=True)
+            continue
+        for m, r in ra.items():
+            eod_ghi(m, {ng: r})
+        co_dl = sum(1 for r in ra.values() if r.get("nMua") is not None)
+        tong_ma += len(ra)
+        print(f"  {ng}: {len(ra):,} mã · {co_dl:,} mã có sổ lệnh chốt phiên"
               f" · {time.time()-t0:.0f}s", flush=True)
-
-    if lam_phien:
-        ngays = []
-        if a.tu:
-            d0 = datetime.datetime.strptime(a.tu, "%Y-%m-%d").date()
-            d1 = datetime.datetime.strptime(a.den or a.tu, "%Y-%m-%d").date()
-            while d0 <= d1:
-                if d0.weekday() < 5:
-                    ngays.append(d0.strftime("%Y-%m-%d"))
-                d0 += datetime.timedelta(days=1)
-        else:
-            ngays = [a.ngay or datetime.datetime.now(TZ).strftime("%Y-%m-%d")]
-        for ng in ngays:
-            p = os.path.join(PHIEN_DIR, f"{ng}.json")
-            if os.path.exists(p) and a.tu:
-                continue                     # cào bù chạy lại được: có rồi thì bỏ qua
-            t0 = time.time()
-            goi_ma, ok, rong, loi, dt = {}, 0, 0, 0, {}
-            for m in ma:
-                r = phien_mot(m, ng)
-                if r is None:
-                    loi += 1
-                elif r:
-                    goi_ma[m] = r
-                    ok += 1
-                else:
-                    rong += 1
-                if r:
-                    # Dòng tiền theo hướng giá về KHO NGÀY chứ không vào file phiên: nó là
-                    # ba con số cho CẢ phiên, cùng nhịp với các cột chốt phiên khác.
-                    c = dongtien(m, ng)
-                    if c:
-                        dt[m] = {ng: c}
-            for m, x in dt.items():          # gom rồi ghi một lượt, đừng đọc-ghi lại file
-                eod_ghi(m, x)                 # ~200KB cho từng mã trong vòng lặp
-            if not ok:
-                print(f"  {ng}: không mã nào khớp lệnh — bỏ qua (nghỉ, hoặc hết lịch sử)",
-                      flush=True)
-                continue
-            kb = phien_ghi(ng, goi_ma) / 1024
-            diem = sum(len(x["t"]) for x in goi_ma.values())
-            print(f"  {ng}: {ok} mã có khớp lệnh · {rong} mã không · lỗi {loi}"
-                  f" · {diem:,} nến 1 phút · {kb:,.0f} KB · dòng tiền {len(dt)} mã"
-                  f" · {time.time()-t0:.0f}s", flush=True)
-
+    print(f"  xong {len(ngays)} ngày · {tong_ma:,} lượt (mã × ngày)", flush=True)
     if a.kiem:
-        kiem(ma[:40])
+        u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+        kiem([x["sym"] for x in u][:40])
     return 0
 
 
