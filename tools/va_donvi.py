@@ -94,11 +94,68 @@ def main():
                     json.dump(o, g, ensure_ascii=False, separators=(",", ":"))
                 os.replace(tmp, p)
 
+    # ── LUẬT 2: TỰ ĐỐI CHIẾU BẰNG `KHỐI LƯỢNG × GIÁ`, KHÔNG CẦN NGUỒN NGOÀI ────────────
+    # Luật 1 đòi có cả Vietstock lẫn VNDirect ở cùng một ô nên BỎ SÓT phần VNDirect không
+    # phủ. Ca lọt lưới: MCH 17/12/2025 `tdBanGT` = 220.000 TỶ trong khi khối lượng bán
+    # 1.000.000 cp × giá 212.500đ = 212,5 tỷ — sai 1000 lần, mà `tdBanTG` không có nên
+    # luật 1 không thấy. Đây chính là ô đẻ ra "tự doanh ròng −220.196 tỷ · chiếm 706,1%"
+    # user nhìn thấy trên trang.
+    #
+    # GIÁ TRỊ CHIA KHỐI LƯỢNG PHẢI RA MỘT MỨC GIÁ TRONG TẦM PHIÊN. Biên độ rộng nhất của
+    # sàn là ±15% (UPCOM), phiên chào sàn ±40%, nên tỉ lệ hợp lệ nằm gọn trong [0,5 ; 2].
+    # Lấy ngưỡng **100 lần** — cách mọi biến động thật hai bậc độ lớn, không thể là giá.
+    doi2 = 0
+    vd2 = []
+    for f in sorted(os.listdir(GD)):
+        if not f.endswith(".json"):
+            continue
+        p = os.path.join(GD, f)
+        try:
+            o = json.load(open(p, encoding="utf-8"))
+        except Exception:
+            continue
+        n = len(o.get("d") or [])
+        c = o.get("c") or []
+        sua = 0
+        for kG, kKL in (("fnMuaGT", "fnMuaKL"), ("fnBanGT", "fnBanKL"),
+                        ("tdMuaGT", "tdMuaKL"), ("tdBanGT", "tdBanKL")):
+            a, kl = o.get(kG), o.get(kKL)
+            if not a or not kl:
+                continue
+            for i in range(min(n, len(a), len(kl), len(c))):
+                x, q, gia = a[i], kl[i], c[i]
+                if not x or not q or not gia:
+                    continue
+                r = x / (q * gia)
+                hs = None
+                if r > 100:
+                    hs = 1 / 1000.0
+                elif r < 0.01:
+                    hs = 1000.0
+                if hs is None:
+                    continue
+                if len(vd2) < 8:
+                    vd2.append((o.get("sym"), o["d"][i], kG, int(x), int(q * gia),
+                                "chia 1000" if hs < 1 else "nhân 1000"))
+                a[i] = round(x * hs)
+                sua += 1
+        if sua:
+            doi2 += sua
+            if not THU:
+                tmp = p + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as g:
+                    json.dump(o, g, ensure_ascii=False, separators=(",", ":"))
+                os.replace(tmp, p)
+
     print("VÁ ĐƠN VỊ ×1000 (trọng tài: VNDirect)")
     print("  ô đã sửa : {:,}".format(doi))
     print("  mã bị đụng: {:,}".format(ma_doi))
     for s, d, k, x, y, cach in vd:
         print("    {:<5s} {} {:<10s} {:>22,} -> theo VND {:>18,}  ({})".format(s, d, k, x, y, cach))
+    print("  ── luật 2 (tự đối chiếu KL × giá, không cần nguồn ngoài) ──")
+    print("  ô đã sửa : {:,}".format(doi2))
+    for s2, d2, k2, x2, y2, cach in vd2:
+        print("    {:<5s} {} {:<10s} {:>22,} -> KL×giá {:>18,}  ({})".format(s2, d2, k2, x2, y2, cach))
     if THU:
         print("  (--thu: KHÔNG ghi file nào)")
     return 0

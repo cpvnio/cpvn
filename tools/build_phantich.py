@@ -56,6 +56,24 @@ PROFILE = os.path.join(BASE, "data", "profile")
 # (22/08/2026): ô chọn khung cho phép xem tới 300 phiên trên đồ thị, mà bấm vào một cột
 # là nhảy tới phiên đó — không có file thì bấm xong ra bảng trống.
 # `ptCoFile` bên client cắt ở 320, HAI SỐ NÀY PHẢI KHỚP NHAU.
+# NGUỒN CHO TẦNG DÒNG TIỀN — user chốt 22/08/2026: *"tạm ẩn nguồn Vietstock đi, toàn bộ
+# dùng nguồn VNDirect"*.
+#   "vnd"       -> `fnMuaTG`/`tdMuaTG` (TỔNG, gồm thoả thuận), sâu 1.000 phiên
+#   "vietstock" -> `fnMuaGT`/`tdMuaGT` (khớp lệnh tách riêng), chỉ 249 phiên
+#
+# VÌ SAO CHỌN VNDIRECT — ba lý do đo được, không phải sở thích:
+#   ① SÂU HƠN 4 LẦN: 1.000 phiên so với 249 (Vietstock chặn cứng 1 năm, đã thử lách bằng
+#     cửa sổ ngày, nguồn bỏ qua cửa sổ).
+#   ② CHÍNH XÁC HƠN: đối chiếu 195.524 ô, phần lệch gần như toàn bộ là **lô lẻ** mà
+#     VNDirect có còn Vietstock làm tròn về lô chẵn; thêm 116 ô Vietstock làm tròn xuống 0.
+#   ③ SẠCH HƠN: tìm được **112 ô Vietstock sai đơn vị ×1000** (MCH 17/12/2025 ghi tự doanh
+#     bán 220 NGHÌN tỷ trong khi khối lượng × giá ra 212,5 tỷ). Chính mấy ô này đẻ ra
+#     "tự doanh ròng −220.196 tỷ · chiếm 706,1%" trên trang. VNDirect không có ô nào như vậy.
+#
+# ĐỔI LẠI: mất phần TÁCH khớp lệnh / thoả thuận (VNDirect chỉ cho tổng). Kho vẫn giữ
+# nguyên trường Vietstock, đổi hằng số này về "vietstock" là quay lại được.
+NGUON_DONGTIEN = "vnd"
+
 SO_PHIEN_FILE = 320
 MIN_MA = 100             # phiên ít mã hơn thì không dựng file ngày
 
@@ -154,14 +172,15 @@ def main():
             # số khối ngoại hơn hẳn. Dùng chung `n` là đọc ra "khối ngoại chỉ chiếm 2% giá
             # trị" trong khi sự thật là 2% đó tính trên mẫu số của cả 1.525 mã còn tử số
             # mới có 300 mã.
-            fm, fb2 = col["fnMuaGT"][i], col["fnBanGT"][i]
+            _hau = "TG" if NGUON_DONGTIEN == "vnd" else "GT"
+            fm, fb2 = col["fnMua" + _hau][i], col["fnBan" + _hau][i]
             if fm is not None or fb2 is not None:
                 t["fnMua"] += fm or 0
                 t["fnBan"] += fb2 or 0
                 t["nFn"] += 1
             # TỰ DOANH — đếm riêng `nTd` y như khối ngoại, cùng lý do: hai tầng cào bởi
             # hai lượt khác nhau nên độ phủ khác nhau, dùng chung mẫu số là ra tỉ lệ bịa.
-            tm, tb2 = col["tdMuaGT"][i], col["tdBanGT"][i]
+            tm, tb2 = col["tdMua" + _hau][i], col["tdBan" + _hau][i]
             if tm is not None or tb2 is not None:
                 t["tdMua"] += tm or 0
                 t["tdBan"] += tb2 or 0

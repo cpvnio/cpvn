@@ -1558,7 +1558,31 @@ nghĩa và khác độ sâu:
 > `FREEFLOAT` và `FOREIGN_OWNERSHIP` theo `reportDate` — nhưng chưa cào, vì đó là chuỗi
 > theo KỲ BÁO CÁO chứ không theo phiên, phải gióng lại trục.
 
-### VIETSTOCK CÓ Ô SAI ĐƠN VỊ ×1000 — `tools/va_donvi.py`, TRỌNG TÀI LÀ VNDIRECT
+### TẦNG DÒNG TIỀN NAY LẤY VNDIRECT — `NGUON_DONGTIEN` trong `build_phantich.py`
+
+User chốt 22/08/2026: *"tạm ẩn nguồn Vietstock đi, toàn bộ dùng nguồn VNDirect"*. Ba lý do
+đo được:
+
+| | Vietstock | VNDirect |
+|---|---|---|
+| độ sâu | 249 phiên (chặn cứng 1 năm) | **1.000 phiên** |
+| lô lẻ | làm tròn về lô chẵn, 116 ô làm tròn xuống 0 | **có đủ** |
+| ô sai đơn vị ×1000 | **112 ô** | **0** |
+
+Đổi lại **mất phần tách khớp lệnh / thoả thuận** (VNDirect chỉ cho tổng). Kho vẫn giữ
+nguyên trường Vietstock — đổi hằng số về `"vietstock"` là quay lại được.
+
+> **MỘT ĐỊNH NGHĨA CHO CẢ KHUNG.** Từ khi chuyển nguồn, con số khối ngoại/tự duyệt là
+> TỔNG ở mọi phiên, nên mẫu số của "mức tham gia" phải là **tổng giao dịch** (`mval +
+> pval`) chứ không riêng khớp lệnh. Chia lệch mẫu là thổi tỉ lệ lên đúng bằng phần thoả
+> thuận — 15,1% giá trị khối ngoại toàn kho.
+
+> **`nFn`/`nTd` = 0 NGHĨA LÀ CHƯA CÓ SỐ, KHÔNG PHẢI BẰNG 0.** Kho gộp cộng dồn từ 0 nên
+> `fnMua` luôn `!= null`; hỏi `!=null` thì ô hiện "0 tỷ · 0 mã" và đọc ra như *khối đó
+> không giao dịch gì*, trong khi sự thật là *nguồn không có số*. Phải hỏi **số mã**.
+> VNDirect phủ tự doanh 983/999 phiên; 16 phiên trống nay hiện `—` thay vì `0`.
+
+### VIETSTOCK CÓ Ô SAI ĐƠN VỊ ×1000 — `tools/va_donvi.py`, HAI LUẬT
 
 User mở khung 300 phiên và thấy **"Tự doanh ròng −363.594 tỷ · chiếm 746,1%"** ở phiên
 16/12/2025, trong khi cả thị trường phiên đó chỉ khớp 27.803 tỷ. Truy ra **một ô**:
@@ -1580,6 +1604,17 @@ thẳng vào tổng toàn thị trường.
 > `Vietstock(khớp lệnh + thoả thuận) == VNDirect(tổng)` đúng ở **98,8%** ô khối ngoại,
 > **99,5%** ô tự doanh. Tỉ lệ rơi đúng 1000,0 thì không còn cách giải thích nào khác.
 > Chỉ động vào ô có tỉ lệ TRÒN 1000; ô lệch vì lô lẻ để nguyên.
+
+**LUẬT 2 — TỰ ĐỐI CHIẾU `GIÁ TRỊ ÷ (KHỐI LƯỢNG × GIÁ)`, KHÔNG CẦN NGUỒN NGOÀI.** Luật 1
+đòi có cả hai nguồn ở cùng một ô nên bỏ sót phần VNDirect không phủ. Ca lọt lưới:
+**MCH 17/12/2025 `tdBanGT` = 220.000 TỶ** trong khi 1.000.000 cp × 212.500đ = 212,5 tỷ —
+đúng ô đẻ ra *"tự doanh ròng −220.196 tỷ · chiếm 706,1%"* user nhìn thấy. Giá trị chia
+khối lượng phải ra một mức giá trong tầm phiên (biên độ rộng nhất là ±40% ngày chào sàn),
+nên ngưỡng **100 lần** cách mọi biến động thật hai bậc độ lớn. Bắt thêm 14 ô.
+
+> **PHÉP KIỂM NÀY CŨNG XÁC NHẬN `mval` SẠCH:** chạy trên **972.653 ô** thì **0 ô** lệch
+> quá 3 lần. Nên phiên 05/08/2025 khớp 80.519 tỷ là số THẬT — tổng `KL × giá` của phiên
+> đó ra 79.670 tỷ, lệch 1,1%.
 
 > **BÀI HỌC RỘNG HƠN:** kho một nguồn thì loại lỗi này **không thể phát hiện** — số vẫn
 > hợp lệ, vẫn parse được, chỉ sai. Có nguồn thứ hai mới thành một phép kiểm chạy được

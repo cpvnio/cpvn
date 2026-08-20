@@ -845,7 +845,6 @@ function ptTop(){
      xuống"; giá trị giao dịch là câu thứ hai. Bản trước không có chỉ số nên nhìn vào
      không biết phiên đó là phiên tăng hay giảm — user chốt 20/08/2026. */
   const vn=cs.VNINDEX, pc=vn&&vn.pc[i];
-  const soChia=(t.nFn||[]).filter(x=>x).length;
   const phu=['VN30','HNX','UPCOM'].map(k=>{
     const x=cs[k]; if(!x||x.c[i]==null) return '';
     const p=x.pc[i];
@@ -900,19 +899,23 @@ function ptTop(){
        ra vì hai tầng này phủ khác nhau — tự doanh phiên 20/08 chỉ có 62 mã trong khi khối
        ngoại có 1.525, mà phần lớn 1.463 mã kia KHÔNG PHẢI thiếu dữ liệu: chúng không có
        tự doanh thật. Không ghi số mã thì "+508 tỷ" đọc như của cả thị trường. */
+    /* ĐẾM SỐ MÃ, ĐỪNG HỎI `!=null`. Kho gộp luôn ghi 0 cho phiên không có dữ liệu (nó
+       cộng dồn từ 0), nên `!=null` luôn đúng và ô hiện "0 tỷ · 0 mã" — đọc ra như *khối
+       đó không giao dịch gì*, trong khi sự thật là *nguồn không có số*. Hai câu khác hẳn
+       nhau. User thấy đúng chỗ này ở phiên 05/08/2025. */
     +box('<i class="pkN"></i>Khối ngoại ròng',
-         (t.fnMua&&t.fnMua[i]!=null)
+         (t.nFn&&t.nFn[i])
            ?('<span class="'+cls(t.fnMua[i]-t.fnBan[i])+'">'+((t.fnMua[i]-t.fnBan[i])>0?'+':'')
              +num(t.fnMua[i]-t.fnBan[i])+' tỷ</span>'):'—',
-         (t.fnMua&&t.fnMua[i]!=null)
+         (t.nFn&&t.nFn[i])
            ?('mua <b class="up">'+num(t.fnMua[i])+'</b> · bán <b class="dn">'+num(t.fnBan[i])
              +'</b> tỷ · chiếm <b>'+(t.mval[i]?((t.fnMua[i]+t.fnBan[i])/2/t.mval[i]*100).toFixed(1):'—')
              +'%</b> · <b>'+num(t.nFn[i])+'</b> mã'):'kho chưa có')
     +box('<i class="pkT"></i>Tự doanh ròng',
-         (t.tdMua&&t.tdMua[i]!=null)
+         (t.nTd&&t.nTd[i])
            ?('<span class="'+cls(t.tdMua[i]-t.tdBan[i])+'">'+((t.tdMua[i]-t.tdBan[i])>0?'+':'')
              +num(t.tdMua[i]-t.tdBan[i])+' tỷ</span>'):'—',
-         (t.tdMua&&t.tdMua[i]!=null)
+         (t.nTd&&t.nTd[i])
            ?('mua <b class="up">'+num(t.tdMua[i])+'</b> · bán <b class="dn">'+num(t.tdBan[i])
              +'</b> tỷ · chiếm <b>'+(t.mval[i]?((t.tdMua[i]+t.tdBan[i])/2/t.mval[i]*100).toFixed(1):'—')
              +'%</b> · <b>'+num(t.nTd[i])+'</b> mã có'):'kho chưa có')
@@ -928,11 +931,7 @@ function ptTop(){
        nay đã nhét vào chính hai ô đó. */
     +'<p class="ptleg"><i class="pk0"></i> phiên kho chưa cào đủ mã'
       +' &nbsp; <i class="pk3"></i> VN-Index (trục phải)'
-      +(soChia<t.d.length
-        ?(' &nbsp;·&nbsp; <b>'+num(soChia)+' phiên gần nhất</b> chia theo giá trị khớp lệnh;'
-          +' xa hơn nguồn chỉ cho TỔNG nên chia theo tổng giao dịch — cùng ý nghĩa'
-          +' "bao nhiêu phần phiên là của khối đó"')
-        :'')
+      +' &nbsp;·&nbsp; phần tô = <b>mức tham gia</b> của khối đó trong TỔNG giao dịch'
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem chi tiết phiên đó</b></p>'
     +ptGiai('cot','Vì sao màu trên cột lại chia như vậy',
        'Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải mua cộng bán: mỗi '
@@ -1052,16 +1051,17 @@ function ptVeChart(){
        Cùng trả lời "bao nhiêu phần giao dịch phiên này là của khối đó", nên đọc liền
        mạch qua cả khung; và vì chia đúng mẫu, không có chuyện đội lên 15% như khi lấy
        thẳng tổng gán vào mẫu khớp lệnh. */
+    /* MỘT ĐỊNH NGHĨA DUY NHẤT CHO CẢ KHUNG (từ 22/08/2026, khi kho chuyển hẳn sang
+       VNDirect). Con số khối ngoại/tự doanh nay là TỔNG (gồm thoả thuận) ở mọi phiên, nên
+       mẫu số phải là TỔNG giao dịch — chia cho riêng khớp lệnh là thổi tỉ lệ lên đúng
+       bằng phần thoả thuận. Nhân lại với chiều cao cột để phần tô đúng bằng tỉ lệ tham
+       gia; cột vẫn là giá trị khớp lệnh. */
     const mval=t.mval[i]||0;
-    const coChia=!!(t.nFn&&t.nFn[i]);
     const tongGD=mval+(t.pval?t.pval[i]||0:0);
     let fn=0, td=0;
-    if(coChia){
-      fn=((t.fnMua?t.fnMua[i]||0:0)+(t.fnBan?t.fnBan[i]||0:0))/2;
-      td=((t.tdMua?t.tdMua[i]||0:0)+(t.tdBan?t.tdBan[i]||0:0))/2;
-    }else if(t.nFnT&&t.nFnT[i]&&tongGD>0){
-      fn=((t.fnMuaT[i]||0)+(t.fnBanT[i]||0))/2/tongGD*mval;
-      td=((t.tdMuaT?t.tdMuaT[i]||0:0)+(t.tdBanT?t.tdBanT[i]||0:0))/2/tongGD*mval;
+    if(tongGD>0){
+      if(t.nFn&&t.nFn[i]) fn=((t.fnMua[i]||0)+(t.fnBan[i]||0))/2/tongGD*mval;
+      if(t.nTd&&t.nTd[i]) td=((t.tdMua[i]||0)+(t.tdBan[i]||0))/2/tongGD*mval;
     }
     const con=Math.max(0,mval-fn-td);      // kẹp 0: nhiễu nguồn không được đẻ cột âm
     let day=0;
@@ -1134,14 +1134,10 @@ function ptVeChart(){
       +'<div class="tpr tp2"><span>thoả thuận</span><i>'+num(t.pval[k])+' tỷ</i></div>'
       +'<div class="tpr"><span>Khối lượng khớp</span><i>'+num(t.mv[k])+' nghìn cp</i></div>'
       +((t.nFn&&t.nFn[k])
-        ?'<div class="tpr"><span>Khối ngoại ròng <b>khớp lệnh</b></span><i class="'+cls(t.fnMua[k]-t.fnBan[k])+'">'+
+        ?'<div class="tpr"><span>Khối ngoại ròng</span><i class="'+cls(t.fnMua[k]-t.fnBan[k])+'">'+
           ((t.fnMua[k]-t.fnBan[k])>0?'+':'')+num(t.fnMua[k]-t.fnBan[k])+' tỷ</i></div>'+
-         '<div class="tpr tp2"><span>mua / bán</span><i>'+num(t.fnMua[k])+' / '+num(t.fnBan[k])+' tỷ</i></div>'
-        :((t.nFnT&&t.nFnT[k])
-          ?'<div class="tpr"><span>Khối ngoại ròng <b>tổng</b></span><i class="'+cls(t.fnMuaT[k]-t.fnBanT[k])+'">'+
-            ((t.fnMuaT[k]-t.fnBanT[k])>0?'+':'')+num(t.fnMuaT[k]-t.fnBanT[k])+' tỷ</i></div>'+
-           '<div class="tpr tp2"><span>gồm cả thoả thuận</span><i>'+num(t.fnMuaT[k])+' / '+num(t.fnBanT[k])+' tỷ</i></div>':''))
-      +((t.tdMua&&t.tdMua[k]!=null)
+         '<div class="tpr tp2"><span>mua / bán</span><i>'+num(t.fnMua[k])+' / '+num(t.fnBan[k])+' tỷ</i></div>':'')
+      +((t.nTd&&t.nTd[k])
         ?'<div class="tpr"><span>Tự doanh ròng</span><i class="'+cls(t.tdMua[k]-t.tdBan[k])+'">'+
           ((t.tdMua[k]-t.tdBan[k])>0?'+':'')+num(t.tdMua[k]-t.tdBan[k])+' tỷ</i></div>':'')
       +(cs&&cs.c[k]!=null?'<div class="tpr"><span>VN-Index</span><i>'+num2(cs.c[k])+
