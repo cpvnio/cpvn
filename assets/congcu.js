@@ -705,7 +705,8 @@ async function renderNiemYet(){
 
    Dữ liệu chia hai tầng: `data/phantich.json` nhẹ (chỉ chuỗi toàn thị trường, tải ngay) và
    `data/phien/{NGÀY}.json` (bảng mã + vùng giá, tải khi chọn phiên). */
-const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null, n:60};
+const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
+          n:60, ma:null, maD:null, nMa:63};   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
   if(PT.tt) return PT.tt;
@@ -749,7 +750,7 @@ async function ptVe(){
       +'<span class="ptbarn">'+co.length+' phiên có dữ liệu đầy đủ</span></div>'
     +'<div id="ptTop"></div><div id="ptTab"></div>';
   ptTop();
-  await ptBang();
+  if(PT.ma){ ptVeMa(); } else { await ptBang(); }
   $('#ptNgay').onchange=e=>{ PT.ngay=e.target.value; PT.mo=null; ptVe(); };
   $('#ptTruoc').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>0){ PT.ngay=co[j-1]; PT.mo=null; ptVe(); } };
   $('#ptSau').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>=0&&j<co.length-1){ PT.ngay=co[j+1]; PT.mo=null; ptVe(); } };
@@ -810,8 +811,10 @@ let ptCols=[];
 function ptVeChart(){
   const cv=$('#ptCv'); if(!cv) return;
   const o=PT.tt, t=o.tt;
-  const iSel=t.d.indexOf(PT.ngay);
-  const i1=Math.min(t.d.length, Math.max(iSel+1, PT.n)), i0=Math.max(0, i1-PT.n);
+  /* KHUNG CỐ ĐỊNH Ở N PHIÊN GẦN NHẤT, KHÔNG CO THEO PHIÊN ĐANG CHỌN. Bản trước lấy
+     `i1 = max(iSel+1, N)` nên bấm vào một cột cũ là mọi cột SAU nó biến mất — chọn xong
+     không còn đường bấm quay lại, phải dùng ô chọn ngày. User chốt 20/08/2026. */
+  const i1=t.d.length, i0=Math.max(0, i1-PT.n);
   const dpr=devicePixelRatio||1, W=cv.clientWidth||800;
   /* CAO HƠN HẲN (user chốt 20/08/2026): 190px thì mấy chục cột chồng lên nhau thành một
      dải, không đọc được cột nào với cột nào. Khổ hẹp thấp hơn vì màn dọc còn phải chừa
@@ -832,7 +835,13 @@ function ptVeChart(){
      dòng ghi chú dưới đồ thị không cứu được: mắt đọc cột trước khi đọc chữ.
      Dưới 60% số mã của phiên dày nhất trong khung -> tô XÁM, và nói ra trong chú thích. */
   const duPhu=i=>nMax>0&&(t.n[i]||0)>=nMax*0.6;
-  const buoc=ptBuoc(mx), dinh=Math.ceil(mx/buoc)*buoc;
+  /* TRẦN CỐ ĐỊNH 50.000 TỶ (user chốt 20/08/2026), bước 5.000 -> 10 vạch. Trần cố định
+     thì đổi khung thời gian hay đổi phiên, chiều cao cột vẫn so thẳng được với lần trước;
+     trần co theo dữ liệu thì cùng một phiên nhìn cao thấp khác nhau tuỳ khung đang mở.
+     Vượt 50.000 thì mới nới, và nới theo bước tròn. */
+  const TRAN_VOL=50000;
+  let dinh=TRAN_VOL, buoc=5000;
+  if(mx>TRAN_VOL){ buoc=ptBuoc(mx); dinh=Math.ceil(mx/buoc)*buoc; }
   /* Chừa chỗ TRÁI cho nhãn trục — đo bằng chính chữ sắp in, đừng đoán: "50,000" và "500"
      rộng khác nhau, ghim cứng một số là hoặc cụt nhãn hoặc phí chỗ. */
   g.font='11px system-ui,sans-serif';
@@ -947,6 +956,145 @@ function ptDiemSang(r){
     +cot('🤝','Thoả thuận lớn nhất','giao dịch ngoài sổ lệnh', tt)
     +cot('🏭','Ngành hút tiền','▲▼ = số mã tăng/giảm trong ngành', nganh)
     +'</div></div></div>';
+}
+
+/* ============================ PHÂN TÍCH MỘT MÃ (3 tháng) ============================
+   Bấm một mã ở bảng hoặc ở khối Điểm sáng -> mở hẳn một trang con cho mã đó. Dữ liệu đọc
+   THẲNG `data/giaodich/{MÃ}.json` — không cần dựng thêm file gộp nào, và file một mã ở độ
+   sâu 100 phiên chỉ vài chục KB.
+
+   BỘ VẼ DÙNG CHUNG `ptVe1()` cho mọi đồ thị nhỏ. Sáu đồ thị mà mỗi cái một đoạn canvas
+   riêng là sáu chỗ phải sửa mỗi lần đổi bảng màu hay đổi cách chia trục. */
+function ptVe1(cv, cfg){
+  if(!cv) return;
+  const dpr=devicePixelRatio||1, W=cv.clientWidth||600, H=cfg.cao||150;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const dark=document.documentElement.classList.contains('theme-dark')||
+    (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
+  const cg=dark?'rgba(148,163,184,.20)':'rgba(100,116,139,.16)', ct=dark?'#94a3b8':'#64748b';
+  const S=cfg.series.filter(x=>x&&x.v);
+  if(!S.length) return;
+  const n=cfg.d.length;
+  let lo=Infinity, hi=-Infinity;
+  for(const s of S) for(let i=0;i<n;i++){ const v=cfg.chong?S.reduce((a,x)=>a+(x.v[i]||0),0):s.v[i];
+    if(v!=null&&!isNaN(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); } }
+  if(!(hi>-Infinity)) return;
+  /* Đồ thị CỘT phải CHỨA MỐC 0 — cột mà không từ 0 thì tỉ lệ chiều cao nói dối.
+     Nhưng ghim `lo=0` thì cột ÂM biến mất: đồ thị "% thay đổi mỗi phiên" chỉ còn phiên
+     tăng, đọc ra như mã chỉ có lên chứ không có xuống. Nên lấy `min(0, …)`/`max(0, …)`
+     và vẽ từ ĐƯỜNG 0 ra hai phía.
+     Đồ thị ĐƯỜNG (giá, vốn hoá) thì không kéo về 0: kéo về là mọi biến động thành vạch phẳng. */
+  if(cfg.kieu!=='line'){ lo=Math.min(0,lo); hi=Math.max(0,hi); }
+  else { const b=(hi-lo)*0.10||1; lo-=b; hi+=b; }
+  if(hi<=lo) hi=lo+1;
+  g.font='10px system-ui,sans-serif';
+  const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14, padT=6;
+  const plotH=H-padB-padT, plotW=W-padL;
+  const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
+  g.strokeStyle=cg; g.lineWidth=1; g.fillStyle=ct; g.textAlign='right'; g.textBaseline='middle';
+  for(let k=0;k<=3;k++){ const v=lo+(hi-lo)*k/3, yy=y(v);
+    g.beginPath(); g.moveTo(padL,yy+.5); g.lineTo(W,yy+.5); g.stroke();
+    g.fillText(cfg.nhan?cfg.nhan(v):num(v), padL-4, yy); }
+  const gap=plotW/n, bw=Math.max(1,gap*0.7);
+  if(cfg.kieu==='line'){
+    for(const s of S){ g.strokeStyle=s.mau; g.lineWidth=1.8; g.beginPath(); let dau=true;
+      for(let i=0;i<n;i++){ const v=s.v[i]; if(v==null||isNaN(v)){ dau=true; continue; }
+        const x=padL+i*gap+gap/2; if(dau){ g.moveTo(x,y(v)); dau=false; } else g.lineTo(x,y(v)); }
+      g.stroke(); }
+  } else {
+    const y0=y(0);
+    if(lo<0){ g.strokeStyle=ct; g.lineWidth=1; g.beginPath();
+      g.moveTo(padL,y0+.5); g.lineTo(W,y0+.5); g.stroke(); }
+    for(let i=0;i<n;i++){ let day=0;
+      for(const s of S){ const v=s.v[i]; if(v==null||isNaN(v)||!v) continue;
+        g.fillStyle=(s.mauAm&&v<0)?s.mauAm:s.mau;
+        const a=y(day), b=y(day+v);
+        g.fillRect(padL+i*gap+(gap-bw)/2, Math.min(a,b), bw, Math.max(1,Math.abs(b-a)));
+        if(cfg.chong) day+=v; } }
+  }
+  g.fillStyle=ct; g.textAlign='left'; g.textBaseline='top';
+  g.fillText(cfg.d[0], padL, H-12);
+  g.textAlign='right'; g.fillText(cfg.d[n-1], W, H-12);
+}
+
+async function ptMoMa(sym){
+  PT.ma=sym; PT.maD=null;
+  await ptVe();
+  try{ PT.maD=await (await fetch('data/giaodich/'+sym+'.json')).json(); }
+  catch(e){ PT.maD={err:1}; }
+  ptVeMa();
+}
+
+function ptVeMa(){
+  const w=$('#ptTab'); if(!w||!PT.ma) return;
+  const o=PT.maD;
+  const dau='<div class="ptmahead"><button id="ptQuay" class="ptnav">←</button>'+
+    '<h2>'+esc(PT.ma)+'</h2><span class="ptbarn">phân tích '+PT.nMa+' phiên gần nhất</span>'+
+    '<a class="ptlink" href="/cophieu/'+esc(PT.ma)+'">mở trang cổ phiếu →</a></div>';
+  if(!o){ w.innerHTML=dau+'<div class="panel"><div class="pb"><div class="empty">Đang nạp…</div></div></div>'; ptBindMa(); return; }
+  if(o.err||!o.d||!o.d.length){
+    w.innerHTML=dau+'<div class="panel"><div class="pb"><div class="empty">Mã này chưa có trong kho giao dịch.</div></div></div>';
+    ptBindMa(); return; }
+  const n=o.n||o.d.length, i0=Math.max(0,n-PT.nMa);
+  const lay=k=>(o[k]||[]).slice(i0);
+  const d=o.d.slice(i0), c=lay('c'), tc=lay('tc'), vw=lay('vwap'),
+        mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), sh=lay('sh');
+  const m=d.length-1;
+  const mcap=c.map((x,i)=>(x&&sh[i])?x*sh[i]:null);
+  const pcs=c.map((x,i)=>(x&&tc[i])?((x/tc[i]-1)*100):null);
+  /* Mốc so sánh: 1 phiên · ~1 tháng (21 phiên) · cả khung. Dùng chỉ số phiên chứ không dùng
+     ngày lịch — tháng nào cũng khác số phiên, so theo lịch là so hai độ dài khác nhau. */
+  const doi=(k)=>{ const j=m-k; return (j>=0&&c[j]&&c[m])?((c[m]/c[j]-1)*100):null; };
+  const tbGT=mval.filter(x=>x).reduce((a,b)=>a+b,0)/Math.max(mval.filter(x=>x).length,1);
+  const tongTT=pval.reduce((a,b)=>a+(b||0),0), tongKL=mval.reduce((a,b)=>a+(b||0),0);
+  const ph=(v)=>v==null?'—':'<span class="'+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</span>';
+  const box=(nhan,gt,ghi)=>'<div class="ptbox"><span class="ptlb">'+nhan+'</span><b>'+gt+'</b>'+
+    (ghi?'<i>'+ghi+'</i>':'')+'</div>';
+  const vg=(PT.phien[PT.ngay]&&PT.phien[PT.ngay].ma&&PT.phien[PT.ngay].ma[PT.ma])||null;
+  w.innerHTML=dau
+    +'<div class="panel"><div class="pb"><div class="ptgrid">'
+      +box('Giá đóng cửa', num(c[m]), 'phiên '+esc(d[m])+' · '+ph(pcs[m]))
+      +box('So 1 tháng', ph(doi(21)), '21 phiên trước')
+      +box('So '+d.length+' phiên', ph(doi(d.length-1)), 'cả khung đang xem')
+      +box('GT khớp lệnh TB', ptTien(tbGT), 'mỗi phiên trong khung')
+      +box('Vốn hoá', mcap[m]?ptTien(mcap[m]):'—', sh[m]?num(sh[m])+' cp':'')
+      +box('Tỉ lệ thoả thuận', (tongKL+tongTT)?((tongTT/(tongKL+tongTT)*100).toFixed(1)+'%'):'—',
+           'cả khung · '+ptTien(tongTT))
+    +'</div></div></div>'
+    +'<div class="ptbieu">'
+      +ptO('Giá đóng cửa và giá trung bình', 'mc1',
+           '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)')
+      +ptO('Giá trị giao dịch mỗi phiên', 'mc2',
+           '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận')
+      +ptO('Vốn hoá', 'mc3', 'giá đóng cửa × số cổ phiếu lưu hành của chính phiên đó')
+      +ptO('Khối lượng khớp lệnh', 'mc4', 'cổ phiếu')
+      +ptO('% thay đổi mỗi phiên', 'mc5', 'so với giá tham chiếu của chính phiên đó')
+      +ptO('Vùng giá khớp lệnh — phiên '+esc(PT.ngay), 'mc6',
+           vg?'khối lượng gộp theo từng mức giá':'phiên này chưa cào vùng giá cho mã này')
+    +'</div>';
+  const dark=document.documentElement.classList.contains('theme-dark')||
+    (matchMedia('(prefers-color-scheme:dark)').matches&&!document.documentElement.classList.contains('theme-light'));
+  ptVe1($('#mc1'),{d,kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
+    {v:vw,mau:dark?'#fbbf24':'#d97706'}],nhan:num});
+  ptVe1($('#mc2'),{d,kieu:'bar',chong:1,series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},
+    {v:pval,mau:dark?'#a78bfa':'#7c3aed'}],nhan:v=>ptTien(v)});
+  ptVe1($('#mc3'),{d,kieu:'line',series:[{v:mcap,mau:dark?'#34d399':'#059669'}],nhan:v=>ptTien(v)});
+  ptVe1($('#mc4'),{d,kieu:'bar',series:[{v:mv,mau:dark?'#94a3b8':'#64748b'}],nhan:num});
+  /* Xanh/đỏ theo dấu — cùng quy ước bảng điện của cả site, đọc một cái là ra ngay phiên
+     nào tăng phiên nào giảm mà không phải dò trục. */
+  ptVe1($('#mc5'),{d,kieu:'bar',series:[{v:pcs,mau:dark?'#34d399':'#16a34a',
+    mauAm:dark?'#f87171':'#dc2626'}],nhan:v=>v.toFixed(1)+'%'});
+  if(vg) ptVe1($('#mc6'),{d:vg.p.map(x=>num(x)),kieu:'bar',
+    series:[{v:vg.v,mau:dark?'#38bdf8':'#0284c7'}],nhan:num});
+  ptBindMa();
+}
+function ptO(ten,id,ghi){
+  return '<div class="panel ptbo"><div class="ph"><span>📈</span>'+ten+'</div><div class="pb">'+
+    '<canvas id="'+id+'"></canvas>'+(ghi?'<p class="ptleg">'+ghi+'</p>':'')+'</div></div>';
+}
+function ptBindMa(){
+  const b=$('#ptQuay'); if(b) b.onclick=()=>{ PT.ma=null; PT.maD=null; ptVe(); };
 }
 
 /* ---- BẢNG MÃ CỦA PHIÊN ĐANG CHỌN ---- */
@@ -1091,11 +1239,9 @@ function ptBind(){
     ptBang(); }; });
   /* Bấm một mã ở khối điểm sáng = lọc bảng về đúng mã đó rồi bung vùng giá — bằng không
      người ta thấy tên mã hay ho mà không có đường nào đi tiếp. */
-  $$('.dsr[data-sym]').forEach(d=>{ d.onclick=()=>{
-    PT.q=d.dataset.sym; PT.ex='all'; PT.mo=d.dataset.sym; ptBang(); }; });
+  $$('.dsr[data-sym]').forEach(d=>{ d.onclick=()=>{ ptMoMa(d.dataset.sym); }; });
   tb.querySelectorAll('tr[data-sym]').forEach(tr=>{ tr.onclick=()=>{
-    const s=tr.dataset.sym;
-    PT.mo=(PT.mo===s)?null:s; ptBang(); }; });
+    ptMoMa(tr.dataset.sym); }; });
 }
 
 const MODULES=[

@@ -458,6 +458,18 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .dsv>i{font-style:normal;font-weight:600;font-size:10px;color:var(--faint);margin-left:5px}
 .dse{font-size:11.5px;color:var(--faint);padding:6px 0}
 .dsg{margin:7px 0 0;font-size:10.5px;line-height:1.5;color:var(--faint)}
+/* ---- TRANG PHÂN TÍCH MỘT MÃ ---- */
+.ptmahead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.ptmahead h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em}
+.ptlink{margin-left:auto;font-size:12px;font-weight:700;color:var(--rose);text-decoration:none}
+.ptlink:hover{text-decoration:underline}
+/* Lưới đồ thị: hai cột ở máy bàn, một cột ở khổ hẹp. minmax(320px) vì dưới ngần đó thì
+   nhãn trục và nhãn ngày đè lên nhau, đồ thị thành một vệt không đọc được. */
+.ptbieu{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.ptbo{margin:0}
+.ptbo canvas{width:100%;display:block}
+.ptleg i.pkA{background:#0284c7;height:3px;border-radius:2px}
+.ptleg i.pkB{background:#d97706;height:3px;border-radius:2px}
 .ptvg1 i{color:var(--faint);font-size:11.5px}
 /* Khổ hẹp: vùng giá và dòng tiền XẾP DỌC — hai cột trong 375px thì cột nào cũng bẹp */
 @media(max-width:760px){
@@ -1167,7 +1179,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260820m"></script>
+<script defer src="assets/mobi.js?v=20260820n"></script>
 </head>
 <body>
 
@@ -1224,6 +1236,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260820m"></script>
+<script src="assets/congcu.js?v=20260820n"></script>
 </body>
 </html>

@@ -187,8 +187,9 @@ def eod_trang(sym, trang, tu, den):
 TRANG_NGAY = 2
 
 
-def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
-    """Trả về dict {ngày: bản ghi}. day_du=True thì lật hết trang."""
+def eod_nap(sym, day_du=False, tu="2000-01-01", den=None, trang_toi=None):
+    """Trả về dict {ngày: bản ghi}. day_du=True thì lật hết trang; `trang_toi` để lấy sâu
+    có kiểm soát (20 dòng/trang, nên 5 trang ≈ 100 phiên ≈ hơn 4 tháng)."""
     den = den or datetime.datetime.now(TZ).strftime("%Y-%m-%d")
     ra, trang, tong, sid = {}, 1, None, [None]
     while True:
@@ -215,7 +216,7 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None):
                 "shR": (round(r["MarketCap"] / r["ClosePrice"])
                         if r.get("MarketCap") and r.get("ClosePrice") else None),
             }
-        if trang >= (TRANG_NGAY if not day_du else 400):
+        if trang >= (400 if day_du else (trang_toi or TRANG_NGAY)):
             break
         if day_du and len(ra) >= (tong or 0):
             break
@@ -700,6 +701,8 @@ def main():
     ap.add_argument("--sau", action="store_true",
                     help="đường HỎI TỪNG MÃ — chỉ dùng cho lịch sử SÂU hơn cửa sổ ~09/2025")
     ap.add_argument("--tatca", action="store_true", help="với --sau: lật HẾT trang")
+    ap.add_argument("--trang", type=int,
+                    help="với --sau: lấy bao nhiêu trang giá (20 phiên/trang). Mặc định 2")
     ap.add_argument("--vg", action="store_true",
                     help="VÙNG GIÁ khớp lệnh + phân bổ dòng tiền cho --ngay (1 lượt/mã/ngày ×2)")
     ap.add_argument("--chiso", action="store_true",
@@ -766,7 +769,7 @@ def main():
         sids = {}
         for i, m in enumerate(ma):
             try:
-                moi, sid = eod_nap(m, day_du=a.tatca)
+                moi, sid = eod_nap(m, day_du=a.tatca, trang_toi=a.trang)
             except Exception:
                 moi, sid = None, None
             if not moi:
