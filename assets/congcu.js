@@ -1012,6 +1012,39 @@ function ptVeChart(){
     const r=cv.getBoundingClientRect(); hien(tch.clientX-r.left, 8); };
 }
 
+/* DÒNG TIỀN KHỐI NGOẠI & TỰ DOANH THEO MÃ — user chốt 21/08/2026: *"chưa thực sự thấy rõ
+   là nhóm này mua cổ phiếu nào và bán cổ phiếu nào vào ngày hôm đó"*. Đúng: trang đang nói
+   "khối ngoại bán ròng 582 tỷ" mà không nói bán mã nào — con số tổng không dùng được cho
+   việc gì ngoài việc biết chiều.
+
+   XẾP THEO RÒNG, KHÔNG XẾP THEO MUA HAY BÁN RIÊNG. Một mã khối ngoại vừa mua 300 tỷ vừa
+   bán 290 tỷ thì đứng đầu bảng "mua nhiều nhất" mà thực chất chỉ gom được 10 tỷ — đó là
+   sang tay giữa các quỹ chứ không phải dòng tiền vào. Ròng mới là thứ nói được chiều. */
+function ptDongTien(r){
+  const co=(k1,k2)=>r.filter(x=>x[k1]!=null||x[k2]!=null)
+    .map(x=>({sym:x.sym,sec:x.sec,pc:x.pc,rong:(x[k1]||0)-(x[k2]||0),
+              mua:x[k1]||0,ban:x[k2]||0}))
+    .filter(x=>x.rong);
+  const fn=co('fnM','fnB'), td=co('tdM','tdB');
+  const dong=x=>'<div class="dsr" data-sym="'+x.sym+'" title="mua '+ptTien(x.mua)+
+    ' · bán '+ptTien(x.ban)+'"><b>'+esc(x.sym)+'</b>'+
+    '<span class="dsn">'+esc(shortName(x.sec||''))+'</span>'+
+    '<span class="dsv '+cls(x.rong)+'">'+(x.rong>0?'+':'')+ptTien(x.rong)+'</span></div>';
+  const cot=(ic,ten,rows,ghi)=>'<div class="dscol"><h4>'+ic+' '+ten+'</h4>'+
+    (rows.length?rows:'<div class="dse">không có mã nào</div>')+
+    (ghi?'<p class="dsg">'+ghi+'</p>':'')+'</div>';
+  const top=(a,chieu)=>a.slice().sort((x,y)=>chieu*(y.rong-x.rong))
+    .filter(x=>chieu>0?x.rong>0:x.rong<0).slice(0,8).map(dong).join('');
+  if(!fn.length&&!td.length) return '';
+  return '<div class="panel"><div class="ph"><span>💸</span>Khối ngoại và tự doanh mua bán gì — phiên '+
+    esc(PT.ngay)+'</div><div class="pb"><div class="dsw">'
+    +cot('🌏','Khối ngoại MUA ròng', top(fn,1), 'rê chuột để xem mua/bán từng mã')
+    +cot('🌏','Khối ngoại BÁN ròng', top(fn,-1), '')
+    +cot('🏦','Tự doanh MUA ròng', top(td,1), 'tổng tự doanh toàn thị trường — nguồn KHÔNG tách theo công ty chứng khoán')
+    +cot('🏦','Tự doanh BÁN ròng', top(td,-1), '')
+    +'</div></div></div>';
+}
+
 /* ĐIỂM SÁNG TRONG NGÀY — user chốt 20/08/2026: *"cách sắp xếp dữ liệu đang khó nhìn làm tao
    không thể biết được điểm sáng nào trong ngày"*. Đúng: một bảng 1.525 dòng xếp theo giá trị
    trả lời được "mã nào to nhất" nhưng KHÔNG trả lời được "phiên này có gì đáng chú ý".
@@ -1303,7 +1336,10 @@ async function ptBang(){
   w.innerHTML='<div class="panel"><div class="pb"><div class="empty">Đang nạp phiên '+esc(PT.ngay)+'…</div></div></div>';
   const p=await ptPhien(PT.ngay);
   if(!p||!p.bang){
-    w.innerHTML=ptDiemSang(rDay)+'<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
+    /* KHÔNG gọi ptDiemSang ở đây — `rDay` chỉ được dựng sau khi đọc xong file phiên, gọi
+       ở nhánh thoát sớm này là ReferenceError và cả trang trắng. Mà cũng vô nghĩa: không
+       có file thì không có mã nào để tìm điểm sáng. */
+    w.innerHTML='<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
       '</div><div class="pb"><div class="empty">Phiên này chưa có file dữ liệu. '+
       'Kho chỉ dựng file cho phiên có từ 100 mã trở lên.</div></div></div>';
     return;
@@ -1316,6 +1352,7 @@ async function ptBang(){
     r.push({sym, ex:g('ex')||'', sec:g('sec')||'', c, tc, vwap:g('vwap'), mval:g('mval')||0, pval:g('pval')||0,
             mv:g('mv')||0, mcap:(c&&sh)?c*sh:null, pc:(c&&tc)?((c/tc-1)*100):null,
             ptt:(g('pv')&&g('pval'))?(g('pval')/g('pv')):null,
+            fnM:g('fnMuaGT'), fnB:g('fnBanGT'), tdM:g('tdMuaGT'), tdB:g('tdBanGT'),
             vg:(p.ma&&p.ma[sym])||null});
   }
   /* Điểm sáng dựng từ rổ ĐẦY ĐỦ của phiên, KHÔNG theo bộ lọc sàn / ô tìm đang bật:
@@ -1357,7 +1394,8 @@ async function ptBang(){
         'khoảng 09/2025; phiên nào đã cào thì dòng có dấu ▾.</i></div>')+'</td></tr>';
     return tr;
   }).join('');
-  w.innerHTML=ptDiemSang(rDay)+'<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
+  w.innerHTML=ptDongTien(rDay)+ptDiemSang(rDay)+
+    '<div class="panel"><div class="ph"><span>📋</span>Bảng mã — phiên '+esc(PT.ngay)+
     '<span class="cnt">'+num(r.length)+' mã</span></div><div class="pb">'
     +'<p class="ptnote">Xếp theo <b>giá trị</b> chứ không theo khối lượng: một mã khớp mấy triệu '
       +'cổ phiếu giá 3.000đ chỉ là vài tỷ, còn mã khớp vài trăm nghìn cổ phiếu giá 200.000đ mới là '
