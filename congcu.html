@@ -524,6 +524,27 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptcfc>b{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
 .ptcfn{margin:8px 0 0;font-size:11px;line-height:1.6;color:var(--faint)}
 .ptvg1{padding:14px;font-size:12.5px;line-height:1.7;color:var(--txt)}
+/* ---- BỘ LỌC ĐẶC TRƯNG ---- */
+/* Ba dòng điều kiện xếp lưới, mỗi dòng [đại lượng][≥/≤][ngưỡng][đơn vị]. Ô đại lượng co
+   được, ba ô còn lại cố định — tên đại lượng dài ngắn khác nhau nhiều, để cả bốn ô co
+   thì mỗi dòng một kiểu, đọc dọc xuống không thẳng cột nào. */
+.lcw{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px;margin-bottom:10px}
+.lcr{display:flex;gap:6px;align-items:center;min-width:0}
+.lcr select,.lcr input{background:var(--card2);color:var(--txt);border:1px solid var(--line);
+  border-radius:8px;padding:6px 9px;font-size:12.5px;font-weight:600}
+.lcr .lck{flex:1;min-width:0}
+.lcr .lco{flex:none;width:52px;text-align:center}
+.lcr .lcv{flex:none;width:82px;font-variant-numeric:tabular-nums}
+.lcr .lcd{flex:none;font-size:10.5px;color:var(--faint);min-width:30px}
+.lcbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;
+  font-size:11.5px;color:var(--faint)}
+.lcbar select{background:var(--card2);color:var(--txt);border:1px solid var(--line);
+  border-radius:8px;padding:6px 9px;font-size:12.5px;font-weight:600}
+.lcbar .ptnav{width:32px;height:32px}
+.lcbtn{background:var(--card2);color:var(--faint);border:1px solid var(--line);
+  border-radius:8px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;margin-left:auto}
+.lcbtn:hover{color:var(--txt)}
+#lcT{max-height:60vh;overflow:auto}
 /* ---- ĐIỂM SÁNG TRONG NGÀY ---- */
 /* Năm cột đọc hết trong MỘT màn — đó là cả lý do khối này tồn tại. Tự xuống hàng theo bề
    ngang; khổ hẹp thành một cột và mỗi cột vẫn đọc được nguyên vẹn. */
@@ -1285,7 +1306,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821s"></script>
+<script defer src="assets/mobi.js?v=20260821t"></script>
 </head>
 <body>
 
@@ -1342,6 +1363,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821s"></script>
+<script src="assets/congcu.js?v=20260821t"></script>
 </body>
 </html>

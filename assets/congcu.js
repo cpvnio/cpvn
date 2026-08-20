@@ -1113,6 +1113,136 @@ function ptDongTien(r){
     +'</div></div></div>';
 }
 
+/* ================== BỘ LỌC ĐẶC TRƯNG — NGƯỜI DÙNG TỰ ĐẶT TIÊU CHÍ ==================
+   Đọc khối `dt`/`dtf` mà `tools/quet_la.py` ghi sẵn vào file phiên: một lát cắt ngang
+   toàn thị trường với 22 đại lượng đã tính sẵn ở kho đặc trưng.
+
+   ĐÂY LÀ BỘ ĐO, KHÔNG PHẢI DANH MỤC GỢI Ý — và đó là một ràng buộc pháp lý, không phải
+   sở thích thiết kế. Bộ lọc Pro cũ bị gỡ hẳn 16/08/2026 vì nó chấm điểm bằng trọng số
+   CỦA CHỦ TRANG rồi cắt lấy 30 mã: dù từng yếu tố đều đo được, thứ người dùng nhận về
+   vẫn là *"đây là 30 mã"* — tức khuyến nghị đầu tư, đúng khoản 32 Điều 4 Luật CK 2019.
+   Bản này không có điểm tổng hợp, không có trọng số, không có top N mặc định: người dùng
+   chọn lọc theo cái gì, ngưỡng bao nhiêu, xếp theo cái nào. Kết quả là của họ.
+   ĐỪNG THÊM một nút "chấm điểm tổng hợp" hay một bộ tiêu chí dựng sẵn nào vào đây.
+
+   Mỗi đại lượng kèm CÂU GIẢI THÍCH của chính nó — một cái tên như "Amihud" hay
+   "cỡ lệnh mua/bán" mà không nói nghĩa thì bộ lọc chỉ dùng được bởi người đã biết. */
+const DTM={
+  mval:  {t:'Giá trị khớp lệnh',      d:'tiền thật khớp trong phiên', f:v=>ptTien(v), don:'đồng'},
+  mcapFF:{t:'Vốn hoá free float',     d:'phần vốn hoá thực sự mua bán được', f:v=>ptTien(v), don:'đồng'},
+  vqf:   {t:'Vòng quay free float',   d:'% cổ phiếu tự do chuyển nhượng đã sang tay trong phiên', f:v=>v.toFixed(3)+'%', don:'%'},
+  ami:   {t:'Kém thanh khoản (Amihud)',d:'% giá nhảy trên mỗi tỷ đồng khớp — cao là mã mỏng', f:v=>v.toFixed(4), don:''},
+  bd20:  {t:'Biên độ TB 20 phiên',    d:'(cao − thấp) ÷ đóng cửa, trung bình 20 phiên', f:v=>v.toFixed(2)+'%', don:'%'},
+  vol20: {t:'Biến động 20 phiên',     d:'độ lệch chuẩn lợi suất ngày', f:v=>v.toFixed(2)+'%', don:'%'},
+  gtx:   {t:'Thanh khoản so TB 20',   d:'giá trị hôm nay ÷ trung bình 20 phiên TRƯỚC đó', f:v=>'×'+v.toFixed(2), don:'lần'},
+  d52:   {t:'Cách đỉnh 52 tuần',      d:'0% là đang ở đỉnh, −30% là đã rơi 30% khỏi đỉnh', f:v=>v.toFixed(1)+'%', don:'%'},
+  r20:   {t:'Lợi suất 20 phiên',      d:'dồn từ % từng phiên nên đã sạch mọi sự kiện quyền', f:v=>v.toFixed(1)+'%', don:'%'},
+  r60:   {t:'Lợi suất 60 phiên',      d:'dồn từ % từng phiên', f:v=>v.toFixed(1)+'%', don:'%'},
+  clm:   {t:'Cỡ lệnh mua / bán',      d:'log tỉ lệ — dương là bên mua đặt lệnh to hơn', f:v=>v.toFixed(2), don:''},
+  cl:    {t:'Cỡ lệnh trung bình',     d:'khối lượng đặt ÷ số lệnh — lệnh to là tổ chức', f:v=>num(Math.round(v)), don:'cp'},
+  ep:    {t:'Lợi suất trên giá',      d:'LNST 4 quý ÷ vốn hoá — nghịch đảo P/E, dùng được cả khi lỗ', f:v=>v.toFixed(2)+'%', don:'%'},
+  roe:   {t:'ROE',                    d:'lợi nhuận trên vốn chủ sở hữu', f:v=>v.toFixed(1)+'%', don:'%'},
+  ngaypt:{t:'Số ngày phải thu',       d:'bán chịu bao lâu mới thu được tiền', f:v=>num(v), don:'ngày'},
+  ngaytk:{t:'Số ngày tồn kho',        d:'hàng nằm kho bao lâu', f:v=>num(v), don:'ngày'},
+  novayvc:{t:'Nợ vay / vốn chủ',      d:'đòn bẩy tài chính', f:v=>v.toFixed(2), don:'lần'},
+  biengop:{t:'Biên lợi nhuận gộp',    d:'', f:v=>v.toFixed(1)+'%', don:'%'},
+  fnr20: {t:'Khối ngoại ròng 20 phiên',d:'cộng dồn mua trừ bán', f:v=>ptTien(v), don:'đồng'},
+  fnp:   {t:'% phiên là khối ngoại',  d:'(mua + bán) ÷ 2 ÷ giá trị khớp lệnh', f:v=>v.toFixed(1)+'%', don:'%'},
+  room:  {t:'Room ngoại còn',         d:'0% là hết room; mã nguồn không biết trần thì để trống', f:v=>v.toFixed(2)+'%', don:'%'},
+  shu:   {t:'Sở hữu nước ngoài',      d:'', f:v=>v.toFixed(1)+'%', don:'%'},
+  ttp:   {t:'Tỉ trọng thoả thuận',    d:'giá trị thoả thuận ÷ giá trị khớp lệnh', f:v=>v.toFixed(2), don:'lần'},
+  ff:    {t:'Free float',             d:'% cổ phiếu tự do chuyển nhượng', f:v=>v.toFixed(1)+'%', don:'%'},
+  pc:    {t:'% thay đổi phiên',       d:'', f:v=>(v>0?'+':'')+v.toFixed(2)+'%', don:'%'},
+};
+/* Ba dòng điều kiện là đủ: bốn dòng trở lên thì gần như lượt lọc nào cũng ra rỗng, mà
+   rỗng thì không học được gì về dữ liệu. */
+const LOC={dk:[{k:'mval',op:'>=',v:''},{k:'',op:'>=',v:''},{k:'',op:'>=',v:''}],
+           sap:'mval', chieu:-1, hien:['vqf','d52','ep','roe']};
+
+function ptLocDL(p){
+  if(!p||!p.dt||!p.dtf||!p.bang) return null;
+  const ix={}; p.dtf.forEach((k,i)=>ix[k]=i);
+  const bx={}; (p.f||[]).forEach((k,i)=>bx[k]=i);
+  const r=[];
+  for(const sym in p.bang){
+    const b=p.bang[sym], dt=p.dt[sym]; if(!dt) continue;
+    const c=b[bx['c']], tc=b[bx['tc']];
+    const x={sym, ten:'', sec:b[bx['sec']]||'', ex:b[bx['ex']]||'', ff:b[bx['ff']],
+             c, mval:b[bx['mval']], pc:(c&&tc)?((c/tc-1)*100):null};
+    for(const k in ix) x[k]=dt[ix[k]];
+    r.push(x);
+  }
+  return r;
+}
+function ptBoLoc(p){
+  const r=ptLocDL(p); if(!r) return '';
+  const opt=(sel,rong)=>(rong?'<option value="">— chọn đại lượng —</option>':'')
+    +Object.keys(DTM).map(k=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+DTM[k].t+'</option>').join('');
+  const dong=(d,i)=>'<div class="lcr"><select class="lck" data-i="'+i+'">'+opt(d.k,1)+'</select>'
+    +'<select class="lco" data-i="'+i+'"><option value=">="'+(d.op==='>='?' selected':'')+'>≥</option>'
+      +'<option value="<="'+(d.op==='<='?' selected':'')+'>≤</option></select>'
+    +'<input class="lcv" data-i="'+i+'" value="'+esc(d.v)+'" placeholder="ngưỡng">'
+    +'<span class="lcd">'+(d.k?esc(DTM[d.k].don||''):'')+'</span></div>';
+  return '<div class="panel"><div class="ph">'+ptIc('bang')+'Bộ lọc đặc trưng — phiên '+esc(PT.ngay)
+    +'<span class="cnt" id="lcN">'+num(r.length)+' mã</span></div><div class="pb">'
+    +ptGiai('boloc','Bộ lọc này là gì và không phải là gì',
+       'Đây là <b>bộ đo</b>: bạn chọn lọc theo đại lượng nào, ngưỡng bao nhiêu, xếp theo cái gì. '
+      +'Trang <b>không</b> chấm điểm tổng hợp, không có bộ tiêu chí dựng sẵn và không đề xuất mã nào — '
+      +'mọi con số ở đây là thống kê mô tả quá khứ, tính thẳng từ số chốt phiên và báo cáo đã công bố. '
+      +'Chỉ tiêu cơ bản (ROE, lợi suất trên giá, số ngày phải thu…) gắn theo <b>ngày công bố báo cáo</b> '
+      +'chứ không theo ngày chốt quý, nên phiên nào cũng chỉ thấy thứ thị trường đã biết vào đúng phiên đó.')
+    +'<div class="lcw" id="lcW">'+LOC.dk.map(dong).join('')+'</div>'
+    +'<div class="lcbar"><span>xếp theo</span><select id="lcS">'+opt(LOC.sap,0)+'</select>'
+      +'<button id="lcD" class="ptnav" title="đổi chiều xếp">'+ptIc(LOC.chieu<0?'xuong':'len')+'</button>'
+      +'<button id="lcX" class="lcbtn">xoá bộ lọc</button></div>'
+    +'<div class="pttw" id="lcT"></div></div></div>';
+}
+function ptLocVe(p){
+  const w=$('#lcT'); if(!w) return;
+  let r=ptLocDL(p)||[];
+  for(const d of LOC.dk){
+    if(!d.k||d.v==='') continue;
+    const v=parseFloat(String(d.v).replace(/,/g,''));
+    if(isNaN(v)) continue;
+    r=r.filter(x=>x[d.k]!=null&&(d.op==='>='?x[d.k]>=v:x[d.k]<=v));
+  }
+  const k=LOC.sap;
+  r.sort((a,b)=>{ const x=a[k],y=b[k];
+    if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1;
+    return LOC.chieu*(x-y); });
+  const nn=$('#lcN'); if(nn) nn.textContent=num(r.length)+' mã';
+  /* Cột hiện ra = mấy đại lượng ĐANG LỌC cộng với cột đang xếp. Bày cứng một bộ cột thì
+     lọc theo ROE xong lại không thấy cột ROE đâu — phải tự nhớ mình vừa lọc cái gì. */
+  const cot=[]; const them=x=>{ if(x&&cot.indexOf(x)<0) cot.push(x); };
+  LOC.dk.forEach(d=>them(d.k)); them(LOC.sap); LOC.hien.forEach(them);
+  const th='<th>Mã</th><th>Sàn</th><th class="r">Giá</th><th class="r">±%</th>'
+    +cot.slice(0,7).map(c=>'<th class="r">'+esc(DTM[c].t)+'</th>').join('');
+  const body=r.slice(0,300).map(x=>'<tr data-sym="'+x.sym+'"><td><b>'+esc(x.sym)+'</b></td>'
+    +'<td>'+esc(x.ex)+'</td><td class="r">'+num(x.c)+'</td>'
+    +'<td class="r '+(x.pc==null?'':cls(x.pc))+'">'+(x.pc==null?'—':(x.pc>0?'+':'')+x.pc.toFixed(2)+'%')+'</td>'
+    +cot.slice(0,7).map(c=>'<td class="r">'+(x[c]==null?'—':DTM[c].f(x[c]))+'</td>').join('')
+    +'</tr>').join('');
+  w.innerHTML='<table class="pttb"><thead><tr>'+th+'</tr></thead><tbody>'
+    +(body||'<tr><td colspan="11"><div class="empty">Không mã nào thoả — nới ngưỡng lại.</div></td></tr>')
+    +'</tbody></table>'+(r.length>300?'<p class="ptbarn ptdu">Hiện 300 mã đầu — còn '+num(r.length-300)+' mã nữa.</p>':'');
+  $$('#lcT tr[data-sym]').forEach(t=>{ t.onclick=()=>ptMoMa(t.dataset.sym); });
+}
+function ptLocBind(p){
+  const w=$('#lcW'); if(!w) return;
+  $$('#lcW .lck').forEach(e=>{ e.onchange=()=>{ LOC.dk[+e.dataset.i].k=e.value;
+    const d=e.parentNode.querySelector('.lcd'); if(d) d.textContent=e.value?(DTM[e.value].don||''):'';
+    ptLocVe(p); }; });
+  $$('#lcW .lco').forEach(e=>{ e.onchange=()=>{ LOC.dk[+e.dataset.i].op=e.value; ptLocVe(p); }; });
+  $$('#lcW .lcv').forEach(e=>{ e.oninput=()=>{ clearTimeout(LOC._t);
+    LOC._t=setTimeout(()=>{ LOC.dk[+e.dataset.i].v=e.value.trim(); ptLocVe(p); },250); }; });
+  const ss=$('#lcS'); if(ss) ss.onchange=()=>{ LOC.sap=ss.value; ptLocVe(p); };
+  const dd=$('#lcD'); if(dd) dd.onclick=()=>{ LOC.chieu=-LOC.chieu;
+    dd.innerHTML=ptIc(LOC.chieu<0?'xuong':'len'); ptLocVe(p); };
+  const xx=$('#lcX'); if(xx) xx.onclick=()=>{ LOC.dk.forEach(d=>{ d.k=''; d.v=''; });
+    LOC.dk[0].k='mval'; ptBang(); };
+  ptLocVe(p);
+}
+
 /* QUÉT BẤT THƯỜNG — "phiên này có gì lạ". Đọc khối `la` mà `tools/quet_la.py` ghi sẵn
    vào chính file phiên, nên đổi phiên là quét đổi theo mà không tốn thêm lượt tải nào.
 
@@ -1537,7 +1667,7 @@ async function ptBang(){
         'khoảng 09/2025; phiên nào đã cào thì dòng có dấu ▾.</i></div>')+'</td></tr>';
     return tr;
   }).join('');
-  w.innerHTML=ptQuetLa(p)+ptDongTien(rDay)+ptDiemSang(rDay)+
+  w.innerHTML=ptQuetLa(p)+ptDongTien(rDay)+ptDiemSang(rDay)+ptBoLoc(p)+
     '<div class="panel"><div class="ph">'+ptIc('bang')+'Bảng mã — phiên '+esc(PT.ngay)+
     '<span class="cnt">'+num(r.length)+' mã</span></div><div class="pb">'
     +ptGiai('bang','Vì sao bảng xếp theo tiền chứ không theo khối lượng',
@@ -1555,6 +1685,7 @@ async function ptBang(){
     +(r.length>400?'<p class="ptbarn ptdu">Hiện 400 mã đầu theo thứ tự đang xếp — còn '+num(r.length-400)+' mã nữa.</p>':'')
     +'</div></div>';
   ptBind();
+  ptLocBind(p);
 }
 
 /* Tiền: đổi bậc cho dễ đọc. Cột tiền đứng cạnh nhau nên phải CÙNG một bậc trong một cột —

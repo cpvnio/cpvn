@@ -26,7 +26,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc nhanh |
 | `cophieu.html` | 1169 | Trang một mã: hero giá · thống kê · nến · PTKT toàn màn hình · 5 thẻ nội dung |
 | `bubbles.html` | 2185 | Bong bóng (canvas vật lý) + bản đồ nhiệt (treemap DOM). **Tự chứa bản sao lõi giá** |
-| `congcu.html` + `assets/congcu.js` | 384+676 | 3 module: Radar phiên · **Danh mục tập đoàn** (kèm tab quỹ) · Đường đua vốn hoá |
+| `congcu.html` + `assets/congcu.js` | 1450+3900 | **5 module**: Radar phiên · Danh mục tập đoàn (kèm tab quỹ) · **Phân tích dữ liệu** · Đường đua vốn hoá · Thông tin niêm yết |
 | `assets/core.js` | 522 | **Lõi dữ liệu `CP`** — chỉ index + cophieu dùng. Phần lớn là cơ chế giá |
 | `assets/chart.js` | 798 | **`CPChart`** — bộ vẽ nến canvas tự viết + lớp vẽ PTKT. Không phụ thuộc core.js |
 | `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
@@ -37,6 +37,10 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
 | `tools/cao_cocau.py` | 200 | Cào `data/cocau/{MÃ}.json` — cơ cấu lợi nhuận theo mảng + dư nợ cho vay ký quỹ (Simplize). Bước 6c2 |
 | `tools/soi_nguon.py` | 150 | Soi nguồn vẽ chart: đối chiếu VNDirect · VPS · kho · bảng giá cho từng mã. Chạy tay khi nghi nguồn sai |
+| `tools/kho_giaodich.py` | 1050 | Cào `data/giaodich` + `data/chiso.json` + vùng giá. `--sau` (hằng ngày) · `--trang N` (sâu hơn) · `--vg` · `--chiso` |
+| `tools/kho_dactrung.py` | 380 | Dựng `data/dactrung`. KHÔNG gọi mạng |
+| `tools/quet_la.py` | 300 | Quét bất thường + lát cắt ngang, ghi vào file phiên. KHÔNG gọi mạng |
+| `tools/va_dau_fin.py` | 120 | Vá dấu lưu chuyển tiền tệ trong `data/fin`, lấy dấu từ `data/finq`. KHÔNG gọi mạng, **chạy mỗi ngày** |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -50,7 +54,11 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/nganh/{MÃ}.json` | **Chỉ số đặc thù ngành tính sẵn** (1.330 mã, ~6MB): chuỗi QUÝ đủ lịch sử theo 5 mẫu nh/ck/bh/bds/sx. Trang cổ phiếu đọc để hiện ô màu; `tools/build_nganh.py` dựng từ fin+finq |
 | `data/cocau/{MÃ}.json` | **CHỈ CÒN dư nợ cho vay ký quỹ của công ty chứng khoán** (42 mã, 61KB) — khối lợi nhuận theo mảng đã thôi lấy 16/08/2026, xem mục *Cơ cấu lợi nhuận*. Nguồn chỉ sâu **15 quý / 10 năm** |
 | `data/news/{MÃ}.json` | Tin theo mã — **BA CỔNG: trong 30 ngày · có url thật · không trỏ Simplize** (16/08/2026). 4.894 tin / 1.435 mã, nguồn hnx.vn + hsx.vn + báo có link |
-| `data/profile/` | Hồ sơ DN, cổ đông, công ty con |
+| `data/profile/` | Hồ sơ DN, cổ đông, công ty con. **`freeFloat` ở đây là nguồn free float duy nhất** — 1.429/1.525 mã, xem mục *Phân tích dữ liệu* |
+| `data/giaodich/{MÃ}.json` | Số chốt phiên theo mã: OHLC, VWAP, **khớp lệnh tách khỏi thoả thuận** (KL và GT), sổ lệnh lúc đóng cửa, SLCP, khối ngoại (kèm sở hữu + room), tự doanh. `kho_giaodich.py --sau` |
+| `data/dactrung/{MÃ}.json` | **Kho đặc trưng** (~41MB): vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, đỉnh 52 tuần, và chỉ tiêu cơ bản **gắn theo NGÀY CÔNG BỐ BCTC**. `kho_dactrung.py` |
+| `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt` lát cắt ngang cho bộ lọc. **BỐN lượt ghi khác nhau — phải TRỘN, đừng ghi đè** |
+| `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
@@ -1292,6 +1300,164 @@ theo nghĩa vụ pháp luật"*, mà nghĩa vụ ấy chỉ áp cho **cổ đôn
 > NHÃN CHỨC VỤ — báo cáo quản trị công ty của HOSE/HNX — chứ đừng hạ ngưỡng xuống 1%:
 > ngưỡng đó không có căn cứ pháp lý nào, chỉ là đoán.
 > Tỉ trọng sở hữu tổng thể vẫn còn ở trường `own` (cổ đông chiến lược / thông thường / quỹ).
+
+## Phân tích dữ liệu (`/phantich`) — kho giao dịch, đặc trưng và bộ đo
+
+Module thứ 5 của `congcu.js`, dựng 20-21/08/2026. Bốn tầng dữ liệu, mỗi tầng một công cụ:
+
+```
+kho_giaodich.py --sau   -> data/giaodich/{MÃ}.json   giá + sổ lệnh + khối ngoại + tự doanh theo phiên
+kho_giaodich.py --vg    -> data/phien/{NGÀY}.json    vùng giá khớp lệnh + phân bổ dòng tiền
+build_phantich.py       -> data/phantich.json        chuỗi toàn thị trường (nhẹ, tải ngay)
+                        -> data/phien/{NGÀY}.json    bảng mã của phiên (trộn vào, không đè)
+kho_dactrung.py         -> data/dactrung/{MÃ}.json   đại lượng dẫn xuất + cơ bản theo NGÀY CÔNG BỐ
+quet_la.py --phien 100  -> data/phien/{NGÀY}.json    khối `la` (quét bất thường) + `dt` (lát cắt ngang)
+```
+
+### ĐỘ SÂU KHÔNG ĐỀU — bẫy đã trả giá 21/08/2026
+
+Kho mang tiếng "100 phiên" (user chốt 21/08: *"tao chỉ cần 100 phiên thôi"*), nhưng đo ra:
+
+| tầng | trước khi vá | sau |
+|---|---|---|
+| giá / khối lượng / thoả thuận / SLCP | 100 phiên | 100 |
+| khối ngoại (GT, sở hữu, room) | **60** | 120 |
+| sổ lệnh lúc đóng cửa | **30** | 250 |
+| tự doanh | phần lớn 0 — **là thật**, mã không có tự doanh | — |
+
+Gốc: `dl_nap` thoát sau trang 1 và `_kqgd_nap` thoát sau trang 2, hai con số viết cứng
+không chỉnh được từ ngoài. Tức đúng tầng HIẾM NHẤT — thứ không nguồn nào cho lại được
+sau này, phải cào đúng lúc nó còn — lại là tầng mỏng nhất. Nay có `TRANG_LUONG` và
+`--trang N` truyền xuống cả ba tầng.
+
+> **ĐÂY KHÔNG PHẢI NỚI TRẦN NHỊP MẠNG.** Trần vẫn 4 lượt/giây với `finance.vietstock.vn`;
+> xin thêm trang chỉ làm lượt chạy DÀI HƠN. Đừng bao giờ đụng `TRAN` trong `nhipmang.py`
+> để chạy nhanh hơn — xem luật ở đầu file đó.
+
+### FREE FLOAT — có sẵn trong kho từ lâu mà không chỗ nào đọc (21/08/2026)
+
+`data/profile/{MÃ}.json` có trường `freeFloat` cho **1.429/1.525 mã**. Đo phiên 20/08:
+
+```
+Vốn hoá toàn bộ    : 10.167 nghìn tỷ
+Vốn hoá free float :  2.050 nghìn tỷ   ← 20,1%
+```
+
+Và thứ hạng lật hẳn: **BID** 279 nghìn tỷ → 7 (free float 2,6%) · **VGI** 266 → 4 (1,3%) ·
+**GAS** 201 → 8 (4,0%) · **VCB** 483 → 30 (6,2%) · **STB** 140 → **133** (95,0%).
+Đây là lời giải cho chuyện ai cũng thấy mà không giải thích được: **BID vốn hoá gấp đôi
+STB nhưng STB mới là mã chạy**. Xếp hạng hay cộng tổng theo vốn hoá danh nghĩa là đo một
+thứ không giao dịch được.
+
+Kiểm chứng bằng số chứ không chỉ bằng khái niệm: vòng quay tính trên free float dự báo
+lợi suất phiên sau **mạnh hơn** vòng quay tính trên toàn bộ cổ phiếu (rank IC −0,043
+t=−3,29 so với −0,036 t=−3,18, đo trên 99 phiên).
+
+> **THIẾU THÌ ĐỂ TRỐNG, ĐỪNG LẤY 100 LẤP VÀO.** 96 mã nguồn không có số; coi chúng là
+> 100% free float thì đúng nhóm không biết gì lại nhảy lên đầu bảng thanh khoản.
+
+### KHO ĐẶC TRƯNG `data/dactrung` — CƠ BẢN GẮN THEO NGÀY CÔNG BỐ
+
+Bốn luật, phá cái nào cũng ra số trông hợp lý mà sai:
+
+1. **CƠ BẢN THEO NGÀY CÔNG BỐ, KHÔNG THEO NGÀY CHỐT KỲ.** Cái bẫy giết nhiều nghiên cứu
+   nhân tố nhất và nó im lặng tuyệt đối: lãi quý 2 chốt sổ 30/06 nhưng mãi cuối tháng 7
+   hoặc tháng 8 mới ra thị trường, gán nó cho phiên 01/07 là cho mô hình biết trước
+   tương lai 30-60 ngày. `data/sukien` có sẵn ngày công bố thật (**1.199 mã, trung vị 26
+   quý, từ 2020** — trường `k:'bctc'`). Mã không có ngày công bố thì **để trống phần cơ
+   bản**, đừng lùi đại 45 ngày cho có.
+2. **VÒNG QUAY TÍNH TRÊN FREE FLOAT** (xem trên). Vẫn giữ cả `vq` toàn bộ để so được với
+   số của nơi khác.
+3. **LỢI SUẤT DỒN TỪ `c/tc−1` TỪNG PHIÊN, ĐỪNG LẤY `c[i]/c[i−k]`.** `tc` là tham chiếu đã
+   hạ nền của chính phiên đó nên tích các `(1+pc)` tự sạch mọi sự kiện quyền. Lấy giá
+   chia giá là mỗi lần chia cổ tức đẻ ra một cú sập giả — mã trả cổ tức đều thì cú sập ấy
+   lặp lại hằng năm.
+4. **CỬA SỔ TRƯỢT PHẢI ĐỦ Ô MỚI TÍNH.** Trung bình 20 phiên tính trên 6 phiên vẫn ra một
+   con số, và con số đó trông y hệt số thật.
+
+> **ROOM ÂM = NGUỒN KHÔNG BIẾT TRẦN SỞ HỮU, KHÔNG PHẢI "ĐÃ VƯỢT TRẦN".** 386/1.529 mã có
+> `fnRoom` âm ở phiên cuối, và room bằng ĐÚNG trừ tỉ lệ sở hữu tới từng chữ số thập phân
+> (SZL −16,25 / 16,25 · PTS −7,67 / 7,67 · BTU −0,03 / 0,03) — nguồn tính `trần − sở hữu`
+> với trần = 0 vì không có số. Để nguyên thì bảng "room gần cạn" toàn mã −0,03% trông như
+> sắp hết room, trong khi sự thật là KHÔNG BIẾT. Chặn ở `kho_dactrung` để mọi chỗ đọc sau
+> đều sạch. Cùng họ với luật `fRoom` âm của `data/eod`.
+
+> **`lnst4` CHỈ CÓ Ở MẪU `sx`.** `data/nganh` chia năm mẫu và chỉ mẫu sản xuất (1.133 mã)
+> có `lnst4`; ngân hàng 29, chứng khoán 42, bảo hiểm 13, bất động sản 114 thì không — nên
+> lợi suất trên giá hụt đúng nhóm chiếm phần lớn vốn hoá. `lnst4_fin()` cộng bốn quý
+> `np` LIỀN MẠCH từ `data/fin` để bù. **Phải kiểm bốn kỳ liền nhau**: nguồn có lỗ hổng
+> giữa chuỗi, cộng bừa bốn nhãn có sẵn là gộp Q1/24 với Q4/22 rồi gọi đó là bốn quý gần
+> nhất. Phủ 1.181 mã.
+
+### QUÉT BẤT THƯỜNG + BỘ LỌC TỰ CHỌN
+
+`quet_la.py` ghi **thẳng vào file phiên** (`la` = kết quả quét, `dt`/`dtf` = lát cắt
+ngang 22 đại lượng). Trang đã tải file phiên rồi nên đổi phiên là quét đổi theo, không
+tốn lượt tải nào và không đẻ ra nguồn thứ hai lệch pha với bảng ngay bên cạnh.
+
+Bảy phép quét, ngưỡng nào cũng kèm **cổng thanh khoản 1 tỷ** — không lọc thì đầu bảng
+toàn mã đổi chủ vài lô, nhảy trần đều đặn, đẩy hết thứ đáng đọc xuống dưới.
+
+> **`n` của khối quét là số mã CÓ KHỚP LỆNH, không phải số mã có mặt trong kho.** Phần lớn
+> UPCOM không khớp lệnh nào trong một phiên bất kỳ — phiên 20/08 là **849/1.525**. Đếm cả
+> mã đứng im là nói quá độ rộng thị trường lên gần gấp đôi.
+
+> ### BỘ LỌC ĐẶC TRƯNG LÀ BỘ ĐO, KHÔNG PHẢI DANH MỤC GỢI Ý — ĐỪNG THÊM CHẤM ĐIỂM TỔNG HỢP
+> Người dùng chọn lọc theo đại lượng nào, ngưỡng bao nhiêu, xếp theo cái gì. **Không có
+> điểm tổng hợp, không có trọng số, không có bộ tiêu chí dựng sẵn, không có top N.**
+> Đây là ràng buộc pháp lý chứ không phải sở thích thiết kế: bộ lọc Pro cũ bị gỡ hẳn
+> 16/08/2026 vì nó chấm điểm bằng trọng số CỦA CHỦ TRANG rồi cắt lấy 30 mã — dù từng yếu
+> tố đều đo được, thứ người dùng nhận về vẫn là *"đây là 30 mã"*, tức khuyến nghị đầu tư
+> theo khoản 32 Điều 4 Luật CK 2019. Xem mục **Ranh giới pháp lý**. Khi người dùng tự đặt
+> tiêu chí thì kết quả là của họ.
+
+### DẤU LƯU CHUYỂN TIỀN TỆ — `tools/va_dau_fin.py`, CHẠY MỖI NGÀY
+
+`data/fin` mang dấu của 24hMoney (trả một số khoản mục thành dương hết, kể cả dòng chi).
+Đo bằng đẳng thức "kinh doanh + đầu tư + tài chính = lưu chuyển thuần":
+
+```
+data/finq  cfY : 97,9% đúng      (lấy số CÓ DẤU của VNDirect)
+data/fin   cfY : 88,8% -> 96,7%  sau khi vá
+```
+
+Vá bằng cách **chỉ đổi DẤU, tuyệt đối không đổi độ lớn**: |fin| và |finq| bằng nhau
+(sai số 0,5%) mà khác dấu thì lấy dấu của finq. Độ lớn lệch nhau là chuyện KHÁC HẲN (hai
+nguồn chốt số ở hai thời điểm, hoặc doanh nghiệp đính chính) — đếm riêng, không tự sửa.
+
+> **PHẢI CHẠY MỖI NGÀY, KHÔNG PHẢI MỘT LẦN.** Bước 5 của pipeline cào lại `data/fin` từ
+> chính cái nguồn trả dấu sai, nên mã nào được cào lại hôm nay là dấu hỏng lại hôm đó.
+> Vá một lần rồi quên là kho tự hỏng lại mà không có gì báo. `kho_sau.py --va-fin` làm
+> cùng việc nhưng phải chạy trọn một lượt dựng `finq` (~1.525 mã sang VNDirect) — công
+> thừa khi `finq` đã dựng rồi, và là một lượt cào không cần thiết.
+
+### SỨC DỰ BÁO ĐO ĐƯỢC — để đừng ai phải đo lại
+
+Rank IC cắt ngang từng phiên, tín hiệu ngày t → lợi suất phiên t+1, lọc mã khớp ≥1 tỷ:
+
+| tín hiệu | rank IC | t | phiên |
+|---|---|---|---|
+| Biên độ ngày (H−L)/C | −0,066 | **−5,66** | 99 |
+| Vòng quay trên free float | −0,043 | −3,29 | 99 |
+| Vòng quay trên toàn bộ CP | −0,036 | −3,18 | 99 |
+| Khối ngoại ròng CHỈ khớp lệnh / GT | +0,031 | +2,50 | 59 |
+| Khối ngoại ròng (gồm thoả thuận) | +0,030 | +2,44 | 59 |
+| Tỉ trọng thoả thuận | +0,018 | +2,51 | 99 |
+| Tự doanh ròng / GT | −0,019 | −1,37 | 60 |
+| Đóng cửa so VWAP | −0,003 | −0,24 | 99 |
+
+Ba điều đọc ra: **biên độ ngày là tín hiệu mạnh nhất kho này có**, trùng khớp với nghiên
+cứu chu kỳ 08/2026 độc lập ("biến động thấp" đứng đầu bảng chỉ báo hiệu quả); **tách
+thoả thuận ra làm khối ngoại mạnh lên**, đúng lý vì thoả thuận là giao dịch dàn xếp
+trước; **tự doanh ra dấu ÂM** — chưa đủ tin về thống kê nhưng có lời giải, phần lớn tự
+doanh mua trụ lớn là **phòng hộ chứng quyền và chênh lệch ETF**, hành động bắt buộc chứ
+không mang thông tin.
+
+> **99 PHIÊN LÀ QUÁ NGẮN ĐỂ KẾT LUẬN.** Bảng này chứng minh bộ máy đo chạy được, chưa
+> chứng minh nhân tố nào tồn tại. Đừng trích nó ra như bằng chứng về thị trường.
+
+> **`universe.json` LÀ RỔ HÔM NAY** — mọi backtest chạy trên nó đều SỐNG SÓT SAI LỆCH
+> (mã đã huỷ niêm yết không có mặt). Chưa vá; cần một rổ lịch sử có cả mã đã rời sàn.
 
 ## Quy ước toàn site
 

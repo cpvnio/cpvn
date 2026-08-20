@@ -48,8 +48,13 @@ else                                   { & $py refresh_daily.py 2>&1 }
 # KHO GIAO DỊCH (data/giaodich) — số chốt phiên + SỔ LỆNH KHI CHỐT PHIÊN, từ Vietstock.
 # Chạy Ở ĐÂY chứ không ở lượt 7:30: đây là số CHỐT SỔ, phải sau 15:00 mới có.
 # Hằng ngày chỉ xin trang 1 của mỗi mã (đã có sẵn 20 phiên giá + 30 phiên sổ lệnh) nên
-# Một lượt lấy TẤT CẢ cho mỗi mã: 2 trang giá (40 phiên) + sổ lệnh + khối ngoại + tự
-# doanh = 5 lượt/mã ≈ 7.650 lượt ≈ 32 phút ở 4 lượt/giây.
+# Một lượt lấy TẤT CẢ cho mỗi mã: 2 trang giá (40 phiên) + 2 trang sổ lệnh + 2 trang
+# khối ngoại + 1-2 trang tự doanh ≈ 8 lượt/mã ≈ 12.000 lượt ≈ 50 phút ở 4 lượt/giây.
+# Số trang của ba tầng dòng tiền nằm ở `TRANG_LUONG` trong kho_giaodich.py — nâng
+# 21/08/2026 vì sổ lệnh trước đó chỉ xin 1 trang (30 phiên) còn khối ngoại 2 trang
+# (60 phiên), trong khi giá đã có 100. Kho mang tiếng "100 phiên" mà tầng hiếm nhất
+# lại mỏng nhất. ĐÂY KHÔNG PHẢI nới trần nhịp mạng — trần vẫn 4 lượt/giây, chỉ là lượt
+# chạy dài hơn. Muốn kéo sâu hơn nữa thì chạy TAY `--sau --trang N`, đừng đổi mặc định.
 # Gộp bốn thứ vào MỘT bước chứ không tách bốn bước: cả ba tầng sau đều cần `stockID`, mà
 # số đó chỉ có sau khi gọi thống kê giá — tách ra là phải gọi lại thống kê giá ba lần nữa.
 # Hỏng ở bước này KHÔNG được chặn lượt chạy — universe.json và kho nến mới là thứ bắt buộc.
@@ -73,6 +78,29 @@ if ($LASTEXITCODE -ne 0) { "kho_giaodich --vg EXIT $LASTEXITCODE - bo qua, chay 
 # hiện số của hôm qua mà không có dấu hiệu gì.
 & $py tools\build_phantich.py 2>&1
 if ($LASTEXITCODE -ne 0) { "build_phantich EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# VÁ DẤU LƯU CHUYỂN TIỀN TỆ trong data/fin, lấy dấu từ data/finq. KHÔNG gọi mạng, vài
+# giây. Phải chạy MỖI NGÀY chứ không phải một lần: bước 5 của pipeline cào lại data/fin
+# từ 24hMoney — chính cái nguồn trả dấu sai — nên mã nào được cào lại hôm nay là dấu
+# hỏng lại hôm đó. Vá một lần rồi quên là kho tự hỏng lại mà không có gì báo.
+& $py tools\va_dau_fin.py 2>&1
+if ($LASTEXITCODE -ne 0) { "va_dau_fin EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# KHO ĐẶC TRƯNG — vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, và chỉ
+# tiêu cơ bản GẮN THEO NGÀY CÔNG BỐ BCTC. Không gọi mạng, ~40 giây.
+# Phải chạy SAU build_phantich (không phụ thuộc, nhưng để thứ tự đọc xuôi) và TRƯỚC
+# quet_la — quet_la đọc thẳng kho này.
+& $py tools\kho_dactrung.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_dactrung EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# QUÉT BẤT THƯỜNG + LÁT CẮT NGANG cho bộ lọc tự chọn, ghi thẳng vào file phiên.
+# Phải chạy SAU build_phantich (nó là bên dựng ra file phiên) và SAU kho_dactrung.
+# Ghi lại 100 phiên gần nhất chứ không riêng phiên hôm nay: kho đặc trưng đổi thì mọi
+# phiên đổi theo (đỉnh 52 tuần, cộng dồn 20 phiên, kỳ BCTC đang hiệu lực).
+& $py tools\quet_la.py --phien 100 2>&1
+if ($LASTEXITCODE -ne 0) { "quet_la EXIT $LASTEXITCODE - bo qua, chay tiep" }
+& $py tools\quet_la.py 2>&1
+if ($LASTEXITCODE -ne 0) { "quet_la (phien moi nhat) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
 # Tên commit theo NGÀY PHIÊN trong kho vừa dựng, không theo ngày chạy máy: lượt nào
 # vắt qua nửa đêm mà lấy ngày máy sẽ đặt tên phiên hôm sau cho dữ liệu hôm trước.

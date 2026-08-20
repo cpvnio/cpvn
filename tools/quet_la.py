@@ -49,20 +49,34 @@ def doc(p):
         return None
 
 
-def quet(ngay=None):
-    u = json.load(open(UNI, encoding="utf-8"))["stocks"]
-    ten = {s["sym"]: s.get("name") or "" for s in u}
-    nganh = {s["sym"]: s.get("sector") or "" for s in u}
+_KHO = {}
 
-    hang = []
-    ngays = set()
+
+def nap_kho():
+    """NẠP CẢ KHO ĐẶC TRƯNG MỘT LẦN rồi giữ lại. Quét 100 phiên mà mỗi phiên đọc lại
+    1.529 file là 152.900 lượt mở file cho một việc chỉ cần 1.529."""
+    if _KHO:
+        return _KHO
+    u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+    _KHO["ten"] = {s["sym"]: s.get("name") or "" for s in u}
+    _KHO["sec"] = {s["sym"]: s.get("sector") or "" for s in u}
+    hang, gd = [], {}
     for s in u:
         m = s["sym"]
         o = doc(os.path.join(DT, m + ".json"))
-        if not o or not o.get("d"):
-            continue
-        ngays.update(o["d"][-5:])
-        hang.append((m, o))
+        if o and o.get("d"):
+            hang.append((m, o))
+        g = doc(os.path.join(BASE, "data", "giaodich", m + ".json"))
+        if g and g.get("d"):
+            gd[m] = g
+    _KHO["hang"] = hang
+    _KHO["gd"] = gd
+    return _KHO
+
+
+def quet(ngay=None):
+    K = nap_kho()
+    ten, nganh, hang = K["ten"], K["sec"], K["hang"]
     if not hang:
         return None
     if not ngay:
@@ -88,9 +102,8 @@ def quet(ngay=None):
             "vqf": g("vqf"), "ep": g("ep"), "roe": g("roe"), "kyCB": g("kyCB"),
         })
     # `mval` không nằm trong kho đặc trưng (nó là số thô) — lấy lại từ kho giao dịch
-    GD = os.path.join(BASE, "data", "giaodich")
     for x in r:
-        o = doc(os.path.join(GD, x["sym"] + ".json"))
+        o = K["gd"].get(x["sym"])
         if not o:
             continue
         try:
@@ -179,6 +192,41 @@ def quet(ngay=None):
     }
 
 
+# Đặc trưng bày ra cho BỘ LỌC TỰ CHỌN của người dùng. Thứ tự cố định, client đọc theo
+# chỉ số nên **thêm thì nối vào CUỐI, đừng chèn giữa** — chèn giữa là mọi cột lệch một ô
+# mà không có gì báo.
+COT_DT = ["vqf", "ami", "bd20", "vol20", "gtx", "d52", "clm", "cl",
+          "ep", "roe", "ngaypt", "ngaytk", "novayvc", "biengop",
+          "fnr20", "fnp", "room", "shu", "mcapFF", "r20", "r60", "ttp"]
+
+
+def lat_cat(ngay):
+    """LÁT CẮT NGANG toàn thị trường tại một phiên — nguyên liệu cho bộ lọc tự chọn.
+
+    ĐÂY LÀ BỘ ĐO, KHÔNG PHẢI DANH MỤC GỢI Ý. Kho bày ra các đại lượng đã tính sẵn và để
+    NGƯỜI DÙNG tự chọn lọc theo cái nào, ngưỡng bao nhiêu, xếp theo cái nào. Tuyệt đối
+    không chấm điểm tổng hợp bằng trọng số của chủ trang rồi cắt lấy top N — đó đúng là
+    thứ `PRO_N`/`PRO_LIQ`/`PRO_FLAT` đã làm và đã bị gỡ hẳn 16/08/2026 (xem mục *Ranh
+    giới pháp lý* trong CLAUDE.md): dù từng yếu tố đều đo được, thứ người dùng nhận về
+    vẫn là "đây là N mã", tức một danh mục khuyến nghị. Khi người dùng tự đặt tiêu chí
+    thì kết quả là của họ.
+    """
+    K = nap_kho()
+    ra = {}
+    for m, o in K["hang"]:
+        try:
+            i = o["d"].index(ngay)
+        except ValueError:
+            continue
+        v = []
+        for k in COT_DT:
+            a = o.get(k)
+            v.append(a[i] if a and i < len(a) else None)
+        if any(x is not None for x in v):
+            ra[m] = v
+    return ra
+
+
 def main():
     av = sys.argv[1:]
     ngay = None
@@ -215,6 +263,8 @@ def main():
             p = os.path.join(PH, f)
             cu = doc(p) or {}
             cu["la"] = q
+            cu["dtf"] = COT_DT
+            cu["dt"] = lat_cat(ng)
             tmp = p + ".tmp"
             json.dump(cu, open(tmp, "w", encoding="utf-8"), ensure_ascii=False,
                       separators=(",", ":"))

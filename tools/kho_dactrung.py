@@ -43,6 +43,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GD = os.path.join(BASE, "data", "giaodich")
 HIST = os.path.join(BASE, "data", "hist")
 NGANH = os.path.join(BASE, "data", "nganh")
+FIN = os.path.join(BASE, "data", "fin")
 SUKIEN = os.path.join(BASE, "data", "sukien")
 PROFILE = os.path.join(BASE, "data", "profile")
 UNI = os.path.join(BASE, "universe.json")
@@ -122,6 +123,49 @@ def ky_so(lb):
         return None
 
 
+def lnst4_fin(sym):
+    """LNST BỐN QUÝ GẦN NHẤT tính thẳng từ `data/fin` — dự phòng cho mã KHÔNG PHẢI SẢN XUẤT.
+
+    `data/nganh` chỉ có `lnst4` ở mẫu `sx` (1.133 mã). Bốn mẫu còn lại — ngân hàng 29,
+    chứng khoán 42, bảo hiểm 13, bất động sản 114 — không có, nên lợi suất trên giá (E/P)
+    hụt đúng nhóm chiếm phần lớn vốn hoá thị trường: không có ngân hàng thì E/P của cả
+    thị trường là một con số nói về nửa còn lại.
+
+    `Q` của `data/fin` gom dồn đủ lịch sử (xem luật "KQKD phải GOM DỒN" trong CLAUDE.md)
+    và có `np` = lợi nhuận sau thuế từng quý. Cộng bốn quý liên tiếp là ra chuỗi trượt.
+
+    CỘNG ĐÚNG BỐN QUÝ LIỀN MẠCH, thiếu quý nào thì bỏ mốc đó. Nguồn có lỗ hổng giữa
+    chuỗi; cộng bừa bốn nhãn có sẵn là gộp Q1/24 với Q4/22 rồi gọi đó là "bốn quý gần
+    nhất".
+    """
+    o = doc(os.path.join(FIN, sym + ".json"))
+    if not o:
+        return {}
+    q = o.get("Q") or []
+    z = []
+    for r in q:
+        lb, np_ = r.get("label"), r.get("np")
+        k = ky_so(lb) if lb else None
+        if k and np_ is not None:
+            z.append((k, lb, np_))
+    z.sort()
+    ra = {}
+    for i in range(3, len(z)):
+        cua = z[i - 3:i + 1]
+        # bốn kỳ phải LIỀN NHAU: Qx/yy tăng đúng một quý mỗi bước
+        lien = True
+        for j in range(1, 4):
+            a, b = cua[j - 1][0], cua[j][0]
+            ya, qa = divmod(a, 100)
+            yb, qb = divmod(b, 100)
+            if not ((ya == yb and qb == qa + 1) or (yb == ya + 1 and qa == 4 and qb == 1)):
+                lien = False
+                break
+        if lien:
+            ra[cua[-1][1]] = round(sum(x[2] for x in cua), 2)
+    return ra
+
+
 def nap_cb(sym):
     """Chỉ tiêu cơ bản THEO NGÀY CÔNG BỐ (luật 1).
 
@@ -145,6 +189,8 @@ def nap_cb(sym):
         return []
     kys = ng.get("ky") or []
     d = ng.get("d") or {}
+    # dự phòng LNST 4 quý cho mẫu không phải `sx`
+    ln4 = {} if d.get("lnst4") else lnst4_fin(sym)
     ra = []
     for i, lb in enumerate(kys):
         ngay = cb.get(lb)
@@ -155,6 +201,8 @@ def nap_cb(sym):
             v = d.get(k)
             if v and i < len(v) and v[i] is not None:
                 r[k] = v[i]
+        if "lnst4" not in r and lb in ln4:
+            r["lnst4"] = ln4[lb]
         if r:
             r["ky"] = lb
             ra.append((ngay, r))
@@ -358,7 +406,7 @@ def main():
 
     os.makedirs(RA, exist_ok=True)
     ok = bo = 0
-    coCB = coFF = co52 = 0
+    coCB = coFF = co52 = coEP = 0
     for m in ma:
         r = lam(m, ff.get(m))
         if not r:
@@ -370,6 +418,8 @@ def main():
             coFF += 1
         if any(x is not None for x in r["d52"]):
             co52 += 1
+        if any(x is not None for x in r["ep"]):
+            coEP += 1
         if not thu:
             jdump(r, os.path.join(RA, m + ".json"))
         ok += 1
@@ -380,6 +430,7 @@ def main():
     print("  có free float          : {:,}".format(coFF))
     print("  có cơ bản THEO NGÀY CB : {:,}".format(coCB))
     print("  có đỉnh 52 tuần        : {:,}".format(co52))
+    print("  có lợi suất trên giá   : {:,}".format(coEP))
     print("  kho {:,.0f} KB".format(kb))
     if thu:
         print("  (--thu: chạy 40 mã, KHÔNG ghi)")
