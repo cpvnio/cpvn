@@ -803,7 +803,7 @@ async function renderPhanTich(){
 /* Phiên nào CÓ file ngày thì mới chọn được. Trần 320 khớp `SO_PHIEN_FILE` của
    `build_phantich.py` — hai chỗ lệch nhau thì hoặc ô chọn bày ra phiên không có file
    (bấm vào bảng trống), hoặc giấu mất phiên đã có file. */
-function ptCoFile(o){ const t=o.tt; return t.d.filter((d,i)=>t.n[i]>=100).slice(-320); }
+function ptCoFile(o){ const t=o.tt; return t.d.filter((d,i)=>t.n[i]>=100).slice(-1000); }
 
 async function ptVe(){
   const o=PT.tt, b=$('#ptBody'); if(!b) return;

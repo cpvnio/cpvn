@@ -1558,6 +1558,36 @@ nghĩa và khác độ sâu:
 > `FREEFLOAT` và `FOREIGN_OWNERSHIP` theo `reportDate` — nhưng chưa cào, vì đó là chuỗi
 > theo KỲ BÁO CÁO chứ không theo phiên, phải gióng lại trục.
 
+### FILE PHIÊN LÊN 1.000 — VÀ BỎ CỘT RỖNG THEO TỪNG PHIÊN
+
+`SO_PHIEN_FILE` 120 → 320 → **1000** (22/08/2026), khớp với `ptCoFile` bên client. **Hai
+số này phải bằng nhau**: lệch thì hoặc ô chọn bày ra phiên không có file (bấm vào bảng
+trống), hoặc giấu mất phiên đã có file.
+
+Giá phải trả, đo trên file phiên 20/08 — **536 KB**:
+
+```
+bang  240 KB  bảng mã            <- thứ DUY NHẤT còn hiện
+dt    213 KB  lát cắt cho bộ lọc <- ĐANG TẮT
+ma     75 KB  vùng giá khớp lệnh
+la      8 KB  quét bất thường    <- ĐANG TẮT
+```
+
+Hai chỗ cắt: **bỏ cột rỗng theo từng phiên** (phiên cũ hơn 249 không có một cột Vietstock
+nào, để nguyên là mỗi mã gánh một chuỗi `null,null,null…` — nhân 1.525 mã × 1.000 phiên
+thì riêng chữ `null` nặng hơn dữ liệu thật), và `quet_la` vẫn chỉ ghi `dt` cho **100 phiên
+gần nhất**. Kết quả: phiên cũ còn **15 cột / ~152 KB** so với 25 cột / 536 KB của phiên
+mới; cả thư mục **195 MB / 999 file**.
+
+> **AN TOÀN VỚI CLIENT, KHÔNG PHẢI SỬA GÌ:** `ptBang` dựng bảng tra từ chính `p.f`
+> (`ix[k]=i`) rồi đọc `v[ix[k]]`, nên cột vắng mặt trả `undefined` — đi đúng nhánh "không
+> có số" vốn đã có sẵn.
+
+> **BẪY ĐÃ SUÝT TRẢ GIÁ:** `rm -f data/phien/*.json` rồi mới dựng lại là **xoá mất `ma`
+> (vùng giá đã cào), `la` và `dt`** — build_phantich chỉ dựng `bang`, ba khối kia do lượt
+> khác ghi. Cứu được nhờ `git checkout -- data/phien`. **Đừng bao giờ xoá thư mục này rồi
+> dựng lại;** build_phantich vốn đã trộn vào file cũ, chạy thẳng là đủ.
+
 ### TẦNG DÒNG TIỀN NAY LẤY VNDIRECT — `NGUON_DONGTIEN` trong `build_phantich.py`
 
 User chốt 22/08/2026: *"tạm ẩn nguồn Vietstock đi, toàn bộ dùng nguồn VNDirect"*. Ba lý do

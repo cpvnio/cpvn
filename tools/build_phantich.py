@@ -74,7 +74,13 @@ PROFILE = os.path.join(BASE, "data", "profile")
 # nguyên trường Vietstock, đổi hằng số này về "vietstock" là quay lại được.
 NGUON_DONGTIEN = "vnd"
 
-SO_PHIEN_FILE = 320
+# 120 -> 320 -> **1000** (22/08/2026): đồ thị cho xem tới 1.000 phiên mà bấm vào cột là
+# nhảy tới phiên đó — không có file thì bấm xong ra bảng trống. `ptCoFile` bên client cắt
+# ở cùng số này, HAI SỐ PHẢI KHỚP NHAU.
+# Giá phải trả, đo trên file phiên 20/08: 536 KB = `bang` 240 + `dt` 213 (bộ lọc ĐANG TẮT)
+# + `ma` 75. Nhân 1.000 phiên là hơn nửa GB, nên đi kèm phép bỏ cột rỗng ở dưới; và
+# `quet_la` vẫn chỉ ghi `dt` cho 100 phiên gần nhất chứ không phải cả 1.000.
+SO_PHIEN_FILE = 1000
 MIN_MA = 100             # phiên ít mã hơn thì không dựng file ngày
 
 
@@ -234,8 +240,20 @@ def main():
             except Exception:
                 cu = {}
         # TRỘN: khối `ma` (vùng giá) do `kho_giaodich --vg` ghi, đừng xoá mất.
+        # BỎ CỘT RỖNG THEO TỪNG PHIÊN. Phiên cũ hơn 249 không có một cột Vietstock nào
+        # (`fnMuaGT` `tdMuaGT` `fnSoHuu` `fnRoom`…), để nguyên là mỗi mã gánh một chuỗi
+        # "null,null,null…" — nhân 1.525 mã × 1.000 phiên thì riêng chữ `null` nặng hơn
+        # cả dữ liệu thật.
+        # AN TOÀN VỚI CLIENT: `ptBang` dựng bảng tra từ chính `p.f` (`ix[k]=i`) rồi đọc
+        # `v[ix[k]]`, nên cột vắng mặt trả `undefined` — đi đúng nhánh "không có số" vốn
+        # đã có. Không phải sửa gì bên client.
+        dung = [k for j, k in enumerate(COT_BANG)
+                if any(v[j] is not None for v in r.values())]
+        if len(dung) < len(COT_BANG):
+            gi = [COT_BANG.index(k) for k in dung]
+            r = {m: [v[j] for j in gi] for m, v in r.items()}
         cu["date"] = ng
-        cu["f"] = COT_BANG
+        cu["f"] = dung
         cu["bang"] = r
         cu["n"] = len(r)
         # CHỈ GHI KHI ĐỔI — bảng mã của một phiên đã qua không đổi nữa. Ghi vô điều kiện
