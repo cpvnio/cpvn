@@ -24,12 +24,17 @@ $a = New-ScheduledTaskAction -Execute 'powershell.exe' `
 $t = New-ScheduledTaskTrigger -Weekly `
      -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '15:15'
 # StartWhenAvailable: máy ngủ/tắt lúc 15:15 thì chạy bù ngay khi bật lại
+# NỚI GIỚI HẠN 2 -> 3 GIỜ (21/08/2026). Lượt EOD nay làm thêm kho giao dịch: 5 lượt gọi mỗi
+# mã cho giá + sổ lệnh + khối ngoại + tự doanh (~32 phút), vùng giá khớp lệnh (~10 phút),
+# chỉ số và bộ gộp (vài giây). Cộng với refresh_daily thì sát trần 2 giờ cũ. Chạm trần là
+# Windows GIẾT tiến trình giữa chừng mà tác vụ VẪN báo hoàn tất.
+#
+# ĐỪNG CHÈN CHÚ THÍCH VÀO GIỮA DẤU NỐI DÒNG ` VÀ THAM SỐ KẾ TIẾP. Đã dính đúng vậy khi
+# viết lời giải thích trên: PowerShell cắt câu lệnh ngay tại dòng chú thích, nên
+# `New-ScheduledTaskSettingsSet -StartWhenAvailable` chạy trơ trọi và nhận giới hạn MẶC
+# ĐỊNH 72 GIỜ, còn dòng `-ExecutionTimeLimit` thành một câu lệnh rác. Tác vụ vẫn đăng ký
+# "thành công" — chỉ lộ ra khi đọc lại `Settings.ExecutionTimeLimit` và thấy PT72H.
 $s = New-ScheduledTaskSettingsSet -StartWhenAvailable `
-     # NỚI 2 -> 3 GIỜ (21/08/2026). Lượt EOD nay làm thêm kho giao dịch: 5 lượt gọi mỗi mã
-     # cho giá + sổ lệnh + khối ngoại + tự doanh (~32 phút), vùng giá khớp lệnh (~10 phút),
-     # chỉ số và bộ gộp (vài giây). Cộng với refresh_daily thì sát trần 2 giờ.
-     # Chạm trần thì Windows GIẾT tiến trình giữa chừng và tác vụ vẫn báo hoàn tất — mất
-     # phần chưa commit mà không có gì báo, đúng họ với mấy cú hỏng im lặng đã gặp.
      -ExecutionTimeLimit (New-TimeSpan -Hours 3)
 Register-ScheduledTask -TaskName 'CPVN EOD refresh' -Action $a -Trigger $t `
      -Settings $s -User 'SYSTEM' -RunLevel Highest -Force
