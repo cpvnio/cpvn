@@ -1,4 +1,14 @@
-# CÀO BÙ KHO GIAO DỊCH — chạy MỘT LẦN, nhiều giờ, ngoài luồng của mọi tác vụ khác.
+# VÁ KHO GIAO DỊCH — LƯỚI AN TOÀN, chạy TAY khi nghi kho thiếu. KHÔNG đăng ký tác vụ.
+#
+# CHÍNH SÁCH ĐỘ SÂU: 100 PHIÊN, và từ đó bồi tới bằng lượt EOD 15:15 hằng ngày
+# (user chốt 21/08/2026: *"tao chỉ cần 100 phiên thôi... và lưu từ đây về sau là được rồi"*).
+# Bản đầu của file này cào TOÀN BỘ lịch sử mỗi mã (`--tatca`) — 20+ giờ, và phần lớn công
+# đó không ai dùng tới. Đã gỡ tác vụ `CPVN boi giaodich` khỏi máy chủ 21/08/2026 khi nó
+# đang ở 637/1.529 mã.
+#
+# ĐỪNG ĐỔI LẠI THÀNH `--tatca`. Lượt EOD hằng ngày chỉ xin 2 trang (40 phiên) rồi TRỘN vào
+# file cũ, nên kho giữ nguyên 100 phiên đã có và dày thêm mỗi ngày — không có lý do gì phải
+# cào ngược cả nghìn phiên nữa.
 #
 # VÌ SAO CÓ BẢN SAO RIÊNG `C:\cpvn_bf` THAY VÌ CHẠY THẲNG Ở `C:\cpvn`
 # ------------------------------------------------------------------
@@ -51,21 +61,23 @@ if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
 & $git fetch origin main 2>&1 | Add-Content $log
 & $git reset --hard origin/main 2>&1 | Add-Content $log
 
-# Danh sách mã CÒN THIẾU.
+# Danh sách mã CÒN THIẾU — đo theo ĐỘ SÂU chứ không theo "file có tồn tại không".
 #
-# ĐỪNG CHỈ HỎI "FILE CÓ TỒN TẠI KHÔNG" — đã trả giá 20/08/2026. Lượt EOD 15:15 chạy
-# `--sau` (KHÔNG có `--tatca`) nên nó tạo đủ 1.529 file nhưng mỗi file chỉ có ~30 phiên
-# của trang 1. Lượt cào bù sau đó thấy "file có rồi" nên bỏ qua sạch — kho đứng ở 30
-# phiên vĩnh viễn, mà không có gì báo. User phát hiện, không phải phép kiểm nào.
+# Hỏi "có file chưa" là sai, đã trả giá 20/08/2026: lượt EOD tạo đủ 1.529 file nhưng mỗi
+# file chỉ có ~30 phiên, lượt vá sau đó thấy "file có rồi" nên bỏ qua sạch — kho đứng ở 30
+# phiên vĩnh viễn mà không có gì báo.
 #
-# Nên hỏi BA điều, thiếu điều nào cũng để lọt một loại file dở:
-#   · chưa có file
-#   · có nhưng `day` khác 1  -> mới cào trang 1, chưa cào hết lịch sử
-#   · có nhưng `v` < PBAN    -> dựng bằng cách tính CŨ, phải làm lại (kho tự lành dần)
+# Hỏi `day != 1` cũng sai theo hướng ngược lại: mọi file dựng bằng `--sau` đều không mang
+# cờ đó, nên lượt nào cũng coi cả 1.529 mã là thiếu và cào lại từ đầu 20 giờ.
+#
+# Đúng là hỏi HAI điều:
+#   · dưới NGUONG phiên (trừ mã mới lên sàn — chúng KHÔNG THỂ có đủ, đừng hỏi lại mãi)
+#   · `v` < PBAN  -> dựng bằng cách tính CŨ, phải làm lại (kho tự lành dần)
 $conthieu = & $py -c @"
 import json, os, sys
 sys.path.insert(0, 'tools')
 from kho_giaodich import PBAN
+NGUONG = 100
 u = json.load(open('universe.json', encoding='utf-8'))['stocks']
 d = os.path.join('data', 'giaodich')
 def thieu(sym):
@@ -76,7 +88,20 @@ def thieu(sym):
         o = json.load(open(p, encoding='utf-8'))
     except Exception:
         return True
-    return (o.get('day') != 1) or ((o.get('v') or 0) < PBAN)
+    if (o.get('v') or 0) < PBAN:
+        return True
+    n = o.get('n') or 0
+    if n >= NGUONG:
+        return False
+    # MÃ MỚI LÊN SÀN KHÔNG THỂ CÓ ĐỦ 100 PHIÊN — hỏi lại mãi là quay vòng vô ích. Đo
+    # 21/08/2026: 12 mã ở tình trạng này (LPS 3 phiên, PCB 7, DMX 11...), và phiên đầu
+    # trong kho TRÙNG KHÍT ngày lên sàn ở cả 12. Kho của chúng đã đủ.
+    try:
+        ny = json.load(open(os.path.join('data', 'niemyet.json'), encoding='utf-8'))
+        ngay = {z['s']: z.get('d') for z in ny['ma']}.get(sym)
+    except Exception:
+        ngay = None
+    return not (ngay and (o.get('d') or [''])[0] <= ngay)
 print(' '.join(s['sym'] for s in u if thieu(s['sym'])))
 "@
 $ma = ($conthieu -split '\s+') | Where-Object { $_ }
@@ -84,12 +109,12 @@ Ghi "Con thieu $($ma.Count) ma"
 if ($ma.Count -eq 0) { Ghi 'Khong con gi de cao - thoat.'; exit 0 }
 
 # LÔ 50 MÃ. Nhỏ hơn thì tốn quá nhiều lượt commit/push; lớn hơn thì hỏng một cái mất
-# nhiều công hơn. 50 mã ≈ 20-25 phút, tức mất nhiều nhất chừng ấy nếu đứt giữa chừng.
+# nhiều công hơn. Với `--trang 5` thì 50 mã ≈ 2 phút, cả 1.529 mã ≈ 40 phút.
 $lo = 50
 for ($i = 0; $i -lt $ma.Count; $i += $lo) {
   $nhom = $ma[$i..([Math]::Min($i + $lo - 1, $ma.Count - 1))]
   Ghi "--- lo $([int]($i/$lo)+1)/$([Math]::Ceiling($ma.Count/$lo)): $($nhom.Count) ma, bat dau $($nhom[0]) ---"
-  & $py 'tools\kho_giaodich.py' --sau --tatca --ma @nhom 2>&1 | Add-Content $log
+  & $py 'tools\kho_giaodich.py' --sau --trang 5 --ma @nhom 2>&1 | Add-Content $log
 
   & $git add data/giaodich 2>&1 | Add-Content $log
   & $git diff --cached --quiet
