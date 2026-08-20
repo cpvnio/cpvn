@@ -869,9 +869,16 @@ function ptTop(){
        thị trường, nhưng phần THỰC SỰ MUA BÁN ĐƯỢC chỉ 2.049 — 20,1%. Phần chênh nằm ở
        tay nhà nước và cổ đông chiến lược, không bao giờ ra sàn. Hiện mỗi con số đầu là
        nói quá quy mô thị trường lên 5 lần. */
-    +box('Vốn hoá thị trường', num(t.mcap[i]/1000)+' nghìn tỷ',
+    /* VIẾT HẲN SỐ THEO ĐƠN VỊ TỶ, ĐỪNG ĐỔI BẬC SANG "NGHÌN TỶ" (user chốt 22/08/2026).
+       "10.167 nghìn tỷ" đọc ra không ai hiểu là **hơn 10 TRIỆU tỷ** — mắt bắt lấy con số
+       10.167 rồi dừng ở đó, chữ "nghìn" phía sau thành ra chỉ là một cái đuôi. Viết
+       10.167.115 tỷ thì độ lớn nằm ngay trong chính con số, không phải nhân nhẩm.
+       Đây cũng đúng luật sẵn có của dự án mà đoạn cũ đã phá: *một đơn vị `tỷ` duy nhất,
+       viết hẳn số, không đổi bậc; chỉ CÂU CHỮ mới viết "nghìn tỷ"* — xem mục Quy ước
+       toàn site trong CLAUDE.md. Cùng lý do đã bỏ hậu tố tự chế "N"/"Tr" ở bảng giá. */
+    +box('Vốn hoá thị trường', num(t.mcap[i])+' tỷ',
          (t.mcapFF&&t.mcapFF[i]!=null)
-           ?('giao dịch được <b>'+num(t.mcapFF[i]/1000)+' nghìn tỷ</b> · <b>'
+           ?('giao dịch được <b>'+num(t.mcapFF[i])+' tỷ</b> · <b>'
              +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'%</b> free float')
            :('<b>'+num(t.nMcap[i])+'</b> mã có số cổ phiếu'))
     /* KHỐI NGOẠI và TỰ DOANH: hiện RÒNG làm số chính, mua/bán làm phụ. `nFn`/`nTd` phải nói

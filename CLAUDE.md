@@ -1340,6 +1340,22 @@ sau này, phải cào đúng lúc nó còn — lại là tầng mỏng nhất. N
 > xin thêm trang chỉ làm lượt chạy DÀI HƠN. Đừng bao giờ đụng `TRAN` trong `nhipmang.py`
 > để chạy nhanh hơn — xem luật ở đầu file đó.
 
+### VỐN HOÁ VIẾT HẲN SỐ THEO ĐƠN VỊ TỶ — ĐỪNG ĐỔI BẬC SANG "NGHÌN TỶ"
+
+```
+10.167.115 tỷ        <- đúng
+10.167 nghìn tỷ      <- SAI, và đã dùng nhầm suốt 21/08/2026
+```
+
+User chốt 22/08/2026: *"nhiều người đọc không hiểu 10.000 nghìn tỷ là 10 triệu tỷ"*.
+Mắt bắt lấy con số `10.167` rồi dừng ở đó, chữ "nghìn" phía sau thành ra chỉ là một cái
+đuôi — không ai nhân nhẩm khi đang lướt. Viết hẳn thì độ lớn nằm ngay trong chính con số.
+
+> Đây vốn đã là **luật sẵn có của dự án** ở mục *Quy ước toàn site* — *"hiển thị một đơn
+> vị `tỷ` duy nhất qua `CP.fmtVnd`, viết hẳn số (`1,100 tỷ`) không đổi bậc"* và *"bỏ hậu
+> tố tự chế N/Tr … chỉ CÂU CHỮ mới viết nghìn tỷ"*. Đoạn dựng ô vốn hoá đã phá luật đó.
+> Nhắc lại ở đây vì nó tái phạm được: mỗi lần thấy một con số 8 chữ số là rất muốn rút gọn.
+
 ### FREE FLOAT — có sẵn trong kho từ lâu mà không chỗ nào đọc (21/08/2026)
 
 `data/profile/{MÃ}.json` có trường `freeFloat` cho **1.429/1.525 mã**. Đo phiên 20/08:
