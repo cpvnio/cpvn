@@ -49,6 +49,31 @@ def doc(p):
         return None
 
 
+def ghi_neu_doi(p, o):
+    """GHI CHỈ KHI NỘI DUNG THỰC SỰ ĐỔI. Trả về True nếu có ghi.
+
+    Mọi đặc trưng của một phiên đều tính TẠI phiên đó (đỉnh 52 tuần, cửa sổ 20 phiên
+    trước, kỳ BCTC đang hiệu lực) nên phiên CŨ ra kết quả y hệt ở mọi lượt chạy. Ghi vô
+    điều kiện thì lượt EOD mỗi ngày đụng vào cả 100 file × ~510 KB = **~51 MB blob mới
+    mỗi phiên** trong git, cho nội dung không đổi một byte.
+
+    Cùng luật với `kho_sukien.py` ("chỉ ghi file khi danh sách sự kiện thực sự đổi").
+    So bằng CHUỖI ĐÃ TUẦN TỰ HOÁ chứ đừng so dict: thứ tự khoá khác nhau thì hai dict
+    bằng nhau nhưng file khác nhau, mà git nhìn file."""
+    moi = json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+    try:
+        with open(p, encoding="utf-8") as f:
+            if f.read() == moi:
+                return False
+    except Exception:
+        pass
+    tmp = p + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(moi)
+    os.replace(tmp, p)
+    return True
+
+
 _KHO = {}
 
 
@@ -294,12 +319,10 @@ def main():
             cu["la"] = q
             cu["dtf"] = COT_DT
             cu["dt"] = lat_cat(ng)
-            tmp = p + ".tmp"
-            json.dump(cu, open(tmp, "w", encoding="utf-8"), ensure_ascii=False,
-                      separators=(",", ":"))
-            os.replace(tmp, p)
-            ghi += 1
-        print("  ghi kết quả quét vào {}/{} file phiên".format(ghi, len(fs)))
+            if ghi_neu_doi(p, cu):
+                ghi += 1
+        print("  quét {} phiên · GHI {} file (số còn lại nội dung y hệt, không đụng vào)"
+              .format(len(fs), ghi))
         return 0
 
     q = quet(ngay)

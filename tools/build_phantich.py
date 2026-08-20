@@ -196,9 +196,19 @@ def main():
         cu["f"] = COT_BANG
         cu["bang"] = r
         cu["n"] = len(r)
+        # CHỈ GHI KHI ĐỔI — bảng mã của một phiên đã qua không đổi nữa. Ghi vô điều kiện
+        # thì lượt EOD mỗi ngày đụng vào cả 120 file cho nội dung y hệt, và git giữ lại
+        # từng bản một. Cùng luật với `kho_sukien.py` và `quet_la.py`.
+        moi = json.dumps(cu, ensure_ascii=False, separators=(",", ":"))
+        try:
+            with open(p, encoding="utf-8") as f:
+                if f.read() == moi:
+                    continue
+        except Exception:
+            pass
         tmp = p + ".tmp"
-        json.dump(cu, open(tmp, "w", encoding="utf-8"), ensure_ascii=False,
-                  separators=(",", ":"))
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(moi)
         os.replace(tmp, p)
         ghi += 1
 
@@ -238,7 +248,7 @@ def main():
     os.replace(tmp, RA)
 
     i = len(ngays) - 1
-    print(f"  đọc {doc:,} file · {len(ngays):,} phiên · file ngày: ghi {ghi}, bỏ {bo} (dưới {MIN_MA} mã)"
+    print(f"  đọc {doc:,} file · {len(ngays):,} phiên · file ngày: GHI {ghi} (còn lại y hệt), bỏ {bo} (dưới {MIN_MA} mã)"
           f" · phantich.json {os.path.getsize(RA)/1024:,.0f} KB", flush=True)
     print(f"  phiên {ngays[i]}: {out['tt']['n'][i]:,} mã · khớp lệnh {out['tt']['mval'][i]:,.0f} tỷ"
           f" · thoả thuận {out['tt']['pval'][i]:,.0f} tỷ"
