@@ -9,3 +9,12 @@ wyckoff-lab.html
 server/*.log
 server/.nghi_le
 PUSH_FAILED.txt
+
+# KHO ĐẶC TRƯNG — DỰNG LẠI ĐƯỢC, ĐỪNG ĐẨY LÊN KHO (21/08/2026).
+# 43 MB / 1.529 file, và `kho_dactrung.py` dựng lại trong ~40 giây từ data/giaodich +
+# data/nganh + data/sukien, KHÔNG gọi mạng lượt nào. Trang web cũng không đọc nó —
+# lát cắt ngang mà bộ lọc cần đã nằm sẵn trong data/phien.
+# Vì sao phải chặn: lượt EOD chạy MỖI PHIÊN và gần như cả 1.529 file đều đổi (thêm một
+# phiên là mọi cửa sổ trượt đổi theo), nên commit nó là ~43 MB blob mới MỖI NGÀY —
+# khoảng 10 GB một năm cho thứ dựng lại hết 40 giây.
+data/dactrung/
