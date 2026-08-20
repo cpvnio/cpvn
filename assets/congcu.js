@@ -747,6 +747,9 @@ const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:
 async function ptTT(){
   if(PT.tt) return PT.tt;
   try{ PT.tt=await (await fetch('data/phantich.json')).json(); }catch(e){ PT.tt={err:1}; }
+  /* CHỨNG QUYỀN — 26 KB, tải cùng lượt đầu. Không có nó thì con số tự doanh đọc ra sai
+     bản chất (xem ptDongTien), mà tải lười thì nó về sau khối đã vẽ xong. */
+  try{ PT.cq=(await (await fetch('data/chungquyen.json')).json()).theoCS||{}; }catch(e){ PT.cq={}; }
   return PT.tt;
 }
 /* Mỗi phiên một file, đệm lại theo ngày — đổi qua đổi lại giữa hai phiên không gọi mạng lần hai */
@@ -1094,23 +1097,48 @@ function ptDongTien(r){
               mua:x[k1]||0,ban:x[k2]||0}))
     .filter(x=>x.rong);
   const fn=co('fnM','fnB'), td=co('tdM','tdB');
-  const dong=x=>'<div class="dsr" data-sym="'+x.sym+'" title="mua '+ptTien(x.mua)+
-    ' · bán '+ptTien(x.ban)+'"><b>'+esc(x.sym)+'</b>'+
-    '<span class="dsn">'+esc(shortName(x.sec||''))+'</span>'+
-    '<span class="dsv '+cls(x.rong)+'">'+(x.rong>0?'+':'')+ptTien(x.rong)+'</span></div>';
+  /* `cq` = số chứng quyền đang lưu hành trên mã đó. CHỈ gắn vào cột TỰ DOANH, không gắn
+     vào cột khối ngoại: khối ngoại không phát hành chứng quyền nên nó chẳng nói gì ở đó. */
+  const dong=(x,cq)=>{
+    const n=cq?((PT.cq||{})[x.sym]||{}).n||0:0;
+    return '<div class="dsr" data-sym="'+x.sym+'" title="mua '+ptTien(x.mua)+
+      ' · bán '+ptTien(x.ban)+(n?(' · '+n+' chứng quyền đang lưu hành của '+
+        (((PT.cq||{})[x.sym]||{}).tc||[]).join(', ')):'')+'"><b>'+esc(x.sym)+
+      (n?'<i class="dscq" title="'+n+' chứng quyền đang lưu hành">CQ</i>':'')+'</b>'+
+      '<span class="dsn">'+esc(shortName(x.sec||''))+'</span>'+
+      '<span class="dsv '+cls(x.rong)+'">'+(x.rong>0?'+':'')+ptTien(x.rong)+'</span></div>';
+  };
   const cot=(ic,ten,rows,ghi)=>'<div class="dscol"><h4>'+ptIc(ic)+ten+'</h4>'+
     (rows.length?rows:'<div class="dse">không có mã nào</div>')+
     (ghi?'<p class="dsg">'+ghi+'</p>':'')+'</div>';
-  const top=(a,chieu)=>a.slice().sort((x,y)=>chieu*(y.rong-x.rong))
-    .filter(x=>chieu>0?x.rong>0:x.rong<0).slice(0,8).map(dong).join('');
+  const top=(a,chieu,cq)=>a.slice().sort((x,y)=>chieu*(y.rong-x.rong))
+    .filter(x=>chieu>0?x.rong>0:x.rong<0).slice(0,8).map(x=>dong(x,cq)).join('');
   if(!fn.length&&!td.length) return '';
+  /* Có bao nhiêu mã trong cột tự doanh mua ròng đang có chứng quyền — con số này quyết
+     định câu ghi chú bên dưới nói mạnh tới đâu. Phiên 20/08: 12/12 mã đầu bảng đều có. */
+  const tdTop=td.slice().sort((x,y)=>y.rong-x.rong).filter(x=>x.rong>0).slice(0,8);
+  const nCQ=tdTop.filter(x=>((PT.cq||{})[x.sym]||{}).n).length;
   return '<div class="panel"><div class="ph">'+ptIc('tien')+'Khối ngoại và tự doanh mua bán gì — phiên '+
     esc(PT.ngay)+'</div><div class="pb"><div class="dsw">'
-    +cot('ngoai','Khối ngoại MUA ròng', top(fn,1), 'rê chuột để xem mua/bán từng mã')
-    +cot('ngoai','Khối ngoại BÁN ròng', top(fn,-1), '')
-    +cot('bank','Tự doanh MUA ròng', top(td,1), 'tổng tự doanh toàn thị trường — nguồn KHÔNG tách theo công ty chứng khoán')
-    +cot('bank','Tự doanh BÁN ròng', top(td,-1), '')
-    +'</div></div></div>';
+    +cot('ngoai','Khối ngoại MUA ròng', top(fn,1,0), 'rê chuột để xem mua/bán từng mã')
+    +cot('ngoai','Khối ngoại BÁN ròng', top(fn,-1,0), '')
+    +cot('bank','Tự doanh MUA ròng', top(td,1,1),
+         'tổng tự doanh toàn thị trường — nguồn KHÔNG tách theo công ty chứng khoán')
+    +cot('bank','Tự doanh BÁN ròng', top(td,-1,1), '')
+    +'</div>'
+    /* ĐỌC SỐ TỰ DOANH DÈ DẶT — và nói ra vì sao, ngay cạnh con số. Không có câu này thì
+       "tự doanh mua ròng HPG 66 tỷ" đọc ra như công ty chứng khoán đặt cược HPG lên. */
+    +(tdTop.length?ptGiai('tdcq','Vì sao con số tự doanh phải đọc dè dặt',
+       'Nhãn <b>CQ</b> nghĩa là mã đó đang có <b>chứng quyền lưu hành</b>. Bán chứng quyền '
+      +'mua ra thì công ty phát hành <b>buộc phải ôm cổ phiếu cơ sở để phòng hộ</b> — mua vì '
+      +'nghĩa vụ, không phải vì quan điểm. Chênh lệch ETF cũng vậy. Phiên này <b>'+nCQ+'/'
+      +tdTop.length+'</b> mã đầu bảng tự doanh mua ròng đang có chứng quyền'
+      +(nCQ===tdTop.length?' — không sót mã nào.':'.')
+      +' Toàn thị trường có <b>'+num(Object.keys(PT.cq||{}).reduce((a,k)=>a+((PT.cq[k].n)||0),0))
+      +'</b> chứng quyền trên <b>'+num(Object.keys(PT.cq||{}).length)+'</b> cổ phiếu cơ sở. '
+      +'Nguồn không công bố vị thế phòng hộ nên không tách được bao nhiêu phần là phòng hộ; '
+      +'mã <b>không</b> có nhãn CQ thì con số tự doanh gần với một quyết định thật hơn.'):'')
+    +'</div></div>';
 }
 
 /* ================== BỘ LỌC ĐẶC TRƯNG — NGƯỜI DÙNG TỰ ĐẶT TIÊU CHÍ ==================

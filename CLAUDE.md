@@ -41,6 +41,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/kho_dactrung.py` | 380 | Dựng `data/dactrung`. KHÔNG gọi mạng |
 | `tools/quet_la.py` | 300 | Quét bất thường + lát cắt ngang, ghi vào file phiên. KHÔNG gọi mạng |
 | `tools/va_dau_fin.py` | 120 | Vá dấu lưu chuyển tiền tệ trong `data/fin`, lấy dấu từ `data/finq`. KHÔNG gọi mạng, **chạy mỗi ngày** |
+| `tools/kho_chungquyen.py` | 110 | Cào `data/chungquyen.json`. ĐÚNG 1 lượt gọi |
+| `tools/kho_rolichsu.py` | 90 | Cào `data/rolichsu.json` (gồm mã đã rời sàn). 2 lượt gọi |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -59,6 +61,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/dactrung/{MÃ}.json` | **Kho đặc trưng** (~41MB): vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, đỉnh 52 tuần, và chỉ tiêu cơ bản **gắn theo NGÀY CÔNG BỐ BCTC**. `kho_dactrung.py` |
 | `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt` lát cắt ngang cho bộ lọc. **BỐN lượt ghi khác nhau — phải TRỘN, đừng ghi đè** |
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
+| `data/chungquyen.json` | **328 chứng quyền đang lưu hành** trên 20 cổ phiếu cơ sở, kèm tổ chức phát hành. MỘT lượt gọi. Dùng để đọc con số tự doanh cho đúng — xem mục *Phân tích dữ liệu* |
+| `data/rolichsu.json` | **Rổ mã lịch sử: 1.968 mã, trong đó 443 ĐÃ RỜI SÀN** kèm ngày niêm yết / huỷ niêm yết. Chống sống sót sai lệch |
 | `data/screen.json` `fund.json` | Dạng CỘT: `f`=tên trường, `d[MÃ]`=mảng giá trị cùng thứ tự |
 | `data/market.json` | `breadth` 250 phiên · `global` (CNN F&G) · `race` (đường đua) |
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
@@ -1456,8 +1460,38 @@ không mang thông tin.
 > **99 PHIÊN LÀ QUÁ NGẮN ĐỂ KẾT LUẬN.** Bảng này chứng minh bộ máy đo chạy được, chưa
 > chứng minh nhân tố nào tồn tại. Đừng trích nó ra như bằng chứng về thị trường.
 
-> **`universe.json` LÀ RỔ HÔM NAY** — mọi backtest chạy trên nó đều SỐNG SÓT SAI LỆCH
-> (mã đã huỷ niêm yết không có mặt). Chưa vá; cần một rổ lịch sử có cả mã đã rời sàn.
+### TỰ DOANH PHẦN LỚN LÀ PHÒNG HỘ CHỨNG QUYỀN — ĐỪNG ĐỌC NHƯ MỘT QUYẾT ĐỊNH
+
+"Tự doanh mua ròng HPG 66 tỷ" đọc tự nhiên ra thành *công ty chứng khoán đặt cược HPG
+lên*. Phần lớn thì không phải: bán chứng quyền mua ra là buộc phải ôm cổ phiếu cơ sở để
+phòng hộ — mua vì nghĩa vụ, không mang thông tin. Chênh lệch ETF cũng vậy.
+
+Đo phiên 20/08/2026, **12/12 mã đầu bảng tự doanh mua ròng đều đang có chứng quyền lưu
+hành**: HPG 33 cái · FPT 30 · STB 28 · MBB 23 · MWG 23 · VPB 22 · ACB 21 · MSN 19 · TCB
+19 · VHM 15 · VNM 15 · VIC 10. Không sót mã nào. Cạnh đó VCB, CTG, SSI **không** có
+chứng quyền nào và cũng không nằm trong nhóm mua ròng.
+
+Khớp với số đo: rank IC của "tự doanh ròng ÷ giá trị khớp lệnh" với lợi suất phiên sau
+là **−0,019 (t = −1,37)** — chưa đủ tin về thống kê nhưng SAI CHIỀU so với trực giác, và
+đây là lời giải hợp lý nhất.
+
+Giao diện gắn nhãn **CQ** cạnh mã có chứng quyền, CHỈ ở cột tự doanh (khối ngoại không
+phát hành chứng quyền nên nhãn đó vô nghĩa ở đó). **Nguồn không công bố vị thế phòng
+hộ** nên không tách được bao nhiêu phần là phòng hộ — nói được đúng một điều: mã có nhãn
+CQ thì đọc dè dặt, mã không có thì gần với một quyết định thật hơn.
+
+### SỐNG SÓT SAI LỆCH — `data/rolichsu.json` mới chỉ làm nó ĐẾM ĐƯỢC
+
+`universe.json` là rổ **HÔM NAY**, nên mọi phép đo chạy trên nó đều bỏ sót mã huỷ niêm
+yết vì thua lỗ / đình chỉ / phá sản — đúng nhóm có lợi suất tệ nhất. Lệch **có hệ thống
+và luôn theo hướng lạc quan**, và càng nghiêng về mã nhỏ thì càng đẹp giả nhiều.
+
+`data/rolichsu.json` có **443 mã đã rời sàn** kèm ngày niêm yết/huỷ (2021: 62 mã · 2022:
+71 · 2025: 45 · **2026: 68**), nên trả lời được *"tại phiên X thì rổ gồm những mã nào"*.
+
+> **ĐỪNG NÓI KHO NÀY ĐÃ CHỮA XONG SỐNG SÓT SAI LỆCH.** Nó chưa có GIÁ của mã đã rời sàn,
+> nên mới chỉ làm cho chỗ thiếu đếm được, chưa đo được lợi suất thật của nhóm đó. Muốn
+> đo thì phải cào nến của chúng, mà **nguồn nến có giữ lại hay không thì chưa dò**.
 
 ## Quy ước toàn site
 

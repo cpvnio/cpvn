@@ -79,6 +79,19 @@ if ($LASTEXITCODE -ne 0) { "kho_giaodich --vg EXIT $LASTEXITCODE - bo qua, chay 
 & $py tools\build_phantich.py 2>&1
 if ($LASTEXITCODE -ne 0) { "build_phantich EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# CHỨNG QUYỀN ĐANG LƯU HÀNH — ĐÚNG MỘT lượt gọi. Không có kho này thì con số tự doanh
+# trên trang phân tích đọc ra sai bản chất: đo phiên 20/08, **12/12 mã đầu bảng tự doanh
+# mua ròng đều đang có chứng quyền lưu hành** (HPG 33 cái, FPT 30, STB 28) — tức phần lớn
+# là phòng hộ bắt buộc chứ không phải đặt cược.
+& $py tools\kho_chungquyen.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_chungquyen EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# RỔ MÃ LỊCH SỬ gồm cả 443 mã ĐÃ RỜI SÀN — hai lượt gọi. `universe.json` là rổ HÔM NAY
+# nên mọi phép đo trên nó đều sống sót sai lệch theo hướng lạc quan (68 mã huỷ niêm yết
+# riêng năm 2026). Kho này chưa chữa được sai lệch, nhưng làm cho chỗ thiếu ĐẾM ĐƯỢC.
+& $py tools\kho_rolichsu.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_rolichsu EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # VÁ DẤU LƯU CHUYỂN TIỀN TỆ trong data/fin, lấy dấu từ data/finq. KHÔNG gọi mạng, vài
 # giây. Phải chạy MỖI NGÀY chứ không phải một lần: bước 5 của pipeline cào lại data/fin
 # từ 24hMoney — chính cái nguồn trả dấu sai — nên mã nào được cào lại hôm nay là dấu

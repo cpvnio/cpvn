@@ -558,6 +558,11 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .dsr:hover{background:var(--card)}
 .dsr2{cursor:default}
 .dsr>b{font-size:12.5px;font-weight:800}
+/* Nhãn CQ: nhỏ, xám, đứng SAU mã — nó là chú thích cho con số bên phải chứ không phải
+   một cảnh báo. Tô đỏ ở đây là nói quá: có chứng quyền không phải chuyện xấu. */
+.dsr>b .dscq{font-style:normal;font-size:8.5px;font-weight:800;margin-left:4px;
+  padding:1px 3px;border-radius:4px;background:var(--card);color:var(--faint);
+  border:1px solid var(--line);vertical-align:1px}
 .dsr>b.dsnn{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Tên ngành co lại được, con số thì KHÔNG — số bị cắt là mất nghĩa, tên bị cắt thì vẫn đoán ra */
 .dsn{font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -1306,7 +1311,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260821t"></script>
+<script defer src="assets/mobi.js?v=20260821u"></script>
 </head>
 <body>
 
@@ -1363,6 +1368,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260821t"></script>
+<script src="assets/congcu.js?v=20260821u"></script>
 </body>
 </html>
