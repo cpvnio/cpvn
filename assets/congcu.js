@@ -600,11 +600,16 @@ function nyLichHTML(){
 
      HIỆN TẠI KHÔNG CÓ MÃ NÀO SẮP TỚI — và phải nói rõ đó là "chưa công bố", không phải
      "không có nguồn". Hai câu đó khác hẳn nhau: nguồn chạy tốt, chỉ là đợt tới chưa tới lúc
-     công bố. Nên khối rỗng vẫn kèm bằng chứng nguồn sống (mốc gần nhất + số sự kiện). */
+     công bố. Nên khối rỗng vẫn kèm bằng chứng nguồn sống (mốc gần nhất + số sự kiện).
+
+     KHÔNG DỰNG LẠI KHỐI "VỪA LÊN SÀN" (user chốt 20/08/2026 — xoá). Mục này để trả lời
+     "sắp tới có gì", mã đã lên sàn rồi thì tra ở thẻ "Toàn bộ mã đang niêm yết", xếp theo
+     ngày lên sàn là ra. Danh sách quá khứ vẫn giữ trong `NY.ny` vì khối rỗng cần nó làm
+     bằng chứng nguồn chưa chết. */
   const L=NY.ny||[], sap=NY.sap||[];
   const hnay=new Date(); hnay.setHours(0,0,0,0);
   const tl=L.filter(r=>new Date(r.d+'T00:00:00')>=hnay);
-  const qua=L.filter(r=>new Date(r.d+'T00:00:00')<hnay);
+  const qua=L.filter(r=>new Date(r.d+'T00:00:00')<hnay);   // chỉ dùng làm BẰNG CHỨNG nguồn còn sống
   const conLai=d=>{const t=new Date(d+'T00:00:00'); if(isNaN(t)) return '';
     const n=Math.round((t-hnay)/86400000);
     return n<=0?'<b class="nyd0">hôm nay</b>':n===1?'<b class="nyd0">ngày mai</b>':'<i class="nydn">còn '+n+' ngày</i>';};
@@ -626,12 +631,6 @@ function nyLichHTML(){
     +'nên mục này chỉ có tên khi đợt tới đã được công bố. Bằng chứng nguồn đang chạy: đã ghi '
     +'<b>'+L.length+'</b> lượt niêm yết, gần nhất <b>'+(L[0]?nyNgay(L[0].d)+' — '+esc(L[0].s):'—')+'</b>.'
     +'</div>';
-
-  h+='<h3 class="nyh3">Vừa lên sàn</h3>';
-  h+='<div class="nynote nytren">Các mã đã chào sàn gần đây, kèm <b>giá tham chiếu phiên đầu</b> '
-    +'và ngày sở công bố. Đây là cùng một nguồn với mục trên — nhìn khoảng cách giữa hai cột '
-    +'ngày là biết đợt tới sẽ xuất hiện trước bao lâu.</div>';
-  h+=bang(qua.slice(0,60),false);
 
   h+='<h3 class="nyh3">Hồ sơ đang chờ — HOSE</h3>';
   if(!sap.length) h+='<div class="empty">'+(NY.sapLoi
