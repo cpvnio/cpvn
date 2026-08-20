@@ -19,9 +19,10 @@ nhiều mã chỉ niêm yết MỘT PHẦN vốn ở lần đầu — VCB niêm 
 mẩu với toàn bộ, ra bội số phóng đại hàng chục lần. Vốn hoá lúc lên sàn vẫn ghi vào kho vì
 nó đúng NGHĨA CỦA NÓ (vốn hoá phần được niêm yết), nhưng ĐỪNG lấy làm mẫu số.
 
-    python3 tools/kho_chaosan.py          # cào thật
-    python3 tools/kho_chaosan.py VCB HPG  # vài mã
-    python3 tools/kho_chaosan.py --thu    # chỉ in, không ghi
+    python3 tools/kho_chaosan.py           # CHỈ mã còn thiếu giá chào sàn (dùng cho lượt 7:30)
+    python3 tools/kho_chaosan.py --tatca   # làm mới TOÀN BỘ 1.529 mã (~484 giây, 460 MB)
+    python3 tools/kho_chaosan.py VCB HPG   # vài mã
+    python3 tools/kho_chaosan.py --thu     # chỉ in, không ghi
 """
 import json, os, re, sys, time, html, threading, collections
 import concurrent.futures as cf
@@ -31,6 +32,7 @@ import nhipmang
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT  = os.path.join(BASE, "data", "niemyet.json")
+SUKIEN = os.path.join(BASE, "data", "sukien")
 URL  = "https://finance.vietstock.vn/{}/ho-so-doanh-nghiep.htm"
 THU  = "--thu" in sys.argv
 NHAN = {"nd": "Ngày giao dịch đầu tiên", "gc": "Giá chào sàn",
@@ -60,11 +62,57 @@ def doc(sym):
     return ra or None
 
 
+BIEN = {"HOSE": 0.20, "HNX": 0.30, "UPCOM": 0.40}
+
+
+def hop_le(m):
+    """`gc` có khớp với `d` không — Vietstock ghép NHẦM hai ô này ở mã CHUYỂN SÀN: họ cập
+    nhật *Ngày giao dịch đầu tiên* sang sàn mới nhưng *Giá chào sàn* vẫn giữ của lần niêm yết
+    gốc. Đo 20/08: ITA ghi 13/02/2025 · 54.000đ trong khi giá thật hôm đó 2.300đ; NTC ghi
+    28/10/2025 · 20.000đ trong khi giá thật 164.500đ.
+
+    Hai phép chặn, cần cả hai:
+      ① `gc` là GIÁ THAM CHIẾU phiên đầu (chú giải của chính Vietstock), nên giá ĐÓNG CỬA
+         phiên đó chỉ được lệch trong BIÊN ĐỘ của sàn. Cao hơn biên độ -> ghép nhầm.
+      ② Thấp hơn thì hợp lệ nếu đã chia nhiều lần, nhưng KHÔNG được vượt xa mức mà chuỗi sự
+         kiện giải thích được. Cho hệ số 3 lần dư dả trên tích chia tách.
+    Không có `g` để soi thì cho qua — thà giữ còn hơn loại mù."""
+    gc, g = m.get("gc"), m.get("g")
+    if not gc or not g: return True
+    b = BIEN.get(m.get("ex"), 0.40)
+    if gc * (1 - b - 0.05) <= g <= gc * (1 + b + 0.05): return True
+    if g > gc: return False                       # ① vượt biên độ phiên đầu
+    try:
+        ev = [e for e in json.load(open(os.path.join(SUKIEN, m["s"] + ".json"),
+                                        encoding="utf-8"))["ev"] if e["d"] >= m["d"]]
+    except Exception:
+        ev = []
+    nhan = 1.0
+    for e in ev:
+        if e.get("k") in ("cp", "thuong", "quyenmua") and (e.get("tl") or 0) > 0:
+            nhan *= 1 + e["tl"] / 100
+    return gc / g <= max(nhan * 3.0, 3.0)         # ②
+
+
 def main():
     av = [a.upper() for a in sys.argv[1:] if not a.startswith("--")]
     d = json.load(open(OUT, encoding="utf-8"))
     ma = {r["s"]: r for r in d["ma"]}
-    syms = av or list(ma)
+    # ---- MẶC ĐỊNH CHỈ CÀO MÃ CÒN THIẾU ----------------------------------------
+    # Giá chào sàn của mã cũ KHÔNG BAO GIỜ ĐỔI, nên cào lại cả sàn mỗi ngày là 1.529 trang
+    # HTML ~300KB = 460 MB và 484 giây, để đổi lại đúng vài mã mới lên sàn. Chỉ lấy mã chưa
+    # có `gc`. Muốn làm mới toàn bộ (đổi cách đọc, nguồn sửa dữ liệu) thì `--tatca`.
+    if av:
+        syms = av
+    elif "--tatca" in sys.argv:
+        syms = list(ma)
+    else:
+        # `gcx` = đã cào rồi và bị PHÉP KIỂM loại (xem `hop_le` bên dưới). Không cào lại
+        # mỗi ngày để rồi loại lại — nguồn sẽ không tự sửa, mà mỗi lượt tốn 300KB/mã.
+        syms = [k for k, v in ma.items() if not v.get("gc") and not v.get("gcx")]
+        if not syms:
+            print("  không mã nào thiếu giá chào sàn — không cào gì (dùng --tatca để làm mới hết)")
+            return 0
     print(f"  {len(syms)} mã · giá chào sàn + KL niêm yết lần đầu (finance.vietstock.vn)"
           + ("  [CHẠY THỬ]" if THU else ""))
     t0 = time.time()
@@ -94,6 +142,10 @@ def main():
             if iso != m.get("d"): m["nd2"] = iso
         if m.get("gc") and m.get("kl0"):
             m["mcny"] = round(m["gc"] * m["kl0"] / 1e9, 1)   # vốn hoá PHẦN NIÊM YẾT, tỷ đồng
+        if not hop_le(m):
+            for kk in ("gc", "kl0", "mcny"): m.pop(kk, None)
+            m["gcx"] = 1
+            dem["loại vì không khớp ngày"] += 1
 
     # ---- NGÀY GIAO DỊCH ĐẦU TIÊN LẤY CỦA VIETSTOCK, khớp cặp với giá chào sàn ----
     # Hai nguồn hiểu "ngày lên sàn" KHÁC NHAU: VNDirect `listedDate` = ngày niêm yết trên

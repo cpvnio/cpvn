@@ -16,6 +16,13 @@
 # 7:30 chọn có lý do: sớm hơn giờ mở cửa 90 phút, đủ cho lượt chạy (~5 phút) + git push +
 # build Cloudflare (~1 phút) và vẫn còn dư nếu nguồn chậm. Đừng đẩy sát 8:45.
 #
+# LƯỢT NÀY LÀM BỐN VIỆC (20/08/2026): sang_som.py (SLCP + vốn hoá) · kho_sukien.py (cổ tức,
+# thưởng, quyền mua, ngày ra BCTC) · kho_niemyet.py (ngày lên sàn + lịch mã sắp lên sàn) ·
+# kho_chaosan.py (giá chào sàn, CHẠY TĂNG DẦN — ngày thường 0 mã).
+# Tổng ~12 phút, xong lúc ~7:42, còn dư hơn một giờ trước giờ mở cửa. Ba việc sau đều
+# KHÔNG chặn lượt chạy nếu hỏng — universe.json mới là thứ bắt buộc phải lên.
+# Vì thế -ExecutionTimeLimit nâng 30 -> 45 phút.
+#
 # CHI PHÍ: tối đa 1 commit/ngày -> ~22 build/tháng. Script tự BỎ QUA commit khi
 # `universe.json` không đổi, mà ngày thường thì SLCP gần như không đổi — nên số thật thấp
 # hơn nhiều. Đo 19/08: 7/1.529 mã đổi, và đó là ngày ngay sau một loạt chốt quyền.
@@ -33,7 +40,7 @@ $t = New-ScheduledTaskTrigger -Weekly `
 # ở đây: script chỉ làm mới SLCP, chạy lúc nào cũng cho cùng kết quả.
 $s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries `
      -DontStopIfGoingOnBatteries -RestartCount 2 -RestartInterval (New-TimeSpan -Minutes 5) `
-     -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
+     -ExecutionTimeLimit (New-TimeSpan -Minutes 45)
 
 Register-ScheduledTask -TaskName 'CPVN truoc phien' -Action $a -Trigger $t -Settings $s `
   -User 'SYSTEM' -RunLevel Highest -Force

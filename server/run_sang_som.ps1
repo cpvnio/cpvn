@@ -63,10 +63,24 @@ if ($ma -ne 0) { "EXIT $ma - bo qua buoc day" | Add-Content $log; exit $ma }
 & $py 'C:\cpvn\tools\kho_sukien.py' 2>&1 | Add-Content $log
 if ($LASTEXITCODE -ne 0) { "kho_sukien EXIT $LASTEXITCODE - bo qua, chay tiep" | Add-Content $log }
 
+# THÔNG TIN NIÊM YẾT (data/niemyet.json) — ngày lên sàn, lịch mã sắp lên sàn, đường ống hồ
+# sơ HOSE. Phải chạy SAU kho_sukien: nó dùng chuỗi sự kiện để gỡ hạ nền.
+# Nặng vừa (~7 phút): phần lớn là hỏi gộp 150 mã/lượt, chỉ mã thiếu giá phiên đầu mới phải
+# hỏi lẻ. Hỏng thì bỏ qua, không chặn lượt chạy.
+& $py 'C:\cpvn\tools\kho_niemyet.py' 2>&1 | Add-Content $log
+if ($LASTEXITCODE -ne 0) { "kho_niemyet EXIT $LASTEXITCODE - bo qua, chay tiep" | Add-Content $log }
+
+# GIÁ CHÀO SÀN — CHẠY TĂNG DẦN, chỉ lấy mã CHƯA có giá chào sàn (mã mới lên sàn).
+# KHÔNG được thêm --tatca vào đây: lượt đầy đủ là 1.529 trang HTML ~300KB = 460 MB và 484
+# giây, trong khi giá chào sàn của mã cũ KHÔNG BAO GIỜ ĐỔI. Ngày thường nó cào 0 mã và
+# thoát ngay. Muốn làm mới toàn bộ thì chạy tay `kho_chaosan.py --tatca`.
+& $py 'C:\cpvn\tools\kho_chaosan.py' 2>&1 | Add-Content $log
+if ($LASTEXITCODE -ne 0) { "kho_chaosan EXIT $LASTEXITCODE - bo qua, chay tiep" | Add-Content $log }
+
 # Không có gì đổi thì ĐỪNG commit — mỗi commit rỗng vẫn kích một lượt build Cloudflare.
-& $git add universe.json data/sukien 2>&1 | Add-Content $log
+& $git add universe.json data/sukien data/niemyet.json 2>&1 | Add-Content $log
 & $git diff --cached --quiet
-if ($LASTEXITCODE -eq 0) { 'universe.json + data/sukien khong doi - khong commit.' | Add-Content $log; exit 0 }
+if ($LASTEXITCODE -eq 0) { 'universe.json + data/sukien + niemyet khong doi - khong commit.' | Add-Content $log; exit 0 }
 
 & $git -c user.name='cpvn-server' -c user.email='bot@users.noreply.github.com' `
   commit -m "Truoc phien $(Get-Date -Format 'yyyy-MM-dd') (server)" 2>&1 | Add-Content $log
