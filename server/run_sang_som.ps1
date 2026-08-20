@@ -61,6 +61,37 @@ if (-not (Test-Path $py)) { "KHONG THAY PYTHON: $py" | Add-Content $log; exit 9 
 $ma = $LASTEXITCODE
 if ($ma -ne 0) { "EXIT $ma - bo qua buoc day" | Add-Content $log; exit $ma }
 
+# ĐẨY universe.json NGAY ĐÂY, ĐỪNG ĐỂ TỚI CUỐI LƯỢT.
+# `C:\cpvn` là CÂY LÀM VIỆC DÙNG CHUNG. Tác vụ `CPVN gia phien` nổ 5 phút một lần từ 09:00
+# tới 15:00 và mở đầu bằng `git reset --hard origin/main` — nên mọi thay đổi CHƯA COMMIT của
+# lượt này bị xoá sạch giữa chừng, IM LẶNG, mà LastResult vẫn là 0.
+# Đã dính đúng vậy ở lượt chạy thử 12:41 ngày 20/08/2026: sang_som ghi SLCP mới của HHP
+# (×1,0650 sau GDKHQ 18/08, tỷ lệ 1000:65 — khớp đúng kho sự kiện) lúc 12:45:06, gia_phien
+# reset ngay giây đó, tới bước commit cuối thì "khong doi - khong commit" và cả lượt coi như
+# chưa từng chạy. Ba công cụ dưới còn chạy thêm ~5 phút nữa nên cửa sổ hở là ~9 phút.
+# Lượt thật 07:30 xong trước 09:00 nên hiện không đụng — nhưng đó là MAY về giờ giấc chứ
+# không phải thiết kế: chỉ cần nguồn chậm một lượt là mất trắng. Commit ngay tại đây thu cửa
+# sổ hở từ ~9 phút xuống ~10 giây, và đúng thứ tự ưu tiên đã ghi ở đầu file: universe.json
+# mới là thứ BẮT BUỘC phải lên trước phiên.
+& $git add universe.json 2>&1 | Add-Content $log
+& $git diff --cached --quiet
+if ($LASTEXITCODE -ne 0) {
+  & $git -c user.name='cpvn-server' -c user.email='bot@users.noreply.github.com' `
+    commit -m "SLCP truoc phien $(Get-Date -Format 'yyyy-MM-dd') (server)" 2>&1 | Add-Content $log
+  $ok = $false
+  for ($i = 1; $i -le 5; $i++) {
+    & $git pull --rebase -X theirs origin main 2>&1 | Add-Content $log
+    & $git push origin main 2>&1 | Add-Content $log
+    if ($LASTEXITCODE -eq 0) { "Day universe.json thanh cong lan $i." | Add-Content $log; $ok = $true; break }
+    Start-Sleep -Seconds (5 * $i)
+  }
+  # Thua thì phải để lại DẤU — cùng bài học với cú push hỏng 04/08.
+  if (-not $ok) {
+    'DAY universe.json THAT BAI sau 5 lan.' | Add-Content $log
+    "DAY universe.json THAT BAI - $(Get-Date -Format 'yyyy-MM-dd HH:mm')" | Set-Content 'C:\cpvn\PUSH_FAILED.txt'
+  }
+} else { 'universe.json khong doi - khong commit som.' | Add-Content $log }
+
 # KHO SỰ KIỆN DOANH NGHIỆP (data/sukien) — cổ tức/thưởng/quyền mua + ngày ra BCTC.
 # Đặt ở lượt TRƯỚC PHIÊN chứ không phải lượt EOD: nó chỉ đọc, không đụng giá hay kho nến,
 # mà chart lại cần nó ngay từ phiên sáng. ~3,5 phút, 1.500 lượt tới Vietstock ở 8 lượt/giây.
