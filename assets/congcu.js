@@ -1536,7 +1536,8 @@ function ptVeMa(){
     ptBindMa(); return; }
   const n=o.n||o.d.length, i0=Math.max(0,n-PT.nMa);
   const lay=k=>(o[k]||[]).slice(i0);
-  const d=o.d.slice(i0), c=lay('c'), tc=lay('tc'), vw=lay('vwap'),
+  const d=o.d.slice(i0), c=lay('c'), tc=lay('tc'), vwN=lay('vwap'),
+        op=lay('o'), hi=lay('h'), lo=lay('l'),
         mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), pv=lay('pv'), sh=lay('sh'),
         fnM=lay('fnMuaGT'), fnB=lay('fnBanGT'), fnMK=lay('fnMuaKL'), fnBK=lay('fnBanKL'),
         fnSH=lay('fnSoHuu'), fnRO=lay('fnRoom'),
@@ -1544,6 +1545,13 @@ function ptVeMa(){
   /* Giá bình quân của RIÊNG thoả thuận. Để `null` khi phiên không có thoả thuận — vẽ 0 thì
      đường tụt thẳng xuống đáy, đọc ra như giá sập trong khi thực ra hôm đó không có lệnh nào. */
   const ptt=pval.map((x,i)=>(x&&pv[i])?(x/pv[i]):null);
+  /* GIÁ KHỚP LỆNH TRUNG BÌNH = GIÁ TRỊ ÷ KHỐI LƯỢNG, tự tính, KHÔNG lấy `AvrPrice` của
+     nguồn. Hai số này khớp nhau ở phần lớn kho (đo 100.536 ô: trung vị lệch 0,000%,
+     91,9% nằm trong 0,5%) nhưng lệch hẳn ở phiên biến động mạnh — PNJ 08/07/2026 nguồn
+     ghi 49.262 trong khi GT/KL ra 48.579, lệch 1,39%. Lấy GT/KL vì nó ĐỊNH NGHĨA ra
+     chính nó và tự nhất quán với hai con số nằm ngay cạnh trên màn hình: người xem cộng
+     trừ lại được. Còn `AvrPrice` thì không truy được cách nguồn tính. */
+  const vw=mval.map((x,i)=>(x&&mv[i])?(x/mv[i]):null);
   const m=d.length-1;
   const mcap=c.map((x,i)=>(x&&sh[i])?x*sh[i]:null);
   const pcs=c.map((x,i)=>(x&&tc[i])?((x/tc[i]-1)*100):null);
@@ -1559,7 +1567,31 @@ function ptVeMa(){
      hàng ô tổng hợp — chúng chỉ phục vụ mấy ô đó. Muốn dựng lại thì tính lại, đừng để
      sáu biến chết nằm đây rồi lần sau có người tưởng chúng đang được dùng. */
   const ph=(v)=>v==null?'—':'<b class="'+cls(v)+'">'+(v>0?'+':'')+v.toFixed(2)+'%</b>';
-  const vg=(PT.phien[PT.ngay]&&PT.phien[PT.ngay].ma&&PT.phien[PT.ngay].ma[PT.ma])||null;
+  /* VÙNG GIÁ PHẢI LÀ CỦA PHIÊN ĐANG CHỌN Ở CHÍNH TRANG MÃ NÀY (`d[k]`), KHÔNG PHẢI
+     `PT.ngay` của thanh chọn trên đầu — bẫy đã dính: ghim phiên 08/07 trên đồ thị mã mà
+     đồ thị vùng giá vẫn vẽ phiên 20/08, im lặng hoàn toàn vì cả hai đều là "một phiên
+     nào đó" nên nhìn không ra. Đây đúng là chỗ trả lời câu "khối lượng khớp ở giá nào",
+     mà nó lại trả lời về một ngày khác. */
+  const ngVG=d[k];
+  /* PHẢI TỰ TẢI FILE PHIÊN CỦA NGÀY ĐANG GHIM. `PT.phien` chỉ chứa những phiên người
+     dùng đã mở qua THANH CHỌN ở đầu trang — mà ghim một phiên trên đồ thị mã thì không
+     đi qua đường đó, nên bộ đệm rỗng và đồ thị vùng giá báo "chưa cào" trong khi kho có
+     đủ. Im lặng và rất dễ tin nhầm thành thiếu dữ liệu.
+     `ptPhien` tự đệm (kể cả khi hỏng thì đệm `null`) nên nhánh này chạy ĐÚNG MỘT LẦN cho
+     mỗi ngày — không có vòng lặp vô tận. */
+  if(PT.phien[ngVG]===undefined){ ptPhien(ngVG).then(()=>{ if(PT.ma&&d[PT.maI]===ngVG) ptVeMa(); }); }
+  const vg=(PT.phien[ngVG]&&PT.phien[ngVG].ma&&PT.phien[ngVG].ma[PT.ma])||null;
+  /* Chú thích phải NÓI RA MỨC GIÁ HÚT NHIỀU NHẤT, đừng bắt người ta soi cột cao nhất rồi
+     tự dóng xuống trục. PNJ 08/07/2026: 44,1% khối lượng khớp ở ĐÚNG 49.800 trong khi
+     đóng cửa 52.000 — con số đó mới là câu trả lời cho "khớp ở giá nào", chứ không phải
+     hình dạng cái đồ thị. */
+  let vgGhi='phiên này chưa cào vùng giá cho mã này — kho vùng giá lấy riêng từng phiên';
+  if(vg&&vg.v&&vg.v.length){
+    const tg=vg.v.reduce((a,b)=>a+b,0);
+    let mi=0; for(let z=1;z<vg.v.length;z++) if(vg.v[z]>vg.v[mi]) mi=z;
+    vgGhi='khối lượng gộp theo từng mức giá · <b>hút nhiều nhất '+num(vg.p[mi])+'đ</b> với '
+      +num(vg.v[mi])+' cp = <b>'+(tg?(vg.v[mi]/tg*100).toFixed(1):'—')+'%</b> khối lượng phiên';
+  }
   /* HÀNG Ô TỔNG HỢP ĐÃ XOÁ 22/08/2026 (user chốt: *"xoá cái này ở mỗi cổ phiếu phân
      tích luôn, tao cần giá theo phiên"*). Bảy ô đó in số của CẢ KHUNG — "so 1 tháng",
      "so 63 phiên", "GT khớp lệnh TB", "khối ngoại ròng cả khung" — trong khi cả trang
@@ -1593,8 +1625,7 @@ function ptVeMa(){
            +' &nbsp;·&nbsp; chỉ vẽ phiên CÓ thoả thuận')
       +ptO('Vốn hoá', 'mc7', 'giá đóng cửa × số cổ phiếu lưu hành của chính phiên đó')
       +ptO('Khối lượng khớp lệnh', 'mc8', 'cổ phiếu')
-      +ptO('Vùng giá khớp lệnh — phiên '+esc(PT.ngay), 'mc9',
-           vg?'khối lượng gộp theo từng mức giá':'phiên này chưa cào vùng giá cho mã này')
+      +ptO('Vùng giá khớp lệnh — phiên '+esc(ngVG), 'mc9', vgGhi)
     +'</div>';
   /* DÒ CHỦ ĐỀ BẰNG `isLight()`, ĐỪNG DÒ BẰNG `classList`. Trang đặt chủ đề vào
      `document.documentElement.dataset.theme` (xem đoạn inline đầu congcu.html và nút đổi
@@ -1659,7 +1690,26 @@ function ptVeMa(){
     +'<div class="ptdw">'
     +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'giá TB '+num(vw[k]),
         pcs[k]==null?'':cls(pcs[k]))
+    /* GIÁ KHỚP LỆNH TB đứng thành Ô RIÊNG, không nhét vào dòng phụ của ô đóng cửa
+       (user chốt 22/08/2026: *"tôi không đọc được giá khớp lệnh trung bình"*). Đây là chỗ
+       lộ ra phiên nào đóng cửa không đại diện cho phiên: PNJ 08/07/2026 đóng 52.000 mà
+       giá khớp bình quân 48.579 — lệch 6,6%, vì mã mở cửa KỊCH SÀN rồi được kéo lên
+       suốt phiên. Nhìn mỗi giá đóng cửa thì không đời nào thấy được điều đó. */
+    +oo('Giá khớp lệnh TB', vw[k]!=null?num(Math.round(vw[k])):oNul,
+        (vw[k]!=null&&c[k])
+          ?('<b class="'+cls(vw[k]/c[k]-1)+'">'+((vw[k]/c[k]-1)>0?'+':'')
+            +((vw[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá đóng cửa'
+            +((vwN[k]&&Math.abs(vw[k]/vwN[k]-1)>0.005)
+               ?' · nguồn ghi '+num(vwN[k]):''))
+          :'')
     +oo('Giá trị khớp lệnh', ptTien(mval[k]), num(mv[k])+' cp')
+    /* BIÊN ĐỘ PHIÊN — mở/cao/thấp. Không có nó thì "đóng cửa 52.000, giá TB 48.579" là
+       một mâu thuẫn không giải thích được; có nó thì đọc ra ngay: mở 47.250 đúng giá SÀN,
+       thấp nhất cũng 47.250, tức cả phiên là một cú kéo từ sàn lên. */
+    +oo('Biên độ phiên', (hi[k]&&lo[k]&&c[k])?(((hi[k]-lo[k])/c[k]*100).toFixed(1)+'%'):oNul,
+        (op[k]?('mở <b>'+num(op[k])+'</b>'+(tc[k]&&Math.abs(op[k]/tc[k]-1)>=0.0695
+            ?' <b class="'+cls(op[k]-tc[k])+'">'+(op[k]>tc[k]?'kịch trần':'kịch sàn')+'</b>':'')):'')
+          +(hi[k]?' · cao <b>'+num(hi[k])+'</b>':'')+(lo[k]?' · thấp <b>'+num(lo[k])+'</b>':''))
     +oo('Khối ngoại ròng', fnRong[k]!=null?tien(fnRong[k]):oNul,
         fnM[k]!=null?('mua <b class="up">'+ptTien(fnM[k])+'</b> · bán <b class="dn">'
           +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')

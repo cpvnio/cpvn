@@ -1471,6 +1471,45 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
 
+### GIÁ KHỚP LỆNH TB TỰ TÍNH — VÀ VÙNG GIÁ PHẢI THEO PHIÊN ĐANG GHIM
+
+**`vw = mval / mv`, KHÔNG lấy `AvrPrice` của nguồn.** Hai số khớp nhau ở phần lớn kho —
+đo 100.536 ô: trung vị lệch **0,000%**, 91,9% nằm trong 0,5%, 99,3% trong 2% — nhưng lệch
+hẳn ở phiên biến động mạnh. Lấy GT÷KL vì nó **định nghĩa ra chính nó** và tự nhất quán
+với hai con số nằm ngay cạnh trên màn hình (giá trị và khối lượng), người xem cộng trừ
+lại được; còn `AvrPrice` thì không truy được cách nguồn tính. Khi hai số lệch quá 0,5%
+thì in kèm số của nguồn để không giấu.
+
+**Ca mẫu — PNJ 08/07/2026**, đáng nhớ vì nó cho thấy giá đóng cửa nói dối tới mức nào:
+
+```
+tham chiếu 50.800 · mở 47.250 (ĐÚNG GIÁ SÀN) · thấp 47.250 · cao 52.000 · đóng 52.000 (+2,36%)
+giá khớp lệnh TB 48.579  ->  lệch −6,6% so giá đóng cửa
+vùng giá: 44,1% khối lượng khớp ở ĐÚNG 49.800 · chỉ 3,5% khớp ở 52.000
+```
+
+Cả phiên là một cú kéo từ giá sàn lên, mà nhìn mỗi "đóng cửa 52.000 +2,36%" thì không đời
+nào thấy. Vì thế thanh đọc số có ô **Giá khớp lệnh TB** và ô **Biên độ phiên** (mở/cao/
+thấp, tự dán nhãn *kịch trần*/*kịch sàn* khi |mở/tham chiếu − 1| ≥ 6,95%).
+
+> **VÙNG GIÁ TỪ NẾN 1 PHÚT: KHỐI LƯỢNG CHÍNH XÁC, GIÁ TRỊ THÌ KHÔNG.** Tổng `v` khớp
+> tuyệt đối với `mv` của kho (PNJ 08/07: 25.605.600 = 25.605.600), nhưng `Σ p×v` ra
+> 1.271,9 tỷ so với `mval` 1.243,9 tỷ (+2,3%) — vì trong một phút, `Price` là giá CHỐT
+> phút đó còn `Vol` là khối lượng cả phút, các lệnh bên trong khớp ở nhiều giá khác nhau.
+> Nên **dùng vùng giá để trả lời "khớp ở giá nào", đừng dùng nó để tính VWAP.**
+
+> **VÙNG GIÁ PHẢI LÀ CỦA PHIÊN ĐANG GHIM Ở TRANG MÃ (`d[k]`), KHÔNG PHẢI `PT.ngay`.**
+> Bẫy đã dính: ghim phiên 08/07 trên đồ thị mã mà đồ thị vùng giá vẫn vẽ phiên 20/08 —
+> im lặng hoàn toàn vì cả hai đều là "một phiên nào đó" nên nhìn không ra, mà đây đúng là
+> chỗ trả lời "khối lượng khớp ở giá nào". Kèm theo: **trang mã phải TỰ TẢI file phiên
+> đó** — `PT.phien` chỉ chứa phiên người dùng đã mở qua thanh chọn đầu trang, nên ghim
+> một ngày khác là bộ đệm rỗng và đồ thị báo "chưa cào" trong khi kho có đủ.
+
+> **KHO VÙNG GIÁ CHỈ CÓ PHIÊN GẦN NHẤT** — lượt EOD chỉ chạy `--vg` cho phiên vừa chốt.
+> Cào bù cả kho là 2 lượt × mã × phiên = 1.529 × 100 × 2 ≈ **21 giờ**, không đáng. Muốn
+> soi kỹ MỘT mã thì cào riêng nó: `--vg --ma PNJ --tu … --den …` = 2 lượt × 63 phiên
+> ≈ **2 phút**. Đó là cách dùng đúng của chế độ này.
+
 ### QUÉT BẤT THƯỜNG + BỘ LỌC TỰ CHỌN
 
 `quet_la.py` ghi **thẳng vào file phiên** (`la` = kết quả quét, `dt`/`dtf` = lát cắt

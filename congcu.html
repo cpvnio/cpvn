@@ -659,7 +659,10 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptdgh:hover{opacity:.88}
 .ptdw{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 18px}
 @media(min-width:700px){.ptdw{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(min-width:1080px){.ptdw{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* BỐN CỘT, KHÔNG PHẢI TÁM. Tám ô dàn một hàng ở 1.364px là 170px mỗi ô — dòng phụ
+   ("mở 47.250 kịch sàn · cao 52.000 · thấp 47.250") gãy thành bốn dòng và ô cao gấp ba
+   ô bên cạnh. Hai hàng bốn ô đọc dễ hơn hẳn một hàng tám ô chen chúc. */
+@media(min-width:1080px){.ptdw{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .ptdc{display:flex;flex-direction:column;gap:2px;min-width:0}
 .ptdcl{font-size:10.5px;font-weight:700;color:var(--faint);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
@@ -1377,7 +1380,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822i"></script>
+<script defer src="assets/mobi.js?v=20260822k"></script>
 </head>
 <body>
 
@@ -1434,6 +1437,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822i"></script>
+<script src="assets/congcu.js?v=20260822k"></script>
 </body>
 </html>
