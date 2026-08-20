@@ -48,7 +48,10 @@ else                                   { & $py refresh_daily.py 2>&1 }
 # KHO GIAO DỊCH (data/giaodich) — số chốt phiên + SỔ LỆNH KHI CHỐT PHIÊN, từ Vietstock.
 # Chạy Ở ĐÂY chứ không ở lượt 7:30: đây là số CHỐT SỔ, phải sau 15:00 mới có.
 # Hằng ngày chỉ xin trang 1 của mỗi mã (đã có sẵn 20 phiên giá + 30 phiên sổ lệnh) nên
-# ~3.060 lượt ≈ 13 phút ở 4 lượt/giây. Giới hạn tác vụ là 2 giờ, thừa chỗ.
+# Một lượt lấy TẤT CẢ cho mỗi mã: 2 trang giá (40 phiên) + sổ lệnh + khối ngoại + tự
+# doanh = 5 lượt/mã ≈ 7.650 lượt ≈ 32 phút ở 4 lượt/giây.
+# Gộp bốn thứ vào MỘT bước chứ không tách bốn bước: cả ba tầng sau đều cần `stockID`, mà
+# số đó chỉ có sau khi gọi thống kê giá — tách ra là phải gọi lại thống kê giá ba lần nữa.
 # Hỏng ở bước này KHÔNG được chặn lượt chạy — universe.json và kho nến mới là thứ bắt buộc.
 & $py tools\kho_giaodich.py --sau 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }

@@ -778,6 +778,22 @@ function ptTop(){
     +box('Giá trị khớp lệnh', num(kl)+' tỷ', tong?((kl/tong*100).toFixed(1)+'% tổng giao dịch'):'')
     +box('Giá trị thoả thuận', num(tt)+' tỷ', tong?((tt/tong*100).toFixed(1)+'% tổng giao dịch'):'')
     +box('Vốn hoá toàn thị trường', num(t.mcap[i]/1000)+' nghìn tỷ', num(t.nMcap[i])+' mã có số cổ phiếu')
+    /* KHỐI NGOẠI và TỰ DOANH: hiện RÒNG làm số chính, mua/bán làm phụ. `nFn`/`nTd` phải nói
+       ra vì hai tầng này phủ khác nhau — tự doanh phiên 20/08 chỉ có 62 mã trong khi khối
+       ngoại có 1.525, mà phần lớn 1.463 mã kia KHÔNG PHẢI thiếu dữ liệu: chúng không có
+       tự doanh thật. Không ghi số mã thì "+508 tỷ" đọc như của cả thị trường. */
+    +box('Khối ngoại ròng',
+         (t.fnMua&&t.fnMua[i]!=null)
+           ?('<span class="'+cls(t.fnMua[i]-t.fnBan[i])+'">'+((t.fnMua[i]-t.fnBan[i])>0?'+':'')
+             +num(t.fnMua[i]-t.fnBan[i])+' tỷ</span>'):'—',
+         (t.fnMua&&t.fnMua[i]!=null)
+           ?('mua '+num(t.fnMua[i])+' · bán '+num(t.fnBan[i])+' tỷ · '+num(t.nFn[i])+' mã'):'kho chưa có')
+    +box('Tự doanh ròng',
+         (t.tdMua&&t.tdMua[i]!=null)
+           ?('<span class="'+cls(t.tdMua[i]-t.tdBan[i])+'">'+((t.tdMua[i]-t.tdBan[i])>0?'+':'')
+             +num(t.tdMua[i]-t.tdBan[i])+' tỷ</span>'):'—',
+         (t.tdMua&&t.tdMua[i]!=null)
+           ?('mua '+num(t.tdMua[i])+' · bán '+num(t.tdBan[i])+' tỷ · '+num(t.nTd[i])+' mã có'):'kho chưa có')
     +'</div>'
     +(phu?'<div class="ptcsw">'+phu+'</div>':'')
     +'<div class="ptcv" id="ptCvW"><canvas id="ptCv"></canvas>'
@@ -915,6 +931,12 @@ function ptVeChart(){
       +'<div class="tpr tp2"><span>khớp lệnh</span><i>'+num(t.mval[k])+' tỷ</i></div>'
       +'<div class="tpr tp2"><span>thoả thuận</span><i>'+num(t.pval[k])+' tỷ</i></div>'
       +'<div class="tpr"><span>Khối lượng khớp</span><i>'+num(t.mv[k])+' nghìn cp</i></div>'
+      +((t.fnMua&&t.fnMua[k]!=null)
+        ?'<div class="tpr"><span>Khối ngoại ròng</span><i class="'+cls(t.fnMua[k]-t.fnBan[k])+'">'+
+          ((t.fnMua[k]-t.fnBan[k])>0?'+':'')+num(t.fnMua[k]-t.fnBan[k])+' tỷ</i></div>':'')
+      +((t.tdMua&&t.tdMua[k]!=null)
+        ?'<div class="tpr"><span>Tự doanh ròng</span><i class="'+cls(t.tdMua[k]-t.tdBan[k])+'">'+
+          ((t.tdMua[k]-t.tdBan[k])>0?'+':'')+num(t.tdMua[k]-t.tdBan[k])+' tỷ</i></div>':'')
       +(cs&&cs.c[k]!=null?'<div class="tpr"><span>VN-Index</span><i>'+num2(cs.c[k])+
          (pc==null?'':' <b class="'+cls(pc)+'">'+(pc>0?'+':'')+pc.toFixed(2)+'%</b>')+'</i></div>':'')
       +'<div class="tpr"><span>Số mã có số</span><i>'+num(t.n[k])+'</i></div>'

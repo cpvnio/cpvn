@@ -544,16 +544,16 @@ def dl_nap(sym, sid, day_du=False):
                                   headers={"X-Requested-With": "XMLHttpRequest", "Cookie": ck or "",
                                            "Referer": "https://finance.vietstock.vn/ket-qua-giao-dich"})
             except Exception:
-                return ra
+                return ra or None
             t = b.lstrip("\ufeff").lstrip()
             if t[:1] == "[":
                 break
         else:
-            return ra
+            return ra or None
         try:
             j = json.loads(t)
         except Exception:
-            return ra
+            return ra or None
         rows = j[1] if len(j) > 1 and isinstance(j[1], list) else []
         if tong is None:
             tong = (j[2][0] if len(j) > 2 and isinstance(j[2], list) and j[2] else 1)
@@ -679,9 +679,15 @@ TD_TIEN = {"BuyVal": "tdMuaGT", "SellVal": "tdBanGT",
 def _kqgd_nap(ep, sym, sid, anh, anh_tien, day_du=False):
     """Bộ nạp dùng chung cho hai endpoint cùng hình dạng của trang kết quả giao dịch
     (khối ngoại và tự doanh): 30 dòng/lượt, `stockID` số, khối [1] là dữ liệu, [2] là số
-    trang, tiền tính bằng TRIỆU ĐỒNG."""
+    trang, tiền tính bằng TRIỆU ĐỒNG.
+
+    TRẢ VỀ `None` KHI GỌI HỎNG, `{}` KHI NGUỒN TRẢ LỜI NHƯNG KHÔNG CÓ DÒNG NÀO — hai
+    chuyện khác hẳn nhau. Rất nhiều mã KHÔNG HỀ CÓ TỰ DOANH: đo VBT (UPCOM) thì khối ngoại
+    có đủ 60 phiên còn tự doanh 0 phiên, và đó là sự thật chứ không phải lỗi mạng. Gộp hai
+    cái làm một thì lượt cào báo "1.012 mã hỏng" trong khi thực ra chỉ có vài mã hỏng thật,
+    và lượt thử lại đi hỏi lại cả nghìn mã vốn không có gì để lấy."""
     if not sid:
-        return {}
+        return None
     ra, trang, tong = {}, 1, None
     while True:
         for lan in (0, 1):
@@ -695,16 +701,16 @@ def _kqgd_nap(ep, sym, sid, anh, anh_tien, day_du=False):
                                   headers={"X-Requested-With": "XMLHttpRequest", "Cookie": ck or "",
                                            "Referer": "https://finance.vietstock.vn/ket-qua-giao-dich"})
             except Exception:
-                return ra
+                return ra or None
             t = b.lstrip("\ufeff").lstrip()
             if t[:1] == "[":
                 break
         else:
-            return ra
+            return ra or None
         try:
             j = json.loads(t)
         except Exception:
-            return ra
+            return ra or None
         rows = j[1] if len(j) > 1 and isinstance(j[1], list) else []
         if tong is None:
             tong = (j[2][0] if len(j) > 2 and isinstance(j[2], list) and j[2] else 1)
@@ -823,7 +829,7 @@ def main():
             xin = {x.upper() for x in a.ma}
             ma = [m for m in ma if m in xin]
         t0 = time.time()
-        ok = loi = khongsid = 0
+        ok = loi = khongsid = khongco = 0
         hong = []
         for i, m in enumerate(ma):
             p = os.path.join(GD_DIR, m + ".json")
@@ -840,9 +846,12 @@ def main():
                 r = nap(m, sid, day_du=a.tatca)
             except Exception:
                 r = None
-            if not r:
+            if r is None:
                 loi += 1
                 hong.append((m, sid))
+                continue
+            if not r:
+                khongco += 1          # nguồn trả lời, mã này không có giao dịch loại đó
                 continue
             eod_ghi(m, r)
             ok += 1
@@ -862,10 +871,13 @@ def main():
                     eod_ghi(m, r)
                     ok += 1
                     lai += 1
+                elif r is not None:
+                    khongco += 1
+                    lai += 1
             loi -= lai
             print(f"    thử lại cứu được {lai}/{len(hong)} mã", flush=True)
-        print(f"  {ten}: ok {ok} · lỗi {loi} · không có sid {khongsid}"
-              f" · {time.time()-t0:.0f}s", flush=True)
+        print(f"  {ten}: ok {ok} · mã KHÔNG có giao dịch loại này {khongco}"
+              f" · lỗi {loi} · không có sid {khongsid} · {time.time()-t0:.0f}s", flush=True)
         return 0
 
     if a.chiso:
@@ -941,12 +953,16 @@ def main():
                     moi.setdefault(d, {}).update(r)
             except Exception:
                 pass
-            # KHỐI NGOẠI — trộn vào cùng bản ghi ngày, cùng nhịp với giá và sổ lệnh.
-            try:
-                for d, r in (fn_nap(m, sid, day_du=a.tatca) or {}).items():
-                    moi.setdefault(d, {}).update(r)
-            except Exception:
-                pass
+            # KHỐI NGOẠI và TỰ DOANH — trộn vào cùng bản ghi ngày, cùng nhịp với giá và
+            # sổ lệnh. Để chung một lượt chứ không tách thành hai bước riêng trong runner:
+            # cả hai đều cần `sid` mà `sid` chỉ có sau khi gọi thống kê giá, nên tách ra là
+            # phải gọi lại thống kê giá lần nữa chỉ để lấy một con số.
+            for nap in (fn_nap, td_nap):
+                try:
+                    for d, r in (nap(m, sid, day_du=a.tatca) or {}).items():
+                        moi.setdefault(d, {}).update(r)
+                except Exception:
+                    pass
             if sid:
                 sids[m] = sid
             tong += eod_ghi(m, moi, sid, a.tatca)
@@ -974,8 +990,9 @@ def main():
                 try:
                     for d, r in (dl_nap(m, sid, day_du=a.tatca) or {}).items():
                         moi.setdefault(d, {}).update(r)
-                    for d, r in (fn_nap(m, sid, day_du=a.tatca) or {}).items():
-                        moi.setdefault(d, {}).update(r)
+                    for nap2 in (fn_nap, td_nap):
+                        for d, r in (nap2(m, sid, day_du=a.tatca) or {}).items():
+                            moi.setdefault(d, {}).update(r)
                 except Exception:
                     pass
                 tong += eod_ghi(m, moi, sid, a.tatca)

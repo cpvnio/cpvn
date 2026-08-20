@@ -25,7 +25,12 @@ $t = New-ScheduledTaskTrigger -Weekly `
      -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '15:15'
 # StartWhenAvailable: máy ngủ/tắt lúc 15:15 thì chạy bù ngay khi bật lại
 $s = New-ScheduledTaskSettingsSet -StartWhenAvailable `
-     -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+     # NỚI 2 -> 3 GIỜ (21/08/2026). Lượt EOD nay làm thêm kho giao dịch: 5 lượt gọi mỗi mã
+     # cho giá + sổ lệnh + khối ngoại + tự doanh (~32 phút), vùng giá khớp lệnh (~10 phút),
+     # chỉ số và bộ gộp (vài giây). Cộng với refresh_daily thì sát trần 2 giờ.
+     # Chạm trần thì Windows GIẾT tiến trình giữa chừng và tác vụ vẫn báo hoàn tất — mất
+     # phần chưa commit mà không có gì báo, đúng họ với mấy cú hỏng im lặng đã gặp.
+     -ExecutionTimeLimit (New-TimeSpan -Hours 3)
 Register-ScheduledTask -TaskName 'CPVN EOD refresh' -Action $a -Trigger $t `
      -Settings $s -User 'SYSTEM' -RunLevel Highest -Force
 
