@@ -377,7 +377,18 @@ async function doPoll(only){
       const last=(+t.lastPrice||0)*1000;
       c.vol=(+t.lot||0)*10;
       c.traded=last>0&&c.vol>0;
-      if(last>0) c.price=last; else if(!c.price) c.price=c.ref;
+      /* CHƯA KHỚP LỆNH -> LẤY THAM CHIẾU, đừng giữ giá khớp cuối của phiên CŨ.
+         Bản cũ `else if(!c.price)` chỉ điền khi đang trống, nên mã chưa khớp vẫn hiện giá
+         của phiên trước. Ngày thường thì vô hại (tham chiếu = giá đóng cửa phiên trước),
+         nhưng ĐÚNG NGÀY CHỐT QUYỀN thì hai số đó khác hẳn nhau — user báo THN hiện 5.300đ
+         trong khi sàn đang 4.000đ. Đo lúc 11:50 ngày 20/08/2026: 11 mã chưa khớp lệnh mà
+         giá đang giữ lệch quá 2% so với tham chiếu, nặng nhất THN +32,5% · UDL +22,1% ·
+         TID +9,7%. Cờ `nt` ngay dưới đã chặn được PHẦN TRĂM bịa, nhưng không sửa GIÁ —
+         mà giá sai còn kéo theo vốn hoá sống (`mcapLive = shares × price`).
+         Tham chiếu là nền hợp lệ của phiên đang chạy, nên nó mới là số đúng để hiện.
+         Nhánh `boardEmpty` đã `continue` phía trên nên ca ban đêm (bảng đã nhảy sang biên
+         độ phiên sau) không đi qua đây. */
+      if(last>0) c.price=last; else c.price=c.ref||c.price;
       const ave=(parseFloat(t.avePrice)||0)*1000;
       if(ave&&c.vol) c.gtgd=ave*c.vol;
       c.high=(parseFloat(t.highPrice)||0)*1000||c.high;

@@ -1546,6 +1546,21 @@ kê TOÀN SÀN nên lần nào mở cũng cần cả 1.529 mã (169 KB, gzip ~45
 > ở hai thời điểm khác nhau. Kho nay giữ `d` = ngày giao dịch đầu tiên (khớp cặp với `gc`) và
 > `dS` = ngày lên sàn hiện tại; giao diện đánh dấu ↷.
 
+**MÃ CHƯA KHỚP LỆNH PHẢI HIỆN THAM CHIẾU, KHÔNG PHẢI GIÁ PHIÊN TRƯỚC (20/08/2026).**
+`core.js` dòng 391, bản cũ `if(last>0) c.price=last; else if(!c.price) c.price=c.ref;` —
+`else if(!c.price)` chỉ điền khi đang TRỐNG, nên mã chưa khớp lệnh vẫn giữ giá khớp cuối của
+phiên trước. Ngày thường vô hại (tham chiếu = giá đóng cửa phiên trước), nhưng **đúng ngày
+chốt quyền thì hai số đó khác hẳn nhau**. User báo: THN hiện **5.300đ** trong khi sàn đang
+**4.000đ**.
+> Đo lúc 11:50 ngày 20/08: **11 mã** chưa khớp lệnh mà giá đang giữ lệch quá 2% so với tham
+> chiếu — THN **+32,5%** · UDL +22,1% · TID +9,7% · VUA −5,3% · HBH +5,1%.
+> Cờ `nt` ngay dưới đã chặn được **phần trăm** bịa (bài học 12/08), nhưng KHÔNG sửa **giá** —
+> mà giá sai còn kéo theo vốn hoá sống (`mcapLive = shares × price`). Hai lớp khác nhau,
+> đừng tưởng có `nt` là xong.
+> Ba đường ghi `c.price`, chỉ đường này hổng: dòng 150 là ảnh chụp kho EOD (nhất quán trong
+> chính nó), dòng 515 `applyLive` đã có `if(!(last>0)) continue`. Nhánh `boardEmpty` đã
+> `continue` phía trên nên ca ban đêm (bảng đã nhảy sang biên độ phiên sau) không đi qua đây.
+
 **HỆ SỐ HẠ NỀN CỔ TỨC TIỀN PHẢI LÀM TRÒN THEO BƯỚC GIÁ (20/08/2026).** Công thức `P/(P−d)`
 THIẾU một bước: sở lấy giá tham chiếu mới = `P−d` rồi **làm tròn về bước giá** trước khi dùng
 làm nền. Đo trên đúng 4 mã chốt quyền ngày 20/08, so nguồn sống với `data/eod`:
