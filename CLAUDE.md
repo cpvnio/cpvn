@@ -1731,8 +1731,36 @@ dài hơn và bắt đầu sớm hơn trục của một mã, lệch một ô l�
 không ra; và **`PT.tt.tt.mval/pval` tính bằng TỶ** (khác `mval` của kho mã tính bằng ĐỒNG),
 đưa qua `ptTien` là sai một tỉ lệ tỷ lần.
 Ô thứ chín làm lưới 4 cột thành 3 hàng, thanh dính cao thêm 61px (236 so với 175) — nên
-`.ptdw.co9` chuyển sang **5 cột từ 1.080px** (9 ô = 5+4, mỗi ô 223px, đo được **0 dòng phụ
-bị cắt** trên SHB và VCB ở cả bốn khung 100/300/600/1.000).
+`.ptdw` chuyển sang **5 cột từ 1.080px** (mỗi ô 223px). Nay thanh có **9 ô** thường và
+**10 ô** khi bật VN-Index, 5 cột chia đẹp cả hai (5+4 và 5+5) và **bật/tắt VN-Index không
+làm đổi chiều cao thanh nữa** — cùng 174,5px.
+> Đuôi `cả thị trường` bọc `.ptdq` để khổ hẹp bỏ đi: ở 375px ô chỉ còn ~155px và chuỗi đầy
+> đủ bị cắt đuôi đúng vào CON SỐ. Đúng luật đã ghi — *cắt một chữ định tính còn hơn cắt
+> một con số*. Đo lại ở 375px: 0 ô bị cắt.
+
+### "FREE FLOAT" ĐỔI TÊN THÀNH "LƯU THÔNG", VÀ CÓ Ô RIÊNG Ở TRANG MÃ (22/08/2026)
+
+User: *"tao chưa biết được là cổ phiếu này đang lưu thông bao nhiêu %, cần thêm mục lưu
+thông nữa. đổi free float thành lưu thông"*. Đổi ở **mọi nhãn hiển thị** — ô toàn thị
+trường, bảng mã (`Lưu thông` · `Vốn hoá LT`), và bộ mô tả đại lượng (`Vốn hoá lưu thông`,
+`Vòng quay lưu thông`). **Tên TRƯỜNG trong kho giữ nguyên** (`ff`, `mcapFF`, `vqf`,
+`freeFloat` trong `data/profile`) — đổi tên trường là phải dựng lại kho và sửa mọi chỗ đọc,
+mà nó không phải thứ người dùng nhìn thấy.
+
+Ô mới ở thanh đọc số: `Lưu thông 32,2% · 2.281.769.413 cp · 72.218 tỷ` (TCB). Nó **KHÔNG
+nằm trong `data/giaodich`** mà nằm ở cột `ff` của FILE PHIÊN (dựng từ `data/profile`) —
+đây là tỉ lệ của CẢ MÃ, không đổi theo phiên, nên lấy ở file phiên nào cũng được: ưu tiên
+phiên đang ghim (file đó đã phải tải cho đồ thị vùng giá nên **không tốn thêm lượt mạng
+nào**), rồi tới phiên của thanh chọn đầu trang, cuối cùng là bất kỳ file nào trong bộ đệm.
+
+> **ĐỨNG THÀNH Ô RIÊNG, đừng nhét vào dòng phụ của ô Vốn hoá.** Dòng đó đã có "số cổ phiếu
+> · nước ngoài x%" và bị khoá MỘT DÒNG (`nowrap` + `ellipsis`) — nhét mẩu thứ ba là cắt
+> đuôi ngay giữa một con số. Mà nó cũng đáng một ô: TCB vốn hoá 224.280 tỷ nhìn như một mã
+> khổng lồ, nhưng phần THỰC SỰ mua bán được mới là thứ quyết định giá chạy hay không.
+
+> **94/1.526 mã nguồn không có số -> ĐỂ TRỐNG**, in "nguồn chưa có tỉ lệ lưu thông". Coi
+> chúng là 100% lưu thông thì đúng nhóm KHÔNG BIẾT GÌ lại nhảy lên đầu mọi bảng xếp theo
+> tỉ lệ lưu thông.
 
 ### CỘT KHỚP LỆNH CỦA TRANG MÃ TÁCH MÀU THEO KHỐI (22/08/2026)
 

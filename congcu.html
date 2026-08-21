@@ -738,13 +738,13 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 /* BỐN CỘT, KHÔNG PHẢI TÁM. Tám ô dàn một hàng ở 1.364px là 170px mỗi ô — dòng phụ
    ("mở 47.250 kịch sàn · cao 52.000 · thấp 47.250") gãy thành bốn dòng và ô cao gấp ba
    ô bên cạnh. Hai hàng bốn ô đọc dễ hơn hẳn một hàng tám ô chen chúc. */
-@media(min-width:1080px){.ptdw{grid-template-columns:repeat(4,minmax(0,1fr))}}
-/* BẬT VN-INDEX LÀ CÓ Ô THỨ CHÍN -> 4 cột thành 3 hàng, hàng cuối trơ một ô và thanh dính
-   cao thêm 61px (236 so với 175). Chín ô thì 5 cột chia đẹp thành 5+4. Đo ở 1.280px: mỗi
-   ô còn 223px và **0 dòng phụ nào bị cắt** — dòng phụ vốn đã `nowrap` + `ellipsis` nên có
-   mã nào dài hơn thì nó cắt đuôi chứ không phá lưới. Dưới 1.080px vẫn 3 cột (9 ô = đúng
-   3 hàng) và dưới 700px vẫn 2 cột. */
-@media(min-width:1080px){.ptdw.co9{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* NĂM CỘT TỪ 1.080px. Thanh đọc số nay có **9 ô** (thêm ô Lưu thông) và **10 ô** khi bật
+   VN-Index — 4 cột thì thành 3 hàng, hàng cuối trơ một ô, thanh dính cao thêm 61px (236 so
+   với 175). Năm cột chia đẹp cả hai trường hợp: 5+4 và 5+5.
+   Đo ở 1.280px: mỗi ô còn 223px và **0 dòng phụ nào bị cắt** trên SHB lẫn VCB ở cả bốn
+   khung 100/300/600/1.000 — dòng phụ vốn đã `nowrap` + `ellipsis` nên mã nào dài hơn thì
+   nó cắt đuôi chứ không phá lưới. Dưới 1.080px vẫn 3 cột, dưới 700px vẫn 2 cột. */
+@media(min-width:1080px){.ptdw{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .ptdc{display:flex;flex-direction:column;gap:2px;min-width:0}
 .ptdcl{font-size:10.5px;font-weight:700;color:var(--faint);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
@@ -1490,7 +1490,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823d"></script>
+<script defer src="assets/mobi.js?v=20260823e"></script>
 </head>
 <body>
 
@@ -1547,6 +1547,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823d"></script>
+<script src="assets/congcu.js?v=20260823e"></script>
 </body>
 </html>

@@ -893,7 +893,7 @@ function ptTop(){
     +box('Vốn hoá thị trường', num(t.mcap[i])+' tỷ',
          (t.mcapFF&&t.mcapFF[i]!=null)
            ?('giao dịch được <b>'+num(t.mcapFF[i])+' tỷ</b> · <b>'
-             +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'%</b> free float')
+             +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'%</b> lưu thông')
            :('<b>'+num(t.nMcap[i])+'</b> mã có số cổ phiếu'))
     /* KHỐI NGOẠI và TỰ DOANH: hiện RÒNG làm số chính, mua/bán làm phụ. `nFn`/`nTd` phải nói
        ra vì hai tầng này phủ khác nhau — tự doanh phiên 20/08 chỉ có 62 mã trong khi khối
@@ -1232,8 +1232,8 @@ function ptDongTien(r){
    "cỡ lệnh mua/bán" mà không nói nghĩa thì bộ lọc chỉ dùng được bởi người đã biết. */
 const DTM={
   mval:  {t:'Giá trị khớp lệnh',      d:'tiền thật khớp trong phiên', f:v=>ptTien(v), don:'đồng'},
-  mcapFF:{t:'Vốn hoá free float',     d:'phần vốn hoá thực sự mua bán được', f:v=>ptTien(v), don:'đồng'},
-  vqf:   {t:'Vòng quay free float',   d:'% cổ phiếu tự do chuyển nhượng đã sang tay trong phiên', f:v=>v.toFixed(3)+'%', don:'%'},
+  mcapFF:{t:'Vốn hoá lưu thông',      d:'phần vốn hoá thực sự mua bán được', f:v=>ptTien(v), don:'đồng'},
+  vqf:   {t:'Vòng quay lưu thông',    d:'% cổ phiếu đang lưu thông đã sang tay trong phiên', f:v=>v.toFixed(3)+'%', don:'%'},
   ami:   {t:'Kém thanh khoản (Amihud)',d:'% giá nhảy trên mỗi tỷ đồng khớp — cao là mã mỏng', f:v=>v.toFixed(4), don:''},
   bd20:  {t:'Biên độ TB 20 phiên',    d:'(cao − thấp) ÷ đóng cửa, trung bình 20 phiên', f:v=>v.toFixed(2)+'%', don:'%'},
   vol20: {t:'Biến động 20 phiên',     d:'độ lệch chuẩn lợi suất ngày', f:v=>v.toFixed(2)+'%', don:'%'},
@@ -1254,7 +1254,7 @@ const DTM={
   room:  {t:'Room ngoại còn',         d:'0% là hết room; mã nguồn không biết trần thì để trống', f:v=>v.toFixed(2)+'%', don:'%'},
   shu:   {t:'Sở hữu nước ngoài',      d:'', f:v=>v.toFixed(1)+'%', don:'%'},
   ttp:   {t:'Tỉ trọng thoả thuận',    d:'giá trị thoả thuận ÷ giá trị khớp lệnh', f:v=>v.toFixed(2), don:'lần'},
-  ff:    {t:'Free float',             d:'% cổ phiếu tự do chuyển nhượng', f:v=>v.toFixed(1)+'%', don:'%'},
+  ff:    {t:'Lưu thông',              d:'% cổ phiếu đang thật sự lưu thông trên sàn', f:v=>v.toFixed(1)+'%', don:'%'},
   pc:    {t:'% thay đổi phiên',       d:'', f:v=>(v>0?'+':'')+v.toFixed(2)+'%', don:'%'},
 };
 /* Ba dòng điều kiện là đủ: bốn dòng trở lên thì gần như lượt lọc nào cũng ra rỗng, mà
@@ -2202,6 +2202,26 @@ function ptVeMa(){
      như số chứng quyền — đã chuyển sang chú thích đồ thị Tự doanh) · ② CSS `.ptdcp` khoá
      một dòng, `nowrap` + `ellipsis`, để có gặp mã tên dài hay số to bất thường thì nó cắt
      đuôi chứ TUYỆT ĐỐI không xuống dòng. Chỉ làm ① là lần sau có chuỗi dài hơn lại giật. */
+  /* TỈ LỆ LƯU THÔNG (free float) CỦA CHÍNH MÃ NÀY (user chốt 22/08/2026: *"tao chưa biết
+     được là cổ phiếu này đang lưu thông bao nhiêu %, cần thêm mục lưu thông nữa"*).
+     Nó KHÔNG nằm trong `data/giaodich` mà nằm trong FILE PHIÊN (`bang`, cột `ff`) — vốn
+     dựng từ `data/profile`. Đây là tỉ lệ của CẢ MÃ, không đổi theo phiên, nên lấy ở file
+     phiên nào cũng được: ưu tiên phiên đang ghim (file đó đã phải tải cho đồ thị vùng giá,
+     không tốn thêm lượt nào), không có thì mượn phiên của thanh chọn đầu trang, cuối cùng
+     mượn bất kỳ file phiên nào đang trong bộ đệm.
+     THIẾU THÌ ĐỂ TRỐNG. 96/1.525 mã nguồn không có số; coi chúng là 100% lưu thông thì
+     đúng nhóm KHÔNG BIẾT GÌ lại nhảy lên đầu mọi bảng xếp theo tỉ lệ lưu thông — cùng
+     luật đã ghi ở mục FREE FLOAT. */
+  let ffM=null;
+  {
+    const thu=[PT.phien[ngVG], PT.phien[PT.ngay]].concat(Object.values(PT.phien));
+    for(const p of thu){
+      if(!p||!p.bang||!p.f) continue;
+      const b=p.bang[PT.ma]; if(!b) continue;
+      const j=p.f.indexOf('ff'); if(j<0) continue;
+      if(b[j]!=null){ ffM=b[j]; break; }
+    }
+  }
   /* SỐ CỦA THỊ TRƯỜNG CHO ĐÚNG PHIÊN ĐANG XEM. Trục ngày của `data/phantich.json` dài hơn
      và bắt đầu sớm hơn trục ngày của một mã, nên phải dò THEO NGÀY chứ tuyệt đối không
      dùng chung chỉ số — lệch một ô là hiện số của phiên khác mà nhìn không ra. */
@@ -2228,7 +2248,7 @@ function ptVeMa(){
         ? '<button class="ptdgh on" id="ptBoGhim">đã ghim — bấm để bỏ</button>'
         : '<span class="ptdg">rê chuột lên đồ thị để xem phiên khác · <b>bấm để ghim</b></span>')
     +'</div>'
-    +'<div class="ptdw'+(ttP?' co9':'')+'">'
+    +'<div class="ptdw">'
     +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'TB '+num(vw[k]),
         pcs[k]==null?'':cls(pcs[k]))
     /* GIÁ KHỚP LỆNH TB đứng thành Ô RIÊNG, không nhét vào dòng phụ của ô đóng cửa
@@ -2291,6 +2311,17 @@ function ptVeMa(){
            hơn hẳn bỏ một chữ định tính: "bán 2…" đọc ra một số sai. */
         +(fnSH[k]!=null?'<i class="ptdq2">'+(sh[k]?' · ':'')+'nước ngoài <b>'
             +fnSH[k].toFixed(1)+'%</b></i>':''))
+    /* LƯU THÔNG ĐỨNG THÀNH Ô RIÊNG, không nhét thêm vào dòng phụ của ô Vốn hoá — dòng đó
+       đã có "số cổ phiếu · nước ngoài x%" và bị khoá MỘT DÒNG (`nowrap` + `ellipsis`), nhét
+       mẩu thứ ba vào là nó cắt đuôi ngay giữa một con số.
+       Mà nó cũng đáng một ô: TCB vốn hoá 225.342 tỷ nhìn như một mã khổng lồ, nhưng phần
+       THỰC SỰ mua bán được mới là thứ quyết định giá chạy hay không — BID vốn hoá 279
+       nghìn tỷ mà lưu thông 2,6%, tức chỉ 7 nghìn tỷ trôi nổi, trong khi STB 140 nghìn tỷ
+       với 95% thì gần như toàn bộ. Cùng lập luận đã ghi ở mục FREE FLOAT. */
+    +oo('Lưu thông', ffM!=null?(ffM.toFixed(1)+'%'):oNul,
+        ffM==null?'nguồn chưa có tỉ lệ lưu thông'
+          :((sh[k]?num(Math.round(sh[k]*ffM/100))+' cp':'')
+            +(mcap[k]?(sh[k]?' · ':'')+'<b>'+ptTien(mcap[k]*ffM/100)+'</b>':'')))
     /* Ô THỊ TRƯỜNG — CHỈ HIỆN KHI ĐANG BẬT VN-INDEX (user chốt 22/08/2026: *"khi bật
        vnindex vào tao không thể xem giá vnindex và vol tổng ngày đó khi rà trong đồ thị"*).
        Đúng: đường VN-Index vẽ ra rồi mà không có chỗ nào đọc được số của nó, và cũng
@@ -2301,8 +2332,12 @@ function ptVeMa(){
        `PT.tt.tt.mval`/`pval` tính bằng TỶ (xem `build_phantich`), khác `mval` của kho mã
        vốn tính bằng ĐỒNG — đừng đưa qua `ptTien`. */
     +(ttP?oo('VN-Index', ttP.c!=null?num2(ttP.c):oNul,
+        /* "cả thị trường" bọc `.ptdq` để KHỔ HẸP BỎ ĐI — ở 375px ô chỉ còn ~155px và
+           chuỗi đầy đủ bị cắt đuôi đúng vào CON SỐ, mà cắt số thì đọc ra một số sai. Bỏ
+           một chữ định tính an toàn hơn hẳn; nhãn ô đã là "VN-Index" nên con số tỷ đứng
+           cạnh vẫn đọc ra là tiền của thị trường. Cùng luật với `.ptdq` của ô khối ngoại. */
         (ttP.pc!=null?ph(ttP.pc)+' · ':'')
-          +'cả thị trường <b>'+num(Math.round(ttP.gt))+' tỷ</b>',
+          +'<i class="ptdq">cả thị trường </i><b>'+num(Math.round(ttP.gt))+' tỷ</b>',
         ttP.pc!=null?cls(ttP.pc):''):'')
     +'</div>';
   const bg=$('#ptBoGhim');
@@ -2389,8 +2424,8 @@ const PTC=[
      nghìn tỷ mua bán được, trong khi STB 140 nghìn tỷ với 95% -> 133. Xếp bảng theo cột
      `mcapFF` là ra một thứ hạng KHÁC HẲN cột `mcap`, và đó mới là thứ hạng nói được vì
      sao mã này chạy còn mã kia đứng im. */
-  {k:'ff',  t:'Free float',     n:1},
-  {k:'mcapFF',t:'Vốn hoá FF',   n:1, tien:1},
+  {k:'ff',  t:'Lưu thông',      n:1},
+  {k:'mcapFF',t:'Vốn hoá LT',   n:1, tien:1},
 ];
 
 async function ptBang(){
