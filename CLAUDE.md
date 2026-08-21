@@ -1634,13 +1634,27 @@ nào vượt** -> không có chuyện đếm hai lần. Phép này rẻ và nó 
   `EndDate` chạy, và luôn kẹp ~66 phiên.
 · **VNDirect** chính là chỗ hỏng.
 
-**KẾT QUẢ** (`--sau 1000 --bo-som 8`, 1.529 mã, ~52 phút, 0 lỗi):
+**KẾT QUẢ** — ba lượt, tổng ~3,2 giờ, 0 lỗi. Mọi mã cuối cùng đều đã lật trọn 1.000 phiên:
+
+| lượt | phạm vi | thêm |
+|---|---|---|
+| 1 | 1.529 mã, `--bo-som 8` | 43% -> **96,5%** |
+| 2 | 541 mã bị bỏ sớm, `--bo-som 0` | -> **97,5%** |
+| 3 | 988 mã còn lại, `--bo-som 0` | -> **97,8%** |
 
 ```
-thoả thuận   43%  ->  96,5%       khớp lệnh giữ nguyên 99,5%
 phiên 05/08/2025:  85.929,6 tỷ  (sàn công bố 86.059,4 · báo chí ghi 85,8 nghìn tỷ)
-2024-06 tới nay: 95,5-99,9% mỗi tháng · phần hụt còn lại dồn vào 2022-2023
+2024-06 tới nay: 95,5-99,9% mỗi tháng · khớp lệnh giữ nguyên 99,53%
 ```
+
+> **2,2% CÒN HỤT KHÔNG PHẢI LỖI CÀO — ĐỪNG CHẠY LẠI, KHO ĐÃ CẠN.** Đo 12 mã khớp lệnh lớn
+> nhất phiên 2022-12-05 (lùi 925 phiên): kho **khớp Vietstock tới từng đồng, 12/12**. Phần
+> hụt nằm ở **mã KHÔNG CÓ trong `data/giaodich`** — 443 mã đã rời sàn (`data/rolichsu.json`)
+> cộng ETF. Chữ ký của nó rất rõ ở mấy phiên cũ: khớp lệnh đủ **98–99,5%** trong khi thoả
+> thuận chỉ **62–68%** — tức nhóm thiếu góp ~1,5% khớp lệnh nhưng ~35% thoả thuận, đúng hình
+> dạng của **lô sang tay khối lượng lớn ở mã sắp huỷ niêm yết** (thoả thuận khổng lồ, khớp
+> lệnh gần bằng 0). Muốn đóng nốt thì phải đưa mã đã rời sàn vào kho — việc KHÁC HẲN, và
+> kho này vốn là "mã đang niêm yết".
 
 > **`--bo-som N` LÀ THỨ ĐÁNH ĐỔI, PHẢI BIẾT MÌNH ĐANG ĐÁNH ĐỔI GÌ.** Nó bỏ mã sau N trang
 > liên tiếp không có đồng thoả thuận nào — phần lớn 825 mã UPCOM không có thoả thuận phiên
