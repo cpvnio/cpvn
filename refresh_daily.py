@@ -348,12 +348,49 @@ print(f"kho lịch sử: backfill {hstats['new']}, nối {hstats['append']}, t�
 moc("kho_nen")
 HL["hist"]=dict(hstats); HL["histSrc"]=nguon; HL["board"]=len(board); HL["indices"]=len(indices)
 
-# 4) ghép mốc giá + vốn hoá (=SLCP×giá đóng cửa nếu Simplize thiếu) vào universe
+# 4) ghép mốc giá + vốn hoá vào universe
+#
+# SỐ CỔ PHIẾU LẤY TỪ `data/giaodich` (VNDirect `ratios`), KHÔNG LẤY SIMPLIZE NỮA
+# (user chốt 22/08/2026). Trước đây `shares`/`mcap` lấy của Simplize và **gần như không bao
+# giờ được làm mới** — bước 1 chỉ hỏi lại mã nào THIẾU `sector` hoặc `shares`, nên mã đã có
+# số thì đóng băng ở đó. Hậu quả đo được: **298/1.518 mã** có vốn hoá trên bảng giá lệch quá
+# 5% so với `sh × giá` của trang phân tích. HAC hiện **266 tỷ** ở bảng giá trong khi thật là
+# **1.176 tỷ** — cùng một mã, hai con số, tuỳ mở trang nào.
+#
+# PHÂN XỬ BẰNG NGUỒN THỨ BA trước khi đổi, không tin suông: `shR` của Vietstock
+# (= vốn hoá ÷ giá) trên 99 mã có đủ ba nguồn — **VNDirect đúng 78, Simplize đúng 21**.
+# Soi tiếp 21 ca ngược: **19/21 là VNDirect NHỎ HƠN 5-10%**, tức chênh lệch CỔ PHIẾU QUỸ
+# (lưu hành vs niêm yết) chứ không phải sai — và với vốn hoá thì "đang lưu hành" mới đúng.
+# Còn 78 ca kia lệch ×3-×4,4: tăng vốn thật mà Simplize chưa cập nhật.
+#
+# `data/giaodich` được `kho_vnd_lo.py` dựng NGAY TRƯỚC bước này trong lượt EOD nên số luôn
+# mới. Mã nào kho không có thì giữ nguyên số Simplize — thà cũ còn hơn trống.
+_GD=os.path.join(BASE,"data","giaodich")
+_sh_kho = {}
+try:
+    for _f in os.listdir(_GD):
+        if not _f.endswith(".json"): continue
+        try:
+            _g=json.load(open(os.path.join(_GD,_f),encoding="utf-8"))
+        except Exception: continue
+        _v=_g.get("sh") or []
+        _x=next((y for y in reversed(_v) if y), None)
+        if _x: _sh_kho[_f[:-5]]=_x
+except Exception as _e:
+    print(f"  [SLCP] không đọc được data/giaodich: {_e}",flush=True)
+_doi=0
 for sym,s in stocks.items():
     p=prices.get(sym)
     if p:
         s["anc"]=p["anc"]
-        if not s.get("mcap") and s.get("shares"): s["mcap"]=s["shares"]*p["close"]
+        sh=_sh_kho.get(sym)
+        if sh:
+            if not s.get("shares") or abs(sh/s["shares"]-1)>0.001: _doi+=1
+            s["shares"]=sh
+            s["mcap"]=sh*p["close"]
+        elif not s.get("mcap") and s.get("shares"):
+            s["mcap"]=s["shares"]*p["close"]
+print(f"  SLCP từ data/giaodich (VNDirect): {len(_sh_kho)} mã có số, {_doi} mã đổi so với Simplize",flush=True)
 
 # mã VỪA THÊM mà không cào nổi một cây nến nào (mã tạm ngừng, mã SSI liệt kê sớm hơn ngày
 # chào sàn) thì chưa ghi vào universe, chờ lượt sau — không để mã trống giá lọt ra web.

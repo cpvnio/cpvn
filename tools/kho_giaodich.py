@@ -426,7 +426,14 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
         except Exception:
             pass
     sh_cu = {d: cu[d].get("sh") for d in ngay}
-    doc["sh"], doc["shVa"] = neo_slcp(ngay, doc["shR"], ev, _slcp_that(sym))
+    # `shVa` và `shLa` KHÔNG GHI RA FILE NỮA (22/08/2026). Chúng nằm trong danh sách xoá
+    # của `tools/gon_kho.py` từ lâu, mà `eod_ghi` vẫn dựng lại mỗi lượt — một vòng lặp vô
+    # nghĩa: xoá rồi ghi rồi xoá. Đo sau lượt khôi phục sâu: 347 mã có `shVa` sống lại và
+    # 188 mã có `shLa`. Grep cả kho: **không dòng nào đọc chúng** ngoài chính hai dòng ghi.
+    # `shLa` còn nguy hiểm hơn phần thừa: nó là danh sách ≤20 bậc lạ chứ KHÔNG phải cột
+    # theo phiên, nên mọi hàm gom "field kiểu list" thành cột đều phải đặc cách cho nó
+    # (đã phải thêm guard ở cả `eod_ghi` lẫn `kho_vnd_lo`). Không ghi ra là hết chuyện.
+    doc["sh"], _shva = neo_slcp(ngay, doc["shR"], ev, _slcp_that(sym))
     # SỐ CỔ PHIẾU: NGUỒN CHÍNH LÀ `sh` ĐANG CÓ TRONG KHO (do `kho_vnd_lo` ghi từ `ratios`
     # của VNDirect), `neo_slcp` chỉ còn là ĐƯỜNG LẤP CHỖ TRỐNG.
     # Bản trước làm ngược — neo_slcp thắng, chỉ giữ số cũ ở ô nó không suy ra được — và đó
@@ -436,9 +443,7 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
     for i2, d2 in enumerate(ngay):
         if sh_cu.get(d2) is not None:
             doc["sh"][i2] = sh_cu[d2]
-    la = bac_la(ngay, doc["sh"], ev)
-    if la:
-        doc["shLa"] = la[:20]
+    la = bac_la(ngay, doc["sh"], ev)   # chỉ dùng tại chỗ cho luật bậc rác ngay dưới
     # BẬC RÁC Ở ĐẦU CHUỖI -> BỎ HẲN `sh` của quãng đó, đừng để ai tính ra "×3.637 lần".
     # Hẹp có chủ ý: chỉ khi bậc lạ ĐẦU TIÊN nhảy quá 10 lần VÀ nằm trong 5 phiên đầu — đúng
     # hình dạng của ô rác (VGI: một phiên lẻ 14/09/2018 trước ngày niêm yết thật 25/09).

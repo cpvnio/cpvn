@@ -1889,9 +1889,17 @@ function ptVeMa(){
   /* MẪU SỐ PHẢI KHỚP TỬ SỐ. Tử là TỔNG khối ngoại (gồm thoả thuận) nên mẫu phải là TỔNG
      giao dịch, không phải riêng khớp lệnh — chia lệch mẫu là thổi tỉ lệ lên đúng bằng
      phần thoả thuận, mà thoả thuận chiếm 15,1% giá trị khối ngoại toàn kho. */
+  /* QUÁ 100% LÀ MẪU SỐ SAI, KHÔNG PHẢI SỐ ĐÁNG VẼ — để TRỐNG (22/08/2026).
+     Khối ngoại là một phần của giao dịch phiên nên tỉ lệ không thể vượt 100 theo định
+     nghĩa. Nhưng `fnMuaTG` của VNDirect GỒM thoả thuận trong khi `pval` của chính họ BỎ
+     SÓT thoả thuận ở phiên cũ (Vietstock chỉ với tới ~250 phiên) — mẫu hụt thì tỉ lệ vọt.
+     Đo toàn kho: 874/978.749 ô (0,09%) ra quá 100%, cao nhất **29.942.630%** — một cột
+     như thế trên đồ thị đọc ra như cả trang hỏng. Thà không vẽ. */
   const fnPc=mval.map((x,i)=>{
     const tg=(x||0)+(pval[i]||0);
-    return (tg&&(fnM[i]!=null||fnB[i]!=null))?(((fnM[i]||0)+(fnB[i]||0))/2/tg*100):null;
+    if(!tg||(fnM[i]==null&&fnB[i]==null)) return null;
+    const p=((fnM[i]||0)+(fnB[i]||0))/2/tg*100;
+    return p>100?null:p;
   });
   if(PT.maI==null||PT.maI>m) PT.maI=m;
   const k=PT.maI;

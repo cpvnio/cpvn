@@ -1575,6 +1575,72 @@ thứ nhất, vì trang /phantich không cần nó. `PushKho` gọi hai lần: `
   toàn thị trường), và nó **CHỈ trộn `pv`/`pval`**, vứt mọi trường khác của lượt trả về —
   bằng không tầng giá Vietstock ghi đè tầng giá VNDirect, mất luật "một cột một nguồn".
 
+### DƯ CHẤN CỦA LỖI `eod_ghi`: 360 MÃ MẤT 970 PHIÊN — VÀ VÌ SAO KHÔI PHỤC 30 PHIÊN LÀ CHƯA ĐỦ
+
+User báo: *"khối lượng khối ngoại, tự doanh, thoả thuận đang sai từ tháng 7 về trước"*.
+Đúng, và gốc là chuỗi ba bước của chính lượt sửa hôm nay:
+
+1. lượt `--nn`/`--td` đầu tiên chạy khi `eod_ghi` CÒN LỖI → xoá sạch cột VNDirect của 530 mã
+2. tao vá `eod_ghi`, rồi chạy `kho_vnd_lo --sau 30` để khôi phục
+3. nhưng `--sau 30` chỉ đắp lại **30 phiên cuối** — 970 phiên còn lại vẫn trống
+
+Đo: **360 mã** còn ≤40 phiên có `fnMuaTG`; HPG từ **1.000 → 30 ô**. Trên đồ thị trang mã,
+mọi cột khối ngoại/tự doanh trước tháng 7 biến mất — đúng thứ user nhìn thấy.
+
+Khôi phục bằng `kho_vnd_lo.py --sau 1000` (153 lô × 4 tầng, **10,2 phút**) rồi `--tt --tuloc`
+đắp lại thoả thuận của Vietstock. Sau đó: **1.504 mã ≥200 phiên**, HPG đủ 1.000/1.000.
+
+> **LUẬT: SAU MỘT LỖI XOÁ DỮ LIỆU, PHẢI KHÔI PHỤC ĐÚNG ĐỘ SÂU CŨ RỒI ĐO LẠI — không phải
+> chạy công cụ một lượt là xong.** Lượt khôi phục 30 phiên trông "thành công" ở mọi log
+> (`fn:ok 1529`) trong khi 97% dữ liệu vẫn mất. Phép đo đúng là **so độ sâu với bản trước
+> khi hỏng** (`git show <commit>:file`), không phải đếm số mã chạy trót lọt.
+
+### `% GIAO DỊCH LÀ CỦA KHỐI NGOẠI` — QUÁ 100% THÌ ĐỂ TRỐNG
+
+Khối ngoại là một PHẦN của giao dịch phiên nên tỉ lệ không thể vượt 100 theo định nghĩa.
+Nhưng `fnMuaTG` của VNDirect **gồm** thoả thuận trong khi `pval` của chính họ **bỏ sót**
+thoả thuận ở phiên cũ (Vietstock chỉ với tới ~250 phiên) — mẫu hụt thì tỉ lệ vọt.
+
+Đo toàn kho: **874/978.749 ô (0,09%)** vượt 100%, cao nhất **29.942.630%** —
+PHS 18/09/2025 khớp đúng **5 cổ phiếu = 55.000đ** trong khi khối ngoại bán **32,9 tỷ** qua
+thoả thuận. Một cột như thế trên đồ thị đọc ra như cả trang hỏng.
+
+Chặn ở **hai nơi cùng tính đại lượng này**, thiếu một chỗ là hai bề mặt lệch nhau:
+`fnPc` trong `assets/congcu.js` (đồ thị `mc5` + thanh đọc số) và `fnp` trong
+`tools/kho_dactrung.py` (bộ lọc). Kho đặc trưng đồng thời được sửa **mẫu số**: trước chia
+riêng `mval`, nay chia `mval + pval`.
+
+### `shVa` / `shLa` THÔI GHI RA FILE (22/08/2026)
+
+`tools/gon_kho.py` xoá hai trường này từ lâu, mà `eod_ghi` vẫn dựng lại mỗi lượt — xoá rồi
+ghi rồi xoá, một vòng lặp vô nghĩa. Đo sau lượt khôi phục sâu: **347 mã** có `shVa` sống lại,
+**188 mã** có `shLa`. Grep cả kho: **không dòng nào đọc chúng**.
+
+`shLa` còn là một quả mìn: nó là danh sách ≤20 bậc lạ (`[[ngày, tỉ lệ], …]`) chứ **KHÔNG
+phải cột theo phiên**, nên mọi hàm gom "field kiểu list" thành cột đều phải đặc cách cho nó
+— đã phải thêm guard ở cả `eod_ghi` lẫn `kho_vnd_lo`. Không ghi ra là hết chuyện.
+
+### SỐ CỔ PHIẾU CỦA `universe.json` NAY LẤY VNDIRECT, KHÔNG LẤY SIMPLIZE (22/08/2026)
+
+`shares`/`mcap` trước lấy của Simplize ở bước 1, mà bước đó **chỉ hỏi lại mã nào THIẾU**
+`sector` hoặc `shares` — nên mã đã có số thì **đóng băng vĩnh viễn**. Hậu quả: **298/1.518
+mã** có vốn hoá trên bảng giá lệch quá 5% so với `sh × giá` của trang phân tích.
+**HAC hiện 266 tỷ ở bảng giá trong khi thật là 1.176 tỷ** — cùng một mã, hai con số.
+
+**PHÂN XỬ BẰNG NGUỒN THỨ BA TRƯỚC KHI ĐỔI.** `shR` của Vietstock (= vốn hoá ÷ giá) trên 99
+mã có đủ ba nguồn: **VNDirect đúng 78, Simplize đúng 21**. Soi tiếp 21 ca ngược thì
+**19/21 là VNDirect NHỎ HƠN 5-10%** — đó là chênh lệch **cổ phiếu quỹ** (lưu hành vs niêm
+yết) chứ không phải sai, và với vốn hoá thì "đang lưu hành" mới đúng. Còn 78 ca kia lệch
+×3-×4,4: tăng vốn thật mà Simplize chưa cập nhật.
+
+Bước 4 của `refresh_daily` nay đọc `sh` từ `data/giaodich` (do `kho_vnd_lo` dựng ngay trước
+đó trong lượt EOD) và ghi đè `shares` + `mcap`. Mã nào kho không có thì giữ số Simplize.
+Đã áp một lượt lên `universe.json` hiện tại: **160 mã đổi**, và phép đối chiếu
+`universe.mcap` vs `sh × c` đi từ **298 mã lệch xuống 0**.
+
+> Blast radius đã dựng lại theo: `data/screen.json`, `data/market.json`, `data/fund.json`
+> (đường đua + bộ lọc) và `data/tapdoan.json`. Cả hai công cụ đó **không gọi mạng**.
+
 ### SOI TOÀN KHO SAU KHI TRỘN NGUỒN — HAI LỖI TỰ GÂY, BỐN LỖI CÓ SẴN (22/08/2026)
 
 User lo đúng chỗ: *"hành vi trộn data xong lại xoá hết data của Vietstock dễ tạo ra nhiều

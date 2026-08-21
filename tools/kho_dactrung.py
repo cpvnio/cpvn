@@ -316,8 +316,16 @@ def lam(sym, ff):
             # thì cộng hai cái.
             fnr[i] = (fM[i] or 0) - (fB[i] or 0)
             fnrTT[i] = (fMT[i] or 0) - (fBT[i] or 0)
-            if mval[i]:
-                fnp[i] = round(((fM[i] or 0) + (fB[i] or 0)) / 2 / mval[i] * 100, 3)
+            # MẪU SỐ PHẢI GỒM CẢ THOẢ THUẬN, và QUÁ 100% thì để TRỐNG (22/08/2026).
+            # `fM`/`fB` ở đây là trường Vietstock (khớp lệnh) hoặc VNDirect (tổng) tuỳ mã có
+            # gì; chia riêng `mval` là thổi tỉ lệ lên đúng bằng phần thoả thuận. Và quá 100%
+            # thì theo định nghĩa là mẫu số sai — khối ngoại là một PHẦN của giao dịch phiên.
+            # Đo toàn kho: 874 ô vượt 100%, cao nhất 29.942.630% (PHS 18/09/2025: khớp đúng
+            # 5 cổ phiếu = 55.000đ trong khi khối ngoại bán 32,9 tỷ qua thoả thuận).
+            _tg = (mval[i] or 0) + ((pval[i] or 0) if pval else 0)
+            if _tg:
+                _p = ((fM[i] or 0) + (fB[i] or 0)) / 2 / _tg * 100
+                fnp[i] = round(_p, 3) if _p <= 100 else None
         if tM[i] is not None or tB[i] is not None:
             tdr[i] = (tM[i] or 0) - (tB[i] or 0)
         if mval[i]:
