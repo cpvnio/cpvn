@@ -61,6 +61,23 @@ u=json.load(open(UNIV,encoding="utf-8"))
 stocks={s["sym"]:s for s in u["stocks"]}
 print(f"universe: {len(stocks)} mã",flush=True)
 
+# ── MỐC THỜI GIAN TỪNG BƯỚC (22/08/2026) ─────────────────────────────────────────────
+# Lượt EOD 21/08 chạy 2h34, trong đó `refresh_daily.py` một mình ăn ~29 phút — nhưng
+# KHÔNG AI BIẾT 29 phút đó tiêu vào đâu, vì file này không in mốc nào. Sàn cứng theo trần
+# nhịp mạng chỉ ~6 phút (Simplize 1.529 lượt ở 8/s = 3,2 phút · kho nến 1.529 lượt ở 12/s
+# = 2,1 phút), nên 23 phút còn lại là ĐỘ TRỄ chứ không phải trần — đúng bệnh đã chữa được
+# cho VNDirect bằng cách chạy song song. Nhưng đừng tối ưu khi chưa đo: cắm mốc trước.
+# `moc()` in cả tổng thời gian lẫn thời gian của riêng bước vừa xong, và gom vào `MOC` để
+# `health.json` giữ lại — log PowerShell bị cắt khi quá 2 MB, health.json thì không.
+import time as _t
+_T0 = _t.time(); _TL = [_T0]
+MOC = {}
+def moc(ten):
+    g = _t.time()
+    MOC[ten] = round(g - _TL[0], 1)
+    print(f"  ⏱ {ten}: {g-_TL[0]:.0f}s (tổng {g-_T0:.0f}s)", flush=True)
+    _TL[0] = g
+
 # 0) ĐỒNG BỘ danh sách mã từ SSI (thêm mã mới niêm yết, đủ HOSE+HNX+UPCOM) — CHẠY MỖI NGÀY.
 #    Trước đây bước này nằm trong `if FULL` nên mã lên sàn thứ Ba phải chờ tới thứ Hai tuần
 #    sau mới có mặt trên web (DMX niêm yết 07/08/2026 là ca điển hình). Ba lượt gọi, ~2 giây.
@@ -76,6 +93,7 @@ for ex,slug in [("HOSE","hose"),("HNX","hnx"),("UPCOM","upcom")]:
     except Exception as e: print("  SSI",ex,"lỗi:",e,flush=True)
 print(f"đồng bộ SSI: thêm {len(moi)} mã mới{' ('+', '.join(sorted(moi))+')' if 0<len(moi)<=12 else ''}"
       f", tổng {len(stocks)}",flush=True)
+moc("dong_bo_ssi")
 HL["moi"]=sorted(moi)
 syms=list(stocks)
 # mã chưa có hồ sơ (mã mới, hoặc lượt --full trước đó Simplize lỗi) -> nạp ĐỦ trường ngay
@@ -127,6 +145,7 @@ def work_sz(sym):
 with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
     list(pool.map(work_sz,syms))
 print(f"Simplize: ok {sok}, fail {sfail} (giữ giá trị cũ nếu lỗi)",flush=True)
+moc("simplize")
 HL["simplize"]={"ok":sok,"fail":sfail}
 
 # 2) bảng giá cuối phiên -> NN + trần/sàn/tham chiếu (chạy TRƯỚC kho hist để ghi NN hôm nay)
@@ -149,6 +168,7 @@ for i in range(0,len(syms),150):
                 "gtgd":(float(x.get("avePrice") or 0))*1000*(float(x.get("lot") or 0))*10}
     except Exception as e: print("  board lỗi:",e,flush=True)
 print(f"bảng giá: {len(board)} mã",flush=True)
+moc("bang_gia")
 
 # 2b) chỉ số VNINDEX/VN30/HNX/UPCOM (lưu vào snapshot + idx.json để web có dự phòng)
 IDX_NAMES={"10":"VNINDEX","11":"VN30","02":"HNX","03":"UPCOM"}
@@ -325,6 +345,7 @@ nguon={}
 for v in hsrc.values(): nguon[v]=nguon.get(v,0)+1
 print(f"kho lịch sử: backfill {hstats['new']}, nối {hstats['append']}, tải lại {hstats['full']}, "
       f"lỗi {hstats['fail']} · nguồn {nguon}",flush=True)
+moc("kho_nen")
 HL["hist"]=dict(hstats); HL["histSrc"]=nguon; HL["board"]=len(board); HL["indices"]=len(indices)
 
 # 4) ghép mốc giá + vốn hoá (=SLCP×giá đóng cửa nếu Simplize thiếu) vào universe
@@ -355,6 +376,7 @@ u["stocks"]=sorted(keep,key=lambda s:-(s.get("mcap") or 0))
 u["generated"]=today; u["ancDate"]=sess_date
 jdump(u,UNIV)
 print(f"ĐÃ CẬP NHẬT universe.json ({len(u['stocks'])} mã, phiên {sess_date})",flush=True)
+moc("universe")
 
 # 5) snapshot EOD (client chỉ tải latest.json) + lịch sử chỉ số
 os.makedirs(EOD_DIR,exist_ok=True)
@@ -641,6 +663,7 @@ if need:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
         list(pool.map(work_fin,need))
 print(f"kho tài chính (KQKD+CĐKT+LCTT+cổ tức): cào {len(need)} mã, có dữ liệu {fdone[1]}",flush=True)
+moc("kho_tai_chinh")
 HL["fin"]={"need":len(need),"ok":fdone[1],"giu_cu":fkeep[0]}
 
 # 6b) RÚT 3 CHỈ SỐ CƠ BẢN TỪ KHO TÀI CHÍNH -> universe.json (bảng giá đọc 1 lần, không phải
@@ -799,6 +822,7 @@ if ntargets:
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         list(pool.map(work_news,ntargets))
 print(f"kho tin tức/báo cáo: cào {len(ntargets)} mã, có dữ liệu {ndone[1]}",flush=True)
+moc("kho_tin_tuc")
 HL["news"]={"need":len(ntargets),"ok":ndone[1]}
 
 # 8) KHO HỒ SƠ DOANH NGHIỆP data/profile/{SYM}.json — giới thiệu, dịch vụ, chiến lược,
@@ -1002,6 +1026,7 @@ if ptargets:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
         list(pool.map(work_prof,ptargets))
 print(f"kho hồ sơ doanh nghiệp: cào {len(ptargets)} mã, ok {pdone[1]} (chu kỳ 3 ngày)",flush=True)
+moc("kho_ho_so")
 HL["profile"]={"need":len(ptargets),"ok":pdone[1],"giu_cu":pkeep[0]}
 
 # 9) KHO LOGO assets/logo/{SYM}.webp — mã mới niêm yết tự có logo, không phải đụng tay.
@@ -1081,7 +1106,12 @@ except Exception as e:
 # 11) health.json — nhật ký sức khoẻ lượt chạy (web + người vận hành đọc để tự chẩn đoán)
 runner="actions" if os.environ.get("GITHUB_ACTIONS") else ("server" if platform.system()=="Windows" else "local")
 HL_ok=(HL.get("hist",{}).get("fail",9999)<len(syms)*0.2 and HL.get("snapshot",0)>=100)
+moc("con_lai")
+# `giay` = thời gian TỪNG BƯỚC, giữ trong health.json chứ không chỉ in ra log: transcript
+# của PowerShell bị xoá khi quá 2 MB, mà đây đúng là thứ cần đọc lại sau vài ngày để biết
+# bước nào phình ra.
 jdump({"date":sess_date,"generated":vn_now().strftime("%Y-%m-%d %H:%M:%S"),"runner":runner,
-       "full":FULL,"total_syms":len(syms),"ok":HL_ok,"steps":HL},HEALTH)
-print(f"health.json: ok={HL_ok} runner={runner}",flush=True)
+       "full":FULL,"total_syms":len(syms),"ok":HL_ok,
+       "giay":dict(MOC,tong=round(_t.time()-_T0,1)),"steps":HL},HEALTH)
+print(f"health.json: ok={HL_ok} runner={runner} · tong {_t.time()-_T0:.0f}s",flush=True)
 print("XONG.",flush=True)

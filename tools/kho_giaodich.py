@@ -163,7 +163,10 @@ def goi(path, data, sym):
 # lệch trung vị 0,0000 trên 10.623 mẫu). Tổng 42,8 MB.
 # ĐỪNG THÊM LẠI — nếu cần thì tính tại chỗ, đừng lưu.
 COT = ("d", "tc", "o", "h", "l", "c", "vwap", "mv", "mval", "pv", "pval", "shR",
-       "nMua", "nBan", "qMua", "qBan",
+       # SỔ LỆNH (`nMua` `nBan` `qMua` `qBan`) ĐÃ BỎ 22/08/2026 — user chốt không cần nữa,
+       # và `tools/gon_kho.py` đã xoá khỏi kho (−30 MB). PHẢI bỏ khỏi `COT` chứ không chỉ
+       # thôi cào: `eod_ghi` ghi lại MỌI cột trong `COT`, nên để tên ở đây là mỗi lượt chạy
+       # dựng lại bốn mảng 1.000 chữ `null` cho cả 1.529 mã — hồi sinh đúng 30 MB vừa xoá.
        "fnMuaKL", "fnMuaGT", "fnBanKL", "fnBanGT",
        "fnMuaTTKL", "fnMuaTTGT", "fnBanTTKL", "fnBanTTGT",
        "fnSoHuu", "fnRoom",
@@ -200,7 +203,7 @@ TRANG_NGAY = 2
 #
 # VÌ SAO CÓ HẰNG SỐ NÀY (21/08/2026): kho mang tiếng "100 phiên" nhưng đo ra thì
 # **giá/khối lượng/thoả thuận/SLCP đủ 100, khối ngoại chỉ 60, sổ lệnh chỉ 30**. Gốc là
-# `dl_nap` thoát ngay sau trang 1 và `_kqgd_nap` thoát sau trang 2 — hai con số viết cứng,
+# `dl_nap` (đã gỡ) thoát sau trang 1 và `_kqgd_nap` thoát sau trang 2 — hai con số viết cứng,
 # không ai chỉnh được từ ngoài. Tức đúng cái tầng HIẾM NHẤT (không nguồn nào cho lại được
 # sau này, phải cào đúng lúc nó còn) lại là tầng mỏng nhất.
 #
@@ -225,7 +228,7 @@ def eod_nap(sym, day_du=False, tu="2000-01-01", den=None, trang_toi=None, sau_to
             break
         for r in rows:
             if sid[0] is None:
-                sid[0] = r.get("StockID")     # cần cho `dl_nap`, nguồn chỉ nhận stockID số
+                sid[0] = r.get("StockID")     # cần cho fn_nap/td_nap, nguồn chỉ nhận số
             ra[_ngay(r["TradingDate"])] = {
                 "tc": r.get("BasicPrice"), "o": r.get("OpenPrice"), "h": r.get("HighestPrice"),
                 "l": r.get("LowestPrice"), "c": r.get("ClosePrice"), "vwap": r.get("AvrPrice"),
@@ -460,17 +463,6 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
 # phiên) chỉ còn ~5.000 lượt ≈ 21 phút.
 TT_SAN = {1: "HOSE", 2: "HNX", 3: "UPCOM"}   # catID; 4 = VN30 (tập con, đừng lấy)
 TT_TRANG = 200                                # trần cứng, xin 1000 vẫn trả 200
-
-# Cột lấy từ THỐNG KÊ ĐẶT LỆNH — đây là "sổ lệnh khi chốt phiên": giá và khối lượng ở
-# bước giá tốt nhất lúc đóng cửa, số lệnh đặt mua/bán, tổng khối lượng đặt mua/bán.
-# `BestBid`/`BestSell` và khối lượng ở bước giá tốt nhất ĐÃ THÔI LẤY 22/08/2026: không
-# chỗ nào trong site đọc, không nằm trong tín hiệu nào đã đo, và bản thân nó là ảnh chụp
-# MỘT thời điểm (lúc đóng cửa) nên không dựng được chuỗi gì có nghĩa. 27,9 MB.
-# `TotalBuyVol`/`TotalSellVol`/`TotalBuyTrade`/`TotalSellTrade` thì GIỮ — VNDirect không
-# có, và tỉ lệ đặt mua/đặt bán là tín hiệu mạnh nhất kho đo được (t = +12,24).
-DL = {"TotalBuyTrade": "nMua", "TotalSellTrade": "nBan",
-      "TotalBuyVol": "qMua", "TotalSellVol": "qBan"}
-
 _tt = {"v": None, "ck": None, "luc": 0}
 
 
@@ -544,7 +536,8 @@ def tt_ngay(ngay):
     """Cả thị trường một ngày: gộp thống kê giá + thống kê đặt lệnh. Trả về {mã: bản ghi}."""
     ra = {}
     for cat in TT_SAN:
-        for ep, lay in (("KQGDThongKeGiaPaging", "gia"), ("KQGDThongKeDatLenhPaging", "dl")):
+        # SỔ LỆNH ĐÃ BỎ HẲN 22/08/2026 (user chốt ba lần) — chỉ còn thống kê giá.
+        for ep, lay in (("KQGDThongKeGiaPaging", "gia"),):
             trang, tong = 1, None
             while True:
                 rows, st = tt_trang(ep, cat, ngay, trang)
@@ -567,72 +560,10 @@ def tt_ngay(ngay):
                             "shR": (round(r["MarketCap"] / r["ClosePrice"])
                                     if r.get("MarketCap") and r.get("ClosePrice") else None),
                         })
-                    else:
-                        for k, v in DL.items():
-                            o[v] = r.get(k)
                 if trang >= tong:
                     break
                 trang += 1
     return ra
-
-
-def dl_nap(sym, sid, day_du=False, trang_toi=None, sau_toi=None):
-    """SỔ LỆNH KHI CHỐT PHIÊN theo từng mã — `KQGDThongKeDatLenhStockPaging`.
-
-    Trả về 30 dòng/lượt (nhiều hơn 20 của bảng giá), có lịch sử, phủ đủ mọi mã. Cần
-    `stockID` dạng SỐ chứ không phải mã chữ — số đó nằm sẵn trong phản hồi của
-    `GetStockDeal_ListPriceByTimeFrame` (trường `StockID`), nên `eod_nap` nhặt luôn.
-
-    Cột lấy về là đúng thứ user hỏi: giá và khối lượng ở bước giá tốt nhất lúc đóng cửa,
-    SỐ LỆNH đặt mua/bán, và TỔNG KHỐI LƯỢNG đặt mua/bán. HPG 19/08: đặt mua 36.500.971 cp
-    qua 14.196 lệnh, đặt bán 24.483.888 cp qua 5.904 lệnh, trong khi khớp được 15.312.500.
-    """
-    if not sid:
-        return {}
-    ra, trang, tong = {}, 1, None
-    while True:
-        for lan in (0, 1):
-            tk, ck = tt_token(lan == 1)
-            try:
-                b = nhipmang.post("https://finance.vietstock.vn/data/KQGDThongKeDatLenhStockPaging",
-                                  {"page": trang, "pageSize": 200, "catID": 1, "stockID": sid,
-                                   "fromDate": "2000-01-01",
-                                   "toDate": datetime.datetime.now(TZ).strftime("%Y-%m-%d"),
-                                   "__RequestVerificationToken": tk},
-                                  headers={"X-Requested-With": "XMLHttpRequest", "Cookie": ck or "",
-                                           "Referer": "https://finance.vietstock.vn/ket-qua-giao-dich"})
-            except Exception:
-                return ra or None
-            t = b.lstrip("\ufeff").lstrip()
-            if t[:1] == "[":
-                break
-        else:
-            return ra or None
-        try:
-            j = json.loads(t)
-        except Exception:
-            return ra or None
-        rows = j[1] if len(j) > 1 and isinstance(j[1], list) else []
-        if tong is None:
-            tong = (j[2][0] if len(j) > 2 and isinstance(j[2], list) and j[2] else 1)
-        if not rows:
-            break
-        for r in rows:
-            ra[_ngay(r["TradingDate"])] = {v: r.get(k) for k, v in DL.items()}
-        if trang >= (tong or 1) or trang > 400:
-            break
-        if sau_toi:
-            if len(ra) >= sau_toi or trang >= TRANG_TRAN:
-                break
-        elif not day_du and trang >= (trang_toi or TRANG_LUONG):
-            break
-        trang += 1
-    return ra
-
-
-# ── tầng 3: VÙNG GIÁ KHỚP LỆNH + phân bổ dòng tiền ───────────────────────────
-PHIEN_DIR = os.path.join(BASE, "data", "phien")
-
 
 def vung_gia(sym, ngay):
     """KHỐI LƯỢNG KHỚP LỆNH GỘP THEO TỪNG MỨC GIÁ trong một phiên — "vùng giá khớp lệnh".
@@ -1164,13 +1095,6 @@ def main():
                 loi += 1
                 hong.append(m)
                 continue
-            # SỔ LỆNH CHỐT PHIÊN — trộn vào cùng bản ghi ngày, cùng nhịp với giá.
-            try:
-                for d, r in (dl_nap(m, sid, day_du=a.tatca, trang_toi=a.trang,
-                                    sau_toi=a.phien) or {}).items():
-                    moi.setdefault(d, {}).update(r)
-            except Exception:
-                pass
             # KHỐI NGOẠI và TỰ DOANH — trộn vào cùng bản ghi ngày, cùng nhịp với giá và
             # sổ lệnh. Để chung một lượt chứ không tách thành hai bước riêng trong runner:
             # cả hai đều cần `sid` mà `sid` chỉ có sau khi gọi thống kê giá, nên tách ra là
@@ -1207,9 +1131,6 @@ def main():
                 if not moi:
                     continue
                 try:
-                    for d, r in (dl_nap(m, sid, day_du=a.tatca, trang_toi=a.trang,
-                                        sau_toi=a.phien) or {}).items():
-                        moi.setdefault(d, {}).update(r)
                     for nap2 in (fn_nap, td_nap):
                         for d, r in (nap2(m, sid, day_du=a.tatca, trang_toi=a.trang,
                                           sau_toi=a.phien) or {}).items():
@@ -1252,10 +1173,8 @@ def main():
             continue
         for m, r in ra.items():
             eod_ghi(m, {ng: r})
-        co_dl = sum(1 for r in ra.values() if r.get("nMua") is not None)
         tong_ma += len(ra)
-        print(f"  {ng}: {len(ra):,} mã · {co_dl:,} mã có sổ lệnh chốt phiên"
-              f" · {time.time()-t0:.0f}s", flush=True)
+        print(f"  {ng}: {len(ra):,} mã · {time.time()-t0:.0f}s", flush=True)
     print(f"  xong {len(ngays)} ngày · {tong_ma:,} lượt (mã × ngày)", flush=True)
     if a.kiem:
         u = json.load(open(UNI, encoding="utf-8"))["stocks"]
