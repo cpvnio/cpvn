@@ -756,6 +756,7 @@ const PT_HIEN={
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
+          vh:LS.get('cpvn_ptvh',true),
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -1546,6 +1547,24 @@ function ptVe1(cv, cfg){
   }
   const coP2=P2&&P2.length&&hi2>lo2;
   const nhanP=v=>cfg.phai&&cfg.phai.nhan?cfg.phai.nhan(v):num(v);
+  /* TRỤC PHẢI THỨ HAI (`cfg.phai2`) — cho vốn hoá đứng chung đồ thị với giá và tiền
+     (user chốt 22/08/2026: *"nên lồng vốn hoá vào chart giá và giá trị giao dịch luôn"*).
+     PHẢI LÀ TRỤC RIÊNG, không ép chung với ai: vốn hoá VNM 132.000 tỷ so với giá trị giao
+     dịch 318 tỷ là gấp 415 lần — đổ chung trục trái thì cột tiền cao 0,24% khung hình,
+     coi như biến mất. Còn ép chung trục phải với giá thì một trong hai bẹp dí, vì một bên
+     là đồng/cp còn một bên là tỷ đồng.
+     Nhãn của nó vẽ Ở CỘT NGOÀI CÙNG và TÔ ĐÚNG MÀU ĐƯỜNG — hai cột số cùng màu xám nằm
+     cạnh nhau thì không biết cột nào của đường nào, mà đó là lỗi tệ hơn không có nhãn. */
+  const P3=cfg.phai2&&cfg.phai2.series?cfg.phai2.series.filter(x=>x&&x.v):null;
+  let lo3=Infinity, hi3=-Infinity;
+  if(P3&&P3.length){
+    for(const s3 of P3) for(let i=0;i<n;i++){ const v=s3.v[i];
+      if(v!=null&&!isNaN(v)){ lo3=Math.min(lo3,v); hi3=Math.max(hi3,v); } }
+    if(hi3>lo3){ const b3=(hi3-lo3)*0.10; lo3-=b3; hi3+=b3; }
+    else if(hi3>-Infinity){ lo3=hi3*0.98; hi3=hi3*1.02; }
+  }
+  const coP3=P3&&P3.length&&hi3>lo3;
+  const nhanP3=v=>cfg.phai2&&cfg.phai2.nhan?cfg.phai2.nhan(v):num(v);
   const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14;
   /* CHỪA THÊM CHỖ TRÊN ĐỈNH KHI CÓ MỐC SỰ KIỆN — nhưng chỉ 14px, đủ để cái chấm bám trên
      đường giá ở vùng đỉnh không bị cắt mất nửa. Bản đầu chừa 22px và cho mốc nằm THÀNH
@@ -1553,7 +1572,9 @@ function ptVe1(cv, cfg){
      dải riêng thì phải dóng mắt từ chấm xuống đường giá mới biết hôm đó giá bao nhiêu, mà
      đó đúng là câu hỏi duy nhất người ta hỏi khi thấy một mốc cổ tức. */
   const padT=(cfg.sk&&cfg.sk.length)?14:6;
-  const padR=coP2?Math.ceil(g.measureText(nhanP(hi2)).width)+8:0;
+  const wP2=coP2?Math.ceil(g.measureText(nhanP(hi2)).width)+8:0;
+  const wP3=coP3?Math.ceil(g.measureText(nhanP3(hi3)).width)+10:0;
+  const padR=wP2+wP3;
   const plotH=H-padB-padT, plotW=W-padL-padR;
   const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
   g.strokeStyle=cg; g.lineWidth=1; g.fillStyle=ct; g.textAlign='right'; g.textBaseline='middle';
@@ -1565,6 +1586,12 @@ function ptVe1(cv, cfg){
     for(let k=0;k<=3;k++){ const v=lo2+(hi2-lo2)*k/3;
       g.fillText(nhanP(v), W-padR+4, padT+plotH-(v-lo2)/(hi2-lo2)*plotH); }
     g.textAlign='right';
+  }
+  if(coP3){
+    g.textAlign='left'; g.fillStyle=P3[0].mau;
+    for(let k=0;k<=3;k++){ const v=lo3+(hi3-lo3)*k/3;
+      g.fillText(nhanP3(v), W-wP3+4, padT+plotH-(v-lo3)/(hi3-lo3)*plotH); }
+    g.fillStyle=ct; g.textAlign='right';
   }
   const gap=plotW/n, bw=Math.max(1,gap*0.7);
   if(cfg.kieu==='line'){
@@ -1583,17 +1610,25 @@ function ptVe1(cv, cfg){
         g.fillRect(padL+i*gap+(gap-bw)/2, Math.min(a,b), bw, Math.max(1,Math.abs(b-a)));
         if(cfg.chong) day+=v; } }
   }
-  if(coP2){
-    const y2=v=>padT+plotH-(v-lo2)/(hi2-lo2)*plotH;
-    for(const s2 of P2){
-      g.strokeStyle=s2.mau; g.lineWidth=1.8; g.beginPath(); let dau=true;
+  const veDuong=(ds,l3,h3)=>{
+    const yy=v=>padT+plotH-(v-l3)/(h3-l3)*plotH;
+    for(const s2 of ds){
+      /* VỐN HOÁ VẼ NÉT ĐỨT. Vốn hoá = giá đóng cửa × số cổ phiếu, mà số cổ phiếu gần như
+         đứng yên — nên đường này TRÙNG KHÍT đường giá ở hầu hết mã, ba đường liền nét đè
+         nhau thành một vệt không đọc ra đường nào. Nét đứt nói đúng bản chất: nó là bản
+         sao của đường giá, và chỗ nào nó TÁCH ra khỏi đường giá thì đúng chỗ đó doanh
+         nghiệp đã phát hành thêm (HPG 5,81 tỷ -> 8,44 tỷ cp trong 1.000 phiên). */
+      if(s2.net) g.setLineDash(s2.net); else g.setLineDash([]);
+      g.strokeStyle=s2.mau; g.lineWidth=s2.day||1.8; g.beginPath(); let dau=true;
       for(let i=0;i<n;i++){ const v=s2.v[i];
         if(v==null||isNaN(v)){ dau=true; continue; }
         const x=padL+i*gap+gap/2;
-        if(dau){ g.moveTo(x,y2(v)); dau=false; } else g.lineTo(x,y2(v)); }
-      g.stroke();
+        if(dau){ g.moveTo(x,yy(v)); dau=false; } else g.lineTo(x,yy(v)); }
+      g.stroke(); g.setLineDash([]);
     }
-  }
+  };
+  if(coP2) veDuong(P2,lo2,hi2);
+  if(coP3) veDuong(P3,lo3,hi3);
   /* MỐC SỰ KIỆN DOANH NGHIỆP — vẽ SAU dữ liệu (để không bị cột nào đè lên) nhưng TRƯỚC
      mốc phiên đang chọn (mốc phiên là thứ phải nổi nhất trên đồ thị).
      Hai lớp: một VẠCH DỌC rất mờ chạy suốt vùng vẽ để dóng xuống đúng phiên, và một CHẤM
@@ -1650,19 +1685,23 @@ function ptVe1(cv, cfg){
   /* MỐC ĐÁNH DẤU DÙNG CHUNG cho cả sáu đồ thị. User chốt 20/08/2026: bấm một cột ở đồ thị
      khối lượng thì phải thấy luôn giá đóng cửa và % của chính phiên đó ở các đồ thị khác —
      sáu đồ thị mà mỗi cái một mốc riêng thì phải tự dóng bằng mắt qua trục ngày. */
+  /* MỐC PHIÊN LÀ HAI TAM GIÁC KẸP TRÊN DƯỚI, KHÔNG PHẢI MỘT CỘT ĐỎ (user chốt 22/08/2026:
+     *"không phải là 1 cột màu đỏ mà nên là 1 dấu tam giác chỉ vị trí"*). Cột đỏ cao suốt
+     vùng vẽ CẮT NGANG chính dữ liệu đang xem — ở đồ thị giá nó chặt đôi đường giá, ở đồ
+     thị cột nó đứng đè lên cột. Hai tam giác nhỏ chỉ vào đúng cột đó, không che gì.
+     ĐẶC ĐIỂM ĐÃ GHIM vẫn phải phân biệt được: chưa ghim thì mờ (55%) và nhỏ, đã ghim thì
+     đặc và to hơn. Không phân biệt hai trạng thái thì bấm xong không biết đã ghim chưa. */
   if(cfg.moc!=null&&cfg.moc>=0&&cfg.moc<n){
     const x=padL+cfg.moc*gap+gap/2;
-    /* ĐÃ GHIM thì vẽ NÉT LIỀN, dày hơn, kèm tam giác trên đỉnh. Nét đứt = mốc đang chạy
-       theo chuột, nét liền = mốc đứng yên. Không phân biệt được hai trạng thái thì bấm
-       xong không biết mình đã ghim hay chưa, mà đó đúng là câu hỏi duy nhất lúc đó. */
-    g.strokeStyle=dark?'rgba(244,63,94,.9)':'rgba(225,29,72,.8)';
-    g.lineWidth=cfg.ghim?2:1.5;
-    if(!cfg.ghim) g.setLineDash([3,3]);
-    g.beginPath(); g.moveTo(x,padT); g.lineTo(x,padT+plotH); g.stroke(); g.setLineDash([]);
-    if(cfg.ghim){
-      g.fillStyle=g.strokeStyle;
-      g.beginPath(); g.moveTo(x-4,padT); g.lineTo(x+4,padT); g.lineTo(x,padT+5); g.fill();
-    }
+    const w0=cfg.ghim?6.5:5.5, h0=cfg.ghim?8:6.5;
+    g.fillStyle=dark?'#fb7185':'#e11d48';
+    g.globalAlpha=cfg.ghim?1:.55;
+    g.beginPath(); g.moveTo(x-w0,padT+.5); g.lineTo(x+w0,padT+.5); g.lineTo(x,padT+.5+h0);
+    g.closePath(); g.fill();
+    const yb=padT+plotH-.5;
+    g.beginPath(); g.moveTo(x-w0,yb); g.lineTo(x+w0,yb); g.lineTo(x,yb-h0);
+    g.closePath(); g.fill();
+    g.globalAlpha=1;
   }
   /* HỘP THÔNG TIN CỦA MỐC ĐANG MỞ — vẽ SAU CÙNG để không chấm nào, cột nào đè lên.
      Vẽ THẲNG LÊN CANVAS chứ không dựng thẻ HTML: toạ độ mốc đổi theo khung (100/300/600/
@@ -1805,7 +1844,7 @@ function ptVeMa(){
         mval=lay('mval'), pval=lay('pval'), mv=lay('mv'), pv=lay('pv'), sh=lay('sh'),
         fnKL=lay('fnMuaGT'), fnKB=lay('fnBanGT'), fnMK=lay('fnMuaKL'), fnBK=lay('fnBanKL'),
         fnMTT=lay('fnMuaTTGT'), fnBTT=lay('fnBanTTGT'),
-        fnSH=lay('fnSoHuu'), fnRO=lay('fnRoom'),
+        fnSH=lay('fnSoHuu'),
         tdKL=lay('tdMuaGT'), tdKB=lay('tdBanGT'),
         fnMT=lay('fnMuaTG'), fnBT=lay('fnBanTG'),
         tdMT=lay('tdMuaTG'), tdBT=lay('tdBanTG');
@@ -1860,6 +1899,7 @@ function ptVeMa(){
      mà nó lại trả lời về một ngày khác. */
   const ngVG=d[k];
   const skM=ptSkMoc(d);
+  const cqN=((PT.cq||{})[PT.ma]||{}).n||0;
   /* PHẢI TỰ TẢI FILE PHIÊN CỦA NGÀY ĐANG GHIM. `PT.phien` chỉ chứa những phiên người
      dùng đã mở qua THANH CHỌN ở đầu trang — mà ghim một phiên trên đồ thị mã thì không
      đi qua đường đó, nên bộ đệm rỗng và đồ thị vùng giá báo "chưa cào" trong khi kho có
@@ -1906,7 +1946,9 @@ function ptVeMa(){
               hàng, mà hai nút này chỉ đổi MỘT đồ thị chứ không đổi cả trang.
               CHÚ THÍCH CHỮ CÁI CHỈ HIỆN KHI NHÓM ĐÓ ĐANG BẬT — bày ra bốn dòng chú thích
               cho mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
+           +(PT.vh?' &nbsp;·&nbsp; <i class="pkV"></i> vốn hoá (nét đứt) — <b>trục ngoài cùng</b>':'')
            +'<br><span class="ptsw" id="ptSK">'
+             +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
              +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
            +'</span>'
@@ -1921,15 +1963,25 @@ function ptVeMa(){
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
            +' <b>tổng</b> (gồm thoả thuận)')
       +ptO('Khối ngoại ròng', 'mc4', 'mua trừ bán — cột xanh là mua ròng, đỏ là bán ròng')
-      +ptO('Tự doanh ròng', 'mcT', 'tiền của chính công ty chứng khoán — nhóm khác hẳn khối ngoại')
+      /* SỐ CHỨNG QUYỀN CHUYỂN TỪ THANH ĐỌC SỐ SANG ĐÂY (22/08/2026). Nó là số của CẢ MÃ,
+         không đổi theo phiên — nằm trong ô đọc số theo phiên là sai chỗ, mà lại chính là
+         thứ làm dòng đó dài ngắn thất thường khiến lưới đồ thị nhảy khi rê chuột. Ở chú
+         thích thì nó đứng yên và vẫn nói đúng điều cần nói: phần lớn tự doanh mua ròng là
+         phòng hộ chứng quyền bắt buộc, không phải một quyết định đầu tư. */
+      +ptO('Tự doanh ròng', 'mcT', 'tiền của chính công ty chứng khoán — nhóm khác hẳn khối ngoại'
+           +(cqN?' &nbsp;·&nbsp; mã này có <b>'+cqN+' chứng quyền</b> đang lưu hành':''))
       +ptO('% giao dịch phiên là của khối ngoại', 'mc5',
            '(mua + bán) ÷ 2 ÷ <b>tổng</b> giao dịch — đếm cả hai vế là đếm hai lần')
-      +ptO('% thay đổi giá mỗi phiên', 'mc6', 'so với giá tham chiếu của chính phiên đó')
+      /* ĐÃ BỎ 22/08/2026, user chốt — cả ba đều nói lại thứ đã có chỗ khác nói rõ hơn:
+         `mc6` "% thay đổi giá mỗi phiên" -> đã nằm ngay dưới giá đóng cửa ở thanh đọc số ·
+         `mc8` "khối lượng khớp lệnh" -> đồ thị chính đã vẽ GIÁ TRỊ, và số cổ phiếu in ngay
+         dưới ô Giá trị khớp lệnh · `mc7` "vốn hoá" -> nay lồng vào đồ thị chính ở trục
+         ngoài cùng, bật tắt bằng nút Vốn hoá.
+         Từ 11 đồ thị xuống 7. Đồ thị nào cũng "đúng" nhưng 11 ô đều tăm tắp thì không ô
+         nào là câu trả lời đầu tiên. */
       +ptO('Giá thoả thuận so với giá sàn', 'mcP',
            '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkP"></i> giá bình quân thoả thuận'
            +' &nbsp;·&nbsp; chỉ vẽ phiên CÓ thoả thuận')
-      +ptO('Vốn hoá', 'mc7', 'giá đóng cửa × số cổ phiếu lưu hành của chính phiên đó')
-      +ptO('Khối lượng khớp lệnh', 'mc8', 'cổ phiếu')
       +ptO('Vùng giá khớp lệnh — phiên '+esc(ngVG), 'mc9', vgGhi)
     +'</div>';
   /* DÒ CHỦ ĐỀ BẰNG `isLight()`, ĐỪNG DÒ BẰNG `classList`. Trang đặt chủ đề vào
@@ -1967,17 +2019,15 @@ function ptVeMa(){
     series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
     nhan:v=>ptTien(v),
     phai:{nhan:num,series:[{v:c,mau:dark?'#f8fafc':'#0f172a'},
-                           {v:vw,mau:dark?'#fbbf24':'#d97706'}]}}));
+                           {v:vw,mau:dark?'#fbbf24':'#d97706'}]},
+    phai2:PT.vh?{nhan:v=>ptTien(v),series:[{v:mcap,mau:XANH,day:1.5,net:[5,3]}]}:null}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mcT'),C({kieu:'bar',series:[{v:tdRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc5'),C({kieu:'bar',series:[{v:fnPc,mau:dark?'#22d3ee':'#0891b2'}],
     nhan:v=>v.toFixed(1)+'%'}));
-  ptVe1($('#mc6'),C({kieu:'bar',series:[{v:pcs,mau:XANH,mauAm:DO}],nhan:v=>v.toFixed(1)+'%'}));
   ptVe1($('#mcP'),C({kieu:'line',series:[{v:c,mau:dark?'#38bdf8':'#0284c7'},
     {v:ptt,mau:dark?'#c084fc':'#7c3aed'}],nhan:num}));
-  ptVe1($('#mc7'),C({kieu:'line',series:[{v:mcap,mau:XANH}],nhan:v=>ptTien(v)}));
-  ptVe1($('#mc8'),C({kieu:'bar',series:[{v:mv,mau:dark?'#94a3b8':'#64748b'}],nhan:num}));
   if(vg) ptVe1($('#mc9'),{d:vg.p.map(x=>num(x)),kieu:'bar',cao:136,
     series:[{v:vg.v,mau:dark?'#38bdf8':'#0284c7'}],nhan:num});
   /* BẢNG ĐỌC SỐ — SÁU KHỐI CÓ THỨ BẬC, không phải 12 mẩu rời (user chốt 22/08/2026:
@@ -1987,20 +2037,35 @@ function ptVeMa(){
      Nay mỗi khối trả lời một câu: giá bao nhiêu · giao dịch bao nhiêu tiền · khối ngoại
      làm gì · tự doanh làm gì · thoả thuận ở giá nào · công ty to cỡ nào. Trong khối thì
      MỘT con số lớn là câu trả lời, phần còn lại là chú thích cho chính nó. */
+  /* MỖI DÒNG PHỤ ĐÚNG MỘT DÒNG, KHÔNG BAO GIỜ HAI (user chốt 22/08/2026: *"đưa chuột rà
+     trên chart cứ bị giật lên giật xuống"*). Nguyên nhân đúng như user chỉ ra: dòng phụ
+     dài ngắn theo phiên — "khớp lệnh mua 128 tỷ · bán 16 tỷ · thoả thuận 16 tỷ · chiếm
+     12.4% · sở hữu 21.8%" xuống hai dòng, phiên sau ngắn hơn thì còn một dòng — nên ô cao
+     thấp thất thường, cả lưới 7 đồ thị bên dưới NHẢY LÊN NHẢY XUỐNG theo từng bước chuột.
+     Đây là thanh DÍNH (`position:sticky`) ngay trên đồ thị, nên nó nhảy là cả trang nhảy.
+     Chữa bằng HAI việc, phải làm CẢ HAI: ① rút gọn chữ (bỏ mấy cụm không đổi theo phiên
+     như số chứng quyền — đã chuyển sang chú thích đồ thị Tự doanh) · ② CSS `.ptdcp` khoá
+     một dòng, `nowrap` + `ellipsis`, để có gặp mã tên dài hay số to bất thường thì nó cắt
+     đuôi chứ TUYỆT ĐỐI không xuống dòng. Chỉ làm ① là lần sau có chuỗi dài hơn lại giật. */
   const oNul='<span class="ptdn">—</span>';
   const oo=(nhan,gt,phu,cl)=>'<div class="ptdc"><span class="ptdcl">'+nhan+'</span>'
     +'<b class="ptdcv'+(cl?' '+cl:'')+'">'+gt+'</b>'
     +(phu?'<span class="ptdcp">'+phu+'</span>':'')+'</div>';
   const tien=(v)=>v==null?null:((v>0?'+':'')+ptTien(v));
-  const cqN=((PT.cq||{})[PT.ma]||{}).n||0;
   $('#ptDoc').innerHTML=
     '<div class="ptdh"><span class="ptdd">'+esc(d[k])+'</span>'
+      /* SỰ KIỆN NẰM TRONG CHÍNH HÀNG TIÊU ĐỀ, không thành dải riêng bên dưới. Dải riêng
+         chỉ hiện ở ~2% số phiên nên nó XUẤT HIỆN RỒI BIẾN MẤT khi rê chuột ngang qua một
+         mốc — mà thanh đọc số là thanh dính ngay trên lưới đồ thị, nó cao thêm 30px là cả
+         trang giật. Hàng tiêu đề thì luôn có sẵn và cao cố định, nhét vào đây là không tốn
+         thêm một pixel nào. */
+      +ptSkGhi(skM,k,d[k])
       +(PT.ghim!=null
         ? '<button class="ptdgh on" id="ptBoGhim">đã ghim — bấm để bỏ</button>'
         : '<span class="ptdg">rê chuột lên đồ thị để xem phiên khác · <b>bấm để ghim</b></span>')
     +'</div>'
     +'<div class="ptdw">'
-    +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'giá TB '+num(vw[k]),
+    +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'TB '+num(vw[k]),
         pcs[k]==null?'':cls(pcs[k]))
     /* GIÁ KHỚP LỆNH TB đứng thành Ô RIÊNG, không nhét vào dòng phụ của ô đóng cửa
        (user chốt 22/08/2026: *"tôi không đọc được giá khớp lệnh trung bình"*). Đây là chỗ
@@ -2010,55 +2075,55 @@ function ptVeMa(){
     +oo('Giá khớp lệnh TB', vw[k]!=null?num(Math.round(vw[k])):oNul,
         (vw[k]!=null&&c[k])
           ?('<b class="'+cls(vw[k]/c[k]-1)+'">'+((vw[k]/c[k]-1)>0?'+':'')
-            +((vw[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá đóng cửa'
-            +((vwN[k]&&Math.abs(vw[k]/vwN[k]-1)>0.005)
-               ?' · nguồn ghi '+num(vwN[k]):''))
+            +((vw[k]/c[k]-1)*100).toFixed(1)+'%</b> so đóng cửa')
           :'')
     +oo('Giá trị khớp lệnh', ptTien(mval[k]), num(mv[k])+' cp')
     /* BIÊN ĐỘ PHIÊN — mở/cao/thấp. Không có nó thì "đóng cửa 52.000, giá TB 48.579" là
        một mâu thuẫn không giải thích được; có nó thì đọc ra ngay: mở 47.250 đúng giá SÀN,
        thấp nhất cũng 47.250, tức cả phiên là một cú kéo từ sàn lên. */
     +oo('Biên độ phiên', (hi[k]&&lo[k]&&c[k])?(((hi[k]-lo[k])/c[k]*100).toFixed(1)+'%'):oNul,
-        (op[k]?('mở <b>'+num(op[k])+'</b>'+(tc[k]&&Math.abs(op[k]/tc[k]-1)>=0.0695
-            ?' <b class="'+cls(op[k]-tc[k])+'">'+(op[k]>tc[k]?'kịch trần':'kịch sàn')+'</b>':'')):'')
-          +(hi[k]?' · cao <b>'+num(hi[k])+'</b>':'')+(lo[k]?' · thấp <b>'+num(lo[k])+'</b>':''))
+        ((lo[k]&&hi[k])?('<b>'+num(lo[k])+'</b>–<b>'+num(hi[k])+'</b>'):'')
+          +(op[k]?(' · mở <b>'+num(op[k])+'</b>'+(tc[k]&&Math.abs(op[k]/tc[k]-1)>=0.0695
+            ?' <b class="'+cls(op[k]-tc[k])+'">'+(op[k]>tc[k]?'trần':'sàn')+'</b>':'')):''))
     /* PHIÊN NÀO CÓ BẢN TÁCH (Vietstock, 249 phiên gần nhất) thì in bản tách vì nó nói
        được nhiều hơn — khớp lệnh riêng, thoả thuận riêng. Phiên xa hơn chỉ có TỔNG của
        VNDirect thì in tổng và NÓI RA LÀ TỔNG, đừng để người đọc tưởng đó là khớp lệnh. */
+    /* GIỮ ĐÚNG MỘT TỪ ĐỊNH NGHĨA (`khớp lệnh` / `tổng`), bỏ hết phần còn lại. Hai nguồn
+       hai định nghĩa là cái bẫy đã trả giá (xem CLAUDE.md) — bỏ luôn từ đó thì cùng một ô
+       lúc là khớp lệnh lúc là tổng-gồm-thoả-thuận mà không dấu hiệu nào, tệ hơn hẳn việc
+       dòng dài thêm bảy ký tự. Còn `chiếm %` đã có đồ thị riêng, `thoả thuận` đã có ô
+       riêng, nên bỏ được thật. */
     +oo('Khối ngoại ròng', fnRong[k]!=null?tien(fnRong[k]):oNul,
-        fnKL[k]!=null
-          ?('khớp lệnh mua <b class="up">'+ptTien(fnKL[k])+'</b> · bán <b class="dn">'
-            +ptTien(fnKB[k])+'</b>'
-            +((fnMTT[k]||fnBTT[k])?(' · thoả thuận <b>'+ptTien((fnMTT[k]||0)+(fnBTT[k]||0))+'</b>'):'')
-            +(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')
-            +(fnSH[k]!=null?' · sở hữu <b>'+fnSH[k].toFixed(1)+'%</b>':''))
-          :(fnM[k]!=null
-            ?('<b>tổng</b> mua <b class="up">'+ptTien(fnM[k])+'</b> · bán <b class="dn">'
-              +ptTien(fnB[k])+'</b>'+(fnPc[k]!=null?' · chiếm <b>'+fnPc[k].toFixed(1)+'%</b>':'')
-              +' <i>(gồm thoả thuận)</i>')
-            :''),
+        (fnKL[k]!=null||fnM[k]!=null)
+          ?((fnKL[k]!=null?'khớp lệnh ':'tổng ')
+            +'mua <b class="up">'+ptTien(fnKL[k]!=null?fnKL[k]:fnM[k])+'</b>'
+            +' · bán <b class="dn">'+ptTien(fnKL[k]!=null?fnKB[k]:fnB[k])+'</b>')
+          :'',
         fnRong[k]!=null?cls(fnRong[k]):'')
-    /* Ô này từng in một câu giải thích tĩnh ("tiền của chính công ty chứng khoán") —
-       chữ đó không đổi theo phiên nên chiếm chỗ mà không nói gì. Nay in mua/bán của
-       CHÍNH phiên đó, và nói luôn mã có bao nhiêu chứng quyền đang lưu hành: 12/12 mã
-       đầu bảng tự doanh mua ròng đều có chứng quyền, tức phần lớn là phòng hộ bắt buộc
-       chứ không phải đặt cược — không nói ra thì con số này đọc sai bản chất. */
+    /* Số chứng quyền đã chuyển sang chú thích đồ thị "Tự doanh ròng": nó là số của cả mã,
+       không đổi theo phiên, mà lại chính là cụm làm dòng này dài ngắn thất thường. */
     +oo('Tự doanh ròng', tdRong[k]!=null?tien(tdRong[k]):oNul,
         tdRong[k]==null?'nguồn không có tự doanh ở mã này'
-          :((tdKL[k]!=null?'khớp lệnh ':'<b>tổng</b> ')
+          :((tdKL[k]!=null?'khớp lệnh ':'tổng ')
             +'mua <b class="up">'+ptTien(tdM[k]||0)+'</b> · bán <b class="dn">'
-            +ptTien(tdB[k]||0)+'</b>'+(cqN?' · <b>'+cqN+' chứng quyền</b> đang lưu hành':'')),
+            +ptTien(tdB[k]||0)+'</b>'),
         tdRong[k]!=null?cls(tdRong[k]):'')
     /* THOẢ THUẬN PHẢI CÓ GIÁ TRỊ BẰNG TIỀN (user chốt 22/08/2026). "200.000 cp" không
        nói được gì nếu chưa nhân với giá — cùng một khối lượng ở mã 3.000đ và mã 200.000đ
        là hai câu chuyện khác hẳn, mà đây đúng là chỗ hay có lô sang tay lớn. */
     +oo('Thoả thuận', pval[k]?ptTien(pval[k]):oNul,
         ptt[k]!=null?('giá <b>'+num(ptt[k])+'</b> · <b class="'+cls(ptt[k]/c[k]-1)+'">'
-          +((ptt[k]/c[k]-1)>0?'+':'')+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá sàn · '
-          +num(pv[k])+' cp'):'phiên này không có thoả thuận')
-    +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul, sh[k]?num(sh[k])+' cp lưu hành':'')
-    +'</div>'
-    +ptSkGhi(skM,k,d[k]);
+          +((ptt[k]/c[k]-1)>0?'+':'')+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá sàn')
+          :'phiên này không có thoả thuận')
+    /* TỈ LỆ SỞ HỮU NƯỚC NGOÀI CHUYỂN VÀO ĐÂY (22/08/2026). Nó vốn nằm ở đuôi dòng Khối
+       ngoại ròng, nhưng dòng đó nay chỉ còn mua/bán theo yêu cầu — mà `sở hữu` là chuyện
+       của SỔ CỔ ĐÔNG chứ không phải của dòng tiền phiên này, nên ô Vốn hoá mới đúng chỗ:
+       "công ty có bao nhiêu cổ phiếu, trong đó nước ngoài giữ bao nhiêu phần trăm".
+       Chỉ có ở ~249 phiên gần nhất (trường của Vietstock), phiên xa hơn thì bỏ trống. */
+    +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul,
+        (sh[k]?num(sh[k])+' cp':'')
+        +(fnSH[k]!=null?((sh[k]?' · ':'')+'nước ngoài <b>'+fnSH[k].toFixed(1)+'%</b>'):''))
+    +'</div>';
   const bg=$('#ptBoGhim');
   if(bg) bg.onclick=()=>{ PT.ghim=null; ptVeMa(); };
   ptBindMa();
@@ -2085,8 +2150,8 @@ function ptBindMa(){
      nó phải còn tắt — bắt tắt lại ở từng mã là công tắc vô dụng. */
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
-    PT.skH[n.dataset.k]=!PT.skH[n.dataset.k];
-    LS.set('cpvn_ptsk',PT.skH);
+    if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
+    else { PT.skH[n.dataset.k]=!PT.skH[n.dataset.k]; LS.set('cpvn_ptsk',PT.skH); }
     ptVeMa(); };
 }
 
@@ -2099,10 +2164,10 @@ function ptSkGhi(moc,k,ngay){
   if(!moc) return '';
   const o=moc.find(x=>x.i===k);
   if(!o) return '';
-  return '<div class="ptdsk">'+o.evs.map(e=>
+  return '<span class="ptdsk">'+o.evs.map(e=>
       '<span class="ptdske"><i style="background:'+PTSK[e.k].mau+'">'+PTSK[e.k].chu+'</i>'
       +esc(e.gc||'')
-      +(e.d!==ngay?' <em>(lịch ghi '+esc(e.d)+')</em>':'')+'</span>').join('')+'</div>';
+      +(e.d!==ngay?' <em>(lịch ghi '+esc(e.d)+')</em>':'')+'</span>').join('')+'</span>';
 }
 
 /* ---- BẢNG MÃ CỦA PHIÊN ĐANG CHỌN ---- */

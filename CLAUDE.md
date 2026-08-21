@@ -1487,6 +1487,71 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
 
+### THANH ĐỌC SỐ PHẢI CAO CỐ ĐỊNH — MỖI DÒNG PHỤ ĐÚNG MỘT DÒNG (22/08/2026)
+
+User: *"đưa chuột rà trên chart cứ bị giật lên giật xuống rất khó chịu, là do những dòng
+này lúc thì 1 dòng lúc thì 2 dòng"*. Chẩn đúng: `.ptdcp` dài ngắn theo từng phiên, mà
+`.ptdoc` là thanh **dính** (`position:sticky`) ngay trên lưới đồ thị — nó cao thêm một
+dòng là cả trang nhảy theo từng bước chuột.
+
+Phải chữa **cả ba** chỗ, thiếu chỗ nào là lần sau gặp chuỗi dài hơn lại giật:
+
+① **CSS khoá cứng**: `.ptdcp{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`.
+  Đây là cái chốt — rút gọn chữ thôi không đủ, vì mã khác số khác thì dài khác.
+② **Hàng tiêu đề `.ptdh`**: `flex-wrap:nowrap` + `min-height`, và **nút "đã ghim" phải cao
+  bằng dòng gợi ý** (21px cả hai). Đo được: chữ trơn 13px, nút có padding nên 21px — mỗi
+  lần ghim/bỏ ghim thanh nhích 4px.
+③ **Mô tả sự kiện nằm TRONG `.ptdh`**, không thành dải riêng bên dưới: chỉ ~2% số phiên có
+  sự kiện nên dải riêng sẽ hiện lên rồi biến mất khi rê ngang qua mốc.
+
+Đã đo lại sau khi sửa: quét ~150 vị trí khắp đồ thị (gồm cả mốc sự kiện) cộng ghim/bỏ ghim
+→ chiều cao `#ptDoc` **chỉ có đúng một giá trị** (174,5px).
+
+Chữ đã rút, và chỗ những mẩu bị cắt đi đã chuyển tới:
+- `14 chứng quyền đang lưu hành` → **chú thích đồ thị "Tự doanh ròng"**. Nó là số của cả
+  mã, không đổi theo phiên — nằm trong ô đọc số theo phiên vốn đã sai chỗ.
+- `sở hữu 21,8%` → **ô Vốn hoá**. Sở hữu nước ngoài là chuyện của sổ cổ đông, không phải
+  của dòng tiền phiên này: "có bao nhiêu cổ phiếu, nước ngoài giữ bao nhiêu phần trăm".
+- `thoả thuận …` và `chiếm …%` bỏ hẳn — đã có ô Thoả thuận và đồ thị `mc5` nói.
+- **GIỮ đúng một từ định nghĩa** (`khớp lệnh` / `tổng`). Bỏ nốt từ đó thì cùng một ô lúc là
+  khớp lệnh lúc là tổng-gồm-thoả-thuận mà không dấu hiệu nào — đúng cái bẫy hai-nguồn-hai-
+  định-nghĩa đã trả giá. Bảy ký tự đó đáng giữ.
+
+### MỐC PHIÊN LÀ TAM GIÁC, KHÔNG PHẢI CỘT ĐỎ (22/08/2026)
+
+User: *"lúc chọn không phải là 1 cột màu đỏ mà nên là 1 dấu tam giác chỉ vị trí"*. Cột đỏ
+cao suốt vùng vẽ **cắt ngang chính dữ liệu đang xem** — chặt đôi đường giá, đứng đè lên
+cột tiền. Nay hai tam giác nhỏ kẹp trên/dưới, chỉ vào đúng cột đó. Vẫn phân biệt hai trạng
+thái: chưa ghim thì mờ 55% và nhỏ, đã ghim thì đặc và to hơn.
+
+### VỐN HOÁ LỒNG VÀO ĐỒ THỊ GIÁ — `cfg.phai2`, TRỤC PHẢI THỨ HAI (22/08/2026)
+
+User: *"nên lồng vốn hoá vào chart giá và giá trị giao dịch luôn, có thể bật tắt được"*.
+
+**PHẢI LÀ TRỤC RIÊNG.** Vốn hoá VNM 132.000 tỷ so với giá trị giao dịch 318 tỷ là gấp
+**415 lần** — đổ chung trục trái thì cột tiền cao 0,24% khung hình, coi như biến mất; ép
+chung trục phải với giá thì một bên là đồng/cp một bên là tỷ đồng, một trong hai bẹp dí.
+Nên `ptVe1` nay có `cfg.phai2`: thang riêng, **nhãn ở cột ngoài cùng và tô đúng màu đường**
+(hai cột số cùng màu xám cạnh nhau thì không biết cột nào của đường nào — tệ hơn không nhãn).
+
+**VẼ NÉT ĐỨT.** Vốn hoá = giá × số cổ phiếu, mà số cổ phiếu gần như đứng yên, nên đường này
+trùng khít đường giá ở hầu hết mã — ba đường liền nét đè nhau thành một vệt. Nét đứt nói
+đúng bản chất: nó là bản sao của đường giá, và **chỗ nó tách ra là chỗ doanh nghiệp phát
+hành thêm**. HPG khung 1.000 phiên là ví dụ đọc được ngay: 5,81 tỷ → 8,44 tỷ cp.
+
+Công tắc `PT.vh` lưu ở `localStorage['cpvn_ptvh']`.
+
+### BA ĐỒ THỊ ĐÃ BỎ (22/08/2026) — ĐỪNG THÊM LẠI
+
+Từ 11 đồ thị xuống 7. Đồ thị nào cũng "đúng" nhưng 11 ô đều tăm tắp thì không ô nào là câu
+trả lời đầu tiên.
+
+| bỏ | vì đã có chỗ khác nói rõ hơn |
+|---|---|
+| `mc6` % thay đổi giá mỗi phiên | in ngay dưới giá đóng cửa ở thanh đọc số |
+| `mc8` khối lượng khớp lệnh | đồ thị chính vẽ GIÁ TRỊ, số cổ phiếu in dưới ô Giá trị khớp lệnh |
+| `mc7` vốn hoá | lồng vào đồ thị chính ở trục ngoài cùng |
+
 ### MỐC SỰ KIỆN TRÊN ĐỒ THỊ GIÁ CỦA TRANG MÃ (22/08/2026)
 
 User chốt: *"trên đồ thị giá cũng gắn thêm báo cáo tài chính, cổ tức (có thể bật tắt)"*.

@@ -664,6 +664,7 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkS2{background:#eab308;border-radius:50%}
 .ptleg i.pkS3{background:#c026d3;border-radius:50%}
 .ptleg i.pkS4{background:#8a8a99;border-radius:50%}
+.ptleg i.pkV{background:#16a34a;height:3px;border-radius:2px}
 /* CÔNG TẮC BẬT/TẮT MỐC, đứng ngay trong dòng chú thích của đồ thị giá. Cùng lối với
    `.ptseg` nhưng NHỎ HƠN và KHÔNG DÍNH NHAU: `.ptseg` là chọn MỘT trong nhiều (khung 100
    / 300 / 600 / 1.000) nên các nút phải liền một khối; còn đây là hai công tắc ĐỘC LẬP,
@@ -682,15 +683,24 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    ra thứ cần, mà nhãn lại bé hơn số — đúng ngược. */
 .ptdoc{position:sticky;top:0;z-index:4;background:var(--card);border:1px solid var(--line);
   border-radius:12px;padding:10px 13px 11px;margin:0 0 12px;font-variant-numeric:tabular-nums}
-.ptdh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:9px;
-  padding-bottom:8px;border-bottom:1px solid var(--line)}
-.ptdd{font-size:14px;font-weight:800}
-.ptdg{font-size:11px;color:var(--faint);margin-left:auto}
+/* HÀNG TIÊU ĐỀ CAO CỐ ĐỊNH VÀ KHÔNG XUỐNG DÒNG. `min-height` là bắt buộc: nút "đã ghim"
+   cao hơn dòng chữ gợi ý ~6px, nên mỗi lần ghim/bỏ ghim cả lưới đồ thị bên dưới nhích một
+   nấc. `nowrap` cũng bắt buộc: hàng này nay mang thêm mô tả sự kiện, mã nào ghi dài là nó
+   rớt xuống dòng thứ hai và thanh dính cao thêm 20px. */
+.ptdh{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;min-height:26px;
+  margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.ptdd{font-size:14px;font-weight:800;flex:0 0 auto}
+/* DÒNG GỢI Ý VÀ NÚT "ĐÃ GHIM" PHẢI CAO BẰNG NHAU (21px). Đo được: chữ trơn cao 13px còn
+   nút có padding nên cao 21px — mỗi lần ghim/bỏ ghim là thanh đọc số nhích 4px và cả lưới
+   đồ thị bên dưới nhảy theo. Ép cùng chiều cao thì đổi trạng thái không xê dịch gì. */
+.ptdg{font-size:11px;color:var(--faint);margin-left:auto;flex:0 0 auto;white-space:nowrap;
+  height:21px;display:inline-flex;align-items:center}
 .ptdg b{color:var(--txt);font-weight:700}
 /* Nút bỏ ghim phải TRÔNG NHƯ NÚT: đã ghim là một trạng thái người dùng tự bật, phải có
    đường tắt đi ra ngay cạnh, đừng bắt đoán là bấm lại lên đồ thị. */
-.ptdgh{margin-left:auto;background:var(--rose);color:#fff;border:0;border-radius:20px;
-  padding:4px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}
+.ptdgh{margin-left:auto;flex:0 0 auto;white-space:nowrap;background:var(--rose);color:#fff;
+  border:0;border-radius:20px;height:21px;padding:0 12px;font-size:11px;font-weight:800;
+  cursor:pointer;font-family:inherit;display:inline-flex;align-items:center}
 .ptdgh:hover{opacity:.88}
 .ptdw{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 18px}
 @media(min-width:700px){.ptdw{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -702,16 +712,24 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptdcl{font-size:10.5px;font-weight:700;color:var(--faint);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 .ptdcv{font-size:17px;font-weight:800;line-height:1.15;white-space:nowrap}
-.ptdcp{font-size:10.5px;color:var(--faint);line-height:1.45}
+/* KHOÁ ĐÚNG MỘT DÒNG. Đây là chỗ gây ra chuyện "rê chuột trên chart cứ giật lên giật
+   xuống" mà user báo 22/08/2026: dòng phụ dài ngắn theo từng phiên nên ô cao thấp thất
+   thường, mà cả thanh này `position:sticky` ngay trên lưới đồ thị.
+   Rút gọn chữ thôi KHÔNG ĐỦ — lần sau gặp mã có số to hơn hay tên dài hơn là giật lại.
+   `nowrap` + `ellipsis` là cái chốt cứng: có tràn thì cắt đuôi, tuyệt đối không xuống dòng. */
+.ptdcp{font-size:10.5px;color:var(--faint);line-height:1.45;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ptdcp b{font-weight:700;color:var(--txt)}
 .ptdcp b.up{color:var(--green)}.ptdcp b.dn{color:var(--red)}.ptdcp b.fl{color:var(--yellow)}
 .ptdn{color:var(--faint);font-weight:600}
-/* DẢI SỰ KIỆN của phiên đang chọn — nằm DƯỚI lưới ô số và chỉ hiện khi phiên đó có sự
-   kiện. Không chừa chỗ trống sẵn: phần lớn phiên không có sự kiện nào, để một dải rỗng
-   thường trực là đẩy cả lưới 11 đồ thị xuống thêm một hàng mà không được gì. */
-.ptdsk{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:9px;
-  border-top:1px solid var(--line);font-size:11.5px;color:var(--txt)}
-.ptdske{display:inline-flex;align-items:center;gap:6px;min-width:0}
+/* SỰ KIỆN CỦA PHIÊN ĐANG CHỌN — nằm TRONG hàng tiêu đề, không thành dải riêng bên dưới:
+   chỉ ~2% số phiên có sự kiện nên một dải riêng sẽ hiện lên rồi biến mất khi rê chuột
+   ngang qua mốc, làm thanh dính cao thấp thất thường. Ở đây thì không tốn thêm pixel nào,
+   và `min-width:0` + `ellipsis` lo phần mô tả dài. */
+.ptdsk{display:flex;align-items:center;gap:14px;min-width:0;height:21px;overflow:hidden;
+  font-size:11.5px;color:var(--txt);white-space:nowrap}
+.ptdske{display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;
+  text-overflow:ellipsis}
 .ptdske i{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
   width:15px;height:15px;border-radius:50%;color:#fff;font-size:9px;font-weight:800;
   font-style:normal}
@@ -1425,7 +1443,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822x"></script>
+<script defer src="assets/mobi.js?v=20260822y"></script>
 </head>
 <body>
 
@@ -1482,6 +1500,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822x"></script>
+<script src="assets/congcu.js?v=20260822y"></script>
 </body>
 </html>
