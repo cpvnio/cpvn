@@ -13,10 +13,17 @@ XOÁ
   Không chỗ nào trong site đọc, không nằm trong bất kỳ tín hiệu nào đã đo, và bản thân nó
   là ảnh chụp MỘT thời điểm nên không dựng được chuỗi gì có nghĩa.
 
+· `qMua` `qBan` `nMua` `nBan` (sổ lệnh, **28,8 MB**) — user chốt 22/08/2026: *"tao không
+  cần data sổ lệnh hàng ngày nữa, giá khớp lệnh trung bình và tổng khối lượng khớp lệnh
+  của từng mã là quá đủ"*. Lượt EOD đã thôi cào từ cùng ngày.
+  **XOÁ ĐƯỢC MÀ KHÔNG MẤT VĨNH VIỄN** — đo độ sâu trước khi xoá: trung vị **121 phiên**,
+  p90 121, max 251. Vietstock chặn cứng 1 năm nên cào lại lúc nào cũng lấy về đúng chừng
+  ấy; đây không phải dữ liệu chỉ-có-một-lần như tách thoả thuận.
+  Cái giá, nói cho rõ: đây là tín hiệu MẠNH NHẤT kho từng đo (rank IC +0,082,
+  **t = +12,24** trên 248 phiên). Mọi nghiên cứu dựa vào nó sẽ đứng lại ở 21/08/2026.
+
 GIỮ — và đây mới là phần đáng nói
 ---------------------------------
-· `qMua` `qBan` `nMua` `nBan` (sổ lệnh) — **VNDirect KHÔNG CÓ**, và tỉ lệ đặt mua/đặt bán
-  là tín hiệu mạnh nhất kho đo được (rank IC +0,082, t = **+12,24**). Xoá là mất hẳn.
 · `*TTGT` `*TTKL` (tách thoả thuận) — VNDirect chỉ cho TỔNG. Không có bộ này thì không
   bao giờ trả lời được "khối ngoại mua 130 tỷ nhưng bao nhiêu là sang tay".
 · `fnSoHuu` `fnRoom` — thử suy từ `fnRoomV/sh` và `(fnRoomTong−fnRoomV)/sh`: trung vị khớp
@@ -35,7 +42,8 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GD = os.path.join(BASE, "data", "giaodich")
 THU = "--thu" in sys.argv
 
-BO = ("fnMuaPc", "fnBanPc", "bMua", "bBan", "bMuaKL", "bBanKL", "shVa", "shLa")
+BO = ("fnMuaPc", "fnBanPc", "bMua", "bBan", "bMuaKL", "bBanKL", "shVa", "shLa",
+      "qMua", "qBan", "nMua", "nBan")
 
 
 def main():

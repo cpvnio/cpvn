@@ -1487,6 +1487,42 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
 
+### `neo_slcp` XOÁ SỐ CỔ PHIẾU MỖI LẦN `eod_ghi` CHẠY — đã vá 22/08/2026
+
+Bệnh anh em với chuyện `eod_ghi` xoá cột lạ, nhưng lặng hơn nhiều vì cột vẫn còn, chỉ RỖNG
+BỚT. `doc["sh"]` được **tính lại từ `shR`** (số cổ phiếu suy từ vốn hoá của Vietstock) ở
+MỌI lượt `eod_ghi`. Mà `shR` chỉ sâu bằng đúng tầng giá Vietstock (~120–300 phiên), nên nó
+ném đi phần `sh` sâu 1.000 phiên mà `kho_slcp.py`/`kho_vnd_lo.py` đã lấp từ VNDirect.
+
+Đo ngay sau lượt EOD 21/08 (lượt đó còn chạy `kho_giaodich --sau` cho cả 1.529 mã):
+**chỉ 21/1.529 mã còn `sh` gần đủ**; TCB còn 301/1.000 ô, và ô đầu tiên nằm đúng
+2025-06-11 — đúng chỗ `shR` bắt đầu. Tức đồ thị vốn hoá lại cụt như trước, đúng lỗi user
+đã báo một lần rồi.
+
+Vá hai lớp: `eod_ghi` **giữ `sh` cũ ở mọi ô `neo_slcp` không suy ra được**, và lượt EOD
+thôi chạy `--sau` nên `shR` không còn bị làm mới nông. Lấp lại bằng
+`python3 tools/kho_vnd_lo.py --tang sh --sau 1000` (39 lượt gọi, 36 giây) →
+**1.422/1.529 mã** có `sh` gần đủ, HPG/TCB/VNM đều vẽ được 905/1.000 phiên từ 2023-01-03.
+
+> **Bài học chung, lần thứ hai trong một ngày:** hàm ghi TÍNH LẠI một trường từ nguồn nông
+> hơn nguồn đang có là một dạng xoá dữ liệu — và nó không để lại dấu vết nào, vì cột vẫn
+> tồn tại và những ô còn lại vẫn đúng.
+
+### SỔ LỆNH ĐÃ XOÁ KHỎI KHO (22/08/2026) — `qMua` `qBan` `nMua` `nBan`
+
+User chốt: *"tao không cần data sổ lệnh hàng ngày nữa"*. Lượt EOD thôi cào, và
+`tools/gon_kho.py` xoá luôn khỏi kho: **290 → 261 MB (−30 MB)**.
+
+**Xoá được mà không mất vĩnh viễn** — đo độ sâu TRƯỚC khi xoá: trung vị **121 phiên**,
+p90 121, max 251. Vietstock chặn cứng 1 năm nên chạy lại `kho_giaodich.py --sau` lúc nào
+cũng lấy về đúng chừng ấy. Khác hẳn `*TTGT` (tách thoả thuận) — thứ mất là mất thật.
+
+`tools/kho_dactrung.py` đọc bốn trường này qua `g()` (trả `[None]*n` khi thiếu) nên không
+vỡ, đặc trưng suy từ sổ lệnh chỉ thành rỗng và bị bỏ cột.
+
+> Cái giá, biết trước: đây là tín hiệu **mạnh nhất** kho từng đo (rank IC +0,082,
+> **t = +12,24** trên 248 phiên). Chuỗi đứng lại ở phiên 21/08/2026.
+
 ### LƯỢT EOD DỰNG LẠI 22/08/2026 — 2h34 XUỐNG ~8 PHÚT, VÀ BỎ CÀO SỔ LỆNH
 
 User: *"tao không muốn chốt phiên 15h15 mà tận 17h20 mới có đủ data"*, và *"giá khớp lệnh
