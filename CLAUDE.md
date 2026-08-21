@@ -1517,6 +1517,28 @@ Chữ đã rút, và chỗ những mẩu bị cắt đi đã chuyển tới:
   khớp lệnh lúc là tổng-gồm-thoả-thuận mà không dấu hiệu nào — đúng cái bẫy hai-nguồn-hai-
   định-nghĩa đã trả giá. Bảy ký tự đó đáng giữ.
 
+### KHỔ HẸP CỦA THANH ĐỌC SỐ — BỐN THỨ ĐÃ PHẢI SỬA RIÊNG
+
+Đo thật ở 375px, không đoán:
+
+① **`@media` KHÔNG cộng độ ưu tiên.** Đặt `@media(max-width:700px){.ptdg{display:none}}`
+  TRƯỚC khai báo `.ptdg` gốc thì nó bị chính khai báo gốc đè lại — im lặng hoàn toàn, chỉ
+  hỏng ở khổ hẹp. Mọi khối `@media` ghi đè phải đứng SAU khai báo nó ghi đè.
+② **`height` chứ không `min-height` cho `.ptdh`.** Khổ hẹp ẩn dòng gợi ý nên trạng thái
+  chưa-ghim chỉ còn con số ngày (16,5px → rơi về sàn 26px) trong khi đã-ghim có nút 21px
+  (→ 30px). Mức sàn chỉ chặn được một phía. Cao cứng 30px thì mọi trạng thái đều bằng nhau.
+③ **Cắt một chữ định tính còn hơn cắt một con số.** Ở 2 cột × ~155px, "khớp lệnh mua 550
+  tỷ · bán 68 tỷ" vẫn tràn dù đã hạ cỡ chữ — mà `ellipsis` ăn vào ĐUÔI, tức ăn vào chính
+  con số "bán": đọc ra "bán 2…" là một số sai. Nên bọc từ định nghĩa vào `.ptdq` và đuôi
+  sở hữu vào `.ptdq2`, khổ hẹp ẩn cả hai. Đo lại: **0 chuỗi bị cắt**.
+④ **Khổ hẹp không vẽ nhãn trục vốn hoá.** Máng trái 45px + nhãn giá 40px + nhãn vốn hoá
+  60px = 145px trên 319px — vùng vẽ còn 55%. Bỏ NHÃN chứ không bỏ ĐƯỜNG (`hep = W<520`):
+  hình dạng và chỗ tách khỏi đường giá mới là thứ cần nhìn, còn con số chính xác thì ô
+  "Vốn hoá" ở thanh đọc số luôn in sẵn cho đúng phiên đang chọn.
+
+Kiểm cuối ở 375px: quét 2 chiều khắp đồ thị + ghim/bỏ ghim → chiều cao `#ptDoc` **một giá
+trị duy nhất (290,5px)**, **0 chuỗi bị cắt**.
+
 ### MỐC PHIÊN LÀ TAM GIÁC, KHÔNG PHẢI CỘT ĐỎ (22/08/2026)
 
 User: *"lúc chọn không phải là 1 cột màu đỏ mà nên là 1 dấu tam giác chỉ vị trí"*. Cột đỏ

@@ -665,6 +665,9 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkS3{background:#c026d3;border-radius:50%}
 .ptleg i.pkS4{background:#8a8a99;border-radius:50%}
 .ptleg i.pkV{background:#16a34a;height:3px;border-radius:2px}
+/* Khổ hẹp không vẽ nhãn trục vốn hoá (xem `hep` trong ptVe1) nên chú thích cũng phải bỏ
+   theo — chỉ vào một cái trục không tồn tại là bắt người ta đi tìm thứ không có. */
+@media(max-width:700px){ .ptkr{display:none} }
 /* CÔNG TẮC BẬT/TẮT MỐC, đứng ngay trong dòng chú thích của đồ thị giá. Cùng lối với
    `.ptseg` nhưng NHỎ HƠN và KHÔNG DÍNH NHAU: `.ptseg` là chọn MỘT trong nhiều (khung 100
    / 300 / 600 / 1.000) nên các nút phải liền một khối; còn đây là hai công tắc ĐỘC LẬP,
@@ -683,11 +686,14 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    ra thứ cần, mà nhãn lại bé hơn số — đúng ngược. */
 .ptdoc{position:sticky;top:0;z-index:4;background:var(--card);border:1px solid var(--line);
   border-radius:12px;padding:10px 13px 11px;margin:0 0 12px;font-variant-numeric:tabular-nums}
-/* HÀNG TIÊU ĐỀ CAO CỐ ĐỊNH VÀ KHÔNG XUỐNG DÒNG. `min-height` là bắt buộc: nút "đã ghim"
-   cao hơn dòng chữ gợi ý ~6px, nên mỗi lần ghim/bỏ ghim cả lưới đồ thị bên dưới nhích một
-   nấc. `nowrap` cũng bắt buộc: hàng này nay mang thêm mô tả sự kiện, mã nào ghi dài là nó
-   rớt xuống dòng thứ hai và thanh dính cao thêm 20px. */
-.ptdh{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;min-height:26px;
+/* HÀNG TIÊU ĐỀ CAO CỨNG 30px VÀ KHÔNG XUỐNG DÒNG.
+   `height` chứ không `min-height`: đã thử `min-height:26px` và vẫn giật 4px ở KHỔ HẸP —
+   nơi dòng gợi ý bị ẩn nên trạng thái chưa-ghim chỉ còn con số ngày (16,5px, rơi về mức
+   sàn 26px) trong khi trạng thái đã-ghim có cái nút 21px (thành 30px). Mức sàn chỉ chặn
+   được một phía. Cao cứng thì mọi trạng thái, mọi khổ màn hình đều bằng nhau.
+   `nowrap` cũng bắt buộc: hàng này nay mang thêm mô tả sự kiện, mã nào ghi dài là nó rớt
+   xuống dòng thứ hai và thanh dính cao thêm 20px. */
+.ptdh{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;height:30px;overflow:hidden;
   margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .ptdd{font-size:14px;font-weight:800;flex:0 0 auto}
 /* DÒNG GỢI Ý VÀ NÚT "ĐÃ GHIM" PHẢI CAO BẰNG NHAU (21px). Đo được: chữ trơn cao 13px còn
@@ -702,6 +708,13 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
   border:0;border-radius:20px;height:21px;padding:0 12px;font-size:11px;font-weight:800;
   cursor:pointer;font-family:inherit;display:inline-flex;align-items:center}
 .ptdgh:hover{opacity:.88}
+/* KHỔ HẸP THÌ BỎ HẲN DÒNG GỢI Ý. Nó nói "rê chuột lên đồ thị" — trên điện thoại không có
+   chuột để rê, nên câu đó vừa sai vừa dài: đo ở 375px thì hàng tiêu đề tràn 57px ra ngoài
+   thẻ (`nowrap` nên nó không xuống dòng được nữa, đúng như thiết kế). Nút "đã ghim" thì
+   GIỮ — chạm vào đồ thị là ghim thật, phải có đường thoát ra.
+   PHẢI ĐỨNG SAU khai báo `.ptdg` ở trên: `@media` KHÔNG cộng thêm độ ưu tiên, đặt trước
+   là bị chính khai báo gốc đè lại — đã dính đúng bẫy này lúc viết. */
+@media(max-width:700px){ .ptdg{display:none} }
 .ptdw{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 18px}
 @media(min-width:700px){.ptdw{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* BỐN CỘT, KHÔNG PHẢI TÁM. Tám ô dàn một hàng ở 1.364px là 170px mỗi ô — dòng phụ
@@ -719,7 +732,17 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    `nowrap` + `ellipsis` là cái chốt cứng: có tràn thì cắt đuôi, tuyệt đối không xuống dòng. */
 .ptdcp{font-size:10.5px;color:var(--faint);line-height:1.45;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* KHỔ HẸP: lưới còn 2 cột nên mỗi ô chỉ ~155px, mà dòng "khớp lệnh mua 43 tỷ · bán 40 tỷ"
+   cần ~150px ở cỡ 10,5px — sát quá, cắt đuôi ngay từ chữ "bán". Hạ một nấc cho vừa.
+   ĐỨNG SAU khai báo gốc: `@media` không cộng độ ưu tiên, đặt trước là bị đè. */
+@media(max-width:700px){ .ptdcp{font-size:9.5px} .ptdcl{font-size:10px}
+  /* CẮT MỘT CHỮ ĐỊNH TÍNH CÒN HƠN CẮT MỘT CON SỐ. Ở 375px dù đã hạ cỡ chữ thì
+     "khớp lệnh mua 550 tỷ · bán 68 tỷ" vẫn tràn — mà tràn thì `ellipsis` ăn vào đuôi, tức
+     ăn vào chính con số "bán". Nên khổ hẹp bỏ hẳn từ định nghĩa và đuôi sở hữu; số thì
+     giữ nguyên, không bao giờ bị cắt. Bản rộng vẫn in đủ. */
+  .ptdq,.ptdq2{display:none} }
 .ptdcp b{font-weight:700;color:var(--txt)}
+.ptdcp .ptdq,.ptdcp .ptdq2{font-style:normal}
 .ptdcp b.up{color:var(--green)}.ptdcp b.dn{color:var(--red)}.ptdcp b.fl{color:var(--yellow)}
 .ptdn{color:var(--faint);font-weight:600}
 /* SỰ KIỆN CỦA PHIÊN ĐANG CHỌN — nằm TRONG hàng tiêu đề, không thành dải riêng bên dưới:
@@ -1443,7 +1466,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822y"></script>
+<script defer src="assets/mobi.js?v=20260823a"></script>
 </head>
 <body>
 
@@ -1500,6 +1523,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822y"></script>
+<script src="assets/congcu.js?v=20260823a"></script>
 </body>
 </html>

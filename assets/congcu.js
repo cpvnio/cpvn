@@ -1573,7 +1573,14 @@ function ptVe1(cv, cfg){
      đó đúng là câu hỏi duy nhất người ta hỏi khi thấy một mốc cổ tức. */
   const padT=(cfg.sk&&cfg.sk.length)?14:6;
   const wP2=coP2?Math.ceil(g.measureText(nhanP(hi2)).width)+8:0;
-  const wP3=coP3?Math.ceil(g.measureText(nhanP3(hi3)).width)+10:0;
+  /* KHỔ HẸP THÌ VẼ ĐƯỜNG NHƯNG KHÔNG VẼ NHÃN TRỤC THỨ HAI. Đo ở 375px: máng nhãn trái
+     ("853 tỷ") 45px + nhãn giá 40px + nhãn vốn hoá ("135,680 tỷ") 60px = 145px trên tổng
+     319px — vùng vẽ chỉ còn 55% bề ngang, đồ thị bị bóp thành một dải hẹp.
+     Bỏ nhãn chứ KHÔNG bỏ đường: hình dạng và chỗ nó tách khỏi đường giá mới là thứ cần
+     nhìn, còn con số chính xác của phiên đang chọn thì ô "Vốn hoá" ở thanh đọc số luôn in
+     sẵn — thậm chí chính xác hơn bốn cái mốc lưới. */
+  const hep=W<520;
+  const wP3=(coP3&&!hep)?Math.ceil(g.measureText(nhanP3(hi3)).width)+10:0;
   const padR=wP2+wP3;
   const plotH=H-padB-padT, plotW=W-padL-padR;
   const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
@@ -1587,7 +1594,7 @@ function ptVe1(cv, cfg){
       g.fillText(nhanP(v), W-padR+4, padT+plotH-(v-lo2)/(hi2-lo2)*plotH); }
     g.textAlign='right';
   }
-  if(coP3){
+  if(coP3&&!hep){
     g.textAlign='left'; g.fillStyle=P3[0].mau;
     for(let k=0;k<=3;k++){ const v=lo3+(hi3-lo3)*k/3;
       g.fillText(nhanP3(v), W-wP3+4, padT+plotH-(v-lo3)/(hi3-lo3)*plotH); }
@@ -1946,7 +1953,8 @@ function ptVeMa(){
               hàng, mà hai nút này chỉ đổi MỘT đồ thị chứ không đổi cả trang.
               CHÚ THÍCH CHỮ CÁI CHỈ HIỆN KHI NHÓM ĐÓ ĐANG BẬT — bày ra bốn dòng chú thích
               cho mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
-           +(PT.vh?' &nbsp;·&nbsp; <i class="pkV"></i> vốn hoá (nét đứt) — <b>trục ngoài cùng</b>':'')
+           +(PT.vh?' &nbsp;·&nbsp; <i class="pkV"></i> vốn hoá (nét đứt)'
+              +'<span class="ptkr"> — <b>trục ngoài cùng</b></span>':'')
            +'<br><span class="ptsw" id="ptSK">'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
@@ -2095,7 +2103,7 @@ function ptVeMa(){
        riêng, nên bỏ được thật. */
     +oo('Khối ngoại ròng', fnRong[k]!=null?tien(fnRong[k]):oNul,
         (fnKL[k]!=null||fnM[k]!=null)
-          ?((fnKL[k]!=null?'khớp lệnh ':'tổng ')
+          ?('<i class="ptdq">'+(fnKL[k]!=null?'khớp lệnh ':'tổng ')+'</i>'
             +'mua <b class="up">'+ptTien(fnKL[k]!=null?fnKL[k]:fnM[k])+'</b>'
             +' · bán <b class="dn">'+ptTien(fnKL[k]!=null?fnKB[k]:fnB[k])+'</b>')
           :'',
@@ -2103,8 +2111,8 @@ function ptVeMa(){
     /* Số chứng quyền đã chuyển sang chú thích đồ thị "Tự doanh ròng": nó là số của cả mã,
        không đổi theo phiên, mà lại chính là cụm làm dòng này dài ngắn thất thường. */
     +oo('Tự doanh ròng', tdRong[k]!=null?tien(tdRong[k]):oNul,
-        tdRong[k]==null?'nguồn không có tự doanh ở mã này'
-          :((tdKL[k]!=null?'khớp lệnh ':'tổng ')
+        tdRong[k]==null?'nguồn không có tự doanh'
+          :('<i class="ptdq">'+(tdKL[k]!=null?'khớp lệnh ':'tổng ')+'</i>'
             +'mua <b class="up">'+ptTien(tdM[k]||0)+'</b> · bán <b class="dn">'
             +ptTien(tdB[k]||0)+'</b>'),
         tdRong[k]!=null?cls(tdRong[k]):'')
@@ -2122,7 +2130,11 @@ function ptVeMa(){
        Chỉ có ở ~249 phiên gần nhất (trường của Vietstock), phiên xa hơn thì bỏ trống. */
     +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul,
         (sh[k]?num(sh[k])+' cp':'')
-        +(fnSH[k]!=null?((sh[k]?' · ':'')+'nước ngoài <b>'+fnSH[k].toFixed(1)+'%</b>'):''))
+        /* Đuôi "nước ngoài x%" bọc `.ptdq2` để KHỔ HẸP ẨN ĐI. Ở 375px lưới còn 2 cột,
+           mỗi ô ~155px — để nguyên là cắt đuôi ngay giữa con số, mà cắt một CON SỐ thì tệ
+           hơn hẳn bỏ một chữ định tính: "bán 2…" đọc ra một số sai. */
+        +(fnSH[k]!=null?'<i class="ptdq2">'+(sh[k]?' · ':'')+'nước ngoài <b>'
+            +fnSH[k].toFixed(1)+'%</b></i>':''))
     +'</div>';
   const bg=$('#ptBoGhim');
   if(bg) bg.onclick=()=>{ PT.ghim=null; ptVeMa(); };
