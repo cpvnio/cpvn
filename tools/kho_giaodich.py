@@ -372,14 +372,28 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
     """Trộn vào file cũ. GIỮ ngày cũ, chỉ thêm/cập nhật ngày có trong `moi`."""
     p = os.path.join(GD_DIR, f"{sym}.json")
     cu, cu_sid = {}, sid
+    # ĐỌC MỌI CỘT ĐANG CÓ, KHÔNG CHỈ CỘT TRONG `COT` — bẫy đã trả giá 22/08/2026.
+    # Bản cũ đọc và ghi lại đúng danh sách `COT`, nên **mọi cột ngoài danh sách đó bị XOÁ
+    # HẲN** mỗi lần hàm này chạy: `fnMuaTG` `fnBanTG` `tdMuaTG` `tdBanTG` `fnRoomV`
+    # `fnRoomTong` `*TKL` — toàn bộ tầng VNDirect.
+    # KHÔNG LỘ RA SUỐT NHIỀU THÁNG vì thứ tự cũ chạy Vietstock TRƯỚC rồi `kho_vnd` ghi lại
+    # NGAY SAU, nên cột vừa bị xoá lại được đắp vào. Đảo thứ tự (VNDirect chạy trước để
+    # bảng lên web sớm) là nó phơi ra ngay: khối ngoại toàn thị trường từ 2.268 tỷ về 0.
+    # Không lỗi nào báo — file vẫn hợp lệ, chỉ thiếu cột.
+    # Luật chung: hàm ghi phải GIỮ NGUYÊN thứ nó không hiểu, đừng dựng lại file từ một
+    # danh sách cứng. Ai thêm cột mới cũng khỏi phải nhớ khai vào đây.
+    cot_cu = []
     if os.path.exists(p):
         try:
             o = json.load(open(p, encoding="utf-8"))
             cu_sid = cu_sid or o.get("sid")
+            nd = len(o.get("d") or [])
+            cot_cu = [k for k, v in o.items()
+                      if k != "d" and isinstance(v, list) and len(v) == nd]
             for i, d in enumerate(o.get("d") or []):
-                cu[d] = {k: (o.get(k) or [None] * len(o["d"]))[i] for k in COT if k != "d"}
+                cu[d] = {k: o[k][i] for k in cot_cu}
         except Exception:
-            cu = {}
+            cu, cot_cu = {}, []
     # TRỘN THEO TỪNG TRƯỜNG, đừng `cu.update(moi)`.
     # `update` thay CẢ bản ghi của ngày đó — nên lượt ghi dòng tiền (chỉ có cfU/cfF/cfD)
     # xoá sạch giá, khối lượng, SLCP của chính ngày ấy. Đã dính đúng vậy 20/08/2026: sau
@@ -389,10 +403,14 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
     ngay = sorted(cu)
     doc = {"sym": sym, "updated": datetime.datetime.now(TZ).strftime("%Y-%m-%d"),
            "n": len(ngay), "d": ngay}
-    for k in COT:
+    for k in list(COT) + [x for x in cot_cu if x not in COT]:
         if k == "d":
             continue
-        doc[k] = [cu[d].get(k) for d in ngay]
+        arr = [cu[d].get(k) for d in ngay]
+        # Cột của `COT` giữ nguyên kể cả khi rỗng (hợp đồng cũ); cột LẠ chỉ giữ khi còn số,
+        # để không hồi sinh mấy cột đã cố ý xoá bằng `tools/gon_kho.py`.
+        if k in COT or any(x is not None for x in arr):
+            doc[k] = arr
     if cu_sid:
         doc["sid"] = cu_sid
     ev = _sukien(sym)
@@ -404,7 +422,15 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
             doc["day"] = json.load(open(p, encoding="utf-8")).get("day") or 0
         except Exception:
             pass
+    sh_cu = {d: cu[d].get("sh") for d in ngay}
     doc["sh"], doc["shVa"] = neo_slcp(ngay, doc["shR"], ev, _slcp_that(sym))
+    # SỐ CỔ PHIẾU: `neo_slcp` suy từ `shR` của Vietstock, mà từ 22/08 lượt EOD KHÔNG còn cào
+    # tầng giá Vietstock nữa nên `shR` không có số mới. `kho_vnd_lo.py` đã ghi `sh` từ
+    # `ratios` của VNDirect — giữ lại ở mọi ô mà `neo_slcp` không suy ra được, bằng không
+    # ô vốn hoá của phiên mới trống trơn.
+    for i2, d2 in enumerate(ngay):
+        if doc["sh"][i2] is None and sh_cu.get(d2) is not None:
+            doc["sh"][i2] = sh_cu[d2]
     la = bac_la(ngay, doc["sh"], ev)
     if la:
         doc["shLa"] = la[:20]
@@ -717,6 +743,71 @@ FN_TIEN = {"BuyVal": "fnMuaGT", "SellVal": "fnBanGT",
            "BuyPutVal": "fnMuaTTGT", "SellPutVal": "fnBanTTGT"}
 
 
+def loc_dang_goi(ma, tang):
+    """Bỏ những mã CHẮC CHẮN không có số ở tầng này, đọc từ chính kho — không gọi mạng.
+
+    VÌ SAO (22/08/2026): lượt EOD gọi Vietstock cho cả 1.529 mã ở mọi tầng, trong khi phần
+    lớn lượt gọi trả về RỖNG. Đo phiên 21/08 và 30 phiên gần nhất:
+
+        khối ngoại  chỉ   338/1.525 mã có khối ngoại giao dịch HOẶC có thoả thuận
+        tự doanh    chỉ   195/1.529 mã có tự doanh trong 30 phiên gần nhất
+
+    Tức ~78% và ~87% số lượt gọi là gọi để nhận về con số 0. Bỏ chúng đi tiết kiệm ~10 phút
+    mỗi phiên mà KHÔNG mất một con số nào — xem lập luận từng tầng ngay dưới.
+
+    ĐÂY LÀ CỔNG THEO LỊCH SỬ, NÊN PHẢI CÓ ĐƯỜNG BẮT MÃ MỚI: lượt thứ Hai chạy KHÔNG có
+    `--tuloc` để quét lại trọn rổ, bắt mã lần đầu có khối ngoại/tự doanh.
+    """
+    ra = []
+    for m in ma:
+        p = os.path.join(GD_DIR, m + ".json")
+        if not os.path.exists(p):
+            continue
+        try:
+            g = json.load(open(p, encoding="utf-8"))
+        except Exception:
+            ra.append(m)                      # đọc hỏng thì cứ gọi, đừng đoán
+            continue
+        d = g.get("d") or []
+        if not d:
+            continue
+        n = len(d)
+        lay = lambda k: (g.get(k) or []) if len(g.get(k) or []) == n else []
+        if tang == "nn":
+            # KHỐI NGOẠI: chỉ cần bản TÁCH của Vietstock khi phiên đó THẬT SỰ có gì để tách.
+            # Không có khối ngoại giao dịch và không có thoả thuận thì bản tách bằng đúng
+            # TỔNG của VNDirect (cả hai đều 0), và tỉ lệ sở hữu KHÔNG ĐỔI nên số phiên
+            # trước vẫn đúng nguyên — đây là chỗ giữ nguyên CHÍNH XÁC, không phải xấp xỉ.
+            i = n - 1
+            co = False
+            for k in ("fnMuaTG", "fnBanTG", "pval"):
+                v = lay(k)
+                if v and i < len(v) and v[i]:
+                    co = True
+                    break
+            if co:
+                ra.append(m)
+        elif tang == "tt":
+            # THOẢ THUẬN: mã chưa từng có thoả thuận trong 30 phiên gần nhất thì phiên này
+            # gần như chắc chắn cũng không — và top 50 mã chiếm 99,8% giá trị thoả thuận
+            # toàn thị trường, nên cổng này không bỏ sót phần đáng kể nào.
+            v = lay("pval")
+            if v and any(v[i] for i in range(max(0, n - 30), n)):
+                ra.append(m)
+        else:
+            # TỰ DOANH: mã chưa từng có tự doanh trong 30 phiên gần nhất thì phiên này gần
+            # như chắc chắn cũng không. Cửa sổ 30 (không phải 1) để mã giao dịch thưa vẫn lọt.
+            co = False
+            for k in ("tdMuaGT", "tdMuaTG", "tdBanGT", "tdBanTG"):
+                v = lay(k)
+                if v and any(v[i] is not None for i in range(max(0, n - 30), n)):
+                    co = True
+                    break
+            if co:
+                ra.append(m)
+    return ra
+
+
 def fn_nap(sym, sid, day_du=False, trang_toi=None, sau_toi=None):
     """Khối ngoại từng phiên: khối lượng và giá trị mua/bán (khớp lệnh và thoả thuận tách
     riêng), % của phiên, tỉ lệ sở hữu và room còn lại."""
@@ -885,10 +976,60 @@ def main():
                     help="CHỈ cào khối ngoại (dùng lại `sid` đã lưu, 2 lượt/mã)")
     ap.add_argument("--td", action="store_true",
                     help="CHỈ cào tự doanh CTCK (dùng lại `sid` đã lưu, 2 lượt/mã)")
+    ap.add_argument("--tt", action="store_true",
+                    help="CHỈ lấy THOẢ THUẬN (pv/pval) — VNDirect bỏ sót, xem chú thích")
+    ap.add_argument("--tuloc", action="store_true",
+                    help="với --nn/--td: TỰ BỎ mã chắc chắn không có số, xem `loc_dang_goi`")
     ap.add_argument("--chiso", action="store_true",
                     help="chỉ số theo phiên (VNINDEX/VN30/HNX/HNX30/UPCOM) -> data/chiso.json")
     ap.add_argument("--kiem", action="store_true", help="đối chiếu chéo sau khi chạy")
     a = ap.parse_args()
+
+    if a.tt:
+        # ── THOẢ THUẬN LẤY RIÊNG TỪ VIETSTOCK (22/08/2026) ────────────────────────────
+        # Từ 22/08 tầng giá lấy VNDirect (nhanh gấp 17 lần, gọi theo lô). Nhưng đối chiếu
+        # phiên 21/08 thì **khớp lệnh hai nguồn khớp tuyệt đối** (16.939 vs 16.940 tỷ) còn
+        # **thoả thuận thì VNDirect BỎ SÓT**: tổng 2.607 tỷ so với 3.001 tỷ của Vietstock,
+        # thiếu 394 tỷ dồn vào 7 mã — VHM 298,9 tỷ ghi thành 0, HUT 33,2 -> 0, HHC 27,1 -> 0.
+        # KHÔNG PHẢI TRỄ MÀ LÀ SÓT: VHM phiên 20/08 đã chốt hẳn, VNDirect vẫn ghi ptValue=0.
+        # Nên riêng `pv`/`pval` vẫn phải hỏi Vietstock — nhưng chỉ hỏi mã ĐÁNG hỏi: 348 mã
+        # từng có thoả thuận trong 30 phiên gần nhất, tức 1,4 phút thay vì 6,4.
+        # CHỈ TRỘN `pv`/`pval`, vứt mọi trường khác của lượt trả về — bằng không tầng giá
+        # của Vietstock ghi đè lên tầng giá VNDirect và mất luôn luật "một cột một nguồn".
+        u = json.load(open(UNI, encoding="utf-8"))["stocks"]
+        ma = [x["sym"] for x in u]
+        if a.ma:
+            xin = {x.upper() for x in a.ma}
+            ma = [m for m in ma if m in xin]
+        if a.tuloc:
+            truoc = len(ma)
+            ma = loc_dang_goi(ma, "tt")
+            print(f"  [tự lọc] {truoc} -> {len(ma)} mã từng có thoả thuận", flush=True)
+        t0 = time.time()
+        ok = loi = trong = 0
+        for i, m in enumerate(ma):
+            try:
+                moi, sid = eod_nap(m, trang_toi=a.trang or 1)
+            except Exception:
+                moi, sid = None, None
+            if not moi:
+                loi += 1
+                continue
+            loc = {}
+            for d, r in moi.items():
+                o = {k: r[k] for k in ("pv", "pval") if r.get(k) is not None}
+                if o:
+                    loc[d] = o
+            if not loc:
+                trong += 1
+                continue
+            eod_ghi(m, loc, sid)
+            ok += 1
+            if (i + 1) % 100 == 0:
+                print(f"    …{i+1}/{len(ma)}  {time.time()-t0:.0f}s", flush=True)
+        print(f"  thoả thuận: ok {ok} · không có {trong} · lỗi {loi} · {time.time()-t0:.0f}s",
+              flush=True)
+        return
 
     if a.nn or a.td:
         nap = fn_nap if a.nn else td_nap
@@ -900,6 +1041,10 @@ def main():
         if a.ma:
             xin = {x.upper() for x in a.ma}
             ma = [m for m in ma if m in xin]
+        if a.tuloc:
+            truoc = len(ma)
+            ma = loc_dang_goi(ma, "nn" if a.nn else "td")
+            print(f"  [tự lọc] {truoc} -> {len(ma)} mã đáng gọi", flush=True)
         t0 = time.time()
         ok = loi = khongsid = khongco = 0
         hong = []
@@ -915,7 +1060,7 @@ def main():
                 khongsid += 1
                 continue
             try:
-                r = nap(m, sid, day_du=a.tatca)
+                r = nap(m, sid, day_du=a.tatca, trang_toi=a.trang)
             except Exception:
                 r = None
             if r is None:
@@ -936,7 +1081,7 @@ def main():
             lai = 0
             for m, sid in hong:
                 try:
-                    r = nap(m, sid, day_du=a.tatca)
+                    r = nap(m, sid, day_du=a.tatca, trang_toi=a.trang)
                 except Exception:
                     r = None
                 if r:

@@ -1487,6 +1487,87 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
 
+### LƯỢT EOD DỰNG LẠI 22/08/2026 — 2h34 XUỐNG ~8 PHÚT, VÀ BỎ CÀO SỔ LỆNH
+
+User: *"tao không muốn chốt phiên 15h15 mà tận 17h20 mới có đủ data"*, và *"giá khớp lệnh
+trung bình và tổng khối lượng khớp lệnh của từng mã là quá đủ rồi"* → bỏ cào sổ lệnh.
+
+**Lượt 21/08 chạy 2 giờ 34 phút** (15:15 → 17:49). Gốc là SỐ LƯỢT GỌI và THỨ TỰ, không phải
+nguồn chậm. Ba thứ đã đổi:
+
+| | trước | sau | vì sao |
+|---|---|---|---|
+| `kho_vnd.py` | 4.587 lượt · ~45 ph | **`kho_vnd_lo.py` 156 lượt · 2,6 ph** | cả 4 endpoint VNDirect nhận `q=code:A,B,C` |
+| `kho_giaodich --sau` | 12.232 lượt · ~51 ph | **BỎ HẲN** | tầng giá trùng VNDirect; sổ lệnh user chốt bỏ |
+| `kho_giaodich --vg` | 3.058 lượt · ~13 ph | **`kho_vunggia.py` 525 lượt · 0,8 ph** | nến 1 phút của VNDirect, host trần 12/s thay vì 4/s |
+| khối ngoại / tự doanh tách | 3.058 lượt | **530 lượt · 2,4 ph** | `--tuloc` bỏ mã chắc chắn không có số |
+| thoả thuận | (đi kèm `--sau`) | **348 lượt · 1,4 ph** | `--tt --tuloc`, xem bẫy ngay dưới |
+
+**~19.900 → ~1.900 lượt gọi.** Và `refresh_daily.py` (~29 phút) nay chạy **SAU** lượt đẩy
+thứ nhất, vì trang /phantich không cần nó. `PushKho` gọi hai lần: `(phan tich)` ở ~8 phút,
+`(server)` ở cuối.
+
+> **VÌ SAO TỐC ĐỘ LÀ CHUYỆN ĐÚNG/SAI CHỨ KHÔNG CHỈ LÀ TIỆN:** lưới dự phòng GitHub Actions
+> hẹn 16:05, *"sau giờ server chính 50 phút"*. Ngày 21/08 server chạy 2h34 nên Actions kết
+> luận server chết và **cào lại toàn bộ pipeline** — commit `fc69c0233`, 1.927 file, **lần
+> đầu tiên trong lịch sử repo** nó thật sự đẩy. Tức mọi nguồn bị nện gấp đôi. Xuống 8 phút
+> là ngòi đó tự tắt; **đừng nới mốc 50 phút của workflow, hãy giữ lượt chạy dưới nó.**
+
+**BỐN PHÉP ĐO ĐỨNG SAU MẤY CON SỐ TRÊN** (đừng đo lại, và đừng "tối ưu" ngược lại):
+
+① **Vietstock ĐÃ chạy sát trần, thêm luồng vô ích.** Đo 6 lượt: trễ trung vị **0,24s**, trần
+  `nhipmang` là 0,25s → vòng lặp nối đuôi đã đạt 4,0 lượt/giây. Khác hẳn VNDirect (trễ chập
+  chờn 0,6–147s, CPU rảnh 99%) — ở đó luồng mới có tác dụng.
+② **Cổng `--tuloc` không bỏ sót gì.** Khối ngoại 1.529 → 335 mã (chỉ mã có khối ngoại giao
+  dịch HOẶC có thoả thuận hôm đó — mã còn lại thì bản tách BẰNG ĐÚNG tổng của VNDirect và
+  tỉ lệ sở hữu KHÔNG ĐỔI, nên giữ số phiên trước là chính xác chứ không phải xấp xỉ). Tự
+  doanh 1.529 → 195 mã (có tự doanh trong 30 phiên gần nhất). Chạy thật: **0 mã báo "không
+  có giao dịch loại này", 0 lỗi** ở cả hai — cổng chọn đúng tập.
+  **Lượt thứ Hai chạy KHÔNG `--tuloc`** để quét lại trọn rổ, bắt mã lần đầu có số.
+③ **Vùng giá VNDirect trùng Vietstock.** Phiên 21/08: HPG 13/13 mức giá, VNM 8/8, SSI 19/19
+  — **trùng toàn bộ mức**. Lệch khối lượng +4,51% / +0,06% / −0,01%; phần lệch của HPG là
+  nến ATC 14:45, nó dịch chiều cao cột chứ không đổi mức giá nào.
+  **MẤT:** khối `cf` (phân bổ dòng tiền theo hướng giá của từng lệnh) — đi kèm miễn phí ở
+  endpoint TỪNG LỆNH của Vietstock, VNDirect không có dữ liệu từng lệnh. **Đừng suy từ nến
+  1 phút**: trong một phút nhiều lệnh khớp ở nhiều giá, so hai nến liền nhau ra một đại
+  lượng KHÁC HẲN mà trông giống — loại số sai không ai phát hiện được.
+④ **THOẢ THUẬN THÌ VNDIRECT BỎ SÓT — vẫn phải hỏi Vietstock.** Khớp lệnh hai nguồn khớp
+  tuyệt đối (16.939 vs 16.940 tỷ, lệch 0,006%) nhưng thoả thuận lệch **394/3.001 tỷ**, dồn
+  vào 7 mã: **VHM 298,9 tỷ ghi thành 0**, HUT 33,2 → 0, HHC 27,1 → 0. **Không phải trễ mà
+  là sót** — VHM phiên 20/08 đã chốt hẳn, `ptValue` vẫn 0. Nên có bước `--tt --tuloc` riêng:
+  348 mã từng có thoả thuận trong 30 phiên (top 50 mã chiếm **99,8%** giá trị thoả thuận
+  toàn thị trường), và nó **CHỈ trộn `pv`/`pval`**, vứt mọi trường khác của lượt trả về —
+  bằng không tầng giá Vietstock ghi đè tầng giá VNDirect, mất luật "một cột một nguồn".
+
+### `eod_ghi` TỪNG XOÁ SẠCH CỘT NÓ KHÔNG BIẾT — đã vá 22/08/2026
+
+Hàm này đọc file cũ và ghi lại **đúng danh sách `COT`**, nên mọi cột ngoài danh sách bị
+**XOÁ HẲN** mỗi lần chạy: `fnMuaTG` `fnBanTG` `tdMuaTG` `tdBanTG` `fnRoomV` `fnRoomTong`
+`*TKL` — toàn bộ tầng VNDirect.
+
+**KHÔNG LỘ RA SUỐT NHIỀU THÁNG** vì thứ tự cũ chạy Vietstock TRƯỚC rồi `kho_vnd` ghi lại
+NGAY SAU, nên cột vừa bị xoá lại được đắp vào. Đảo thứ tự (VNDirect chạy trước để bảng lên
+web sớm) là nó phơi ra ngay: **khối ngoại toàn thị trường từ 2.268 tỷ về 0**, tự doanh về 0.
+Không lỗi nào báo — file vẫn hợp lệ, chỉ thiếu cột.
+
+Nay hàm đọc **mọi cột có độ dài bằng `d`** và ghi lại hợp của `COT` với chúng; cột lạ chỉ
+giữ khi còn số, để không hồi sinh mấy cột đã cố ý xoá bằng `tools/gon_kho.py`. Kèm theo:
+`neo_slcp` suy `sh` từ `shR` của Vietstock, mà nay không còn cào tầng giá Vietstock nữa —
+nên ô nào `neo_slcp` không suy ra được thì **giữ `sh` cũ** (do `kho_vnd_lo` ghi từ `ratios`
+của VNDirect), bằng không ô vốn hoá của phiên mới trống trơn.
+
+> **Luật chung: hàm ghi phải GIỮ NGUYÊN thứ nó không hiểu.** Dựng lại file từ một danh sách
+> cứng là đặt bom hẹn giờ cho người thêm cột sau này — mà quả bom đó im lặng tuyệt đối.
+
+### SỔ LỆNH: THÔI CÀO MỚI, DỮ LIỆU CŨ GIỮ NGUYÊN (22/08/2026)
+
+`qMua` `qBan` `nMua` `nBan` vẫn nằm đủ trong kho (1.529/1.529 mã) và mọi phép đo cũ vẫn
+chạy được trên đó — chỉ **thôi cào phiên mới**. Bật lại là chạy `kho_giaodich.py --sau`
+như xưa, không phải dựng lại gì.
+
+> Cái giá, biết trước và user chấp nhận: đây là tín hiệu **mạnh nhất** kho từng đo được
+> (rank IC +0,082, **t = +12,24** trên 248 phiên). Chuỗi sẽ đứng lại ở phiên 21/08/2026.
+
 ### THANH ĐỌC SỐ PHẢI CAO CỐ ĐỊNH — MỖI DÒNG PHỤ ĐÚNG MỘT DÒNG (22/08/2026)
 
 User: *"đưa chuột rà trên chart cứ bị giật lên giật xuống rất khó chịu, là do những dòng

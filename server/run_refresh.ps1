@@ -42,144 +42,153 @@ if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
 & $git fetch origin main 2>&1
 & $git reset --hard origin/main 2>&1
 
-if ((Get-Date).DayOfWeek -eq 'Monday') { & $py refresh_daily.py --full 2>&1 }
-else                                   { & $py refresh_daily.py 2>&1 }
+# ══ PHẦN PHÂN TÍCH CHẠY TRƯỚC — đẩy xong ở ~8 phút, không đợi cả dây cào ═════════════
+# Thứ tự cũ: refresh_daily -> kho_giaodich --sau -> kho_vnd -> --vg -> build_phantich, tức
+# bảng phiên nằm sau ~2 tiếng cào mà nó KHÔNG cần. Đo ngày 21/08: user mở /phantich lúc
+# 15:25 không thấy phiên hôm nay, và mãi 17:49 lượt chạy mới xong.
+#
+# BỎ HẲN BA BƯỚC CŨ:
+#   `kho_giaodich.py --sau`  -> tầng giá nay lấy VNDirect (trùng hoàn toàn, và đã chốt đè
+#                               bằng VNDirect từ 22/08), còn SỔ LỆNH thì user chốt BỎ:
+#                               *"giá khớp lệnh trung bình và tổng khối lượng khớp lệnh của
+#                               từng mã là quá đủ rồi"*. Sổ lệnh CŨ vẫn nằm nguyên trong
+#                               kho, chỉ thôi cào mới — bật lại là chạy `--sau` như xưa.
+#   `kho_vnd.py`             -> thay bằng `kho_vnd_lo.py`, gọi theo LÔ nhiều mã một lượt:
+#                               156 lượt thay vì 4.587, đo thật 2,6 phút thay vì ~45.
+#   `kho_giaodich.py --vg`   -> thay bằng `kho_vunggia.py`, nến 1 phút của VNDirect (host
+#                               trần 12 lượt/giây thay vì 4, và 1 lượt/mã thay vì 2).
 
-# KHO GIAO DỊCH (data/giaodich) — số chốt phiên + SỔ LỆNH KHI CHỐT PHIÊN, từ Vietstock.
-# Chạy Ở ĐÂY chứ không ở lượt 7:30: đây là số CHỐT SỔ, phải sau 15:00 mới có.
-# Hằng ngày chỉ xin trang 1 của mỗi mã (đã có sẵn 20 phiên giá + 30 phiên sổ lệnh) nên
-# Một lượt lấy TẤT CẢ cho mỗi mã: 2 trang giá (40 phiên) + 2 trang sổ lệnh + 2 trang
-# khối ngoại + 1-2 trang tự doanh ≈ 8 lượt/mã ≈ 12.000 lượt ≈ 50 phút ở 4 lượt/giây.
-# Số trang của ba tầng dòng tiền nằm ở `TRANG_LUONG` trong kho_giaodich.py — nâng
-# 21/08/2026 vì sổ lệnh trước đó chỉ xin 1 trang (30 phiên) còn khối ngoại 2 trang
-# (60 phiên), trong khi giá đã có 100. Kho mang tiếng "100 phiên" mà tầng hiếm nhất
-# lại mỏng nhất. ĐÂY KHÔNG PHẢI nới trần nhịp mạng — trần vẫn 4 lượt/giây, chỉ là lượt
-# chạy dài hơn. Muốn kéo sâu hơn nữa thì chạy TAY `--sau --trang N`, đừng đổi mặc định.
-# Gộp bốn thứ vào MỘT bước chứ không tách bốn bước: cả ba tầng sau đều cần `stockID`, mà
-# số đó chỉ có sau khi gọi thống kê giá — tách ra là phải gọi lại thống kê giá ba lần nữa.
-# Hỏng ở bước này KHÔNG được chặn lượt chạy — universe.json và kho nến mới là thứ bắt buộc.
-& $py tools\kho_giaodich.py --sau 2>&1
-if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
+# [1] VNDIRECT, BỐN TẦNG, GỌI THEO LÔ — giá + khối ngoại + tự doanh + số cổ phiếu.
+# `--sau 30`: mỗi ngày chỉ cần thêm MỘT phiên, 30 phiên là thừa đệm cho cả kỳ nghỉ Tết.
+& $py tools\kho_vnd_lo.py --sau 30 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_vnd_lo EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# DỰNG BẢNG PHIÊN NGAY SAU KHI CÓ SỐ CHỐT — đừng bắt nó xếp hàng sau cả dây cào (22/08/2026).
-# `build_phantich` tốn VÀI GIÂY và chỉ cần `data/giaodich` của bước ngay trên, nhưng nó vốn
-# đứng ở vị trí thứ 7, tức sau ~1 tiếng cào của `kho_vnd` và `--vg` — hai thứ nó KHÔNG cần
-# để dựng bảng giá. Đo thật 21/08/2026: user mở /phantich lúc 15:25 không thấy phiên hôm
-# nay, và sớm nhất cũng phải 17:20 mới có.
-# Chạy HAI LƯỢT: lượt này đưa bảng giá + thoả thuận lên sớm, lượt sau (vị trí cũ) lấp thêm
-# tầng dòng tiền của VNDirect. Ghi đè nhau vô hại — build_phantich TRỘN vào file phiên chứ
-# không xoá khối khác (xem bài học `phien_ghi`), và cột nào chưa có số thì bị bỏ theo từng
-# phiên nên client không thấy cột rỗng.
-& $py tools\build_phantich.py 2>&1
-if ($LASTEXITCODE -ne 0) { "build_phantich (luot som) EXIT $LASTEXITCODE - bo qua, chay tiep" }
+# [2] THOẢ THUẬN — riêng `pv`/`pval` vẫn phải hỏi Vietstock. Đối chiếu phiên 21/08: khớp
+# lệnh hai nguồn khớp tuyệt đối (16.939 vs 16.940 tỷ) nhưng thoả thuận thì VNDirect BỎ SÓT
+# 394/3.001 tỷ, dồn vào 7 mã (VHM 298,9 tỷ ghi thành 0). Không phải trễ mà là sót — VHM
+# phiên 20/08 đã chốt hẳn, VNDirect vẫn ghi 0. `--tuloc` chỉ hỏi 348 mã từng có thoả thuận
+# trong 30 phiên gần nhất (top 50 mã chiếm 99,8% giá trị), tức 1,4 phút thay vì 6,4.
+# ĐỨNG TRƯỚC build_phantich để bảng lên web đã đúng số ngay từ lượt đầu.
+& $py tools\kho_giaodich.py --tt --tuloc --trang 1 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_giaodich --tt EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# BỒI TỪ VNDIRECT — tầng giá + khối ngoại + tự doanh, sâu 1.000 phiên, ~45 phút.
-# Phải chạy SAU kho_giaodich (nó chỉ ĐIỀN CHỖ TRỐNG, giữ nguyên số Vietstock để còn đối
-# chiếu) và TRƯỚC build_phantich.
-# Đây nay là NGUỒN CHÍNH của tầng dòng tiền: Vietstock chặn cứng 1 năm, làm tròn mất lô
-# lẻ, và có 112 ô sai đơn vị ×1000. Xem mục Phân tích dữ liệu trong CLAUDE.md.
-& $py tools\kho_vnd.py 2>&1
-if ($LASTEXITCODE -ne 0) { "kho_vnd EXIT $LASTEXITCODE - bo qua, chay tiep" }
-
-# VÁ Ô SAI ĐƠN VỊ ×1000 — hai luật: đối chiếu VNDirect, và tự đối chiếu KL × giá.
-# KHÔNG gọi mạng, vài giây. Phải chạy SAU kho_vnd (luật 1 cần số của VNDirect).
+# [3] VÁ Ô SAI ĐƠN VỊ x1000 — hai luật: đối chiếu hai nguồn, và tự đối chiếu KL x gia.
+# KHÔNG gọi mạng, vài giây.
 & $py tools\va_donvi.py 2>&1
 if ($LASTEXITCODE -ne 0) { "va_donvi EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# CHỈ SỐ THEO PHIÊN (data/chiso.json) — VNINDEX/VN30/HNX/HNX30/UPCOM, điểm đóng cửa và
-# % thay đổi, sâu tới 2017. Đúng 5 lượt gọi, vài giây. `data/idx.json` của pipeline chỉ
-# giữ ~15 phiên và không có % thay đổi nên không thay được cái này.
+# [4] CHỈ SỐ THEO PHIÊN (VNINDEX/VN30/HNX/HNX30/UPCOM). Đúng 5 lượt gọi, vài giây.
 & $py tools\kho_giaodich.py --chiso 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich --chiso EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# VÙNG GIÁ KHỚP LỆNH của phiên vừa chốt — khối lượng gộp theo từng mức giá, kèm phân bổ
-# dòng tiền. 2 lượt/mã = ~3.060 lượt ≈ 13 phút. Chỉ làm PHIÊN HÔM NAY; muốn bồi lịch sử
-# thì chạy tay `--vg --tu ... --den ...` (kho vùng giá của nguồn chỉ có từ ~09/2025).
-& $py tools\kho_giaodich.py --vg 2>&1
-if ($LASTEXITCODE -ne 0) { "kho_giaodich --vg EXIT $LASTEXITCODE - bo qua, chay tiep" }
-
-# Gộp kho giao dịch thành MỘT file cho trang /phantich. Không gọi mạng, vài giây.
-# Phải chạy SAU kho_giaodich, và mỗi ngày — kho đổi mà file gộp không đổi thì trang
-# hiện số của hôm qua mà không có dấu hiệu gì.
+# [5] DỰNG BẢNG PHIÊN LẦN ĐẦU — vài giây. Tới đây trang /phantich đã có đủ giá, khối lượng,
+# giá trị, thoả thuận, khối ngoại, tự doanh, vốn hoá.
 & $py tools\build_phantich.py 2>&1
-if ($LASTEXITCODE -ne 0) { "build_phantich EXIT $LASTEXITCODE - bo qua, chay tiep" }
+if ($LASTEXITCODE -ne 0) { "build_phantich (luot 1) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# CHỨNG QUYỀN ĐANG LƯU HÀNH — ĐÚNG MỘT lượt gọi. Không có kho này thì con số tự doanh
-# trên trang phân tích đọc ra sai bản chất: đo phiên 20/08, **12/12 mã đầu bảng tự doanh
-# mua ròng đều đang có chứng quyền lưu hành** (HPG 33 cái, FPT 30, STB 28) — tức phần lớn
-# là phòng hộ bắt buộc chứ không phải đặt cược.
-& $py tools\kho_chungquyen.py 2>&1
-if ($LASTEXITCODE -ne 0) { "kho_chungquyen EXIT $LASTEXITCODE - bo qua, chay tiep" }
+# [6] VÙNG GIÁ KHỚP LỆNH từ nến 1 phút của VNDirect. Chỉ mã khớp >= 100 triệu (525/966 mã
+# phiên 21/08) — vùng giá của mã khớp vài chục triệu là hai ba cái cột, không nói được gì.
+& $py tools\kho_vunggia.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_vunggia EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# RỔ MÃ LỊCH SỬ gồm cả 443 mã ĐÃ RỜI SÀN — hai lượt gọi. `universe.json` là rổ HÔM NAY
-# nên mọi phép đo trên nó đều sống sót sai lệch theo hướng lạc quan (68 mã huỷ niêm yết
-# riêng năm 2026). Kho này chưa chữa được sai lệch, nhưng làm cho chỗ thiếu ĐẾM ĐƯỢC.
-& $py tools\kho_rolichsu.py 2>&1
-if ($LASTEXITCODE -ne 0) { "kho_rolichsu EXIT $LASTEXITCODE - bo qua, chay tiep" }
+# [7] KHỐI NGOẠI bản TÁCH khớp lệnh/thoả thuận + tỉ lệ sở hữu + room — VNDirect KHÔNG CÓ,
+# chỉ Vietstock mới có. `--tuloc` bỏ mã không có gì để tách: 1.529 -> 338 mã.
+& $py tools\kho_giaodich.py --nn --tuloc --trang 1 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_giaodich --nn EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# VÁ DẤU LƯU CHUYỂN TIỀN TỆ trong data/fin, lấy dấu từ data/finq. KHÔNG gọi mạng, vài
-# giây. Phải chạy MỖI NGÀY chứ không phải một lần: bước 5 của pipeline cào lại data/fin
-# từ 24hMoney — chính cái nguồn trả dấu sai — nên mã nào được cào lại hôm nay là dấu
-# hỏng lại hôm đó. Vá một lần rồi quên là kho tự hỏng lại mà không có gì báo.
-& $py tools\va_dau_fin.py 2>&1
-if ($LASTEXITCODE -ne 0) { "va_dau_fin EXIT $LASTEXITCODE - bo qua, chay tiep" }
+# [8] TỰ DOANH bản TÁCH. `--tuloc`: chỉ 195/1.529 mã có tự doanh trong 30 phiên gần nhất.
+& $py tools\kho_giaodich.py --td --tuloc --trang 1 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_giaodich --td EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# GIAO DỊCH NGƯỜI NỘI BỘ — đọc tiêu đề CBTT của HOSE/HNX đã có trong data/news, KHÔNG
-# gọi mạng. PHẢI CHẠY MỖI NGÀY và kho PHẢI GOM DỒN: data/news chỉ giữ tin trong 30 ngày,
-# bỏ một tuần là mất hẳn tuần đó, không lấy lại được.
-& $py tools\kho_noibo.py 2>&1
-if ($LASTEXITCODE -ne 0) { "kho_noibo EXIT $LASTEXITCODE - bo qua, chay tiep" }
+# [9] DỰNG BẢNG PHIÊN LẦN HAI — lấp thêm phần tách thoả thuận và tỉ lệ sở hữu.
+& $py tools\build_phantich.py 2>&1
+if ($LASTEXITCODE -ne 0) { "build_phantich (luot 2) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# KHO ĐẶC TRƯNG — vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, và chỉ
-# tiêu cơ bản GẮN THEO NGÀY CÔNG BỐ BCTC. Không gọi mạng, ~40 giây.
-# Phải chạy SAU build_phantich (không phụ thuộc, nhưng để thứ tự đọc xuôi) và TRƯỚC
-# quet_la — quet_la đọc thẳng kho này.
+# [10] KHO ĐẶC TRƯNG — không gọi mạng, ~40 giây. Phải TRƯỚC quet_la (quet_la đọc kho này).
 & $py tools\kho_dactrung.py 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_dactrung EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# QUÉT BẤT THƯỜNG + LÁT CẮT NGANG cho bộ lọc tự chọn, ghi thẳng vào file phiên.
-# Phải chạy SAU build_phantich (nó là bên dựng ra file phiên) và SAU kho_dactrung.
-# Ghi lại 100 phiên gần nhất chứ không riêng phiên hôm nay: kho đặc trưng đổi thì mọi
-# phiên đổi theo (đỉnh 52 tuần, cộng dồn 20 phiên, kỳ BCTC đang hiệu lực).
+# [11] QUÉT BẤT THƯỜNG + LÁT CẮT NGANG, ghi thẳng vào file phiên. Ghi lại 100 phiên gần
+# nhất chứ không riêng hôm nay: kho đặc trưng đổi thì mọi phiên đổi theo.
 & $py tools\quet_la.py --phien 100 2>&1
 if ($LASTEXITCODE -ne 0) { "quet_la EXIT $LASTEXITCODE - bo qua, chay tiep" }
 & $py tools\quet_la.py 2>&1
 if ($LASTEXITCODE -ne 0) { "quet_la (phien moi nhat) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# Tên commit theo NGÀY PHIÊN trong kho vừa dựng, không theo ngày chạy máy: lượt nào
-# vắt qua nửa đêm mà lấy ngày máy sẽ đặt tên phiên hôm sau cho dữ liệu hôm trước.
-$sess = & $py -c "import json;print(json.load(open('data/health.json'))['date'])" 2>$null
-if (-not $sess) { $sess = Get-Date -Format 'yyyy-MM-dd' }
-
-& $git add universe.json data/ assets/logo/ 2>&1
-& $git commit -m ("EOD $sess (server)") 2>&1
-
-# ĐẨY CÓ THỬ LẠI: mỗi vòng kéo lại rồi mới đẩy, vì remote có thể vừa nhích lên.
-# `-X theirs` = khi đụng nhau thì lấy BẢN VỪA CÀO (commit đang được replay), vì nó là số
-# liệu mới nhất và dựng lại từ nguồn; không có nó là rebase dừng giữa chừng, kẹt máy.
-$pushed = $false
-for ($i = 1; $i -le 5; $i++) {
-  & $git pull --rebase -X theirs origin main 2>&1
-  if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
-    Write-Output "Rebase vong $i van ket - huy de lan sau con chay duoc."
-    & $git rebase --abort 2>&1
+# ── ĐẨY: tách thành HÀM vì nay gọi HAI LẦN (22/08/2026) ──────────────────────────────
+# Lượt EOD trước đây đẩy đúng một lần ở cuối, nên trang phân tích phải đợi TRỌN cả dây cào
+# — kể cả `refresh_daily.py` (~29 phút) mà nó không hề cần. User chốt: *"tao không muốn
+# chốt phiên 15h15 mà tận 17h20 mới có đủ data"*.
+# Nay: dựng xong phần PHÂN TÍCH thì đẩy ngay (vòng 1, ~8 phút sau 15:15), rồi mới chạy
+# phần còn lại của trang và đẩy tiếp (vòng 2).
+# `-X theirs` = khi đụng nhau thì lấy BẢN VỪA CÀO (commit đang được replay); không có nó
+# là rebase dừng giữa chừng và kẹt máy cho những lượt sau.
+function PushKho($sess, $nhan) {
+  & $git add universe.json data/ assets/logo/ 2>&1
+  & $git commit -m ("EOD $sess $nhan") 2>&1
+  for ($i = 1; $i -le 5; $i++) {
+    & $git pull --rebase -X theirs origin main 2>&1
+    if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
+      Write-Output "Rebase vong $i van ket - huy de lan sau con chay duoc."
+      & $git rebase --abort 2>&1
+      Start-Sleep -Seconds 20
+      continue
+    }
+    & $git push origin main 2>&1
+    if ($LASTEXITCODE -eq 0) { Write-Output "DAY XONG $nhan (vong $i)"; return $true }
+    Write-Output "Day hong o vong $i, cho 20 giay roi thu lai..."
     Start-Sleep -Seconds 20
-    continue
   }
-  & $git push origin main 2>&1
-  if ($LASTEXITCODE -eq 0) { $pushed = $true; Write-Output "DAY XONG (vong $i)"; break }
-  Write-Output "Day hong o vong $i, cho 20 giay roi thu lai..."
-  Start-Sleep -Seconds 20
+  return $false
 }
 
-if (-not $pushed) {
-  # Kêu to: ghi cờ ra file riêng để lượt sau và người kiểm biết ngay là kho đang kẹt lại
-  $msg = "DAY THAT BAI sau 5 lan - phien $sess da cao xong nhung CON KET trong may nay. " +
+# Tên commit theo NGÀY PHIÊN trong kho vừa dựng, không theo ngày chạy máy: lượt nào vắt
+# qua nửa đêm mà lấy ngày máy sẽ đặt tên phiên hôm sau cho dữ liệu hôm trước.
+# Vòng 1 lấy từ `data/phantich.json` chứ KHÔNG từ `health.json` — health.json do
+# `refresh_daily.py` ghi, mà bước đó nay chạy SAU, nên lúc này nó vẫn là ngày hôm qua.
+$sess = & $py -c "import json;print(json.load(open('data/phantich.json'))['tt']['d'][-1])" 2>$null
+if (-not $sess) { $sess = Get-Date -Format 'yyyy-MM-dd' }
+$ok1 = PushKho $sess '(phan tich)'
+
+# ══ PHẦN CÒN LẠI CỦA TRANG — chạy SAU vì trang /phantich không cần chờ nó ══════════════
+# `refresh_daily.py` (~29 phút đo ngày 21/08) lo bảng giá, kho nến, BCTC, tin, hồ sơ, logo,
+# bộ lọc, tập đoàn, cổ tức. Nó cũng là bên ghi `data/health.json` — khoá mà lưới dự phòng
+# GitHub Actions đọc để biết phiên đã chốt chưa.
+if ((Get-Date).DayOfWeek -eq 'Monday') { & $py refresh_daily.py --full 2>&1 }
+else                                   { & $py refresh_daily.py 2>&1 }
+
+# CHỨNG QUYỀN ĐANG LƯU HÀNH — ĐÚNG MỘT lượt gọi. Không có kho này thì con số tự doanh trên
+# trang phân tích đọc ra sai bản chất: 12/12 mã đầu bảng tự doanh mua ròng đều có chứng
+# quyền lưu hành, tức phần lớn là phòng hộ bắt buộc chứ không phải đặt cược.
+& $py tools\kho_chungquyen.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_chungquyen EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# RỔ MÃ LỊCH SỬ gồm cả mã ĐÃ RỜI SÀN — hai lượt gọi. Chống sống sót sai lệch.
+& $py tools\kho_rolichsu.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_rolichsu EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# VÁ DẤU LƯU CHUYỂN TIỀN TỆ trong data/fin. KHÔNG gọi mạng. PHẢI CHẠY MỖI NGÀY và PHẢI SAU
+# refresh_daily: bước 5 của nó cào lại data/fin từ chính nguồn trả dấu sai, nên mã nào được
+# cào lại hôm nay là dấu hỏng lại hôm đó.
+& $py tools\va_dau_fin.py 2>&1
+if ($LASTEXITCODE -ne 0) { "va_dau_fin EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# GIAO DỊCH NGƯỜI NỘI BỘ — đọc tiêu đề CBTT trong data/news, KHÔNG gọi mạng. Phải chạy SAU
+# refresh_daily (bên cào tin) và kho PHẢI GOM DỒN: data/news chỉ giữ tin trong 30 ngày.
+& $py tools\kho_noibo.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_noibo EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+$sess2 = & $py -c "import json;print(json.load(open('data/health.json'))['date'])" 2>$null
+if (-not $sess2) { $sess2 = $sess }
+$ok2 = PushKho $sess2 '(server)'
+
+if (-not ($ok1 -and $ok2)) {
+  $msg = "DAY THAT BAI - phien $sess da cao xong nhung CON KET trong may nay. " +
          "Chay tay: cd C:\cpvn; git fetch origin main; git reset --hard origin/main"
   Write-Output $msg
   Set-Content -Path 'C:\cpvn\PUSH_FAILED.txt' -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm')  $msg"
 } elseif (Test-Path 'C:\cpvn\PUSH_FAILED.txt') {
-  Remove-Item 'C:\cpvn\PUSH_FAILED.txt' -Force    # đã thông, xoá cờ cũ
+  Remove-Item 'C:\cpvn\PUSH_FAILED.txt' -Force
 }
 
 Stop-Transcript | Out-Null
