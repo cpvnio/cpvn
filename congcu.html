@@ -653,6 +653,27 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkB{background:#d97706;height:3px;border-radius:2px}
 .ptleg i.pkC{background:#16a34a}
 .ptleg i.pkD{background:#dc2626}
+/* CHẤM SỰ KIỆN DOANH NGHIỆP — TRÒN, không vuông như mấy chấm chú thích khác, vì trên đồ
+   thị chúng cũng là hình tròn có chữ. Chấm chú thích mà khác hình với thứ nó chú thích thì
+   phải dóng bằng màu, mà bốn màu này (vàng / hồng cánh sen / xanh trời / xám) ở cạnh nhau
+   trong một dòng 11,5px là đủ để nhầm.
+   MÀU VIẾT CỨNG, CỐ Ý: đây đúng bốn màu `assets/chart.js` dùng ở trang cổ phiếu (xem khối
+   `PTSK`). Cùng một mã, cùng một sự kiện, hai trang phải ra cùng một màu — đổi ở đây mà
+   quên đổi bên kia là người xem phải học lại bảng màu ở mỗi trang. */
+.ptleg i.pkS1{background:#38bdf8;border-radius:50%}
+.ptleg i.pkS2{background:#eab308;border-radius:50%}
+.ptleg i.pkS3{background:#c026d3;border-radius:50%}
+.ptleg i.pkS4{background:#8a8a99;border-radius:50%}
+/* CÔNG TẮC BẬT/TẮT MỐC, đứng ngay trong dòng chú thích của đồ thị giá. Cùng lối với
+   `.ptseg` nhưng NHỎ HƠN và KHÔNG DÍNH NHAU: `.ptseg` là chọn MỘT trong nhiều (khung 100
+   / 300 / 600 / 1.000) nên các nút phải liền một khối; còn đây là hai công tắc ĐỘC LẬP,
+   bật cả hai hoặc tắt cả hai đều được — dính liền nhau thì đọc nhầm thành chọn một. */
+.ptsw{display:inline-flex;gap:5px;vertical-align:-2px;margin-right:2px}
+.ptsw button{background:var(--card);color:var(--faint);border:1px solid var(--line);
+  border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:inherit;line-height:1.5}
+.ptsw button:hover{color:var(--txt)}
+.ptsw button.on{background:var(--rose);color:#fff;border-color:var(--rose)}
 /* THANH ĐỌC SỐ của phiên đang chọn — dính lên đầu khi cuộn, vì lưới 11 đồ thị dài hơn
    một màn: rê chuột ở đồ thị cuối mà thanh số nằm trên cùng thì không thấy nó đổi.
    SÁU KHỐI CÓ THỨ BẬC, không phải 12 mẩu ngang vai (user chốt 22/08/2026). Mỗi khối:
@@ -685,6 +706,16 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptdcp b{font-weight:700;color:var(--txt)}
 .ptdcp b.up{color:var(--green)}.ptdcp b.dn{color:var(--red)}.ptdcp b.fl{color:var(--yellow)}
 .ptdn{color:var(--faint);font-weight:600}
+/* DẢI SỰ KIỆN của phiên đang chọn — nằm DƯỚI lưới ô số và chỉ hiện khi phiên đó có sự
+   kiện. Không chừa chỗ trống sẵn: phần lớn phiên không có sự kiện nào, để một dải rỗng
+   thường trực là đẩy cả lưới 11 đồ thị xuống thêm một hàng mà không được gì. */
+.ptdsk{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:9px;
+  border-top:1px solid var(--line);font-size:11.5px;color:var(--txt)}
+.ptdske{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.ptdske i{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:15px;height:15px;border-radius:50%;color:#fff;font-size:9px;font-weight:800;
+  font-style:normal}
+.ptdske em{color:var(--faint);font-style:normal;font-size:10.5px}
 .ptvg1 i{color:var(--faint);font-size:11.5px}
 /* Khổ hẹp: vùng giá và dòng tiền XẾP DỌC — hai cột trong 375px thì cột nào cũng bẹp */
 @media(max-width:760px){
@@ -1394,7 +1425,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260822v"></script>
+<script defer src="assets/mobi.js?v=20260822w"></script>
 </head>
 <body>
 
@@ -1451,6 +1482,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260822v"></script>
+<script src="assets/congcu.js?v=20260822w"></script>
 </body>
 </html>

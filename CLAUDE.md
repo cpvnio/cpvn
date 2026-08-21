@@ -1487,6 +1487,53 @@ lộ ra giá đóng cửa bịa (khớp vài lô, lệnh cuối kê trần).
 > hiệu cho lợi suất phiên sau: **rank IC −0,0031, t = −0,24** trên 99 phiên. Bằng không.
 > Nó mô tả cấu trúc phiên vừa rồi, không nói gì về phiên tới.
 
+### MỐC SỰ KIỆN TRÊN ĐỒ THỊ GIÁ CỦA TRANG MÃ (22/08/2026)
+
+User chốt: *"trên đồ thị giá cũng gắn thêm báo cáo tài chính, cổ tức (có thể bật tắt)"*.
+
+Nguồn là kho **`data/sukien/{MÃ}.json`** đã có sẵn (1.482 mã, 47.531 sự kiện) — `ptNapMa`
+gọi nó **song song** với `data/giaodich` bằng `Promise.all`, không nối đuôi. Sáu loại `k`:
+`bctc` 28.893 · `tien` 14.802 · `cp` 2.091 · `thuong` 872 · `quyenmua` 840 · `phathanh` 33.
+
+**BẢNG MÀU VÀ CHỮ CÁI PHẢI GIỐNG `assets/chart.js`** (trang cổ phiếu): `D` xanh trời
+`#38bdf8` cổ tức tiền · `C` vàng `#eab308` cổ phiếu/thưởng · `P` hồng sen `#c026d3`
+quyền mua/phát hành · `B` xám `#8a8a99` báo cáo tài chính. Cùng một mã, cùng một sự kiện,
+hai trang vẽ hai màu là bắt người xem học lại bảng màu ở mỗi trang. Sửa một bên thì sửa
+cả bên kia — hằng số nằm ở `PTSK` (`congcu.js`) và khối màu trong `veMocSK` (`chart.js`),
+cộng bốn chấm chú thích `.ptleg i.pkS1..pkS4` trong `congcu.html`.
+
+Bốn điểm đã cân nhắc, đừng làm ngược lại:
+
+① **NGÀY SỰ KIỆN LÀ NGÀY GIAO DỊCH KHÔNG HƯỞNG QUYỀN, KHÔNG PHẢI NGÀY TRẢ.** Đã kiểm
+   chứ không đoán: với `k:'tien'`, so `tc` của phiên đó với `c` phiên trước, phần hụt
+   xuống đúng bằng số tiền cổ tức ở **83,0%** trường hợp (837/1.008 mẫu, 400 mã đầu kho).
+   Nên gắn lên đồ thị giá là ĐÚNG CHỖ — nó giải thích mấy cú tụt giá không có tin gì.
+
+② **DÍNH SANG PHIÊN ĐẦU TIÊN TỪ NGÀY ĐÓ TRỞ ĐI, và chặn sự kiện trước đầu khung.**
+   331/4.380 mốc trong khung (7,6%) rơi vào ngày không có phiên — cuối tuần, nghỉ lễ,
+   hoặc mã ngừng giao dịch hôm đó. Bỏ luôn là mất 7,6% số mốc mà không ai biết. Nhưng dò
+   nhị phân "phiên đầu tiên ≥ ngày sự kiện" mà KHÔNG chặn `e.d < d[0]` thì mọi sự kiện
+   của 16 năm trước dồn hết vào chỉ số 0 — một chồng mốc dựng đứng ở mép trái. Khi mốc bị
+   dính sang ngày khác thì dải đọc số **in cả ngày gốc** (`(lịch ghi …)`).
+
+③ **DẢI RIÊNG TRÊN ĐỈNH (`padT` 6 → 22 khi có mốc), KHÔNG VẼ ĐÈ VÀO VÙNG DỮ LIỆU.**
+   Chấm 13px đặt trong vùng vẽ thì ở đồ thị cột nó ngồi trên đầu cột cao nhất, ở đồ thị
+   đường thì đè lên chính đường đang xem. Đồ thị không có mốc giữ nguyên `padT=6`.
+
+④ **DÍNH CHUỘT CHỈ TRONG DẢI MỐC (`my < padT`), ĐỪNG DÍNH THEO BÁN KÍNH Ở MỌI ĐỘ CAO.**
+   Bản đầu dính 8px ở mọi độ cao — ở khung 1.000 phiên mỗi phiên rộng 1,1px nên quanh mỗi
+   mốc có ~14 phiên KHÔNG rê tới được nữa; 20 mốc là mất gần 300/1.000 phiên, im lặng
+   hoàn toàn. Chặn theo chiều dọc thì được cả hai: bấm chấm là trúng chấm, rê trên thân
+   đồ thị vẫn đi từng phiên một (đã kiểm: −6…+6px cho ra 7 phiên khác nhau liên tiếp).
+
+Hai công tắc `PT.skH = {sk, bctc}` lưu ở `localStorage['cpvn_ptsk']`, đặt **ngay dưới đồ
+thị nó điều khiển** chứ không lên thanh đầu trang (thanh đầu đã có nút quay lại, tên mã,
+ô chọn khung, link sang trang cổ phiếu — thêm nữa là bốn nhóm điều khiển cho ba việc khác
+nhau đứng chung hàng). Dùng `.ptsw` (nút rời, bo tròn) chứ không `.ptseg` (khối liền):
+`.ptseg` là chọn MỘT trong nhiều, đây là hai công tắc độc lập.
+
+Chỉ gắn cho **`#mc1`** — đồ thị giá. Gắn cả 11 đồ thị là nhiễu.
+
 ### BỐN KHỐI ĐANG TẮT — `PT_HIEN` ở đầu module (22/08/2026)
 
 ```js

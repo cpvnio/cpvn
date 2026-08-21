@@ -755,6 +755,7 @@ const PT_HIEN={
 
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
+          skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}),
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -791,10 +792,7 @@ async function renderPhanTich(){
   /* Vào thẳng bằng `?sym=` (link từ trang cổ phiếu) thì NẠP LUÔN dữ liệu mã đó trước khi
      vẽ. Không nạp thì `ptVeMa` chạy với `PT.maD` rỗng và trang đứng im ở "Đang nạp…" —
      vì hàm gọi fetch là `ptMoMa`, mà đường vào bằng URL không đi qua nó. */
-  if(PT.ma&&!PT.maD){
-    try{ PT.maD=await (await fetch('data/giaodich/'+PT.ma+'.json')).json(); }
-    catch(e){ PT.maD={err:1}; }
-  }
+  if(PT.ma&&!PT.maD) await ptNapMa(PT.ma);
   el.innerHTML='<div id="ptBody"></div>';
   await ptVe();
 }
@@ -1510,7 +1508,12 @@ function ptVe1(cv, cfg){
   }
   const coP2=P2&&P2.length&&hi2>lo2;
   const nhanP=v=>cfg.phai&&cfg.phai.nhan?cfg.phai.nhan(v):num(v);
-  const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14, padT=6;
+  const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14;
+  /* CHỪA HẲN MỘT DẢI TRÊN ĐỈNH CHO MỐC SỰ KIỆN, đừng vẽ đè vào vùng dữ liệu. Chấm 6,5px
+     đặt trong vùng vẽ thì ở đồ thị cột nó ngồi ngay trên đầu cột cao nhất, còn ở đồ thị
+     đường nó đè lên chính đường đang xem — mà đây là đồ thị LỚN NHẤT của trang mã, chỗ
+     người ta nhìn lâu nhất. Đồ thị không có mốc thì giữ nguyên 6px như cũ, không mất chỗ. */
+  const padT=(cfg.sk&&cfg.sk.length)?22:6;
   const padR=coP2?Math.ceil(g.measureText(nhanP(hi2)).width)+8:0;
   const plotH=H-padB-padT, plotW=W-padL-padR;
   const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
@@ -1552,6 +1555,34 @@ function ptVe1(cv, cfg){
       g.stroke();
     }
   }
+  /* MỐC SỰ KIỆN DOANH NGHIỆP — vẽ SAU dữ liệu (để không bị cột nào đè lên) nhưng TRƯỚC
+     mốc phiên đang chọn (mốc phiên là thứ phải nổi nhất trên đồ thị).
+     Hai lớp: một VẠCH DỌC rất mờ chạy suốt vùng vẽ để dóng xuống đúng phiên, và một CHẤM
+     CÓ CHỮ nằm trên dải riêng ở đỉnh. Chỉ có chấm thì không dóng được xuống cột nào ở
+     khung 1.000 phiên; chỉ có vạch thì không biết vạch đó là sự kiện gì. */
+  if(cfg.sk&&cfg.sk.length){
+    const nen=dark?'#0f172a':'#ffffff';
+    for(const sk of cfg.sk){
+      const x=padL+sk.i*gap+gap/2;
+      g.strokeStyle=sk.mau; g.globalAlpha=.30; g.lineWidth=1;
+      g.beginPath(); g.moveTo(x+.5,padT); g.lineTo(x+.5,padT+plotH); g.stroke();
+      g.globalAlpha=1;
+      g.beginPath(); g.arc(x,11,6.5,0,7); g.fillStyle=sk.mau; g.fill();
+      g.strokeStyle=nen; g.lineWidth=1.5; g.stroke();
+      g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+      g.font='700 9px system-ui,sans-serif'; g.fillText(sk.chu,x,11.5);
+      /* NHIỀU SỰ KIỆN CÙNG MỘT PHIÊN thì ghi số lượng, đừng vẽ chồng mấy chấm lên nhau
+         thành một vệt. Chia cổ tức tiền và cổ tức cổ phiếu chốt CÙNG NGÀY là chuyện
+         thường; ở khung 1.000 phiên còn có cả BCTC rơi trùng ngày chốt quyền. */
+      if(sk.n>1){
+        g.beginPath(); g.arc(x+5.5,5.5,4.5,0,7); g.fillStyle=nen; g.fill();
+        g.strokeStyle=sk.mau; g.lineWidth=1; g.stroke();
+        g.fillStyle=sk.mau; g.font='800 8px system-ui,sans-serif';
+        g.fillText(String(sk.n),x+5.5,6);
+      }
+    }
+    g.font='10px system-ui,sans-serif';
+  }
   /* MỐC ĐÁNH DẤU DÙNG CHUNG cho cả sáu đồ thị. User chốt 20/08/2026: bấm một cột ở đồ thị
      khối lượng thì phải thấy luôn giá đóng cửa và % của chính phiên đó ở các đồ thị khác —
      sáu đồ thị mà mỗi cái một mốc riêng thì phải tự dóng bằng mắt qua trục ngày. */
@@ -1573,24 +1604,103 @@ function ptVe1(cv, cfg){
   g.fillText(cfg.d[0], padL, H-12);
   g.textAlign='right'; g.fillText(cfg.d[n-1], W-padR, H-12);
   if(cfg.chon){
+    /* MỘT HÀM DÒ CHỈ SỐ DUY NHẤT cho cả chuột lẫn chạm. Bản trước chép logic ra hai chỗ,
+       nên nhánh chạm không có phần dính mốc và trên điện thoại bấm vào chấm sự kiện là
+       trượt sang phiên bên cạnh. */
+    const chiX=(mx,my)=>{
+      /* DÍNH VÀO MỐC SỰ KIỆN — NHƯNG CHỈ KHI TRỎ NẰM TRONG DẢI MỐC Ở ĐỈNH (`my<padT`).
+         Vì sao phải chặn theo chiều DỌC: ở khung 1.000 phiên mỗi phiên rộng 1,1px, mà chấm
+         sự kiện to 13px. Dính theo bán kính 8px ở MỌI độ cao thì quanh mỗi mốc có ~14 phiên
+         KHÔNG rê tới được nữa — 20 mốc là mất gần 300/1.000 phiên, im lặng hoàn toàn: rê
+         qua vùng đó thấy số đứng im mà không hiểu vì sao.
+         Chặn theo dải thì được cả hai: bấm vào chấm là trúng chấm (chấm nằm trong dải), rê
+         trên thân đồ thị vẫn chọn đúng từng phiên một. */
+      if(cfg.sk&&cfg.sk.length&&my!=null&&my<padT){
+        let tot=null, gan=9;
+        for(const sk of cfg.sk){ const dx=Math.abs(padL+sk.i*gap+gap/2-mx);
+          if(dx<gan){ gan=dx; tot=sk.i; } }
+        if(tot!=null) return tot;
+      }
+      const i=Math.floor((mx-padL)/gap);
+      return (i>=0&&i<n)?i:null;
+    };
     const chi=e=>{ const r=cv.getBoundingClientRect();
-      const i=Math.floor((e.clientX-r.left-padL)/gap);
-      return (i>=0&&i<n)?i:null; };
+      return chiX(e.clientX-r.left, e.clientY-r.top); };
     cv.style.cursor='crosshair';
     cv.onmousemove=e=>{ const i=chi(e); if(i!=null) cfg.chon(i); };
     cv.onclick=e=>{ const i=chi(e); if(i!=null) cfg.chon(i,true); };
     cv.ontouchstart=cv.ontouchmove=e=>{ const t2=e.touches&&e.touches[0]; if(!t2) return;
-      const r=cv.getBoundingClientRect(), i=Math.floor((t2.clientX-r.left-padL)/gap);
-      if(i>=0&&i<n) cfg.chon(i); };
+      const r=cv.getBoundingClientRect();
+      const i=chiX(t2.clientX-r.left, t2.clientY-r.top);
+      if(i!=null) cfg.chon(i); };
   }
 }
 
+/* NẠP HAI KHO CÙNG MỘT LƯỢT. `data/sukien` là kho RỜI (mỗi mã một file, cào từ lịch sự
+   kiện của mã) nên phải gọi thêm một lượt mạng — nhưng gọi NỐI ĐUÔI thì trang mã đợi hai
+   lượt thay vì một, mà cả hai đều là file tĩnh trên cùng một máy chủ.
+   THIẾU SỰ KIỆN KHÔNG ĐƯỢC LÀM HỎNG TRANG: mã mới niêm yết chưa có file sự kiện, và đó là
+   chuyện bình thường chứ không phải lỗi — nhánh hỏng trả MẢNG RỖNG (đồ thị vẫn vẽ, chỉ
+   không có mốc), còn nhánh giao dịch mới trả `{err:1}` để `ptVeMa` in câu "chưa có trong
+   kho giao dịch". Hai loại thiếu khác nhau, đừng gộp làm một. */
+async function ptNapMa(sym){
+  const [g,e]=await Promise.all([
+    fetch('data/giaodich/'+sym+'.json').then(r=>r.ok?r.json():{err:1}).catch(()=>({err:1})),
+    fetch('data/sukien/'+sym+'.json').then(r=>r.ok?r.json():null).catch(()=>null)]);
+  PT.maD=g; PT.skD=(e&&e.ev)||[];
+}
+
 async function ptMoMa(sym){
-  PT.ma=sym; PT.maD=null; PT.maI=null; PT.ghim=null;
+  PT.ma=sym; PT.maD=null; PT.skD=null; PT.maI=null; PT.ghim=null;
   await ptVe();
-  try{ PT.maD=await (await fetch('data/giaodich/'+sym+'.json')).json(); }
-  catch(e){ PT.maD={err:1}; }
+  await ptNapMa(sym);
   ptVeMa();
+}
+
+/* ---- MỐC SỰ KIỆN DOANH NGHIỆP TRÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) ----------------
+   Bảng màu và CHỮ CÁI lấy ĐÚNG của `assets/chart.js` (trang cổ phiếu) — cùng một mã, cùng
+   một sự kiện, mà hai trang vẽ hai màu thì người xem phải học lại từ đầu ở mỗi trang.
+   Xếp hạng ưu tiên cũng vậy: một ngày có thể chốt nhiều quyền cùng lúc (SSI 17/08/2026),
+   khi đó lấy loại NẶNG nhất — chia cổ phiếu/thưởng đổi hẳn số cổ phiếu lưu hành nên đáng
+   chú ý hơn cổ tức tiền. */
+const PTSK={
+  cp:      {mau:'#eab308', chu:'C'},
+  thuong:  {mau:'#eab308', chu:'C'},
+  quyenmua:{mau:'#c026d3', chu:'P'},
+  phathanh:{mau:'#c026d3', chu:'P'},
+  tien:    {mau:'#38bdf8', chu:'D'},
+  bctc:    {mau:'#8a8a99', chu:'B'}
+};
+const PTSK_UT=['cp','thuong','quyenmua','phathanh','tien','bctc'];   // nặng -> nhẹ
+
+function ptSkMoc(d){
+  const ev=PT.skD;
+  if(!ev||!ev.length||!d.length) return null;
+  const gom=new Map();
+  for(const e of ev){
+    if(!e||!e.d||!PTSK[e.k]) continue;
+    if(e.k==='bctc'?!PT.skH.bctc:!PT.skH.sk) continue;
+    /* SỰ KIỆN TRƯỚC ĐẦU KHUNG PHẢI BỎ HẲN, đừng để nó dính vào phiên đầu tiên. Dò nhị
+       phân "phiên đầu tiên >= ngày sự kiện" mà không chặn thì MỌI sự kiện của 16 năm
+       trước đều rơi hết vào chỉ số 0 — một mã lâu đời sẽ có một chồng mốc dựng đứng ở mép
+       trái đồ thị, mà nhìn thì tưởng hôm đó doanh nghiệp làm 40 việc cùng lúc. */
+    if(e.d<d[0]) continue;
+    /* NGÀY SỰ KIỆN CÓ THỂ RƠI VÀO NGÀY KHÔNG CÓ PHIÊN — đo trên 300 mã: 331/4.380 mốc
+       nằm trong khung nhưng không trúng phiên nào (cuối tuần, nghỉ lễ, mã ngừng giao dịch
+       hôm đó). Bỏ đi là mất 7,6% số mốc mà không ai biết. Nên DÍNH SANG PHIÊN ĐẦU TIÊN TỪ
+       NGÀY ĐÓ TRỞ ĐI: giá điều chỉnh quyền ở đúng phiên ấy chứ không ở ngày lịch. */
+    let a=0, b=d.length-1, i=-1;
+    while(a<=b){ const m=(a+b)>>1; if(d[m]>=e.d){ i=m; b=m-1; } else a=m+1; }
+    if(i<0) continue;                       // sau phiên cuối khung
+    (gom.get(i)||gom.set(i,[]).get(i)).push(e);
+  }
+  if(!gom.size) return null;
+  const ra=[];
+  for(const [i,evs] of gom){
+    let k=PTSK_UT.find(u=>evs.some(e=>e.k===u));
+    ra.push({i:i, mau:PTSK[k].mau, chu:PTSK[k].chu, n:evs.length, evs:evs});
+  }
+  return ra.sort((x,y)=>x.i-y.i);
 }
 
 function ptVeMa(){
@@ -1672,6 +1782,7 @@ function ptVeMa(){
      nào đó" nên nhìn không ra. Đây đúng là chỗ trả lời câu "khối lượng khớp ở giá nào",
      mà nó lại trả lời về một ngày khác. */
   const ngVG=d[k];
+  const skM=ptSkMoc(d);
   /* PHẢI TỰ TẢI FILE PHIÊN CỦA NGÀY ĐANG GHIM. `PT.phien` chỉ chứa những phiên người
      dùng đã mở qua THANH CHỌN ở đầu trang — mà ghim một phiên trên đồ thị mã thì không
      đi qua đường đó, nên bộ đệm rỗng và đồ thị vùng giá báo "chưa cào" trong khi kho có
@@ -1711,7 +1822,24 @@ function ptVeMa(){
       +ptO('Giá và giá trị giao dịch mỗi phiên', 'mc1',
            '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'
            +' &nbsp;·&nbsp; <i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)'
-           +' &nbsp;—&nbsp; hai đường đọc ở <b>trục phải</b>', 1)
+           +' &nbsp;—&nbsp; hai đường đọc ở <b>trục phải</b>'
+           /* CÔNG TẮC ĐẶT NGAY DƯỚI ĐỒ THỊ NÓ ĐIỀU KHIỂN, không nhét lên thanh đầu trang:
+              thanh đầu đã có nút quay lại, tên mã, ô chọn khung và link sang trang cổ phiếu.
+              Thêm nút vào đó là bốn nhóm điều khiển cho ba việc khác nhau đứng chung một
+              hàng, mà hai nút này chỉ đổi MỘT đồ thị chứ không đổi cả trang.
+              CHÚ THÍCH CHỮ CÁI CHỈ HIỆN KHI NHÓM ĐÓ ĐANG BẬT — bày ra bốn dòng chú thích
+              cho mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
+           +'<br><span class="ptsw" id="ptSK">'
+             +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
+             +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
+           +'</span>'
+           +(skM?(
+              (PT.skH.sk?' &nbsp;<i class="pkS1"></i> <b>D</b> cổ tức tiền'
+                +' &nbsp;<i class="pkS2"></i> <b>C</b> cổ phiếu / thưởng'
+                +' &nbsp;<i class="pkS3"></i> <b>P</b> quyền mua / phát hành':'')
+              +(PT.skH.bctc?' &nbsp;<i class="pkS4"></i> <b>B</b> ra báo cáo tài chính':'')
+              +' &nbsp;·&nbsp; bấm vào chấm để ghim phiên đó')
+             :((PT.skH.sk||PT.skH.bctc)?' &nbsp;·&nbsp; khung này không có sự kiện nào':'')), 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
            +' <b>tổng</b> (gồm thoả thuận)')
@@ -1751,7 +1879,7 @@ function ptVeMa(){
   /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
      giữ nguyên chiều cao là ô thành hình chữ nhật dựng đứng, đường giá bị kéo dốc giả. */
   const C=(cfg)=>Object.assign({d,moc:PT.maI,ghim:PT.ghim!=null,chon,cao:136},cfg);
-  ptVe1($('#mc1'),C({cao:300,kieu:'bar',chong:1,
+  ptVe1($('#mc1'),C({cao:300,kieu:'bar',chong:1,sk:skM,
     series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
     nhan:v=>ptTien(v),
     phai:{nhan:num,series:[{v:c,mau:dark?'#f8fafc':'#0f172a'},
@@ -1845,7 +1973,8 @@ function ptVeMa(){
           +((ptt[k]/c[k]-1)>0?'+':'')+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá sàn · '
           +num(pv[k])+' cp'):'phiên này không có thoả thuận')
     +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul, sh[k]?num(sh[k])+' cp lưu hành':'')
-    +'</div>';
+    +'</div>'
+    +ptSkGhi(skM,k,d[k]);
   const bg=$('#ptBoGhim');
   if(bg) bg.onclick=()=>{ PT.ghim=null; ptVeMa(); };
   ptBindMa();
@@ -1868,6 +1997,28 @@ function ptBindMa(){
        đưa mốc về phiên cuối, đừng giữ một chỉ số cũ rồi để nó trỏ bừa. */
     PT.maI=null; PT.ghim=null;
     ptVeMa(); };
+  /* NHỚ LỰA CHỌN QUA CÁC LƯỢT MỞ TRANG. Ai đã tắt BCTC vì thấy rối thì lần sau mở mã khác
+     nó phải còn tắt — bắt tắt lại ở từng mã là công tắc vô dụng. */
+  const sk=$('#ptSK');
+  if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
+    PT.skH[n.dataset.k]=!PT.skH[n.dataset.k];
+    LS.set('cpvn_ptsk',PT.skH);
+    ptVeMa(); };
+}
+
+/* DẢI SỰ KIỆN CỦA PHIÊN ĐANG CHỌN. Cái chấm trên đồ thị chỉ nói được LOẠI sự kiện; tỉ lệ
+   chia, số tiền mỗi cổ phiếu, quý nào của báo cáo thì phải đọc bằng chữ. Nằm ngay trong
+   thanh đọc số nên rê tới đâu đọc tới đó, không phải mở thêm gì.
+   IN CẢ NGÀY GỐC KHI MỐC BỊ DÍNH SANG PHIÊN KHÁC (sự kiện rơi vào ngày nghỉ) — không nói
+   ra thì người ta đọc "chốt quyền 15/08" trong khi lịch ghi 14/08 và tưởng kho sai. */
+function ptSkGhi(moc,k,ngay){
+  if(!moc) return '';
+  const o=moc.find(x=>x.i===k);
+  if(!o) return '';
+  return '<div class="ptdsk">'+o.evs.map(e=>
+      '<span class="ptdske"><i style="background:'+PTSK[e.k].mau+'">'+PTSK[e.k].chu+'</i>'
+      +esc(e.gc||'')
+      +(e.d!==ngay?' <em>(lịch ghi '+esc(e.d)+')</em>':'')+'</span>').join('')+'</div>';
 }
 
 /* ---- BẢNG MÃ CỦA PHIÊN ĐANG CHỌN ---- */
