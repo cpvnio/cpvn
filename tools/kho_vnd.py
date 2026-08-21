@@ -58,6 +58,20 @@ SIZE = 4000                 # một lượt lấy trọn lịch sử; nguồn t�
 # 1.000 phiên là chỗ dừng user chọn, và nó vẫn dài gấp 10 lần kho cũ.
 SAU_TRAN = 1000
 
+# ĐÈ TẦNG GIÁ THAY VÌ CHỈ ĐIỀN CHỖ TRỐNG — bật bằng `--de` (user chốt 22/08/2026:
+# *"dữ liệu của Vietstock bây giờ chỉ dùng để đối chiếu … khá phiền phức khi dữ liệu bị
+# trộn chỗ này chỗ kia trong cùng 1 bảng"*).
+#
+# VÌ SAO CẦN: chế độ "chỉ điền chỗ trống" để lại một mảng MỘT CỘT HAI NGUỒN — Vietstock ở
+# ~100-300 phiên cuối, VNDirect ở phần còn lại. Hai nguồn khác nhau ở lô lẻ, ở cách làm
+# tròn, và Vietstock có 112 ô sai đơn vị ×1000; nên đọc dọc một cột là đi qua một ranh
+# giới vô hình không ai thấy. **Một cột phải có MỘT nguồn.**
+#
+# CỔNG AN TOÀN: chỉ đè khi trung vị lệch trên phần chồng nhau ≤ `LECH_TOI`. Lệch hơn nghĩa
+# là hệ số đơn vị dò sai hoặc nguồn trả nhầm mã — giữ nguyên số cũ và báo tên mã ra.
+DE = "--de" in sys.argv
+LECH_TOI = 0.05
+
 # stock_prices -> tên trường trong kho. CÙNG NGHĨA với Vietstock:
 # nmValue/nmVolume = khớp lệnh, ptValue/ptVolume = thoả thuận, average = giá bình quân.
 GIA = {"basicPrice": "tc", "open": "o", "high": "h", "low": "l", "close": "c",
@@ -95,6 +109,11 @@ def he_so(rows, cu, d_cu):
         if abs(m / hs - 1) <= 0.02:
             return hs
     return None
+
+
+def _tv(a):
+    a = sorted(a)
+    return a[len(a) // 2] if a else None
 
 
 def mot(sym, ghi=True):
@@ -165,6 +184,22 @@ def mot(sym, ghi=True):
             bang.setdefault(d, {}).update(o)
             kq["td"] += 1
 
+    # ── CỔNG AN TOÀN CHO CHẾ ĐỘ ĐÈ: đo lệch trên phần chồng nhau TRƯỚC khi thay số ──
+    kq["de"] = False
+    if DE and bang:
+        lech = []
+        for k in ("c", "mval"):
+            cv = cu.get(k) or []
+            for d0, o0 in bang.items():
+                i = d_cu.get(d0)
+                if i is not None and i < len(cv) and cv[i] and o0.get(k):
+                    lech.append(abs(o0[k] / cv[i] - 1))
+        tv = _tv(lech)
+        kq["lech"] = tv
+        kq["de"] = (tv is None) or (tv <= LECH_TOI)
+        if lech and not kq["de"]:
+            kq["bo_de"] = True
+
     if not bang:
         return kq
     if not ghi:
@@ -187,11 +222,15 @@ def mot(sym, ghi=True):
     for k in sorted(cot):
         cv = cu.get(k) or []
         arr = []
+        de_cot = kq.get("de") and k in GIA.values()   # CHỈ đè tầng giá, không đụng tầng khác
         for d in d_moi:
             i = d_cu.get(d)
             v = cv[i] if (i is not None and i < len(cv)) else None
-            if v is None:
-                v = (bang.get(d) or {}).get(k)      # chỉ điền chỗ trống
+            m = (bang.get(d) or {}).get(k)
+            if de_cot and m is not None:
+                v = m                                # VNDirect thắng
+            elif v is None:
+                v = m                                # chỉ điền chỗ trống
             arr.append(v)
         # BỎ CỘT RỖNG HOÀN TOÀN. Mảng 1.000 chữ "null" tốn ~5 KB, mà kho có tới ~30 cột
         # thưa (sổ lệnh chỉ 249 phiên, tự doanh phần lớn mã KHÔNG CÓ) — để nguyên là mỗi
@@ -223,7 +262,7 @@ def main():
 
     t0 = time.time()
     ok = bo = 0
-    bo_gia = []
+    bo_gia, bo_de, lechs = [], [], []
     tong = {"gia": 0, "fn": 0, "td": 0}
     for i, m in enumerate(ma):
         r = mot(m, ghi=not thu)
@@ -235,6 +274,10 @@ def main():
             tong[k] += r[k]
         if r["bo_gia"]:
             bo_gia.append(m)
+        if r.get("bo_de"):
+            bo_de.append(m)
+        if r.get("lech") is not None:
+            lechs.append(r["lech"])
         if (i + 1) % 200 == 0:
             print("    …%d/%d  %.0fs" % (i + 1, len(ma), time.time() - t0), flush=True)
 
@@ -244,6 +287,13 @@ def main():
     print("  dòng tự doanh  : {:,}".format(tong["td"]))
     print("  không dò được đơn vị giá (BỎ tầng giá): %d %s"
           % (len(bo_gia), bo_gia[:8]))
+    if DE:
+        lechs.sort()
+        print("  CHẾ ĐỘ ĐÈ — lệch với số cũ trên phần chồng nhau:")
+        if lechs:
+            print("    trung vị {:.4%} · p90 {:.4%} · p99 {:.4%}".format(
+                lechs[len(lechs) // 2], lechs[int(len(lechs) * .9)], lechs[int(len(lechs) * .99)]))
+        print("    mã BỎ ĐÈ vì lệch quá {:.0%}: {} {}".format(LECH_TOI, len(bo_de), bo_de[:8]))
     print("  %.0f giây" % (time.time() - t0))
     if thu:
         print("  (--thu: 30 mã, KHÔNG ghi)")
