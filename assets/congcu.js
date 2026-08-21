@@ -755,7 +755,7 @@ const PT_HIEN={
 
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
-          skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}),
+          skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -1464,6 +1464,44 @@ function ptDiemSang(r){
 
    BỘ VẼ DÙNG CHUNG `ptVe1()` cho mọi đồ thị nhỏ. Sáu đồ thị mà mỗi cái một đoạn canvas
    riêng là sáu chỗ phải sửa mỗi lần đổi bảng màu hay đổi cách chia trục. */
+/* HỘP THÔNG TIN CỦA MỐC SỰ KIỆN. Vẽ thẳng lên canvas — xem chú thích ở chỗ gọi.
+   DÒNG ĐẦU LÀ NGÀY PHIÊN, bắt buộc: hộp có thể bật lên cho một mốc KHÁC phiên đang ghim
+   (rê chuột qua chấm khác trong lúc đang ghim), không ghi ngày thì đọc số ở thanh trên
+   rồi đọc hộp ở dưới là hai phiên khác nhau mà tưởng một. */
+function veHopSK(g, hit, ngay, W, H, dark){
+  const evs=hit.sk.evs;
+  const dong=evs.map(e=>({chu:PTSK[e.k].chu, mau:PTSK[e.k].mau,
+    t:(e.gc||'')+(e.d!==ngay?'  (lịch ghi '+e.d+')':'')})).filter(z=>z.t);
+  if(!dong.length) return;
+  const RONG=340, DH=17;
+  g.font='600 11px system-ui,sans-serif'; g.textAlign='left'; g.textBaseline='middle';
+  const cat=t=>{ if(g.measureText(t).width<=RONG) return t;
+    let a=t; while(a.length>4&&g.measureText(a+'…').width>RONG) a=a.slice(0,-1); return a+'…'; };
+  dong.forEach(z=>{ z.t=cat(z.t); });
+  const bw=Math.max(g.measureText(ngay).width+10,
+                    ...dong.map(z=>g.measureText(z.t).width+22))+18;
+  const bh=dong.length*DH+DH+12;
+  let bx=hit.x+13, by=hit.y-bh-11;
+  if(bx+bw>W-4) bx=hit.x-bw-13;          // sát mép phải -> lật sang trái
+  if(bx<4) bx=4;
+  if(by<4) by=Math.min(hit.y+13,H-bh-4); // sát mép trên -> lật xuống dưới
+  g.fillStyle=dark?'rgba(17,20,28,.985)':'rgba(255,255,255,.985)';
+  g.strokeStyle=dark?'rgba(255,255,255,.20)':'rgba(0,0,0,.16)'; g.lineWidth=1;
+  if(g.roundRect){ g.beginPath(); g.roundRect(bx,by,bw,bh,9); g.fill(); g.stroke(); }
+  else { g.fillRect(bx,by,bw,bh); g.strokeRect(bx,by,bw,bh); }
+  g.fillStyle=dark?'#94a3b8':'#64748b'; g.font='700 11px system-ui,sans-serif';
+  g.fillText(ngay, bx+10, by+DH/2+5);
+  dong.forEach((z,i)=>{
+    const yy=by+DH+DH/2+5+i*DH;
+    g.beginPath(); g.arc(bx+17,yy,6,0,7); g.fillStyle=z.mau; g.fill();
+    g.fillStyle='#fff'; g.textAlign='center'; g.font='800 8px system-ui,sans-serif';
+    g.fillText(z.chu,bx+17,yy+.5);
+    g.textAlign='left'; g.font='600 11px system-ui,sans-serif';
+    g.fillStyle=dark?'#e2e8f0':'#0f172a'; g.fillText(z.t,bx+28,yy);
+  });
+  g.font='10px system-ui,sans-serif'; g.textBaseline='middle';
+}
+
 function ptVe1(cv, cfg){
   if(!cv) return;
   const dpr=devicePixelRatio||1, W=cv.clientWidth||600, H=cfg.cao||150;
@@ -1509,11 +1547,12 @@ function ptVe1(cv, cfg){
   const coP2=P2&&P2.length&&hi2>lo2;
   const nhanP=v=>cfg.phai&&cfg.phai.nhan?cfg.phai.nhan(v):num(v);
   const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14;
-  /* CHỪA HẲN MỘT DẢI TRÊN ĐỈNH CHO MỐC SỰ KIỆN, đừng vẽ đè vào vùng dữ liệu. Chấm 6,5px
-     đặt trong vùng vẽ thì ở đồ thị cột nó ngồi ngay trên đầu cột cao nhất, còn ở đồ thị
-     đường nó đè lên chính đường đang xem — mà đây là đồ thị LỚN NHẤT của trang mã, chỗ
-     người ta nhìn lâu nhất. Đồ thị không có mốc thì giữ nguyên 6px như cũ, không mất chỗ. */
-  const padT=(cfg.sk&&cfg.sk.length)?22:6;
+  /* CHỪA THÊM CHỖ TRÊN ĐỈNH KHI CÓ MỐC SỰ KIỆN — nhưng chỉ 14px, đủ để cái chấm bám trên
+     đường giá ở vùng đỉnh không bị cắt mất nửa. Bản đầu chừa 22px và cho mốc nằm THÀNH
+     MỘT DẢI RIÊNG trên đỉnh; user chốt 22/08/2026: *"tao muốn nó nằm trên đường chart"* —
+     dải riêng thì phải dóng mắt từ chấm xuống đường giá mới biết hôm đó giá bao nhiêu, mà
+     đó đúng là câu hỏi duy nhất người ta hỏi khi thấy một mốc cổ tức. */
+  const padT=(cfg.sk&&cfg.sk.length)?14:6;
   const padR=coP2?Math.ceil(g.measureText(nhanP(hi2)).width)+8:0;
   const plotH=H-padB-padT, plotW=W-padL-padR;
   const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
@@ -1560,26 +1599,51 @@ function ptVe1(cv, cfg){
      Hai lớp: một VẠCH DỌC rất mờ chạy suốt vùng vẽ để dóng xuống đúng phiên, và một CHẤM
      CÓ CHỮ nằm trên dải riêng ở đỉnh. Chỉ có chấm thì không dóng được xuống cột nào ở
      khung 1.000 phiên; chỉ có vạch thì không biết vạch đó là sự kiện gì. */
+  const skHit=[];
   if(cfg.sk&&cfg.sk.length){
     const nen=dark?'#0f172a':'#ffffff';
+    /* MỐC BÁM VÀO CHÍNH ĐƯỜNG NÓ NÓI VỀ. Ưu tiên chuỗi của TRỤC PHẢI nếu có (ở đồ thị gộp
+       thì trục phải là đường GIÁ — cổ tức và báo cáo là chuyện của giá, không phải của
+       cột tiền); không có trục phải thì bám chuỗi trái, và đồ thị chồng cột thì bám ĐỈNH
+       CỘT chứ không bám chuỗi đầu tiên. */
+    const sTruc=coP2?P2[0]:S[0];
+    const y2m=v=>padT+plotH-(v-lo2)/(hi2-lo2)*plotH;
+    const neo=i=>{
+      if(coP2){ const v=P2[0].v[i]; return v==null||isNaN(v)?null:y2m(v); }
+      const v=cfg.chong?S.reduce((a,x)=>a+(x.v[i]||0),0):sTruc.v[i];
+      return (v==null||isNaN(v))?null:y(v);
+    };
+    const yTran=padT+9, yDay=padT+plotH-9;
     for(const sk of cfg.sk){
       const x=padL+sk.i*gap+gap/2;
-      g.strokeStyle=sk.mau; g.globalAlpha=.30; g.lineWidth=1;
-      g.beginPath(); g.moveTo(x+.5,padT); g.lineTo(x+.5,padT+plotH); g.stroke();
-      g.globalAlpha=1;
-      g.beginPath(); g.arc(x,11,6.5,0,7); g.fillStyle=sk.mau; g.fill();
+      /* ĐẶT TRÊN ĐIỂM GIÁ 13px, HẾT CHỖ THÌ LẬT XUỐNG DƯỚI — cùng luật với `assets/chart.js`.
+         Chỉ ghì mà không lật thì mốc ở vùng đỉnh dán đè lên đúng đoạn đường đang muốn xem.
+         Phiên không có giá (mã ngừng giao dịch) thì rơi về đáy vùng vẽ, đừng bỏ mốc. */
+      const yn=neo(sk.i);
+      let yMoc=yDay;
+      if(yn!=null){ const tren=yn-13; yMoc=tren>=yTran?tren:yn+13;
+        yMoc=Math.max(yTran,Math.min(yDay,yMoc)); }
+      /* VẠCH DỌC chỉ chạy TỪ CHẤM XUỐNG ĐƯỜNG GIÁ, không chạy suốt vùng vẽ nữa: mốc đã
+         nằm trên đường rồi thì vạch dài chỉ là hai chục sợi kẻ dọc cắt ngang đồ thị. */
+      if(yn!=null&&Math.abs(yn-yMoc)>7){
+        g.strokeStyle=sk.mau; g.globalAlpha=.45; g.lineWidth=1;
+        g.beginPath(); g.moveTo(x+.5,Math.min(yn,yMoc)+6); g.lineTo(x+.5,Math.max(yn,yMoc)-6);
+        g.stroke(); g.globalAlpha=1;
+      }
+      g.beginPath(); g.arc(x,yMoc,6.5,0,7); g.fillStyle=sk.mau; g.fill();
       g.strokeStyle=nen; g.lineWidth=1.5; g.stroke();
       g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
-      g.font='700 9px system-ui,sans-serif'; g.fillText(sk.chu,x,11.5);
+      g.font='700 9px system-ui,sans-serif'; g.fillText(sk.chu,x,yMoc+.5);
       /* NHIỀU SỰ KIỆN CÙNG MỘT PHIÊN thì ghi số lượng, đừng vẽ chồng mấy chấm lên nhau
          thành một vệt. Chia cổ tức tiền và cổ tức cổ phiếu chốt CÙNG NGÀY là chuyện
          thường; ở khung 1.000 phiên còn có cả BCTC rơi trùng ngày chốt quyền. */
       if(sk.n>1){
-        g.beginPath(); g.arc(x+5.5,5.5,4.5,0,7); g.fillStyle=nen; g.fill();
+        g.beginPath(); g.arc(x+5.5,yMoc-5.5,4.5,0,7); g.fillStyle=nen; g.fill();
         g.strokeStyle=sk.mau; g.lineWidth=1; g.stroke();
         g.fillStyle=sk.mau; g.font='800 8px system-ui,sans-serif';
-        g.fillText(String(sk.n),x+5.5,6);
+        g.fillText(String(sk.n),x+5.5,yMoc-5);
       }
+      skHit.push({x:x,y:yMoc,r:9,i:sk.i,sk:sk});
     }
     g.font='10px system-ui,sans-serif';
   }
@@ -1600,6 +1664,14 @@ function ptVe1(cv, cfg){
       g.beginPath(); g.moveTo(x-4,padT); g.lineTo(x+4,padT); g.lineTo(x,padT+5); g.fill();
     }
   }
+  /* HỘP THÔNG TIN CỦA MỐC ĐANG MỞ — vẽ SAU CÙNG để không chấm nào, cột nào đè lên.
+     Vẽ THẲNG LÊN CANVAS chứ không dựng thẻ HTML: toạ độ mốc đổi theo khung (100/300/600/
+     1.000 phiên) và theo bề ngang cửa sổ, gắn thẻ HTML là phải đồng bộ vị trí mỗi lần vẽ
+     lại. Cùng cách `assets/chart.js` làm ở trang cổ phiếu. */
+  if(cfg.skMo!=null&&skHit.length){
+    const h=skHit.find(z=>z.i===cfg.skMo);
+    if(h) veHopSK(g,h,cfg.d[h.i],W,H,dark);
+  }
   g.fillStyle=ct; g.textAlign='left'; g.textBaseline='top';
   g.fillText(cfg.d[0], padL, H-12);
   g.textAlign='right'; g.fillText(cfg.d[n-1], W-padR, H-12);
@@ -1607,32 +1679,37 @@ function ptVe1(cv, cfg){
     /* MỘT HÀM DÒ CHỈ SỐ DUY NHẤT cho cả chuột lẫn chạm. Bản trước chép logic ra hai chỗ,
        nên nhánh chạm không có phần dính mốc và trên điện thoại bấm vào chấm sự kiện là
        trượt sang phiên bên cạnh. */
-    const chiX=(mx,my)=>{
-      /* DÍNH VÀO MỐC SỰ KIỆN — NHƯNG CHỈ KHI TRỎ NẰM TRONG DẢI MỐC Ở ĐỈNH (`my<padT`).
-         Vì sao phải chặn theo chiều DỌC: ở khung 1.000 phiên mỗi phiên rộng 1,1px, mà chấm
-         sự kiện to 13px. Dính theo bán kính 8px ở MỌI độ cao thì quanh mỗi mốc có ~14 phiên
-         KHÔNG rê tới được nữa — 20 mốc là mất gần 300/1.000 phiên, im lặng hoàn toàn: rê
-         qua vùng đó thấy số đứng im mà không hiểu vì sao.
-         Chặn theo dải thì được cả hai: bấm vào chấm là trúng chấm (chấm nằm trong dải), rê
-         trên thân đồ thị vẫn chọn đúng từng phiên một. */
-      if(cfg.sk&&cfg.sk.length&&my!=null&&my<padT){
-        let tot=null, gan=9;
-        for(const sk of cfg.sk){ const dx=Math.abs(padL+sk.i*gap+gap/2-mx);
-          if(dx<gan){ gan=dx; tot=sk.i; } }
-        if(tot!=null) return tot;
-      }
-      const i=Math.floor((mx-padL)/gap);
-      return (i>=0&&i<n)?i:null;
+    /* DÒ TRÚNG MỐC THEO CẢ HAI CHIỀU, vào ĐÚNG CÁI CHẤM (bán kính 9px quanh tâm).
+       Bản trước dò một chiều rồi chặn theo dải trên đỉnh; nay mốc bám đường giá nên không
+       còn dải nào để chặn — mà dò một chiều thì ở khung 1.000 phiên (mỗi phiên 1,1px) sẽ
+       nuốt ~14 phiên quanh mỗi mốc, 20 mốc là mất gần 300/1.000 phiên không rê tới được.
+       Dò hai chiều chỉ chiếm đúng cái đĩa 18px, rê ở độ cao khác vẫn đi từng phiên một. */
+    const doMoc=(mx,my)=>{
+      for(const h of skHit)
+        if(Math.abs(mx-h.x)<=h.r&&Math.abs(my-h.y)<=h.r) return h.i;
+      return null;
     };
-    const chi=e=>{ const r=cv.getBoundingClientRect();
-      return chiX(e.clientX-r.left, e.clientY-r.top); };
+    const chiX=mx=>{ const i=Math.floor((mx-padL)/gap); return (i>=0&&i<n)?i:null; };
+    const xy=e=>{ const r=cv.getBoundingClientRect();
+      return [e.clientX-r.left, e.clientY-r.top]; };
     cv.style.cursor='crosshair';
-    cv.onmousemove=e=>{ const i=chi(e); if(i!=null) cfg.chon(i); };
-    cv.onclick=e=>{ const i=chi(e); if(i!=null) cfg.chon(i,true); };
+    cv.onmousemove=e=>{ const [mx,my]=xy(e);
+      const m=doMoc(mx,my);
+      cv.style.cursor=m!=null?'pointer':'crosshair';
+      if(m!=null){ cfg.chon(m,false,true); return; }
+      const i=chiX(mx); if(i!=null) cfg.chon(i,false,false); };
+    cv.onclick=e=>{ const [mx,my]=xy(e);
+      const m=doMoc(mx,my);
+      if(m!=null){ cfg.chon(m,true,true); return; }
+      const i=chiX(mx); if(i!=null) cfg.chon(i,true,false); };
+    /* CHẠM: ngón tay không có trạng thái "rê qua", nên chạm trúng chấm phải mở hộp LUÔN
+       chứ không đợi bấm lần hai. */
     cv.ontouchstart=cv.ontouchmove=e=>{ const t2=e.touches&&e.touches[0]; if(!t2) return;
       const r=cv.getBoundingClientRect();
-      const i=chiX(t2.clientX-r.left, t2.clientY-r.top);
-      if(i!=null) cfg.chon(i); };
+      const mx=t2.clientX-r.left, my=t2.clientY-r.top;
+      const m=doMoc(mx,my);
+      if(m!=null){ cfg.chon(m,false,true); return; }
+      const i=chiX(mx); if(i!=null) cfg.chon(i,false,false); };
   }
 }
 
@@ -1651,7 +1728,7 @@ async function ptNapMa(sym){
 }
 
 async function ptMoMa(sym){
-  PT.ma=sym; PT.maD=null; PT.skD=null; PT.maI=null; PT.ghim=null;
+  PT.ma=sym; PT.maD=null; PT.skD=null; PT.maI=null; PT.ghim=null; PT.skMo=null;
   await ptVe();
   await ptNapMa(sym);
   ptVeMa();
@@ -1838,7 +1915,7 @@ function ptVeMa(){
                 +' &nbsp;<i class="pkS2"></i> <b>C</b> cổ phiếu / thưởng'
                 +' &nbsp;<i class="pkS3"></i> <b>P</b> quyền mua / phát hành':'')
               +(PT.skH.bctc?' &nbsp;<i class="pkS4"></i> <b>B</b> ra báo cáo tài chính':'')
-              +' &nbsp;·&nbsp; bấm vào chấm để ghim phiên đó')
+              +' &nbsp;·&nbsp; rê hoặc bấm vào chấm để xem chi tiết')
              :((PT.skH.sk||PT.skH.bctc)?' &nbsp;·&nbsp; khung này không có sự kiện nào':'')), 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
@@ -1870,16 +1947,23 @@ function ptVeMa(){
      ở dòng đầu. Tức nút bấm có tồn tại nhưng KHÔNG BAO GIỜ làm gì, và mốc thì luôn chạy
      theo chuột: nhấc tay ra là mất phiên vừa xem.
      Nay: bấm = ghim/bỏ ghim; đã ghim thì rê chuột không đổi phiên nữa. */
-  const chon=(i,bam)=>{
-    if(bam){ PT.ghim=(PT.ghim===i)?null:i; PT.maI=i; ptVeMa(); return; }
-    if(PT.ghim!=null) return;
-    if(i===PT.maI) return;
-    PT.maI=i; ptVeMa();
+  /* Tham số thứ ba `moc` = con trỏ đang nằm TRÊN CHẤM SỰ KIỆN. Cần nó vì hộp thông tin
+     chỉ được bật khi trỏ vào đúng cái chấm — bật theo "phiên đang chọn có sự kiện không"
+     thì quét chuột ngang đồ thị là hộp nhấp nháy hai chục lần.
+     ĐANG GHIM VẪN CHO XEM HỘP của mốc khác: ghim là để giữ SỐ của phiên đang xem đứng
+     yên, không phải để cấm hỏi "cái chấm kia là gì". Hộp tự ghi ngày của chính nó nên
+     không lẫn với phiên đang ghim. */
+  const chon=(i,bam,moc)=>{
+    const m=moc?i:null;
+    if(bam){ PT.ghim=(PT.ghim===i)?null:i; PT.maI=i; PT.skMo=m; ptVeMa(); return; }
+    if(PT.ghim!=null){ if(m!==PT.skMo){ PT.skMo=m; ptVeMa(); } return; }
+    if(i===PT.maI&&m===PT.skMo) return;
+    PT.maI=i; PT.skMo=m; ptVeMa();
   };
   /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
      giữ nguyên chiều cao là ô thành hình chữ nhật dựng đứng, đường giá bị kéo dốc giả. */
   const C=(cfg)=>Object.assign({d,moc:PT.maI,ghim:PT.ghim!=null,chon,cao:136},cfg);
-  ptVe1($('#mc1'),C({cao:300,kieu:'bar',chong:1,sk:skM,
+  ptVe1($('#mc1'),C({cao:300,kieu:'bar',chong:1,sk:skM,skMo:PT.skMo,
     series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
     nhan:v=>ptTien(v),
     phai:{nhan:num,series:[{v:c,mau:dark?'#f8fafc':'#0f172a'},
@@ -1995,7 +2079,7 @@ function ptBindMa(){
     PT.nMa=+n.dataset.n;
     /* ĐỔI KHUNG LÀ MỌI CHỈ SỐ DỊCH — mốc đang ghim trỏ vào phiên khác hẳn. Thả ghim và
        đưa mốc về phiên cuối, đừng giữ một chỉ số cũ rồi để nó trỏ bừa. */
-    PT.maI=null; PT.ghim=null;
+    PT.maI=null; PT.ghim=null; PT.skMo=null;
     ptVeMa(); };
   /* NHỚ LỰA CHỌN QUA CÁC LƯỢT MỞ TRANG. Ai đã tắt BCTC vì thấy rối thì lần sau mở mã khác
      nó phải còn tắt — bắt tắt lại ở từng mã là công tắc vô dụng. */

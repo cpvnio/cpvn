@@ -1516,15 +1516,29 @@ Bốn điểm đã cân nhắc, đừng làm ngược lại:
    của 16 năm trước dồn hết vào chỉ số 0 — một chồng mốc dựng đứng ở mép trái. Khi mốc bị
    dính sang ngày khác thì dải đọc số **in cả ngày gốc** (`(lịch ghi …)`).
 
-③ **DẢI RIÊNG TRÊN ĐỈNH (`padT` 6 → 22 khi có mốc), KHÔNG VẼ ĐÈ VÀO VÙNG DỮ LIỆU.**
-   Chấm 13px đặt trong vùng vẽ thì ở đồ thị cột nó ngồi trên đầu cột cao nhất, ở đồ thị
-   đường thì đè lên chính đường đang xem. Đồ thị không có mốc giữ nguyên `padT=6`.
+③ **MỐC BÁM ĐƯỜNG GIÁ, KHÔNG NẰM THÀNH DẢI RIÊNG.** Bản đầu chừa `padT=22` rồi xếp mốc
+   thành một hàng trên đỉnh; user bác ngay: *"tao muốn nó nằm trên đường chart"*. Dải riêng
+   thì phải dóng mắt từ chấm xuống đường giá mới biết hôm đó giá bao nhiêu, mà đó đúng là
+   câu hỏi duy nhất người ta hỏi khi thấy mốc cổ tức. Nay neo vào chuỗi của **trục phải**
+   (đường giá) nếu đồ thị có trục phải, không thì chuỗi trái — đặt trên điểm giá 13px, hết
+   chỗ thì lật xuống dưới, ghì trong `[padT+9, padT+plotH−9]`; cùng luật `assets/chart.js`.
+   `padT` chỉ còn 14 để chấm ở vùng đỉnh không bị cắt. Vạch dọc nối chấm với đường giá chỉ
+   chạy đúng đoạn giữa hai điểm — chạy suốt vùng vẽ là hai chục sợi kẻ cắt ngang đồ thị.
 
-④ **DÍNH CHUỘT CHỈ TRONG DẢI MỐC (`my < padT`), ĐỪNG DÍNH THEO BÁN KÍNH Ở MỌI ĐỘ CAO.**
-   Bản đầu dính 8px ở mọi độ cao — ở khung 1.000 phiên mỗi phiên rộng 1,1px nên quanh mỗi
-   mốc có ~14 phiên KHÔNG rê tới được nữa; 20 mốc là mất gần 300/1.000 phiên, im lặng
-   hoàn toàn. Chặn theo chiều dọc thì được cả hai: bấm chấm là trúng chấm, rê trên thân
-   đồ thị vẫn đi từng phiên một (đã kiểm: −6…+6px cho ra 7 phiên khác nhau liên tiếp).
+④ **DÒ TRÚNG MỐC PHẢI THEO CẢ HAI CHIỀU (đĩa 18px quanh tâm), ĐỪNG DÒ MỘT CHIỀU.**
+   Bản đầu dò theo trục X trong bán kính 8px — ở khung 1.000 phiên mỗi phiên rộng 1,1px
+   nên quanh mỗi mốc có ~14 phiên KHÔNG rê tới được nữa; 20 mốc là mất gần 300/1.000 phiên,
+   im lặng hoàn toàn. Dò hai chiều chỉ chiếm đúng cái đĩa, rê ở độ cao khác vẫn đi từng
+   phiên một (đã kiểm: −6…+6px cho ra 7 phiên khác nhau liên tiếp).
+
+⑤ **HỘP THÔNG TIN VẼ THẲNG LÊN CANVAS** (`veHopSK`), không dựng thẻ HTML: toạ độ mốc đổi
+   theo khung 100/300/600/1.000 và theo bề ngang cửa sổ, gắn thẻ HTML là phải đồng bộ vị
+   trí mỗi lần vẽ lại. `PT.skMo` giữ phiên đang mở hộp — TÁCH HẲN khỏi `PT.maI` (phiên
+   đang chọn): bật hộp theo "phiên đang chọn có sự kiện không" thì quét chuột ngang đồ thị
+   là hộp nhấp nháy hai chục lần. Đang ghim vẫn rê xem hộp của mốc khác được — ghim là để
+   giữ SỐ đứng yên, không phải để cấm hỏi "cái chấm kia là gì" — nên **dòng đầu của hộp
+   luôn là ngày của chính nó**, không có nó thì số ở thanh trên và chữ trong hộp là hai
+   phiên khác nhau mà tưởng một.
 
 Hai công tắc `PT.skH = {sk, bctc}` lưu ở `localStorage['cpvn_ptsk']`, đặt **ngay dưới đồ
 thị nó điều khiển** chứ không lên thanh đầu trang (thanh đầu đã có nút quay lại, tên mã,
