@@ -263,6 +263,35 @@ def gop_sh(rows, ngay):
     """
     ky = sorted((r.get("reportDate"), r.get("value")) for r in rows
                 if r.get("reportDate") and r.get("value"))
+    # ── BỎ GAI NHỌN. Đã trả giá 22/08/2026: `ratios` trả OUTSTANDING_SHARES =
+    #    34.168.189.983 cho BKG ở một kỳ 2024, trong khi số thật là 71.609.020 (khớp
+    #    `universe.json`) — SAI GẤP 477 LẦN, và tool nhận bừa nên vốn hoá của mã đó ở quãng
+    #    ấy nhảy lên hàng chục nghìn tỷ. 9 mã dính.
+    #    Lọc theo HÌNH DẠNG chứ không theo ngưỡng tuyệt đối: pha loãng thật thì tăng rồi Ở
+    #    LẠI (HPG 2,1 → 8,4 tỷ cp), còn gai nhọn thì vọt lên một kỳ rồi tụt về. Nên chỉ bỏ
+    #    điểm nào lớn hơn 5 lần CẢ HAI hàng xóm (hoặc nhỏ hơn 1/5 cả hai).
+    if len(ky) >= 3:
+        sach = [ky[0]]
+        for i in range(1, len(ky) - 1):
+            v, a, b = ky[i][1], ky[i - 1][1], ky[i + 1][1]
+            if v > 5 * max(a, b) or v < min(a, b) / 5:
+                continue
+            sach.append(ky[i])
+        sach.append(ky[-1])
+        ky = sach
+    # ── LUẬT THỨ HAI: BỎ Ô LỚN HƠN 5 LẦN GIÁ TRỊ MỚI NHẤT ──
+    # Luật gai-nhọn ở trên chỉ bắt được ô rác đứng MỘT MÌNH. DPC và HOT có ô rác kéo dài
+    # HAI KỲ liền nên lọt lưới: DPC 2.237.280 -> 22.372.800 -> về lại 2.237.280 (đúng ×10),
+    # HOT 7.999.937 -> 80.000.000 -> về lại. Đối chiếu độc lập với `universe.json` (nguồn
+    # Simplize) thì con số NHỎ mới đúng ở cả hai.
+    # Số cổ phiếu chỉ đi LÊN theo thời gian (pha loãng); một kỳ quá khứ lớn gấp 5 lần kỳ
+    # mới nhất là chuyện gần như không xảy ra ở thị trường Việt Nam — gộp ngược cổ phiếu
+    # cực hiếm. Nên đây là dấu hiệu rác chứ không phải sự kiện.
+    # KIỂM CHÉO trước khi đặt luật: HKT 6,1 -> 33,3 triệu và F88 8,5 -> 220 triệu đều là
+    # tăng vốn THẬT (khớp `universe.json`) và cả hai đều KHÔNG bị luật này đụng tới.
+    if ky:
+        moi_nhat = ky[-1][1]
+        ky = [x for x in ky if x[1] <= 5 * moi_nhat]
     if not ky:
         return {}
     ra = {}
@@ -328,12 +357,22 @@ def mot(sym, theo, tangs):
     for k in ("v", "sid", "day"):
         if k in cu:
             ra[k] = cu[k]
-    cot = {x for x in cu if isinstance(cu[x], list) and x != "d"}
+    # CHỈ COI LÀ CỘT KHI ĐỘ DÀI BẰNG ĐÚNG `d`. Kho có field kiểu list mà KHÔNG PHẢI cột
+    # theo phiên — `shLa` là danh sách ≤20 bậc nhảy lạ của số cổ phiếu (`[[ngày, tỉ lệ], …]`).
+    # Không chặn thì vòng trộn bên dưới đọc `cv[i]` theo chỉ số PHIÊN và đắp `None` cho phần
+    # còn lại, biến nó thành một cột 1.000 ô rác trông y như thật. Cùng cái guard đã đặt ở
+    # `eod_ghi` — nơi nào gom "mọi field list" thành cột đều phải có nó.
+    cot = {x for x in cu
+           if isinstance(cu[x], list) and x != "d" and len(cu[x]) == len(cu.get("d") or [])}
     cot |= {k for o in bang.values() for k in o}
     for k in sorted(cot):
         cv = cu.get(k) or []
+        # `sh` PHẢI ĐÈ, KHÔNG ĐƯỢC CHỈ LẤP TRỐNG. Đã trả giá 22/08/2026: một ô rác ghi
+        # vào rồi thì lượt sau không sửa được nữa — BKG giữ nguyên 34.168.189.983 (sai gấp
+        # 477 lần) dù nguồn đã lọc sạch, vì ô đó "đã có số" nên bị bỏ qua. Kho phải sửa
+        # được bằng cách chạy lại công cụ, bằng không mọi bộ lọc thêm vào sau đều vô dụng.
         vnd = (k in de_gia) or k.endswith("TG") or k.endswith("TKL") \
-            or k in ("fnRoomV", "fnRoomTong")
+            or k in ("fnRoomV", "fnRoomTong", "sh")
         arr = []
         for d in d_moi:
             i = d_cu.get(d)
@@ -346,6 +385,20 @@ def mot(sym, theo, tangs):
         # null là một, mà mảng 1.000 chữ "null" tốn ~5 KB mỗi cột.
         if any(x is not None for x in arr):
             ra[k] = arr
+    # ── QUÉT CUỐI TRÊN CỘT `sh` ĐÃ GHI ──────────────────────────────────────────────
+    # `gop_sh` chỉ lọc được phần NÓ sinh ra. Ô nào nằm trước kỳ báo cáo cũ nhất của `ratios`
+    # thì không có gì đè lên, nên giá trị rác cũ (do `neo_slcp` suy từ `shR` của Vietstock)
+    # ở lại nguyên. PEG dính đúng vậy: đầu chuỗi 2.318.989.190 trong khi cuối chuỗi
+    # 233.172.983 và `universe.json` ghi 248.877.472 — sai gấp 10, và nó ngồi ngay đầu đồ
+    # thị vốn hoá. Cùng một luật: số cổ phiếu chỉ đi lên, ô quá khứ lớn gấp 5 lần ô mới
+    # nhất là rác. Xoá chứ không sửa — thà để trống còn hơn đoán.
+    if "sh" in ra:
+        v = ra["sh"]
+        cuoi = next((x for x in reversed(v) if x), None)
+        if cuoi:
+            ra["sh"] = [None if (x and x > 5 * cuoi) else x for x in v]
+            if not any(x is not None for x in ra["sh"]):
+                del ra["sh"]
     ra["updated"] = time.strftime("%Y-%m-%d")
     tmp = p + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

@@ -1575,6 +1575,59 @@ thứ nhất, vì trang /phantich không cần nó. `PushKho` gọi hai lần: `
   toàn thị trường), và nó **CHỈ trộn `pv`/`pval`**, vứt mọi trường khác của lượt trả về —
   bằng không tầng giá Vietstock ghi đè tầng giá VNDirect, mất luật "một cột một nguồn".
 
+### SOI TOÀN KHO SAU KHI TRỘN NGUỒN — HAI LỖI TỰ GÂY, BỐN LỖI CÓ SẴN (22/08/2026)
+
+User lo đúng chỗ: *"hành vi trộn data xong lại xoá hết data của Vietstock dễ tạo ra nhiều
+lỗi không mong muốn"*. Soi 1.529 mã bằng 13 phép kiểm bất biến, rồi **so từng ca với bản
+kho lúc 10:55** (trước mọi thay đổi trong ngày) để tách lỗi MỚI khỏi lỗi CÓ SẴN.
+
+**HAI LỖI TỰ GÂY RA HÔM NAY — đã vá:**
+
+① **`va_donvi` bị xếp SAI CHỖ trong lượt EOD mới.** Bản đầu đặt nó ở [3], ngay sau
+  `kho_vnd_lo`; nhưng ba bước Vietstock (`--tt` `--nn` `--td`) nằm SAU và **ghi đè lại số
+  thô** — mà số thô mới là thứ mang lỗi đơn vị ×1000. Thứ tự CŨ vốn đúng (Vietstock →
+  kho_vnd → va_donvi). Đo được: BVB 2025-09-09 `tdMuaGT` từ 302 TRIỆU (đúng) thành 302 TỶ;
+  kiểm chứng độc lập 20.000 cp × 15.300đ = 306 triệu. 13 ô dính, nay 0.
+  > **BẪY LÀM NÓ KHÓ THẤY:** trang 1 của `--td`/`--nn` là **30 DÒNG chứ không phải 30
+  > PHIÊN**. Mã giao dịch thưa thì 30 dòng đó trải từ 2025-09-09 tới 2026-07-31 — tức lượt
+  > "chỉ lấy phiên gần nhất" vẫn với tay về gần một năm trước và ghi đè lên đó.
+  **LUẬT: mọi bước VÁ phải đứng sau MỌI bước CÀO của nguồn nó vá.**
+
+② **`kho_vnd_lo` nhận bừa gai nhọn của `ratios`.** VNDirect trả OUTSTANDING_SHARES =
+  34.168.189.983 cho BKG ở kỳ 2024-06-30, trong khi số thật 71.609.020 — **sai gấp 477
+  lần**, và nó ngồi thẳng trong đồ thị vốn hoá. 9 mã dính. Ba lớp lọc, mỗi lớp bắt một
+  hình dạng khác nhau (một lớp thôi là không đủ, đã thử):
+  · **gai nhọn một kỳ** — lớn hơn 5 lần CẢ HAI hàng xóm (BKG).
+  · **gai nhọn NHIỀU KỲ** — lớn hơn 5 lần giá trị MỚI NHẤT. DPC (2,2 → 22,4 → về 2,2 triệu)
+    và HOT (8,0 → 80 → về 8,0 triệu) kéo dài hai kỳ nên lọt lớp trên. Số cổ phiếu chỉ đi
+    LÊN; một kỳ quá khứ gấp 5 lần kỳ mới nhất là rác chứ không phải sự kiện.
+  · **quét cuối trên CỘT ĐÃ GHI** — ô nằm trước kỳ báo cáo cũ nhất của `ratios` thì không
+    có gì đè lên nên rác cũ ở lại. PEG dính: đầu chuỗi 2,32 TỶ cp so với 233 triệu ở cuối.
+  **Và `sh` phải ĐÈ chứ không chỉ lấp trống** — bằng không một ô rác ghi vào rồi thì mọi bộ
+  lọc thêm sau đều vô dụng, chạy lại công cụ cũng không sửa được.
+  **Kèm đảo thứ tự ưu tiên trong `eod_ghi`:** `sh` đang có trong kho THẮNG, `neo_slcp` chỉ
+  còn lấp chỗ trống (trước là ngược lại — xem mục `neo_slcp` phía trên).
+  Sau ba lớp: 9 → **4 mã**, và cả bốn (F88, HKT, VES, VUA) đã đối chiếu `universe.json` xác
+  nhận là **tăng vốn THẬT** — tăng rồi ở lại, khác hẳn hình dạng gai nhọn.
+
+**BỐN LOẠI CÓ SẴN TỪ TRƯỚC — không phải do trộn nguồn, đã so với bản 10:55:**
+
+| phép kiểm | số ô | ví dụ | bản chất |
+|---|---|---|---|
+| `o` ngoài `[l,h]` | 223 | ABR 2022-09-13 `o=12800` trong `[12000,12000]` | nguồn ghi giá mở cửa của phiên khác |
+| giá nhảy bậc giữa chuỗi | 5+7 | SVC 107.000 → 57.200 · DNN 200 → 300 | sự kiện quyền nguồn không hạ nền |
+| khối ngoại mua > tổng giao dịch | 76 | dồn gần hết vào **một ngày 2024-03-04** | nguồn hỏng đúng ngày đó |
+| sở hữu nước ngoài > 100% | 2 | F88 115,53% | nguồn sai |
+
+Chưa vá vì đều là lỗi NGUỒN chứ không phải lỗi trộn, số lượng nhỏ, và mỗi loại cần một
+phép đối chiếu riêng. Ghi ra đây để đừng ai tưởng kho sạch tuyệt đối.
+
+> **Bộ soi để ở đâu:** phép kiểm nằm trong lịch sử phiên làm việc, không commit thành công
+> cụ — nhưng 13 bất biến thì đáng dựng lại khi cần: độ dài cột == `len(d)` · ngày tăng dần
+> không trùng · `o`/`c` trong `[l,h]` · `|c/tc−1| < 45%` · `mval/mv` trong tầm giá ·
+> Vietstock(khớp) ≤ VNDirect(tổng) · Vietstock(khớp+TT) ≈ VNDirect(tổng) · khối ngoại ≤
+> tổng giao dịch · sở hữu trong `[0,100]` · SLCP trong tầm và không nhảy quá 5 lần.
+
 ### `eod_ghi` TỪNG XOÁ SẠCH CỘT NÓ KHÔNG BIẾT — đã vá 22/08/2026
 
 Hàm này đọc file cũ và ghi lại **đúng danh sách `COT`**, nên mọi cột ngoài danh sách bị

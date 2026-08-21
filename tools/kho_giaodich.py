@@ -427,12 +427,14 @@ def eod_ghi(sym, moi, sid=None, day_du=False):
             pass
     sh_cu = {d: cu[d].get("sh") for d in ngay}
     doc["sh"], doc["shVa"] = neo_slcp(ngay, doc["shR"], ev, _slcp_that(sym))
-    # SỐ CỔ PHIẾU: `neo_slcp` suy từ `shR` của Vietstock, mà từ 22/08 lượt EOD KHÔNG còn cào
-    # tầng giá Vietstock nữa nên `shR` không có số mới. `kho_vnd_lo.py` đã ghi `sh` từ
-    # `ratios` của VNDirect — giữ lại ở mọi ô mà `neo_slcp` không suy ra được, bằng không
-    # ô vốn hoá của phiên mới trống trơn.
+    # SỐ CỔ PHIẾU: NGUỒN CHÍNH LÀ `sh` ĐANG CÓ TRONG KHO (do `kho_vnd_lo` ghi từ `ratios`
+    # của VNDirect), `neo_slcp` chỉ còn là ĐƯỜNG LẤP CHỖ TRỐNG.
+    # Bản trước làm ngược — neo_slcp thắng, chỉ giữ số cũ ở ô nó không suy ra được — và đó
+    # là một dạng xoá dữ liệu: `neo_slcp` suy từ `shR` (= vốn hoá ÷ giá của Vietstock) vốn
+    # chỉ sâu ~120-300 phiên và nhiễu vì làm tròn, trong khi `ratios` lấy thẳng từ báo cáo
+    # và sâu 1.000 phiên. Đảo lại thứ tự ưu tiên thì "một cột một nguồn" mới thành thật.
     for i2, d2 in enumerate(ngay):
-        if doc["sh"][i2] is None and sh_cu.get(d2) is not None:
+        if sh_cu.get(d2) is not None:
             doc["sh"][i2] = sh_cu[d2]
     la = bac_la(ngay, doc["sh"], ev)
     if la:

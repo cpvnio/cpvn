@@ -72,33 +72,39 @@ if ($LASTEXITCODE -ne 0) { "kho_vnd_lo EXIT $LASTEXITCODE - bo qua, chay tiep" }
 & $py tools\kho_giaodich.py --tt --tuloc --trang 1 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich --tt EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# [3] VÁ Ô SAI ĐƠN VỊ x1000 — hai luật: đối chiếu hai nguồn, và tự đối chiếu KL x gia.
-# KHÔNG gọi mạng, vài giây.
-& $py tools\va_donvi.py 2>&1
-if ($LASTEXITCODE -ne 0) { "va_donvi EXIT $LASTEXITCODE - bo qua, chay tiep" }
-
-# [4] CHỈ SỐ THEO PHIÊN (VNINDEX/VN30/HNX/HNX30/UPCOM). Đúng 5 lượt gọi, vài giây.
+# [3] CHỈ SỐ THEO PHIÊN (VNINDEX/VN30/HNX/HNX30/UPCOM). Đúng 5 lượt gọi, vài giây.
 & $py tools\kho_giaodich.py --chiso 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich --chiso EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# [5] DỰNG BẢNG PHIÊN LẦN ĐẦU — vài giây. Tới đây trang /phantich đã có đủ giá, khối lượng,
+# [4] DỰNG BẢNG PHIÊN LẦN ĐẦU — vài giây. Tới đây trang /phantich đã có đủ giá, khối lượng,
 # giá trị, thoả thuận, khối ngoại, tự doanh, vốn hoá.
 & $py tools\build_phantich.py 2>&1
 if ($LASTEXITCODE -ne 0) { "build_phantich (luot 1) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# [6] VÙNG GIÁ KHỚP LỆNH từ nến 1 phút của VNDirect. Chỉ mã khớp >= 100 triệu (525/966 mã
+# [5] VÙNG GIÁ KHỚP LỆNH từ nến 1 phút của VNDirect. Chỉ mã khớp >= 100 triệu (525/966 mã
 # phiên 21/08) — vùng giá của mã khớp vài chục triệu là hai ba cái cột, không nói được gì.
 & $py tools\kho_vunggia.py 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_vunggia EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# [7] KHỐI NGOẠI bản TÁCH khớp lệnh/thoả thuận + tỉ lệ sở hữu + room — VNDirect KHÔNG CÓ,
+# [6] KHỐI NGOẠI bản TÁCH khớp lệnh/thoả thuận + tỉ lệ sở hữu + room — VNDirect KHÔNG CÓ,
 # chỉ Vietstock mới có. `--tuloc` bỏ mã không có gì để tách: 1.529 -> 338 mã.
 & $py tools\kho_giaodich.py --nn --tuloc --trang 1 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich --nn EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
-# [8] TỰ DOANH bản TÁCH. `--tuloc`: chỉ 195/1.529 mã có tự doanh trong 30 phiên gần nhất.
+# [7] TỰ DOANH bản TÁCH. `--tuloc`: chỉ 195/1.529 mã có tự doanh trong 30 phiên gần nhất.
 & $py tools\kho_giaodich.py --td --tuloc --trang 1 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich --td EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# [8] VÁ Ô SAI ĐƠN VỊ x1000 — PHẢI ĐỨNG SAU MỌI BƯỚC VIETSTOCK, đã trả giá 22/08/2026.
+# Bản đầu của lượt dựng lại đặt nó ở vị trí [3], ngay sau `kho_vnd_lo`. Sai: nó vá xong rồi
+# ba bước Vietstock bên dưới GHI ĐÈ LẠI số thô — mà số thô mới là thứ có lỗi đơn vị.
+# Đo được ngay: BVB 2025-09-09 `tdMuaGT` từ 302 TRIỆU (đúng) thành 302 TỶ. Kiểm chứng độc
+# lập: 20.000 cp × 15.300đ = 306 triệu, nên bản 302 triệu của VNDirect mới đúng.
+# BẪY LÀM NÓ KHÓ THẤY: trang 1 của `--td`/`--nn` là 30 DÒNG chứ không phải 30 PHIÊN — mã
+# giao dịch thưa thì 30 dòng đó trải từ 2025-09-09 tới 2026-07-31, tức lượt "chỉ lấy phiên
+# gần nhất" vẫn với tay về gần một năm trước.
+& $py tools\va_donvi.py 2>&1
+if ($LASTEXITCODE -ne 0) { "va_donvi EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
 # [9] DỰNG BẢNG PHIÊN LẦN HAI — lấp thêm phần tách thoả thuận và tỉ lệ sở hữu.
 & $py tools\build_phantich.py 2>&1
