@@ -670,6 +670,19 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    (vốn hoá). Đây là đường ĐẶC — nét đứt đã là của vốn hoá, hai đường cùng nét đứt thì
    phải dóng bằng màu ở cỡ chú thích 11,5px, quá nhỏ để phân biệt chắc chắn. */
 .ptleg i.pkI{background:#db2777;height:3px;border-radius:2px}
+/* NHÃN ĐẦU DÒNG CHÚ THÍCH (`cột` · `đường` · `mốc`). Chú thích của đồ thị này có ba loại
+   ký hiệu khác hẳn nhau — ô vuông đặc là mảng cột, vạch ngang là đường, chấm tròn có chữ
+   là mốc sự kiện — mà bản cũ đổ chung một dòng chảy tràn thì mắt không có chỗ bám. Nhãn
+   in hoa nhỏ, xám, bề rộng CỐ ĐỊNH để ba dòng thẳng cột với nhau. */
+.ptleg .ptlgn{display:inline-block;min-width:38px;font-size:9.5px;font-weight:800;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--faint);opacity:.75}
+/* CÔNG TẮC CỦA RIÊNG MỘT ĐỒ THỊ, ĐỨNG Ở THANH TIÊU ĐỀ CỦA CHÍNH NÓ (22/08/2026).
+   `.panel>.ph` vốn đã là flex nên chỉ cần `margin-left:auto` là dạt hẳn sang phải, chỗ
+   trước giờ bỏ trống hơn nửa bề ngang. `flex-wrap` ở cả hai để khổ hẹp xuống dòng chứ
+   không bóp tên đồ thị thành "Giá và giá…". */
+.panel.ptbo>.ph{flex-wrap:wrap;row-gap:8px}
+.panel.ptbo>.ph .phnut{margin-left:auto;display:flex;flex-wrap:wrap;gap:5px}
+.panel.ptbo>.ph .ptsw{margin-right:0}
 /* Khổ hẹp không vẽ nhãn trục vốn hoá (xem `hep` trong ptVe1) nên chú thích cũng phải bỏ
    theo — chỉ vào một cái trục không tồn tại là bắt người ta đi tìm thứ không có. */
 @media(max-width:700px){ .ptkr{display:none} }
@@ -726,6 +739,12 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    ("mở 47.250 kịch sàn · cao 52.000 · thấp 47.250") gãy thành bốn dòng và ô cao gấp ba
    ô bên cạnh. Hai hàng bốn ô đọc dễ hơn hẳn một hàng tám ô chen chúc. */
 @media(min-width:1080px){.ptdw{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* BẬT VN-INDEX LÀ CÓ Ô THỨ CHÍN -> 4 cột thành 3 hàng, hàng cuối trơ một ô và thanh dính
+   cao thêm 61px (236 so với 175). Chín ô thì 5 cột chia đẹp thành 5+4. Đo ở 1.280px: mỗi
+   ô còn 223px và **0 dòng phụ nào bị cắt** — dòng phụ vốn đã `nowrap` + `ellipsis` nên có
+   mã nào dài hơn thì nó cắt đuôi chứ không phá lưới. Dưới 1.080px vẫn 3 cột (9 ô = đúng
+   3 hàng) và dưới 700px vẫn 2 cột. */
+@media(min-width:1080px){.ptdw.co9{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .ptdc{display:flex;flex-direction:column;gap:2px;min-width:0}
 .ptdcl{font-size:10.5px;font-weight:700;color:var(--faint);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
@@ -1471,7 +1490,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823c"></script>
+<script defer src="assets/mobi.js?v=20260823d"></script>
 </head>
 <body>
 
@@ -1528,6 +1547,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823c"></script>
+<script src="assets/congcu.js?v=20260823d"></script>
 </body>
 </html>

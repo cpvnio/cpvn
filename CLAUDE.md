@@ -1721,6 +1721,64 @@ Con số đi kèm nằm ở dòng chú thích dưới đồ thị (`từ phiên 
 c điểm %`) — nhìn hai đường chỉ biết ai hơn, không biết hơn bao nhiêu. Nó tính trên CẢ
 KHUNG nên **đứng yên khi rê chuột**, không đụng luật "thanh đọc số phải cao cố định".
 
+**Ô THỊ TRƯỜNG TRONG THANH ĐỌC SỐ — bật theo cùng công tắc.** User báo tiếp: *"khi bật
+vnindex vào tao không thể xem giá vnindex và vol tổng ngày đó khi rà trong đồ thị"* — đúng,
+đường vẽ ra rồi mà không có chỗ nào đọc được số của nó. Ô thứ chín hiện `điểm VN-Index ·
+% thay đổi · thanh khoản cả thị trường`, chỉ khi `PT.vni` bật (không bật thì nó là số của
+THỊ TRƯỜNG đứng lạc giữa tám ô số của MỘT MÃ).
+Hai cái bẫy: **dò theo NGÀY chứ đừng dùng chung chỉ số** — trục ngày của `data/phantich.json`
+dài hơn và bắt đầu sớm hơn trục của một mã, lệch một ô là hiện số của phiên khác mà nhìn
+không ra; và **`PT.tt.tt.mval/pval` tính bằng TỶ** (khác `mval` của kho mã tính bằng ĐỒNG),
+đưa qua `ptTien` là sai một tỉ lệ tỷ lần.
+Ô thứ chín làm lưới 4 cột thành 3 hàng, thanh dính cao thêm 61px (236 so với 175) — nên
+`.ptdw.co9` chuyển sang **5 cột từ 1.080px** (9 ô = 5+4, mỗi ô 223px, đo được **0 dòng phụ
+bị cắt** trên SHB và VCB ở cả bốn khung 100/300/600/1.000).
+
+### CỘT KHỚP LỆNH CỦA TRANG MÃ TÁCH MÀU THEO KHỐI (22/08/2026)
+
+User: *"trên đồ thị của mã vẫn chưa đánh dấu màu sắc cho tự doanh và khối ngoại"*. Đồ thị
+toàn thị trường tô như vậy từ lâu, đồ thị của mã thì vẫn một khối xanh trơn — cùng một câu
+hỏi mà hai trang trả lời hai kiểu.
+
+Công thức **sao y `ptVeChart`**: phần tô = `(mua + bán) ÷ 2 ÷ TỔNG giao dịch × chiều cao
+cột`. Chia đôi vì mỗi lệnh khớp có đúng một người mua và một người bán. Mẫu là TỔNG vì
+`fnMuaTG`/`tdMuaTG` GỒM thoả thuận. Thứ tự chồng và bảng màu cũng dùng chung
+(`--pkN` khối ngoại · `--pkT` tự doanh · `--pkR` còn lại) — sửa một chỗ phải sửa cả ba
+(`congcu.html`, `ptVeChart`, `ptVeMa`).
+
+> **KHÁC MỘT ĐIỂM SO VỚI BẢN THỊ TRƯỜNG, VÀ PHẢI KHÁC.** Ở đây nếu `fn + td > mval` thì
+> **co CẢ HAI theo tỉ lệ**, chứ không chỉ kẹp phần "còn lại" về 0 như bản thị trường. Bản
+> kia là số gộp cả nghìn mã nên chuyện đó gần như không xảy ra; ở một mã lẻ thì có thật
+> (mã khối ngoại chiếm gần hết phiên, cộng nhiễu nguồn) — mà chỉ kẹp "còn lại" thì **cột
+> cao hơn `mval`**, tức chiều cao cột thôi bằng giá trị khớp lệnh và mọi nhãn trục đọc ra
+> sai. Co lại thì ba mảng luôn cộng đúng bằng `mval`.
+
+Kiểm bằng cách đếm PIXEL trên canvas rồi so với số tính lại bằng Python — SHB 100 phiên:
+khối ngoại 2,3% · tự doanh 1,6% · còn lại 81,5% · thoả thuận 14,6%, khớp tỉ lệ diện tích
+đo được trên canvas. **Đọc `getImageData` thì nhớ mảng "còn lại" có alpha 0,30** nên lọc
+`alpha > 200` sẽ bỏ sót đúng cái mảng lớn nhất — suýt kết luận nhầm là nó không được vẽ.
+
+### CÔNG TẮC CỦA MỘT ĐỒ THỊ ĐỨNG Ở THANH TIÊU ĐỀ CỦA CHÍNH NÓ (22/08/2026)
+
+User: *"các mục chọn bật tắt để vị trí khác thoáng và dễ nhìn hơn, để ở góc này khá rối
+mắt vì nhiều chữ"*. Bốn cái nút đứng lọt giữa một khối chữ dày (chú thích màu + chú thích
+mốc + dòng hiệu suất) thì mắt không tách được đâu là thứ **bấm được**, đâu là thứ chỉ để
+đọc. `ptO` nay nhận tham số thứ năm `nut`, render vào `.ph` với `margin-left:auto`.
+
+> **KHÔNG mâu thuẫn với luật cũ** *"công tắc đặt ngay dưới đồ thị nó điều khiển, đừng nhét
+> lên thanh đầu trang"*: thanh bị cấm là `.ptmahead` của CẢ TRANG (đã có nút quay lại, tên
+> mã, ô chọn khung, link sang trang cổ phiếu). Thanh tiêu đề của chính cái đồ thị vẫn là
+> "ngay tại đồ thị nó điều khiển", mà lại đang trống hơn nửa bề ngang.
+
+Chú thích cũng chia lại theo LOẠI KÝ HIỆU, mỗi loại một dòng có nhãn `cột` / `đường` /
+`mốc` (`.ptlgn`, bề rộng cố định để ba dòng thẳng cột). Ba loại ký hiệu khác hẳn nhau — ô
+vuông đặc là mảng cột, vạch ngang là đường, chấm tròn có chữ là mốc — đổ chung một dòng
+chảy tràn thì không có chỗ nào cho mắt bám.
+
+Đo lại sau cả ba thay đổi, ~600 vị trí rê × 4 khung: `#ptDoc` **một giá trị duy nhất
+174,5px**, thanh tiêu đề 50px, chú thích 54px, 0 dòng phụ bị cắt. Màn 375px: không tràn
+ngang, cả 4 nút vẫn hiện (tiêu đề xuống 2 hàng, 90px).
+
 ### ĐỒ THỊ GIÁ + GIÁ TRỊ GIAO DỊCH CAO THEO BỀ NGANG (22/08/2026)
 
 User: *"đưa Giá và giá trị giao dịch mỗi phiên rộng hơn, bảng hiện tại đang khá nhỏ"*.

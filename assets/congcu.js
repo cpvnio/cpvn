@@ -1950,6 +1950,32 @@ function ptVeMa(){
       }
     }
   }
+  /* ---- CỘT KHỚP LỆNH TÁCH BA MẢNG THEO KHỐI (user chốt 22/08/2026) ------------------
+     *"trên đồ thị của mã vẫn chưa đánh dấu màu sắc cho tự doanh và khối ngoại"*. Đồ thị
+     TOÀN THỊ TRƯỜNG đã tô như vậy từ lâu; đồ thị của mã thì vẫn một khối xanh trơn, nên
+     cùng một câu hỏi ("phiên này ai mua bán") mà hai trang trả lời hai kiểu.
+     CÔNG THỨC GIỐNG HỆT `ptVeChart`, đừng nghĩ lại: phần tô = (mua + bán) ÷ 2 ÷ TỔNG giao
+     dịch × chiều cao cột. Chia đôi vì mỗi lệnh khớp có đúng một người mua và một người
+     bán — cộng thẳng hai vế là đếm hai lần. Mẫu là TỔNG (khớp lệnh + thoả thuận) vì
+     `fnMuaTG`/`tdMuaTG` của VNDirect GỒM thoả thuận; chia riêng `mval` là thổi tỉ lệ lên
+     đúng bằng phần thoả thuận.
+     KHÁC MỘT ĐIỂM SO VỚI ĐỒ THỊ THỊ TRƯỜNG, và phải khác: ở đây nếu `fn + td` vượt quá
+     `mval` thì **co cả hai lại theo tỉ lệ** chứ không chỉ kẹp phần "còn lại" về 0. Bản
+     thị trường là số gộp cả nghìn mã nên chuyện đó gần như không xảy ra; ở một mã lẻ thì
+     có thật (mã mà khối ngoại chiếm gần hết phiên, cộng nhiễu nguồn), mà chỉ kẹp "còn
+     lại" thì cột CAO HƠN `mval` — tức chiều cao cột thôi bằng giá trị khớp lệnh và mọi
+     nhãn trục đọc ra sai. Co lại thì ba mảng luôn cộng đúng bằng `mval`. */
+  const fnPart=[], tdPart=[], conPart=[];
+  for(let i=0;i<d.length;i++){
+    const m0=mval[i]||0, tg=m0+(pval[i]||0);
+    let f=0, t2=0;
+    if(tg>0&&m0>0){
+      if(fnM[i]!=null||fnB[i]!=null) f=((fnM[i]||0)+(fnB[i]||0))/2/tg*m0;
+      if(tdM[i]!=null||tdB[i]!=null) t2=((tdM[i]||0)+(tdB[i]||0))/2/tg*m0;
+      if(f+t2>m0){ const s=m0/(f+t2); f*=s; t2*=s; }
+    }
+    fnPart.push(f); tdPart.push(t2); conPart.push(Math.max(0,m0-f-t2));
+  }
   const fnRong=fnM.map((x,i)=>(x==null&&fnB[i]==null)?null:((x||0)-(fnB[i]||0)));
   const tdRong=tdM.map((x,i)=>(x==null&&tdB[i]==null)?null:((x||0)-(tdB[i]||0)));
   /* % giá trị phiên là của khối ngoại — tính trên (mua+bán)/2 so với giá trị khớp lệnh,
@@ -2019,32 +2045,31 @@ function ptVeMa(){
          nhiều là phiên giá đi đâu*. Chồng lên nhau thì đọc thẳng — cột cao mà giá tụt là
          phân phối, cột cao mà giá bật là gom. Đường giá đi TRỤC PHẢI vì tiền và giá khác
          đơn vị hoàn toàn. */
+      /* CHÚ THÍCH XẾP THEO LOẠI HÌNH, MỖI LOẠI MỘT DÒNG CÓ NHÃN (user chốt 22/08/2026:
+         *"để ở góc này khá rối mắt vì nhiều chữ"*). Bản cũ đổ tất cả — bốn ô màu cột, ba
+         đường, bốn chấm sự kiện, bốn cái nút và một dòng hiệu suất — thành một khối chữ
+         chảy tràn, không có chỗ nào cho mắt bám. Nay `cột` / `đường` / `mốc` đứng đầu
+         từng dòng, và MẤY CÁI NÚT ĐÃ DỜI LÊN THANH TIÊU ĐỀ của chính đồ thị (tham số
+         `nut` của `ptO`) — thứ bấm được không đứng lẫn trong thứ chỉ để đọc nữa.
+         CHÚ THÍCH CHỮ CÁI CHỈ HIỆN KHI NHÓM ĐÓ ĐANG BẬT — bày ra bốn dòng chú thích cho
+         mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
       +ptO('Giá và giá trị giao dịch mỗi phiên', 'mc1',
-           '<i class="pk1"></i> khớp lệnh &nbsp; <i class="pk2"></i> thoả thuận'
-           +' &nbsp;·&nbsp; <i class="pkA"></i> đóng cửa &nbsp; <i class="pkB"></i> giá TB (VWAP)'
-           +' &nbsp;—&nbsp; hai đường đọc ở <b>trục phải</b>'
-           /* CÔNG TẮC ĐẶT NGAY DƯỚI ĐỒ THỊ NÓ ĐIỀU KHIỂN, không nhét lên thanh đầu trang:
-              thanh đầu đã có nút quay lại, tên mã, ô chọn khung và link sang trang cổ phiếu.
-              Thêm nút vào đó là bốn nhóm điều khiển cho ba việc khác nhau đứng chung một
-              hàng, mà hai nút này chỉ đổi MỘT đồ thị chứ không đổi cả trang.
-              CHÚ THÍCH CHỮ CÁI CHỈ HIỆN KHI NHÓM ĐÓ ĐANG BẬT — bày ra bốn dòng chú thích
-              cho mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
-           +(PT.vh?' &nbsp;·&nbsp; <i class="pkV"></i> vốn hoá (nét đứt)'
-              +'<span class="ptkr"> — <b>trục ngoài cùng</b></span>':'')
-           +(vniL?' &nbsp;·&nbsp; <i class="pkI"></i> VN-Index':'')
-           +'<br><span class="ptsw" id="ptSK">'
-             +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
-             +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
-             +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
-             +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
-           +'</span>'
+           '<b class="ptlgn">cột</b> <i class="pkN"></i> khối ngoại &nbsp;<i class="pkT"></i> tự doanh'
+           +' &nbsp;<i class="pkR"></i> còn lại &nbsp;<i class="pk2"></i> thoả thuận'
+           +'<span class="ptkr"> — phần tô là <b>mức tham gia</b> = (mua + bán) ÷ 2</span>'
+           +'<br><b class="ptlgn">đường</b> <i class="pkA"></i> đóng cửa'
+           +' &nbsp;<i class="pkB"></i> giá TB (VWAP)'
+           +(vniL?' &nbsp;<i class="pkI"></i> VN-Index':'')
+           +(PT.vh?' &nbsp;<i class="pkV"></i> vốn hoá (nét đứt)':'')
+           +'<span class="ptkr"> — đọc ở <b>trục phải</b></span>'
            +(skM?(
-              (PT.skH.sk?' &nbsp;<i class="pkS1"></i> <b>D</b> cổ tức tiền'
+              '<br><b class="ptlgn">mốc</b>'
+              +(PT.skH.sk?' <i class="pkS1"></i> <b>D</b> cổ tức tiền'
                 +' &nbsp;<i class="pkS2"></i> <b>C</b> cổ phiếu / thưởng'
                 +' &nbsp;<i class="pkS3"></i> <b>P</b> quyền mua / phát hành':'')
-              +(PT.skH.bctc?' &nbsp;<i class="pkS4"></i> <b>B</b> ra báo cáo tài chính':'')
-              +' &nbsp;·&nbsp; rê hoặc bấm vào chấm để xem chi tiết')
-             :((PT.skH.sk||PT.skH.bctc)?' &nbsp;·&nbsp; khung này không có sự kiện nào':''))
+              +(PT.skH.bctc?' &nbsp;<i class="pkS4"></i> <b>B</b> báo cáo tài chính':'')
+              +'<span class="ptkr"> — bấm vào chấm để xem chi tiết</span>')
+             :'')
            /* CON SỐ ĐI KÈM ĐƯỜNG — nhìn hai đường chỉ biết ai hơn ai, không biết hơn bao
               nhiêu. Nó tính trên CẢ KHUNG nên đứng yên khi rê chuột, đặt ở đây thì không
               đụng luật "thanh đọc số phải cao cố định" (thanh đó là `.ptdoc` dính, còn đây
@@ -2056,7 +2081,13 @@ function ptVeMa(){
               +' · VN-Index <b class="'+cls(vniTom.vni)+'">'+(vniTom.vni>0?'+':'')
               +vniTom.vni.toFixed(1)+'%</b> · chênh <b class="'+cls(vniTom.ma-vniTom.vni)+'">'
               +((vniTom.ma-vniTom.vni)>0?'+':'')+(vniTom.ma-vniTom.vni).toFixed(1)
-              +' điểm %</b> <span class="ptkr">— lợi suất của mã đã trừ cổ tức và chia tách</span>':''), 1)
+              +' điểm %</b> <span class="ptkr">— lợi suất của mã đã trừ cổ tức và chia tách</span>':''), 1,
+           '<span class="ptsw" id="ptSK">'
+             +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
+             +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
+             +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
+             +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
+           +'</span>')
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
            +' <b>tổng</b> (gồm thoả thuận)')
@@ -2091,6 +2122,11 @@ function ptVeMa(){
      thì nó lại đúng — chỉ hỏng đúng nhóm người dùng đổi đèn thủ công. */
   const dark=!isLight();
   const XANH=dark?'#34d399':'#16a34a', DO=dark?'#f87171':'#dc2626';
+  /* Ba màu khối — SAO Y `ptVeChart` (đồ thị toàn thị trường) và `--pkN/--pkT/--pkR` trong
+     congcu.html. Sửa ở đây mà quên hai chỗ kia là hai đồ thị lệch bảng màu. */
+  const cN=dark?'#22d3ee':'#0891b2',      // khối ngoại
+        cT=dark?'#fb923c':'#ea580c',      // tự doanh
+        cR=dark?'rgba(56,189,248,.42)':'rgba(2,132,199,.30)';   // còn lại (trong nước)
   /* GHIM PHIÊN (user chốt 22/08/2026: *"tao không bấm chọn ... để neo lại được"*).
      Bản cũ nhận tham số `bam` rồi KHÔNG DÙNG TỚI, mà lượt `mousemove` đã dời mốc tới
      đúng cột đó trước rồi — nên tới lúc `click` chạy thì `i===PT.maI` và hàm thoát ngay
@@ -2126,7 +2162,12 @@ function ptVeMa(){
   const cvW=(($('#mc1')||{}).clientWidth)||900;
   ptVe1($('#mc1'),C({cao:Math.round(Math.max(300,Math.min(560,cvW*0.40))),
     kieu:'bar',chong:1,sk:skM,skMo:PT.skMo,
-    series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
+    /* Thứ tự xếp chồng ĐÚNG NHƯ ĐỒ THỊ TOÀN THỊ TRƯỜNG: còn lại (dưới) -> tự doanh ->
+       khối ngoại, rồi thoả thuận trên cùng. Bảng màu cũng dùng chung ba biến `--pkN`
+       `--pkT` `--pkR` — hai đồ thị cùng nói một chuyện thì phải cùng một màu, bằng không
+       người xem phải học lại bảng màu khi chuyển từ trang thị trường sang trang mã. */
+    series:[{v:conPart,mau:cR},{v:tdPart,mau:cT},{v:fnPart,mau:cN},
+            {v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
     nhan:v=>ptTien(v),
     /* VN-Index nối vào CUỐI mảng, đừng chèn lên đầu: `ptVe1` lấy `P2[0]` làm đường NEO cho
        mốc sự kiện (cổ tức, BCTC là chuyện của GIÁ) — đẩy nó xuống thứ hai là mấy cái chấm
@@ -2161,6 +2202,15 @@ function ptVeMa(){
      như số chứng quyền — đã chuyển sang chú thích đồ thị Tự doanh) · ② CSS `.ptdcp` khoá
      một dòng, `nowrap` + `ellipsis`, để có gặp mã tên dài hay số to bất thường thì nó cắt
      đuôi chứ TUYỆT ĐỐI không xuống dòng. Chỉ làm ① là lần sau có chuỗi dài hơn lại giật. */
+  /* SỐ CỦA THỊ TRƯỜNG CHO ĐÚNG PHIÊN ĐANG XEM. Trục ngày của `data/phantich.json` dài hơn
+     và bắt đầu sớm hơn trục ngày của một mã, nên phải dò THEO NGÀY chứ tuyệt đối không
+     dùng chung chỉ số — lệch một ô là hiện số của phiên khác mà nhìn không ra. */
+  let ttP=null;
+  if(PT.vni&&PT.tt&&PT.tt.tt&&PT.tt.tt.d){
+    const T=PT.tt.tt, cs=(PT.tt.chiso||{}).VNINDEX||null, z=T.d.indexOf(d[k]);
+    if(z>=0) ttP={c:cs?cs.c[z]:null, pc:cs?cs.pc[z]:null,
+                  gt:(T.mval[z]||0)+((T.pval&&T.pval[z])||0)};
+  }
   const oNul='<span class="ptdn">—</span>';
   const oo=(nhan,gt,phu,cl)=>'<div class="ptdc"><span class="ptdcl">'+nhan+'</span>'
     +'<b class="ptdcv'+(cl?' '+cl:'')+'">'+gt+'</b>'
@@ -2178,7 +2228,7 @@ function ptVeMa(){
         ? '<button class="ptdgh on" id="ptBoGhim">đã ghim — bấm để bỏ</button>'
         : '<span class="ptdg">rê chuột lên đồ thị để xem phiên khác · <b>bấm để ghim</b></span>')
     +'</div>'
-    +'<div class="ptdw">'
+    +'<div class="ptdw'+(ttP?' co9':'')+'">'
     +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'TB '+num(vw[k]),
         pcs[k]==null?'':cls(pcs[k]))
     /* GIÁ KHỚP LỆNH TB đứng thành Ô RIÊNG, không nhét vào dòng phụ của ô đóng cửa
@@ -2241,6 +2291,19 @@ function ptVeMa(){
            hơn hẳn bỏ một chữ định tính: "bán 2…" đọc ra một số sai. */
         +(fnSH[k]!=null?'<i class="ptdq2">'+(sh[k]?' · ':'')+'nước ngoài <b>'
             +fnSH[k].toFixed(1)+'%</b></i>':''))
+    /* Ô THỊ TRƯỜNG — CHỈ HIỆN KHI ĐANG BẬT VN-INDEX (user chốt 22/08/2026: *"khi bật
+       vnindex vào tao không thể xem giá vnindex và vol tổng ngày đó khi rà trong đồ thị"*).
+       Đúng: đường VN-Index vẽ ra rồi mà không có chỗ nào đọc được số của nó, và cũng
+       không biết hôm đó cả thị trường giao dịch bao nhiêu — trong khi so hiệu suất với
+       thị trường thì hai con số đó chính là cái nền để so.
+       BẬT THEO CÔNG TẮC chứ không hiện luôn: nó là số của THỊ TRƯỜNG đứng giữa tám ô số
+       của MỘT MÃ, ai không bật đường VN-Index thì nó chỉ là một ô lạc.
+       `PT.tt.tt.mval`/`pval` tính bằng TỶ (xem `build_phantich`), khác `mval` của kho mã
+       vốn tính bằng ĐỒNG — đừng đưa qua `ptTien`. */
+    +(ttP?oo('VN-Index', ttP.c!=null?num2(ttP.c):oNul,
+        (ttP.pc!=null?ph(ttP.pc)+' · ':'')
+          +'cả thị trường <b>'+num(Math.round(ttP.gt))+' tỷ</b>',
+        ttP.pc!=null?cls(ttP.pc):''):'')
     +'</div>';
   const bg=$('#ptBoGhim');
   if(bg) bg.onclick=()=>{ PT.ghim=null; ptVeMa(); };
@@ -2250,8 +2313,18 @@ function ptVeMa(){
    cỡ, nên "giá đóng cửa" và "vùng giá khớp lệnh" ngang vai nhau — lưới 11 ô đều tăm tắp
    thì không ô nào là câu trả lời đầu tiên, mắt phải đọc hết tên từng ô mới biết nhìn đâu.
    Giá và tiền là hai câu hỏi chính của mọi mã, cho chúng đứng riêng một hàng. */
-function ptO(ten,id,ghi,to){
+/* `nut` = mấy công tắc của riêng đồ thị này, đặt Ở THANH TIÊU ĐỀ CỦA CHÍNH NÓ.
+   Trước nằm chung trong dòng chú thích dưới đồ thị; user chốt 22/08/2026: *"các mục chọn
+   bật tắt để vị trí khác thoáng và dễ nhìn hơn, để ở góc này khá rối mắt vì nhiều chữ"* —
+   bốn cái nút đứng lọt giữa một khối chữ dày (chú thích màu + chú thích mốc sự kiện + dòng
+   hiệu suất) thì mắt không tách được đâu là thứ BẤM ĐƯỢC, đâu là thứ chỉ để đọc.
+   Đây KHÔNG mâu thuẫn với luật cũ *"công tắc đặt ngay dưới đồ thị nó điều khiển, đừng nhét
+   lên thanh đầu trang"*: thanh bị cấm là `.ptmahead` của CẢ TRANG (đã có nút quay lại, tên
+   mã, ô chọn khung, link sang trang cổ phiếu). Thanh tiêu đề của chính cái đồ thị vẫn là
+   "ngay tại đồ thị nó điều khiển", mà lại đang trống hơn nửa bề ngang. */
+function ptO(ten,id,ghi,to,nut){
   return '<div class="panel ptbo'+(to?' ptbig':'')+'"><div class="ph">'+ptIc('bieu')+ten+
+    (nut?'<span class="phnut">'+nut+'</span>':'')+
     '</div><div class="pb">'+
     '<canvas id="'+id+'"></canvas>'+(ghi?'<p class="ptleg">'+ghi+'</p>':'')+'</div></div>';
 }
