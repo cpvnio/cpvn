@@ -665,6 +665,11 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkS3{background:#c026d3;border-radius:50%}
 .ptleg i.pkS4{background:#8a8a99;border-radius:50%}
 .ptleg i.pkV{background:#16a34a;height:3px;border-radius:2px}
+/* VN-Index chồng lên đồ thị giá. Hồng sen vì bốn màu còn lại của đồ thị đó đã bị chiếm:
+   xanh trời (cột khớp lệnh) · tím (cột thoả thuận) · hổ phách (giá TB) · xanh lá nét đứt
+   (vốn hoá). Đây là đường ĐẶC — nét đứt đã là của vốn hoá, hai đường cùng nét đứt thì
+   phải dóng bằng màu ở cỡ chú thích 11,5px, quá nhỏ để phân biệt chắc chắn. */
+.ptleg i.pkI{background:#db2777;height:3px;border-radius:2px}
 /* Khổ hẹp không vẽ nhãn trục vốn hoá (xem `hep` trong ptVe1) nên chú thích cũng phải bỏ
    theo — chỉ vào một cái trục không tồn tại là bắt người ta đi tìm thứ không có. */
 @media(max-width:700px){ .ptkr{display:none} }
@@ -1466,7 +1471,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823b"></script>
+<script defer src="assets/mobi.js?v=20260823c"></script>
 </head>
 <body>
 
@@ -1523,6 +1528,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823b"></script>
+<script src="assets/congcu.js?v=20260823c"></script>
 </body>
 </html>

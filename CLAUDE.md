@@ -44,6 +44,9 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/kho_chungquyen.py` | 110 | Cào `data/chungquyen.json`. ĐÚNG 1 lượt gọi |
 | `tools/kho_rolichsu.py` | 90 | Cào `data/rolichsu.json` (gồm mã đã rời sàn). 2 lượt gọi |
 | `tools/kho_noibo.py` | 150 | Bóc giao dịch người nội bộ từ `data/news`. KHÔNG gọi mạng, **gom dồn** |
+| `tools/kho_thanhkhoan.py` | 60 | Thanh khoản CHÍNH THỨC từng sàn từng phiên → `data/thanhkhoan.json`. 3 lượt gọi |
+| `tools/soi_thanhkhoan.py` | 130 | Cộng kho rồi đặt cạnh số của sàn — **phép đo phải chạy sau mọi lượt đụng vào kho giao dịch**. KHÔNG gọi mạng |
+| `tools/kho_thoathuan.py` | 260 | Vá `pv`/`pval` từ Vietstock cho cả kho. **Lượt một lần**, không nằm trong pipeline |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -1575,6 +1578,161 @@ thứ nhất, vì trang /phantich không cần nó. `PushKho` gọi hai lần: `
   toàn thị trường), và nó **CHỈ trộn `pv`/`pval`**, vứt mọi trường khác của lượt trả về —
   bằng không tầng giá Vietstock ghi đè tầng giá VNDirect, mất luật "một cột một nguồn".
 
+### THOẢ THUẬN HỤT 57% SUỐT BỐN NĂM — VÀ CÁCH ĐO ĐỂ BIẾT MÌNH ĐANG HỤT (22/08/2026)
+
+User đối chiếu phiên 05/08/2025: báo chí ghi thanh khoản toàn thị trường **85,8 nghìn tỷ**
+còn trang mình ghi **84.371 tỷ**. Soi ra:
+
+```
+                khớp lệnh      thoả thuận      tổng
+sàn công bố      80.573,8        5.485,7     86.059,4 tỷ
+kho (lúc đó)     80.522,7        3.848,3     84.371,0 tỷ
+lệch                −51,1       −1.637,4                (0,06%  ·  30%)
+```
+
+**Khớp lệnh không sai chỗ nào; toàn bộ chỗ hụt nằm ở thoả thuận** — và không phải một
+phiên: 1.317/1.336 phiên hụt quá 100 tỷ, tổng kho chỉ có **43%** thoả thuận thật.
+
+GỐC: `ptValue` TỪNG MÃ của VNDirect **thưa ở phiên cũ**. Phiên 05/08/2025 họ chỉ ghi nhận
+thoả thuận cho **28 mã** trên cả ba sàn, trong khi Vietstock có thêm hàng chục mã nữa mà
+họ để 0 (MWG 147,0 tỷ · TCB 215,9 · SHB 54,3 · VHM 26,3). Chỗ nào CẢ HAI cùng có thì hai
+số **trùng tới từng đồng** — nên đây không phải hai định nghĩa, Vietstock là **tập cha**,
+luật gộp là `max`. Phiên gần đây thì VNDirect lại đủ (19–20/08/2026 khớp chỉ số tới 0,0
+tỷ), nên bước `--tt` hằng ngày của lượt EOD vẫn đủ; đây là **vá lịch sử một lần**.
+
+**BA CÔNG CỤ MỚI:**
+
+| | |
+|---|---|
+| `tools/kho_thanhkhoan.py` | thanh khoản CHÍNH THỨC từng sàn từng phiên (2017→nay) -> `data/thanhkhoan.json`. Nguồn `api-finfo.vndirect.com.vn/v4/vnmarket_prices`, tách sẵn `nmValue`/`ptValue`. **Đơn vị ĐỒNG**, chỉ ba chỉ số TỔNG (VN30/HNX30 là tập con, để chung là có ngày ai đó cộng cả năm cái) |
+| `tools/soi_thanhkhoan.py` | cộng `mval`/`pval` cả kho rồi đặt cạnh số của sàn. **KHÔNG gọi mạng.** Đây là phép đo đáng chạy sau mọi lượt đụng vào kho giao dịch |
+| `tools/kho_thoathuan.py` | vá `pv`/`pval` từ Vietstock, chỉ đụng đúng hai cột đó |
+
+**BỐN CÁI BẪY của `kho_thoathuan.py`:**
+
+1. **`fromDate`/`toDate` CỦA VIETSTOCK LÀ ĐỒ TRANG TRÍ.** `GetStockDeal_ListPriceByTimeFrame`
+   **bỏ qua hoàn toàn** hai tham số này và luôn trả về 20 phiên MỚI NHẤT — xin
+   `fromDate=toDate=2025-08-05` vẫn nhận về 21/08/2026, mà số nào cũng hợp lý nên nhìn
+   không ra. **Tao đã suýt kết luận sai vì cái này**: bảng đối chiếu đầu tiên cho thấy
+   "Vietstock có thoả thuận ở 20 mã mà VNDirect để 0" — thật ra là so số của hai NGÀY khác
+   nhau. Đường duy nhất về quá khứ là **lật trang và đối chiếu `TradingDate` từng dòng**.
+2. **`pageSize` KẸT Ở 20.** Xin 50/100/200/500/1000/2000 đều trả đúng 20. Nên 1.000 phiên
+   = 50 lượt/mã, không có cách rút ngắn.
+3. **CHỈ GHI `pv`/`pval`** — đọc trọn file, sửa đúng hai mảng, ghi lại (bài học `eod_ghi`).
+4. **CHỈ VÁ NGÀY ĐÃ CÓ TRONG `d`** — thêm ngày mới là phải nới MỌI cột cho khớp độ dài.
+
+**HIỆU CHUẨN TRƯỚC KHI CÀO, ĐỪNG CÀO RỒI MỚI KIỂM.** Lấy trang 1 của cả 1.529 mã (20 phiên
+gần nhất, 6,5 phút) rồi cộng lại so với chỉ số: Vietstock ra **97,8–100,0%**, **không phiên
+nào vượt** -> không có chuyện đếm hai lần. Phép này rẻ và nó là thứ cho phép chạy lượt vá
+5 tiếng mà không lo ghi bậy vào cả kho.
+
+**HAI NGUỒN ĐÃ THỬ VÀ LOẠI — đừng dò lại:**
+· **CafeF** (`cafef.vn/du-lieu/Ajax/PageNew/DataHistory/PriceHistory.ashx`, `Type=EXPORT`
+  trả 66 phiên/lượt trong một file xlsx — đáng lẽ nhanh gấp 5) **THIẾU 71% thoả thuận**:
+  phiên 05/08/2025, VIC 11,11 tỷ trong khi thật là 2.833,72 tỷ (106.400 cp vs 25.963.812).
+  15 mã mẫu: CafeF 1.242,6 tỷ / Vietstock 4.299,6 tỷ. `StartDate` cũng bị bỏ qua, chỉ
+  `EndDate` chạy, và luôn kẹp ~66 phiên.
+· **VNDirect** chính là chỗ hỏng.
+
+**KẾT QUẢ** (`--sau 1000 --bo-som 8`, 1.529 mã, ~52 phút, 0 lỗi):
+
+```
+thoả thuận   43%  ->  96,5%       khớp lệnh giữ nguyên 99,5%
+phiên 05/08/2025:  85.929,6 tỷ  (sàn công bố 86.059,4 · báo chí ghi 85,8 nghìn tỷ)
+2024-06 tới nay: 95,5-99,9% mỗi tháng · phần hụt còn lại dồn vào 2022-2023
+```
+
+> **`--bo-som N` LÀ THỨ ĐÁNH ĐỔI, PHẢI BIẾT MÌNH ĐANG ĐÁNH ĐỔI GÌ.** Nó bỏ mã sau N trang
+> liên tiếp không có đồng thoả thuận nào — phần lớn 825 mã UPCOM không có thoả thuận phiên
+> nào suốt bốn năm mà vẫn tốn đủ 50 lượt như VIC. Đổi lại, mã chỉ có thoả thuận ở quãng
+> RẤT CŨ thì bị cắt, và đó đúng là 3,5% còn hụt (dồn vào 2022-2023). Chấp nhận được vì
+> `soi_thanhkhoan.py` **đo được ngay** phần bỏ sót — bỏ sót bao nhiêu là thấy bấy nhiêu,
+> không phải đoán. Muốn đủ 100% thì chạy lại `--bo-som 0`.
+
+> **`--nhip N` NỚI NHỊP CHO ĐÚNG LƯỢT CHẠY ĐÓ, KHÔNG SỬA BẢNG `TRAN`.** Nó ghi vào
+> `nhipmang._tran_hien` (chỗ nhịp mạng vẫn dùng để TỰ HẠ tốc khi gặp 429), nên tắt tiến
+> trình là hết; pipeline 15:15 vẫn 4 lượt/giây như cũ. Lượt vá này chạy `--nhip 20
+> --luong 12` ngoài giờ giao dịch và gọi endpoint JSON ~8 KB, khác hẳn trang hồ sơ ~300 KB
+> mà mốc 4 lượt/giây sinh ra để bảo vệ. **Tốc độ THẬT đo được chỉ 8,5 lượt/giây** — nghẽn
+> ở độ trễ vòng gọi chứ không ở trần, và 0 lượt 429.
+> **ĐỪNG mang con số đó đặt vào `TRAN`, và đừng nới tiếp bằng cách tăng LUỒNG** — user hỏi
+> "gấp 30 lần" (=120 lượt/giây); cái giá không phải là chậm mà là **mất nguồn**: Vietstock
+> chặn IP là ba bước EOD chết hẳn (thoả thuận · khối ngoại bản tách · tự doanh bản tách),
+> VNDirect không có cái nào trong ba cái đó.
+
+### TRANG MỘT MÃ CÓ URL RIÊNG — VÀ BẤM LÙI VỀ ĐÚNG BẢNG PHIÊN (22/08/2026)
+
+User: *"bấm vào 1 mã để phân tích tao muốn có trang riêng, bấm lùi lại là tự ra trang phân
+tích data tổng"* — trước đây `PT.ma` chỉ là biến trong module còn `showMod` thì luôn
+`replaceState`, nên nút Lùi nhảy thẳng RA KHỎI trang công cụ.
+
+`ptMoMa` nay `pushState`, `ptDongMa` (nút ⟵ trong trang) `history.back()`, và có
+`popstate` đọc lại trạng thái **từ URL**. Bốn điểm phải giữ:
+
+1. **MÃ ĐI BẰNG THAM SỐ `?sym=`, TUYỆT ĐỐI KHÔNG PHẢI ĐOẠN ĐƯỜNG DẪN.** `congcu.html`
+   KHÔNG có `<base href="/">` (khác `cophieu.html`), nên `/phantich/HPG` biến mọi đường
+   dẫn tương đối thành `/phantich/assets/congcu.js` — **cả trang chết**. Đây đúng là cái
+   bẫy đã ghi ở mục *Quy ước toàn site*: congcu chỉ an toàn với URL MỘT đoạn.
+2. **`showMod` phải GIỮ `?sym=` khi `replaceState`.** Bản cũ ghi đè bằng `PATHOF[id]` trần
+   nên vào thẳng `/phantich?sym=HPG` là URL bị gột sạch ngay lúc dựng trang — tải lại hoặc
+   gửi link cho người khác là mất mã. Lỗi này có sẵn từ trước, không phải do lượt này.
+3. **`tuUrl=true` khi URL do TRÌNH DUYỆT đổi** (popstate, hoặc lượt mở trang đầu tiên).
+   Đẩy thêm mục lịch sử ở đó là mỗi cú bấm Lùi lại đẻ một mục mới, người dùng mắc kẹt.
+4. **Nút ⟵ trong trang chỉ `history.back()` KHI mục hiện tại do chính mình đẩy vào**
+   (`history.state.pt`). Vào thẳng bằng `?sym=` thì không có mục nào để lùi — lùi là rời
+   khỏi site — nên khi đó mới `pushState` một mục mới cho bảng phiên.
+
+Đo sau khi sửa: mở mã -> `history.length` 3, Lùi -> bảng phiên, Tới -> lại đúng mã,
+`history.length` **vẫn 3** (không phình); nút ⟵ cho cùng kết quả với nút Lùi; vào thẳng
+`?sym=VCB` thì URL giữ nguyên và `state=null`.
+
+### VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ CỦA TRANG MÃ (22/08/2026)
+
+User: *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
+Công tắc `VN-Index` cạnh `Vốn hoá`, nhớ ở `localStorage['cpvn_ptvni']`.
+
+**KHÔNG vẽ VN-Index ở thang điểm của chính nó trên một trục thứ ba.** Hai đường tự co giãn
+đầy khung thì cả hai đều lấp đầy đồ thị và **nhìn không ra ai hơn ai** — mà "ai hơn ai" là
+câu hỏi duy nhất người ta hỏi khi bật nó lên. Cách vẽ:
+
+```
+L(i) = giá(i) × (VN-Index tăng bao nhiêu từ đầu khung) ÷ (mã tăng bao nhiêu từ đầu khung)
+```
+
+Phiên đầu khung hai đường TRÙNG NHAU, sau đó khoảng cách giữa chúng đúng bằng chênh lệch
+hiệu suất — **VN-Index nằm DƯỚI đường giá = mã chạy hơn thị trường**. Vì có nhân với
+`giá(i)` nên nó đi qua mọi cú hạ nền của chính mã, hai đường luôn so được bằng mắt.
+
+> **LỢI SUẤT CỦA MÃ PHẢI DỒN TỪ `c/tc−1` TỪNG PHIÊN, ĐỪNG LẤY `c[cuối]/c[đầu]`.**
+> `c` trong `data/giaodich` là giá **THÔ, chưa hạ nền** — đo thật: VCB 12/03/2025 rơi
+> 96.800 -> 64.700 (chia cổ phiếu), HPG 26/06/2025 rơi 27.200 -> 22.650, VNM 16/10/2025
+> rơi 63.650 -> 60.800. Đo trên VCB khung 1.000 phiên: cách đúng ra **+29,9%**, lấy giá
+> chia giá ra **−27,5%** — lệch **57 điểm phần trăm**, và cái sai đó trông y hệt một kết
+> luận đầu tư. `tc` là tham chiếu ĐÃ hạ nền của chính phiên đó nên tích các `(1+pc)` tự
+> sạch mọi sự kiện quyền (đúng luật đã ghi ở `kho_dactrung`). VN-Index không chia tách nên
+> lấy điểm chia điểm là đủ.
+
+Hai chi tiết nhỏ mà bỏ là hỏng: **nối vào CUỐI `phai.series`** (ptVe1 lấy `P2[0]` làm
+đường NEO cho mốc cổ tức/BCTC — đẩy nó xuống thứ hai là mấy cái chấm bám vào đường
+VN-Index), và **màu hồng sen đặc** vì bốn màu kia của đồ thị đã bị chiếm (xanh trời cột
+khớp lệnh · tím cột thoả thuận · hổ phách giá TB · xanh lá NÉT ĐỨT vốn hoá).
+
+Con số đi kèm nằm ở dòng chú thích dưới đồ thị (`từ phiên X: MÃ +a% · VN-Index +b% · chênh
+c điểm %`) — nhìn hai đường chỉ biết ai hơn, không biết hơn bao nhiêu. Nó tính trên CẢ
+KHUNG nên **đứng yên khi rê chuột**, không đụng luật "thanh đọc số phải cao cố định".
+
+### ĐỒ THỊ GIÁ + GIÁ TRỊ GIAO DỊCH CAO THEO BỀ NGANG (22/08/2026)
+
+User: *"đưa Giá và giá trị giao dịch mỗi phiên rộng hơn, bảng hiện tại đang khá nhỏ"*.
+Nó đã chiếm trọn bề ngang lưới rồi (`ptbig` = `grid-column:1/-1`, 1.197px ở cửa sổ 1.280),
+nên chỗ duy nhất còn nới được là **chiều cao**: `max(300, min(560, W×0,40))` — 300 cứng cho
+một khung 1.197px là tỉ lệ 4:1, dẹt tới mức ở khung 1.000 phiên thì cột tiền còn vài pixel
+và bốn đường (đóng cửa · giá TB · vốn hoá · VN-Index) chồng thành một dải. Desktop 300 ->
+**479px**; màn hẹp giữ nguyên 300 vì ở đó bề ngang chỉ 329px, nhân theo tỉ lệ là ra một ô
+gần vuông cao hơn cả bảng đọc số ngay dưới.
+Đo bằng `clientWidth` của chính canvas chứ đừng đọc `innerWidth`: khung vẽ nằm trong lưới
+có padding và `main` bị kẹp `max-width:1420px`, hai số lệch nhau ~80px.
+
 ### DƯ CHẤN CỦA LỖI `eod_ghi`: 360 MÃ MẤT 970 PHIÊN — VÀ VÌ SAO KHÔI PHỤC 30 PHIÊN LÀ CHƯA ĐỦ
 
 User báo: *"khối lượng khối ngoại, tự doanh, thoả thuận đang sai từ tháng 7 về trước"*.
@@ -2848,8 +3006,10 @@ Nó giữ `state.coins` riêng. Các cặp hàm trùng lặp phải sửa **đ�
 `applyLiveShared`↔`applyLive`, `sessionOpen`, `lastSessionDate`, `pricesFinal`.
 Màu bảng điện (trần tím · tăng lục · TC vàng · giảm đỏ · sàn lơ) định nghĩa ở **ba nơi**.
 
-**`congcu.js`** — Thêm module phải sửa **6 chỗ**: `MODULES`, `PATHOF`, `TITLEOF`, `byPath`,
+**`congcu.js`** — Thêm module phải sửa **6 chỗ**: `MODULES`, `PATHOF`, `TITLEOF`, `BYPATH`,
 tab trong HTML, rule trong `_redirects`. Poll sống chỉ vẽ lại module radar.
+(`BYPATH` trước nằm ngay trong `init` nên `popstate` không với tới được — đã nhấc ra ngoài
+cùng chỗ với `PATHOF`/`TITLEOF`.)
 
 **Đường đua có hai chế độ** (`RA.mode`): `race` = xếp hạng vốn hoá; `dca` = **đầu tư**, và
 chế độ đầu tư có thêm hai công tắc độc lập nhau, bốn tổ hợp đều dùng chung một mạch tính:

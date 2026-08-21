@@ -757,6 +757,7 @@ const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           vh:LS.get('cpvn_ptvh',true),
+          vni:LS.get('cpvn_ptvni',false),
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -1773,11 +1774,37 @@ async function ptNapMa(sym){
   PT.maD=g; PT.skD=(e&&e.ev)||[];
 }
 
-async function ptMoMa(sym){
+/* TRANG MỘT MÃ = MỘT MỤC RIÊNG TRONG LỊCH SỬ TRÌNH DUYỆT (user chốt 22/08/2026: *"bấm vào
+   1 mã để phân tích tao muốn có trang riêng, bấm lùi lại là tự ra trang phân tích data
+   tổng"*). Trước đây `PT.ma` chỉ là một biến trong module còn `showMod` thì luôn
+   `replaceState`, nên nút Lùi của trình duyệt nhảy thẳng RA KHỎI trang công cụ — mà đó
+   đúng là cú bấm tự nhiên nhất sau khi xem xong một mã.
+   `tuUrl=true` nghĩa là URL vừa do CHÍNH TRÌNH DUYỆT đổi (popstate, hoặc lượt mở trang
+   đầu tiên bằng `?sym=`). Lúc đó tuyệt đối không được đẩy thêm mục lịch sử: đẩy là mỗi
+   cú bấm Lùi lại đẻ ra một mục mới và người dùng mắc kẹt, không bao giờ ra được. */
+async function ptMoMa(sym,tuUrl){
+  if(!tuUrl) history.pushState({pt:sym},'',duongMod('phantich',sym));
   PT.ma=sym; PT.maD=null; PT.skD=null; PT.maI=null; PT.ghim=null; PT.skMo=null;
+  document.title=tieuDe('phantich');
   await ptVe();
   await ptNapMa(sym);
   ptVeMa();
+}
+
+/* ĐÓNG TRANG MÃ, VỀ BẢNG PHIÊN. Mục lịch sử hiện tại do chính mình đẩy vào thì LÙI ĐÚNG
+   MỘT BƯỚC — như vậy nút quay lại của trang và nút Lùi của trình duyệt cho cùng một kết
+   quả. Đẩy thêm một mục nữa thì bấm Lùi sau đó lại rơi NGƯỢC vào trang mã, đúng kiểu
+   lịch sử vòng tròn mà không ai thoát ra được.
+   Vào thẳng bằng URL `?sym=` thì không có mục nào của mình để lùi (lùi là rời khỏi site),
+   khi đó mới đẩy một mục mới cho bảng phiên. */
+function ptDongMa(tuUrl){
+  if(!tuUrl){
+    if(history.state&&history.state.pt){ history.back(); return; }
+    history.pushState({pt:null},'',duongMod('phantich',null));
+  }
+  PT.ma=null; PT.maD=null; PT.skD=null; PT.maI=null; PT.ghim=null; PT.skMo=null;
+  document.title=tieuDe('phantich');
+  ptVe();
 }
 
 /* ---- MỐC SỰ KIỆN DOANH NGHIỆP TRÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) ----------------
@@ -1882,6 +1909,47 @@ function ptVeMa(){
   const m=d.length-1;
   const mcap=c.map((x,i)=>(x&&sh[i])?x*sh[i]:null);
   const pcs=c.map((x,i)=>(x&&tc[i])?((x/tc[i]-1)*100):null);
+  /* ---- VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) --------------------------
+     *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
+
+     KHÔNG vẽ VN-Index ở thang điểm của chính nó trên một trục thứ ba. Hai đường tự co
+     giãn đầy khung thì cả hai đều lấp đầy đồ thị và **nhìn không ra ai hơn ai** — mà "ai
+     hơn ai" là câu hỏi DUY NHẤT người ta hỏi khi bật nó lên. Đó cũng là lý do không dùng
+     `cfg.phai2` (chỗ của vốn hoá): trục riêng là mất luôn phép so.
+
+     CÁCH VẼ:  L(i) = giá(i) × (VN-Index tăng bao nhiêu) ÷ (mã tăng bao nhiêu)
+     Ở phiên đầu khung hai đường TRÙNG NHAU, sau đó khoảng cách giữa chúng đúng bằng chênh
+     lệch hiệu suất: VN-Index nằm DƯỚI đường giá = mã chạy hơn thị trường. Vì có nhân với
+     `giá(i)` nên nó đi qua mọi cú hạ nền của chính mã, hai đường luôn so được bằng mắt
+     thay vì một đường phẳng lì chạy ngang.
+
+     LỢI SUẤT CỦA MÃ PHẢI DỒN TỪ `c/tc−1` TỪNG PHIÊN, ĐỪNG LẤY `c[cuối]/c[đầu]`.
+     `c` trong `data/giaodich` là giá **THÔ, chưa hạ nền** — đo thật trên kho: VCB
+     12/03/2025 rơi 96.800 -> 64.700 (chia cổ phiếu), HPG 26/06/2025 rơi 27.200 -> 22.650,
+     VNM 16/10/2025 rơi 63.650 -> 60.800. Lấy giá chia giá là mã trả cổ tức đều trông như
+     thua thị trường mấy chục phần trăm — sai to mà lại rất giống một kết luận đầu tư.
+     `tc` là tham chiếu ĐÃ hạ nền của chính phiên đó nên tích các `(1+pc)` tự sạch mọi sự
+     kiện quyền; đúng luật đã ghi ở `tools/kho_dactrung.py`. VN-Index thì không chia tách,
+     lấy điểm chia điểm là đủ. */
+  let vniL=null, vniTom=null;
+  if(PT.vni){
+    const cs=(PT.tt&&PT.tt.chiso&&PT.tt.chiso.VNINDEX)||null,
+          td=(PT.tt&&PT.tt.tt&&PT.tt.tt.d)||null;
+    if(cs&&cs.c&&td){
+      const mp={}; for(let z=0;z<td.length;z++) if(cs.c[z]!=null) mp[td[z]]=cs.c[z];
+      const vn=d.map(x=>mp[x]==null?null:mp[x]);
+      /* Neo ở phiên ĐẦU TIÊN có ĐỦ CẢ HAI số. Neo bừa vào phiên đầu khung mà hôm đó mã
+         chưa niêm yết (hoặc chỉ số thiếu) là cả đường lệch một hệ số cố định. */
+      let z0=-1; for(let z=0;z<d.length;z++) if(vn[z]!=null&&c[z]!=null){ z0=z; break; }
+      if(z0>=0){
+        const hs=new Array(d.length).fill(null); let f=1; hs[z0]=1;
+        for(let z=z0+1;z<d.length;z++){ if(pcs[z]!=null) f*=1+pcs[z]/100; hs[z]=f; }
+        vniL=vn.map((v,z)=>(v==null||c[z]==null||!hs[z])?null:c[z]*(v/vn[z0])/hs[z]);
+        let zN=-1; for(let z=d.length-1;z>z0;z--) if(vn[z]!=null&&c[z]!=null){ zN=z; break; }
+        if(zN>z0) vniTom={tu:d[z0], ma:(hs[zN]-1)*100, vni:(vn[zN]/vn[z0]-1)*100};
+      }
+    }
+  }
   const fnRong=fnM.map((x,i)=>(x==null&&fnB[i]==null)?null:((x||0)-(fnB[i]||0)));
   const tdRong=tdM.map((x,i)=>(x==null&&tdB[i]==null)?null:((x||0)-(tdB[i]||0)));
   /* % giá trị phiên là của khối ngoại — tính trên (mua+bán)/2 so với giá trị khớp lệnh,
@@ -1963,8 +2031,10 @@ function ptVeMa(){
               cho mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
            +(PT.vh?' &nbsp;·&nbsp; <i class="pkV"></i> vốn hoá (nét đứt)'
               +'<span class="ptkr"> — <b>trục ngoài cùng</b></span>':'')
+           +(vniL?' &nbsp;·&nbsp; <i class="pkI"></i> VN-Index':'')
            +'<br><span class="ptsw" id="ptSK">'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
+             +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
              +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
            +'</span>'
@@ -1974,7 +2044,19 @@ function ptVeMa(){
                 +' &nbsp;<i class="pkS3"></i> <b>P</b> quyền mua / phát hành':'')
               +(PT.skH.bctc?' &nbsp;<i class="pkS4"></i> <b>B</b> ra báo cáo tài chính':'')
               +' &nbsp;·&nbsp; rê hoặc bấm vào chấm để xem chi tiết')
-             :((PT.skH.sk||PT.skH.bctc)?' &nbsp;·&nbsp; khung này không có sự kiện nào':'')), 1)
+             :((PT.skH.sk||PT.skH.bctc)?' &nbsp;·&nbsp; khung này không có sự kiện nào':''))
+           /* CON SỐ ĐI KÈM ĐƯỜNG — nhìn hai đường chỉ biết ai hơn ai, không biết hơn bao
+              nhiêu. Nó tính trên CẢ KHUNG nên đứng yên khi rê chuột, đặt ở đây thì không
+              đụng luật "thanh đọc số phải cao cố định" (thanh đó là `.ptdoc` dính, còn đây
+              là chú thích dưới đồ thị).
+              Lợi suất của mã lấy từ chuỗi dồn `c/tc−1` nên ĐÃ SẠCH cổ tức và chia tách —
+              đừng thay bằng `c[cuối]/c[đầu]` cho gọn. */
+           +(vniTom?'<br>từ phiên <b>'+esc(vniTom.tu)+'</b>: '+esc(PT.ma)
+              +' <b class="'+cls(vniTom.ma)+'">'+(vniTom.ma>0?'+':'')+vniTom.ma.toFixed(1)+'%</b>'
+              +' · VN-Index <b class="'+cls(vniTom.vni)+'">'+(vniTom.vni>0?'+':'')
+              +vniTom.vni.toFixed(1)+'%</b> · chênh <b class="'+cls(vniTom.ma-vniTom.vni)+'">'
+              +((vniTom.ma-vniTom.vni)>0?'+':'')+(vniTom.ma-vniTom.vni).toFixed(1)
+              +' điểm %</b> <span class="ptkr">— lợi suất của mã đã trừ cổ tức và chia tách</span>':''), 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
            +' <b>tổng</b> (gồm thoả thuận)')
@@ -2031,11 +2113,27 @@ function ptVeMa(){
   /* Đồ thị nhỏ thấp hơn bản trước (150 -> 136): lưới đã lên ba cột nên mỗi ô hẹp lại,
      giữ nguyên chiều cao là ô thành hình chữ nhật dựng đứng, đường giá bị kéo dốc giả. */
   const C=(cfg)=>Object.assign({d,moc:PT.maI,ghim:PT.ghim!=null,chon,cao:136},cfg);
-  ptVe1($('#mc1'),C({cao:300,kieu:'bar',chong:1,sk:skM,skMo:PT.skMo,
+  /* ĐỒ THỊ CHÍNH CAO THEO BỀ NGANG, KHÔNG CAO CỨNG 300 (user chốt 22/08/2026: *"đưa Giá
+     và giá trị giao dịch mỗi phiên rộng hơn, bảng hiện tại đang khá nhỏ"*).
+     Nó đã chiếm trọn bề ngang lưới rồi (`ptbig` = `grid-column:1/-1`), nên chỗ duy nhất
+     còn nới được là CHIỀU CAO — mà 300px cho một khung 1.197px là tỉ lệ 4:1, dẹt tới mức
+     ở khung 1.000 phiên thì cột tiền chỉ còn vài pixel và bốn đường (đóng cửa, giá TB,
+     vốn hoá, VN-Index) chồng lên nhau thành một dải.
+     Đo tại chỗ bằng `clientWidth` chứ đừng đọc `innerWidth`: khung vẽ nằm trong lưới có
+     padding và `main` bị kẹp `max-width:1420px`, hai số lệch nhau ~80px.
+     SÀN 300 GIỮ NGUYÊN CHO MÀN HẸP — ở đó bề ngang chỉ ~319px nên nhân theo tỉ lệ là ra
+     một ô gần vuông, cao hơn cả bảng đọc số ngay dưới nó. */
+  const cvW=(($('#mc1')||{}).clientWidth)||900;
+  ptVe1($('#mc1'),C({cao:Math.round(Math.max(300,Math.min(560,cvW*0.40))),
+    kieu:'bar',chong:1,sk:skM,skMo:PT.skMo,
     series:[{v:mval,mau:dark?'#38bdf8':'#0284c7'},{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
     nhan:v=>ptTien(v),
+    /* VN-Index nối vào CUỐI mảng, đừng chèn lên đầu: `ptVe1` lấy `P2[0]` làm đường NEO cho
+       mốc sự kiện (cổ tức, BCTC là chuyện của GIÁ) — đẩy nó xuống thứ hai là mấy cái chấm
+       bám vào đường VN-Index, sai hẳn chỗ. */
     phai:{nhan:num,series:[{v:c,mau:dark?'#f8fafc':'#0f172a'},
-                           {v:vw,mau:dark?'#fbbf24':'#d97706'}]},
+                           {v:vw,mau:dark?'#fbbf24':'#d97706'}]
+                          .concat(vniL?[{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}]:[])},
     phai2:PT.vh?{nhan:v=>ptTien(v),series:[{v:mcap,mau:XANH,day:1.5,net:[5,3]}]}:null}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
@@ -2158,7 +2256,7 @@ function ptO(ten,id,ghi,to){
     '<canvas id="'+id+'"></canvas>'+(ghi?'<p class="ptleg">'+ghi+'</p>':'')+'</div></div>';
 }
 function ptBindMa(){
-  const b=$('#ptQuay'); if(b) b.onclick=()=>{ PT.ma=null; PT.maD=null; ptVe(); };
+  const b=$('#ptQuay'); if(b) b.onclick=()=>ptDongMa();
   const k=$('#ptKhungMa');
   if(k) k.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
     PT.nMa=+n.dataset.n;
@@ -2171,6 +2269,7 @@ function ptBindMa(){
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
     if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
+    else if(n.dataset.k==='vni'){ PT.vni=!PT.vni; LS.set('cpvn_ptvni',PT.vni); }
     else { PT.skH[n.dataset.k]=!PT.skH[n.dataset.k]; LS.set('cpvn_ptsk',PT.skH); }
     ptVeMa(); };
 }
@@ -2389,6 +2488,29 @@ const PATHOF={radar:'/radar',tapdoan:'/tapdoan',race:'/duongdua',niemyet:'/niemy
               phantich:'/phantich'};
 const TITLEOF={radar:'Radar phiên',tapdoan:'Danh mục tập đoàn',race:'Đường đua vốn hoá',
                niemyet:'Thông tin niêm yết',phantich:'Phân tích dữ liệu'};
+/* ĐƯỜNG DẪN SẠCH -> MODULE. Trước nằm ngay trong `init` nên `popstate` không với tới được;
+   nhấc ra đây để hai chỗ đọc CÙNG một bảng — lệch nhau là bấm Lùi về đúng URL cũ mà nội
+   dung lại ra module khác. */
+const BYPATH={radar:'radar',tapdoan:'tapdoan',duongdua:'race',niemyet:'niemyet',
+              phantich:'phantich'};
+/* ĐƯỜNG DẪN CỦA MỘT TRẠNG THÁI — dùng chung cho `showMod` (replaceState) và cho lượt mở
+   một mã ở Phân tích dữ liệu (pushState). Gom một chỗ vì hai bên PHẢI sinh ra cùng một
+   chuỗi ký tự.
+   MÃ ĐI BẰNG THAM SỐ `?sym=`, TUYỆT ĐỐI KHÔNG PHẢI MỘT ĐOẠN ĐƯỜNG DẪN. `congcu.html`
+   KHÔNG có `<base href="/">` (khác `cophieu.html`), nên `/phantich/HPG` sẽ biến mọi đường
+   dẫn tương đối thành `/phantich/assets/congcu.js`, `/phantich/data/...` — cả trang chết.
+   Xem mục *Quy ước toàn site* trong CLAUDE.md. `?sym=` cũng đúng tham số trang cổ phiếu
+   đang trỏ sang, khỏi đẻ thêm quy ước thứ hai. */
+function duongMod(id,sym){
+  let u=/\.html$/i.test(location.pathname)?('congcu.html?m='+id):PATHOF[id];
+  if(sym) u+=(u.indexOf('?')>=0?'&':'?')+'sym='+encodeURIComponent(sym);
+  return u;
+}
+/* Tên tab trình duyệt mang luôn mã đang xem — mở vài mã ra vài tab thì đó là thứ duy nhất
+   phân biệt được chúng. */
+function tieuDe(id){
+  return 'CPVN — '+((id==='phantich'&&PT.ma)?(PT.ma+' · '+TITLEOF[id]):TITLEOF[id]);
+}
 function renderNav(){
   $$('.tabs a[data-m]').forEach(e=>{
     e.classList.toggle('on',e.dataset.m===cur);
@@ -2429,9 +2551,11 @@ function showMod(id){
   MODULES.forEach(x=>{ const el=$('#m-'+x.id); if(el) el.classList.toggle('on',x.id===id); });
   if(!done[id]){ done[id]=1; m.render(); }
   if(m.after) m.after();
-  document.title='CPVN — '+TITLEOF[id];
-  if(!/\.html$/i.test(location.pathname)) history.replaceState(null,'',PATHOF[id]);
-  else history.replaceState(null,'','congcu.html?m='+id);
+  document.title=tieuDe(id);
+  /* GIỮ NGUYÊN `history.state` và GIỮ NGUYÊN MÃ ĐANG XEM. Bản cũ thay bằng `null` và bỏ
+     phần `?sym=` — nên vào thẳng `/phantich?sym=HPG` là URL bị gột sạch ngay lúc dựng
+     trang, tải lại một cái (hoặc gửi link cho người khác) là mất mã. */
+  history.replaceState(history.state,'',duongMod(id,id==='phantich'?PT.ma:null));
   scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -4657,9 +4781,23 @@ async function init(){
   addEventListener('resize',(()=>{ let rt; return ()=>{ clearTimeout(rt);
     rt=setTimeout(()=>{ const m=MODULES.find(x=>x.id===cur);
       if(m&&m.after) m.after(); },180); }; })());
+  /* NÚT LÙI / TỚI CỦA TRÌNH DUYỆT — ĐỌC LẠI TRẠNG THÁI TỪ URL, đừng đoán theo biến trong
+     bộ nhớ. Chỉ Phân tích dữ liệu mới đẩy mục lịch sử (trang một mã); mọi module khác vẫn
+     `replaceState` như cũ nên popstate ở đó là lùi ra khỏi trang, không phải việc của
+     mình — vì thế nhánh module chỉ chạy khi URL trỏ vào một module KHÁC module đang xem.
+     Truyền `tuUrl=true` cho cả hai nhánh: URL đã đúng rồi, đẩy thêm mục nữa là lịch sử
+     vòng tròn. */
+  addEventListener('popstate',()=>{
+    const p=new URLSearchParams(location.search);
+    const m=p.get('m')||BYPATH[location.pathname.replace(/\//g,'')]||cur;
+    if(m&&m!==cur&&MODULES.some(x=>x.id===m)) showMod(m);
+    if(cur!=='phantich') return;
+    const s=(p.get('sym')||'').trim().toUpperCase();
+    if(s&&/^[A-Z0-9]{3,10}$/.test(s)){ if(s!==PT.ma) ptMoMa(s,true); }
+    else if(PT.ma) ptDongMa(true);
+  });
   const q=new URLSearchParams(location.search).get('m');
-  const byPath={radar:'radar',tapdoan:'tapdoan',duongdua:'race',niemyet:'niemyet',
-                phantich:'phantich'}[location.pathname.replace(/\//g,'')];
+  const byPath=BYPATH[location.pathname.replace(/\//g,'')];
   const start=q||byPath||(location.hash||'').replace('#','');
   /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
   const t0=new URLSearchParams(location.search).get('t');
