@@ -758,6 +758,10 @@ const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           vh:LS.get('cpvn_ptvh',true),
           vni:LS.get('cpvn_ptvni',false),
+          /* Mảng/đường nào đang ẨN trên đồ thị chính — bấm vào chính ô chú thích của nó.
+             Lưu theo khoá ẩn chứ không theo khoá hiện: thêm một mảng mới về sau thì nó
+             mặc định HIỆN, không phải đi sửa bản đệm của mọi người dùng cũ. */
+          an:LS.get('cpvn_ptan',{}),
           che:'ai'};   // 'tong' = khớp lệnh + thoả thuận · 'ai' = ai mua ai bán   // nMa = 63 phiên ≈ 3 tháng
 
 async function ptTT(){
@@ -807,6 +811,18 @@ function ptCoFile(o){ const t=o.tt; return t.d.filter((d,i)=>t.n[i]>=100).slice(
 
 async function ptVe(){
   const o=PT.tt, b=$('#ptBody'); if(!b) return;
+  /* HAI MÀN HÌNH TÁCH HẲN NHAU (user chốt 22/08/2026: *"mục data bây giờ chỉ có biểu đồ
+     chính và bảng mã theo phiên … trong trang phân tích data cổ phiếu sẽ không còn đồ thị
+     toàn thị trường theo phiên nữa"*).
+     Bản cũ dựng `.ptbar` + `#ptTop` (khối Toàn thị trường) ở CẢ HAI, nên trang một mã mở
+     ra là phải cuộn qua trọn một màn số của thị trường rồi mới tới số của mã — mà người
+     vừa bấm vào một mã thì đang hỏi về MÃ ĐÓ. Thanh chọn phiên ở đầu cũng vô nghĩa ở đó:
+     trang mã có ô chọn khung riêng và chọn phiên bằng cách ghim trên đồ thị. */
+  if(PT.ma){
+    b.innerHTML='<div id="ptTab"></div>';
+    ptVeMa();
+    return;
+  }
   const co=ptCoFile(o), i=co.indexOf(PT.ngay);
   const opt=co.slice().reverse().map(d=>'<option'+(d===PT.ngay?' selected':'')+'>'+d+'</option>').join('');
   b.innerHTML=
@@ -821,7 +837,7 @@ async function ptVe(){
       +'<span class="ptbaon" id="ptBaoN"></span></div>'
     +'<div id="ptTop"></div><div id="ptTab"></div>';
   ptTop();
-  if(PT.ma){ ptVeMa(); } else { await ptBang(); }
+  await ptBang();
   /* ĐỔI KHUNG THÌ CHỈ VẼ LẠI ĐỒ THỊ, đừng dựng lại cả trang: bảng mã và mấy khối dưới
      không phụ thuộc khung, dựng lại chúng là mất chỗ đang cuộn và mất cả ô tìm đang gõ. */
   const kh=$('#ptKhung');
@@ -1519,12 +1535,17 @@ function ptVe1(cv, cfg){
   const dark=!isLight();
   const cg=dark?'rgba(148,163,184,.20)':'rgba(100,116,139,.16)', ct=dark?'#94a3b8':'#64748b';
   const S=cfg.series.filter(x=>x&&x.v);
-  if(!S.length) return;
+  /* ẨN HẾT MẢNG CỘT MÀ VẪN CÒN ĐƯỜNG THÌ PHẢI VẼ TIẾP, đừng thoát. Từ khi mỗi ô chú thích
+     là một công tắc, người dùng tắt được cả bốn mảng cột để chỉ còn xem mấy đường giá —
+     bản cũ `return` ngay ở đây nên cả khung trắng trơn, đọc ra như trang hỏng. */
+  const coPhai=!!(cfg.phai&&cfg.phai.series&&cfg.phai.series.filter(x=>x&&x.v).length);
+  if(!S.length&&!coPhai) return;
   const n=cfg.d.length;
   let lo=Infinity, hi=-Infinity;
   for(const s of S) for(let i=0;i<n;i++){ const v=cfg.chong?S.reduce((a,x)=>a+(x.v[i]||0),0):s.v[i];
     if(v!=null&&!isNaN(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); } }
-  if(!(hi>-Infinity)) return;
+  const coCot=hi>-Infinity;
+  if(!coCot){ if(!coPhai) return; lo=0; hi=1; }
   /* Đồ thị CỘT phải CHỨA MỐC 0 — cột mà không từ 0 thì tỉ lệ chiều cao nói dối.
      Nhưng ghim `lo=0` thì cột ÂM biến mất: đồ thị "% thay đổi mỗi phiên" chỉ còn phiên
      tăng, đọc ra như mã chỉ có lên chứ không có xuống. Nên lấy `min(0, …)`/`max(0, …)`
@@ -1588,7 +1609,10 @@ function ptVe1(cv, cfg){
   g.strokeStyle=cg; g.lineWidth=1; g.fillStyle=ct; g.textAlign='right'; g.textBaseline='middle';
   for(let k=0;k<=3;k++){ const v=lo+(hi-lo)*k/3, yy=y(v);
     g.beginPath(); g.moveTo(padL,yy+.5); g.lineTo(W-padR,yy+.5); g.stroke();
-    g.fillText(cfg.nhan?cfg.nhan(v):num(v), padL-4, yy); }
+    /* Không còn mảng cột nào thì trục trái không đo cái gì — in "0 đ … 1 đ" ở đó là bịa
+       ra một thang không tồn tại. Giữ vạch lưới (mấy đường bên phải vẫn cần nền để đọc),
+       bỏ con số. */
+    if(coCot) g.fillText(cfg.nhan?cfg.nhan(v):num(v), padL-4, yy); }
   if(coP2){
     g.textAlign='left';
     for(let k=0;k<=3;k++){ const v=lo2+(hi2-lo2)*k/3;
@@ -1853,6 +1877,18 @@ function ptSkMoc(d){
   return ra.sort((x,y)=>x.i-y.i);
 }
 
+/* Một ô chú thích BẤM ĐƯỢC. `k` là khoá trong `PT.an`, `mau` là class chấm màu.
+   `vni2`/`vh2` cố ý KHÁC khoá `vni`/`vh` của hai cái nút trên thanh tiêu đề: nút kia quyết
+   định "có TÍNH đường này không" (vốn hoá cần thêm một trục, VN-Index cần dò `data/phantich`),
+   còn ô chú thích chỉ quyết định "có VẼ ra không". Dùng chung một khoá thì tắt ở chú thích
+   là nút trên kia cũng tắt theo, mà hai chỗ nằm cách nhau nửa màn hình — bấm một chỗ thấy
+   chỗ khác đổi theo là loại tương tác khó đoán nhất. */
+function ptSw(k,mau,ten){
+  const off=!!PT.an[k];
+  return '<button class="ptlgi'+(off?' off':'')+'" data-s="'+k+'" '
+    +'title="'+(off?'Hiện':'Ẩn')+' '+esc(ten)+'"><i class="'+mau+'"></i>'+esc(ten)+'</button>';
+}
+
 function ptVeMa(){
   const w=$('#ptTab'); if(!w||!PT.ma) return;
   const o=PT.maD;
@@ -2053,14 +2089,20 @@ function ptVeMa(){
          `nut` của `ptO`) — thứ bấm được không đứng lẫn trong thứ chỉ để đọc nữa.
          CHÚ THÍCH CHỮ CÁI CHỈ HIỆN KHI NHÓM ĐÓ ĐANG BẬT — bày ra bốn dòng chú thích cho
          mấy chấm không có trên màn hình là bắt người ta tìm thứ không tồn tại. */
+      /* MỖI Ô CHÚ THÍCH LÀ MỘT CÔNG TẮC (user chốt 22/08/2026: *"có thể nhấn vào đây để
+         ẩn hoặc hiện các mục tương ứng trong đồ thị"*). Đây đúng chỗ cần nhất ở đồ thị
+         này: "còn lại" chiếm 81,5% chiều cao cột nên hai mảng khối ngoại và tự doanh chỉ
+         là hai vệt mỏng vài pixel — tắt "còn lại" đi là trục dọc co lại theo và hai mảng
+         kia bung ra đọc được ngay. Trạng thái nhớ qua các lượt mở trang. */
       +ptO('Giá và giá trị giao dịch mỗi phiên', 'mc1',
-           '<b class="ptlgn">cột</b> <i class="pkN"></i> khối ngoại &nbsp;<i class="pkT"></i> tự doanh'
-           +' &nbsp;<i class="pkR"></i> còn lại &nbsp;<i class="pk2"></i> thoả thuận'
+           '<b class="ptlgn">cột</b><span class="ptlgs" id="ptLeg">'
+           +ptSw('fn','pkN','khối ngoại')+ptSw('td','pkT','tự doanh')
+           +ptSw('con','pkR','còn lại')+ptSw('tt','pk2','thoả thuận')+'</span>'
            +'<span class="ptkr"> — phần tô là <b>mức tham gia</b> = (mua + bán) ÷ 2</span>'
-           +'<br><b class="ptlgn">đường</b> <i class="pkA"></i> đóng cửa'
-           +' &nbsp;<i class="pkB"></i> giá TB (VWAP)'
-           +(vniL?' &nbsp;<i class="pkI"></i> VN-Index':'')
-           +(PT.vh?' &nbsp;<i class="pkV"></i> vốn hoá (nét đứt)':'')
+           +'<br><b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg2">'
+           +ptSw('c','pkA','đóng cửa')+ptSw('vw','pkB','giá TB (VWAP)')
+           +(vniL?ptSw('vni2','pkI','VN-Index'):'')
+           +(PT.vh?ptSw('vh2','pkV','vốn hoá (nét đứt)'):'')+'</span>'
            +'<span class="ptkr"> — đọc ở <b>trục phải</b></span>'
            +(skM?(
               '<br><b class="ptlgn">mốc</b>'
@@ -2166,16 +2208,18 @@ function ptVeMa(){
        khối ngoại, rồi thoả thuận trên cùng. Bảng màu cũng dùng chung ba biến `--pkN`
        `--pkT` `--pkR` — hai đồ thị cùng nói một chuyện thì phải cùng một màu, bằng không
        người xem phải học lại bảng màu khi chuyển từ trang thị trường sang trang mã. */
-    series:[{v:conPart,mau:cR},{v:tdPart,mau:cT},{v:fnPart,mau:cN},
-            {v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
+    series:[PT.an.con?null:{v:conPart,mau:cR},
+            PT.an.td?null:{v:tdPart,mau:cT},
+            PT.an.fn?null:{v:fnPart,mau:cN},
+            PT.an.tt?null:{v:pval,mau:dark?'#a78bfa':'#7c3aed'}],
     nhan:v=>ptTien(v),
     /* VN-Index nối vào CUỐI mảng, đừng chèn lên đầu: `ptVe1` lấy `P2[0]` làm đường NEO cho
        mốc sự kiện (cổ tức, BCTC là chuyện của GIÁ) — đẩy nó xuống thứ hai là mấy cái chấm
        bám vào đường VN-Index, sai hẳn chỗ. */
-    phai:{nhan:num,series:[{v:c,mau:dark?'#f8fafc':'#0f172a'},
-                           {v:vw,mau:dark?'#fbbf24':'#d97706'}]
-                          .concat(vniL?[{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}]:[])},
-    phai2:PT.vh?{nhan:v=>ptTien(v),series:[{v:mcap,mau:XANH,day:1.5,net:[5,3]}]}:null}));
+    phai:{nhan:num,series:[PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a'},
+                           PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706'}]
+                          .concat((vniL&&!PT.an.vni2)?[{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}]:[])},
+    phai2:(PT.vh&&!PT.an.vh2)?{nhan:v=>ptTien(v),series:[{v:mcap,mau:XANH,day:1.5,net:[5,3]}]}:null}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mcT'),C({kieu:'bar',series:[{v:tdRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
@@ -2374,6 +2418,14 @@ function ptBindMa(){
     ptVeMa(); };
   /* NHỚ LỰA CHỌN QUA CÁC LƯỢT MỞ TRANG. Ai đã tắt BCTC vì thấy rối thì lần sau mở mã khác
      nó phải còn tắt — bắt tắt lại ở từng mã là công tắc vô dụng. */
+  /* HAI DÒNG CHÚ THÍCH, MỘT HÀM XỬ LÝ. Uỷ quyền ở thẻ bọc chứ đừng gắn tay từng nút:
+     danh sách nút đổi theo trạng thái (VN-Index và vốn hoá chỉ hiện khi công tắc trên
+     thanh tiêu đề đang bật), gắn tay là lần nào cũng phải nhớ gắn lại. */
+  const legClick=e=>{ const n=e.target.closest('button[data-s]'); if(!n) return;
+    const k=n.dataset.s;
+    if(PT.an[k]) delete PT.an[k]; else PT.an[k]=1;
+    LS.set('cpvn_ptan',PT.an); ptVeMa(); };
+  [$('#ptLeg'),$('#ptLeg2')].forEach(el=>{ if(el) el.onclick=legClick; });
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
     if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }

@@ -676,6 +676,17 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    in hoa nhỏ, xám, bề rộng CỐ ĐỊNH để ba dòng thẳng cột với nhau. */
 .ptleg .ptlgn{display:inline-block;min-width:38px;font-size:9.5px;font-weight:800;
   letter-spacing:.05em;text-transform:uppercase;color:var(--faint);opacity:.75}
+/* MỖI Ô CHÚ THÍCH LÀ MỘT CÔNG TẮC. Trông vẫn y như chú thích cũ (không viền, không nền)
+   để không biến dòng chú thích thành một hàng nút — chỉ hiện nền khi rê chuột, đủ để lộ
+   ra là bấm được. Tắt rồi thì MỜ + GẠCH NGANG: chỉ làm mờ thôi thì ở dòng chú thích vốn
+   đã xám nhạt sẽ không phân biệt nổi bật với tắt. */
+.ptleg .ptlgs{display:inline}
+.ptleg .ptlgi{background:none;border:0;padding:1px 5px 1px 3px;margin:0 1px;font:inherit;
+  color:inherit;cursor:pointer;border-radius:5px;white-space:nowrap}
+.ptleg .ptlgi i{margin-right:4px}
+.ptleg .ptlgi:hover{background:var(--card2);color:var(--txt)}
+.ptleg .ptlgi.off{opacity:.45;text-decoration:line-through}
+.ptleg .ptlgi.off i{filter:grayscale(1)}
 /* CÔNG TẮC CỦA RIÊNG MỘT ĐỒ THỊ, ĐỨNG Ở THANH TIÊU ĐỀ CỦA CHÍNH NÓ (22/08/2026).
    `.panel>.ph` vốn đã là flex nên chỉ cần `margin-left:auto` là dạt hẳn sang phải, chỗ
    trước giờ bỏ trống hơn nửa bề ngang. `flex-wrap` ở cả hai để khổ hẹp xuống dòng chứ
@@ -1490,7 +1501,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823e"></script>
+<script defer src="assets/mobi.js?v=20260823f"></script>
 </head>
 <body>
 
@@ -1547,6 +1558,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823e"></script>
+<script src="assets/congcu.js?v=20260823f"></script>
 </body>
 </html>
