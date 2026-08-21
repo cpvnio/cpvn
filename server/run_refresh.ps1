@@ -61,6 +61,18 @@ else                                   { & $py refresh_daily.py 2>&1 }
 & $py tools\kho_giaodich.py --sau 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# DỰNG BẢNG PHIÊN NGAY SAU KHI CÓ SỐ CHỐT — đừng bắt nó xếp hàng sau cả dây cào (22/08/2026).
+# `build_phantich` tốn VÀI GIÂY và chỉ cần `data/giaodich` của bước ngay trên, nhưng nó vốn
+# đứng ở vị trí thứ 7, tức sau ~1 tiếng cào của `kho_vnd` và `--vg` — hai thứ nó KHÔNG cần
+# để dựng bảng giá. Đo thật 21/08/2026: user mở /phantich lúc 15:25 không thấy phiên hôm
+# nay, và sớm nhất cũng phải 17:20 mới có.
+# Chạy HAI LƯỢT: lượt này đưa bảng giá + thoả thuận lên sớm, lượt sau (vị trí cũ) lấp thêm
+# tầng dòng tiền của VNDirect. Ghi đè nhau vô hại — build_phantich TRỘN vào file phiên chứ
+# không xoá khối khác (xem bài học `phien_ghi`), và cột nào chưa có số thì bị bỏ theo từng
+# phiên nên client không thấy cột rỗng.
+& $py tools\build_phantich.py 2>&1
+if ($LASTEXITCODE -ne 0) { "build_phantich (luot som) EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # BỒI TỪ VNDIRECT — tầng giá + khối ngoại + tự doanh, sâu 1.000 phiên, ~45 phút.
 # Phải chạy SAU kho_giaodich (nó chỉ ĐIỀN CHỖ TRỐNG, giữ nguyên số Vietstock để còn đối
 # chiếu) và TRƯỚC build_phantich.
