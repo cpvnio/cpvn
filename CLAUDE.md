@@ -1762,6 +1762,58 @@ nào**), rồi tới phiên của thanh chọn đầu trang, cuối cùng là b�
 > chúng là 100% lưu thông thì đúng nhóm KHÔNG BIẾT GÌ lại nhảy lên đầu mọi bảng xếp theo
 > tỉ lệ lưu thông.
 
+### HAI MÀN HÌNH TÁCH HẲN NHAU, VÀ NỐI VỚI TRANG CỔ PHIẾU BẰNG LINK (22/08/2026)
+
+User chốt: *"mục data bây giờ chỉ có biểu đồ chính và bảng mã theo phiên … khi nhấn chọn 1
+mã sẽ lập tức đưa vào trang phân tích data cổ phiếu … trong trang phân tích data cổ phiếu
+sẽ không còn đồ thị toàn thị trường theo phiên nữa"*.
+
+| | mục data (`/phantich`) | trang mã (`/phantich?sym=MÃ`) |
+|---|---|---|
+| thanh chọn phiên + ô chọn khung | ✓ | — |
+| khối *Toàn thị trường* + đồ thị thị trường | ✓ | — |
+| bảng mã của phiên | ✓ | — |
+| đồ thị + thanh đọc số của mã | — | ✓ |
+
+`ptVe()` nay thoát sớm ở nhánh `PT.ma`: dựng đúng `#ptTab` rồi gọi `ptVeMa()`. Bản cũ dựng
+`.ptbar` + `#ptTop` cho cả hai nên mở một mã ra là phải cuộn qua trọn một màn số của thị
+trường — mà người vừa bấm vào một mã thì đang hỏi về MÃ ĐÓ.
+
+> **KHÔNG chuyển sang `cophieu.html`** — user chốt sau khi cân ba đường: hai trang không
+> dùng chung mạch nào (`cophieu.html` có lõi giá riêng `core.js`, không nạp
+> `data/phantich.json`), gộp là chuyển ~900 dòng và phải kiểm lại từ đầu. Nối bằng LINK:
+> trang cổ phiếu có `#goData` (`Phân tích dữ liệu →`, thẻ `<a>` viền đứt dạt phải trong
+> `#secTabs`), trang mã đã sẵn có `mở trang cổ phiếu →`.
+> **Phải là `<a>` chứ không phải `<button>`**: mạch đổi thẻ của `cophieu.html` quét
+> `#secTabs button` rồi mở `.sect` theo `data-t` — thêm một nút nữa là nó đi tìm một khối
+> nội dung không tồn tại. Khổ hẹp thì bỏ `margin-left:auto` (hàng thẻ lúc đó CUỘN NGANG
+> nên không có chỗ trống nào để dạt phải).
+
+### MỖI Ô CHÚ THÍCH LÀ MỘT CÔNG TẮC ẨN/HIỆN (22/08/2026)
+
+User: *"có thể nhấn vào đây để ẩn hoặc hiện các mục tương ứng trong đồ thị"*. Đây đúng chỗ
+cần nhất: *"còn lại"* chiếm **81,5%** chiều cao cột nên khối ngoại và tự doanh chỉ là hai
+vệt vài pixel. Đo trên SHB — tắt *còn lại* và *thoả thuận* thì trục dọc co theo:
+
+```
+khối ngoại   5.817 px  ->  118.729 px
+tự doanh     4.029 px  ->   82.100 px
+```
+
+Trạng thái lưu ở `localStorage['cpvn_ptan']`, **theo khoá ẨN chứ không theo khoá HIỆN** —
+thêm một mảng mới về sau thì nó mặc định hiện, khỏi phải đi sửa bản đệm của người dùng cũ.
+
+> **`ptVe1` PHẢI CHỊU ĐƯỢC VIỆC ẨN HẾT MẢNG CỘT.** Bản cũ `if(!S.length) return;` ngay đầu
+> hàm — từ khi có công tắc thì người dùng tắt được cả bốn mảng để chỉ xem mấy đường giá, và
+> cả khung trắng trơn, đọc ra như trang hỏng. Nay: còn trục phải thì vẫn vẽ (đo được 68.824
+> pixel), và **bỏ số trên trục trái** vì lúc đó nó không đo cái gì — in "0 đ … 1 đ" ở đó là
+> bịa ra một thang không tồn tại.
+
+> **`vni2`/`vh2` CỐ Ý KHÁC KHOÁ với `vni`/`vh` của hai nút trên thanh tiêu đề.** Nút kia
+> quyết định *có TÍNH đường này không* (vốn hoá cần thêm một trục, VN-Index cần dò
+> `data/phantich.json`), ô chú thích chỉ quyết định *có VẼ ra không*. Dùng chung khoá thì
+> bấm ở chú thích làm nút cách đó nửa màn hình đổi theo — loại tương tác khó đoán nhất.
+
 ### CỘT KHỚP LỆNH CỦA TRANG MÃ TÁCH MÀU THEO KHỐI (22/08/2026)
 
 User: *"trên đồ thị của mã vẫn chưa đánh dấu màu sắc cho tự doanh và khối ngoại"*. Đồ thị
