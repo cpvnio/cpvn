@@ -59,6 +59,11 @@ CHỈ ĐIỀN Ô ĐANG TRỐNG, TUYỆT ĐỐI KHÔNG GHI ĐÈ. Ô đã có là 
 import argparse
 import json
 import os
+import statistics
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nhipmang
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GD = os.path.join(BASE, "data", "giaodich")
@@ -173,10 +178,226 @@ def lap_mot(sym, thu=False):
     return dat, ""
 
 
+# ═══ SOI LẠI BẰNG VỐN HOÁ TỪNG PHIÊN CỦA VNDIRECT (`--soi`) ═════════════════════════
+# Bản đi ngược sai ~4,6% số mã (đo 1.387 mã, xem CLAUDE.md) vì `data/sukien` không ghi đợt
+# phát hành riêng lẻ / ESOP. Nhưng `ratioCode:MARKETCAP` thì có VỐN HOÁ TỪNG PHIÊN lùi tới
+# 2017, và `sh ÷ (MARKETCAP ÷ giá)` của mấy mã hỏng có hình dạng RẤT ĐẶC TRƯNG — một BẬC
+# THANG SẠCH: giữ đúng một hằng số rồi rơi thẳng về 1,000 tại ngày phát hành.
+#
+#   SSB  1,030 1,030 1,030 1,030 1,030 | 1,000 1,000 1,000 1,000 1,000
+#   PAP  1,333 1,333 1,333 1,333 1,333 | 1,000 1,000 1,000 1,000 1,000
+#   HHV  1,151 1,151 1,151 1,151 | 1,000 1,000 …
+#
+# Nên chỉ sửa khi thấy ĐÚNG hình đó. Mã nào thương số nhiễu (MARKETCAP của mã thanh khoản
+# mỏng KHÔNG tính bằng giá đóng cửa của chính phiên đó — đo được dao động tới ±51%) thì
+# phép thử "đoạn đầu phải là hằng số" tự loại, không cần ngưỡng tuỳ tiện.
+#
+# ĐÂY LÀ BƯỚC CÓ GỌI MẠNG, tách khỏi phần đi ngược. ~13 lượt: 12 lượt hỏi CẢ SÀN ở 12 ngày
+# rải đều (mỗi lượt ~1.680 bản ghi) để khoanh vùng nghi, rồi 1 lượt hỏi trọn chuỗi của
+# riêng nhóm nghi. Chạy mà hỏng thì bỏ qua — phần đi ngược đã ghi xong từ trước.
+API = ("https://api-finfo.vndirect.com.vn/v4/ratios?q=%s~ratioCode:MARKETCAP"
+       "~reportDate:gte:%s~reportDate:lte:%s&order=code&size=9990")
+DEU = 0.01          # coi là "bằng nhau" — 1%
+BAC = 0.02          # bậc phải cao hơn 2% mới đáng sửa
+DAY = 20            # đoạn phẳng ở cuối phải có ít nhất từng này điểm
+# CHỈ XÉT ĐẦU KHUNG. Đây là bẫy đã dính: soi trọn 994 phiên của SSB thì đoạn "đầu" gộp cả
+# bậc 1,030 lẫn hàng trăm ô 1,000 của mấy đợt phát hành SAU này, trung vị ra 1,0000 và phép
+# thử "đoạn đầu là hằng số" trượt sạch — 455 mã nghi mà sửa được 0. Vùng CÓ THỂ sai chỉ là
+# phần `lap_slcp_cu` vừa ghi (≤ LUI_TOI_DA phiên đầu); từ đó trở đi `sh` là số `ratios` cho,
+# không được đụng vào. Lấy thêm XET phiên phía sau làm đoạn đối chứng phẳng.
+XET = 400
+
+
+def _vongop(sym):
+    """Vốn góp theo quý (tỷ đồng) từ `data/finx`. Mệnh giá cổ phiếu VN là 10.000đ theo
+    luật, nên `vốn góp ÷ 10.000` = số cổ phiếu ĐÃ NIÊM YẾT."""
+    p = os.path.join(BASE, "data", "finx", sym + ".json")
+    if not os.path.exists(p):
+        return None
+    try:
+        j = doc(p)
+    except Exception:
+        return None
+    q = j.get("Q") or {}
+    r = [x for x in q.get("rows", []) if x.get("k") == "x_von_gop"]
+    if not r:
+        return None
+    lab, v = q.get("labels") or [], r[0].get("v") or []
+    return {lab[i]: v[i] for i in range(min(len(lab), len(v))) if v[i]}
+
+
+def _quy_truoc(ngay):
+    """Nhãn quý LIỀN TRƯỚC quý chứa `ngay`, dạng 'Qn/yy'."""
+    y, m = int(ngay[:4]), int(ngay[5:7])
+    q = (m - 1) // 3 + 1
+    if q == 1:
+        y, q = y - 1, 4
+    else:
+        q -= 1
+    return "Q%d/%02d" % (q, y % 100)
+
+
+def _hoi(q, t1, t2):
+    o = json.loads(nhipmang.get(API % (q, t1, t2), timeout=90))
+    ra = {}
+    for x in o.get("data") or []:
+        ra.setdefault(x["reportDate"], {})[x["code"]] = x["value"]
+    return ra
+
+
+def _bac(r):
+    """r = [(chỉ số, thương số)] theo thứ tự thời gian. Trả hằng số K của đoạn đầu nếu
+    chuỗi đúng hình BẬC THANG SẠCH (đoạn đầu là hằng K, đoạn cuối phẳng ở 1,000)."""
+    r = [x for x in r if x[0] < XET]
+    if len(r) < DAY + 5:
+        return None
+    # ── PHẲNG = 90% SỐ ĐIỂM BÁM TRUNG VỊ, KHÔNG PHẢI BIÊN ĐỘ ────────────────────────
+    # Bẫy đã dính: đòi `max - min <= 2%` thì PAP trượt dù trung vị đoạn đầu ra ĐÚNG
+    # 1,3333 — vài phiên lẻ MARKETCAP nhiễu là biên độ vọt lên 0,66. Cùng cảnh SP2
+    # (1,3637), MNB và SFI (1,0500). Đếm tỉ lệ điểm bám trung vị thì chịu được mấy ô
+    # nhiễu lẻ mà vẫn loại được chuỗi nhiễu thật (SIP dao động 0,949-0,997, không mức
+    # nào gom nổi 90%).
+    def phang(v, moc):
+        return sum(1 for x in v if abs(x / moc - 1) <= DEU) >= 0.9 * len(v)
+
+    duoi = [v for _, v in r[-DAY:]]
+    if abs(statistics.median(duoi) - 1) > DEU or not phang(duoi, 1.0):
+        return None
+    # ĐIỂM BẬC: quét XUÔI TỪ ĐẦU, tìm chỗ đầu tiên mà từ đó có ĐỦ `DAY` điểm liền ~1,000.
+    # ĐỪNG QUÉT NGƯỢC TỪ CUỐI — bẫy đã dính: SSB và PAP còn có đợt phát hành nữa vào ~2024,
+    # quét ngược vấp đúng nó rồi dừng ở chỉ số 343/396, thế là "đoạn đầu" gộp cả hai bậc,
+    # trung vị ra 1,0000 và phép thử trượt. Mấy bậc SAU không liên quan: ở đó `sh` là số
+    # `ratios` cho, đã đúng, và mình cũng không đụng tới.
+    # Dùng CÙNG luật 90% chứ đừng đòi `all`: PAP nhiễu ngay tại chỗ bậc (chỉ số 60-80 có
+    # vài ô 1,63 lẫn vào giữa những ô 1,000) nên `all` đẩy điểm bậc trôi từ 60 sang 81 và
+    # đoạn đầu gộp luôn phần đã sang nền mới. Lỏng ở ĐÂY thì an toàn, vì chốt chặn thật
+    # nằm ở phép đối chiếu vốn góp phía dưới — không nguồn thứ hai gật thì không sửa gì.
+    p = None
+    for q in range(len(r) - DAY + 1):
+        if phang([v for _, v in r[q:q + DAY]], 1.0):
+            p = q
+            break
+    if p is None or p < 5:
+        return None
+    # BẬC PHẢI NẰM TRONG VÙNG VỪA LẤP. Ngoài đó là số `ratios` cho — sai lệch ở đấy là
+    # chuyện của MARKETCAP chứ không phải của mình, sửa vào là phá số đúng.
+    if r[p - 1][0] >= LUI_TOI_DA:
+        return None
+    dau = [v for _, v in r[:p]]
+    K = statistics.median(dau)
+    if abs(K - 1) < BAC or not phang(dau, K):
+        return None
+    return K, r[p - 1][0]
+
+
+def soi(syms, thu=False):
+    kho = {s: doc(os.path.join(GD, s + ".json")) for s in syms}
+    ngay = None
+    for o in kho.values():
+        if len(o.get("d") or []) > (len(ngay or []) if ngay else 0):
+            ngay = o["d"]
+    if not ngay:
+        return
+    # ── vòng 1: 12 ngày rải đều cả khung, hỏi cả sàn ──
+    moc = [ngay[i] for i in range(0, len(ngay), max(1, len(ngay) // 12))][:12]
+    mc = {}
+    for n in moc:
+        try:
+            mc.update(_hoi("", n, n))
+        except Exception as e:
+            print("  soi: lượt %s hỏng (%s) - bỏ qua cả bước" % (n, str(e)[:50]), flush=True)
+            return
+    nghi = []
+    for s, o in kho.items():
+        d, c, sh = o["d"], o.get("c") or [], o.get("sh") or []
+        r = []
+        for i, x in enumerate(d):
+            if x not in mc or i >= len(sh) or not sh[i] or i >= len(c) or not c[i]:
+                continue
+            v = mc[x].get(s)
+            if v:
+                r.append((i, sh[i] / (v / c[i])))
+        if len(r) < 8:
+            continue
+        if abs(statistics.median([v for _, v in r[-4:]]) - 1) > DEU:
+            continue        # MARKETCAP đo khác định nghĩa với mã này (cổ phiếu quỹ) -> bỏ
+        if max(abs(v - 1) for _, v in r) > BAC:
+            nghi.append(s)
+    print("  soi: %d mã nghi có bậc thiếu" % len(nghi), flush=True)
+    if not nghi:
+        return
+    # ── vòng 2: chuỗi đầy đủ của riêng nhóm nghi, CHỈ ĐOẠN ĐẦU KHUNG ──
+    # TRẦN 9.990 BẢN GHI MỖI LƯỢT, và nguồn CẮT CÂM chứ không báo lỗi. Xin 60 mã × 999
+    # phiên = 60.000 bản ghi thì nhận về 9.990 mảnh vụn, `_bac` trượt sạch và cả bước báo
+    # "sửa 0 mã" trông y như không có gì để sửa — đã dính đúng vậy. Chỉ cần XET phiên đầu,
+    # nên 20 mã × ~400 phiên = 8.000, còn chỗ thở.
+    het = ngay[min(XET, len(ngay)) - 1]
+    day = {}
+    for i in range(0, len(nghi), 20):
+        lo = nghi[i:i + 20]
+        try:
+            g = _hoi("code:" + ",".join(lo), ngay[0], het)
+            co = {c for m in g.values() for c in m}
+            if len(co) < len(lo):
+                print("  soi: lô %d chỉ nhận %d/%d mã" % (i, len(co), len(lo)), flush=True)
+            for n, m in g.items():
+                day.setdefault(n, {}).update(m)
+        except Exception as e:
+            print("  soi: lô %d hỏng (%s)" % (i, str(e)[:50]), flush=True)
+    sua = 0
+    for s in nghi:
+        o = kho[s]
+        d, c, sh = o["d"], o.get("c") or [], list(o.get("sh") or [])
+        r = []
+        for i, x in enumerate(d):
+            if i >= len(sh) or not sh[i] or i >= len(c) or not c[i]:
+                continue
+            v = (day.get(x) or {}).get(s)
+            if v:
+                r.append((i, sh[i] / (v / c[i])))
+        kq = _bac(r)
+        if not kq:
+            continue
+        K, cuoi = kq
+        # ── CHỈ SỬA KHI VỐN GÓP CŨNG GẬT ĐẦU ────────────────────────────────────────
+        # Hai nguồn hoàn toàn khác nhau: `MARKETCAP` là vốn hoá VNDirect tính theo phiên,
+        # `x_von_gop` là số trên bảng cân đối kế toán. Cùng chỉ vào một con số thì đó là
+        # bằng chứng, một mình `MARKETCAP` thì chỉ là nghi ngờ.
+        # PHẢI LẤY VỐN GÓP CỦA QUÝ **LIỀN TRƯỚC** ngày bậc — đã dính: bậc 27/10 nằm trong
+        # Q4/22, lấy vốn góp cuối Q4 là lấy đúng số SAU đợt phát hành, nên nó "xác nhận"
+        # ngược lại con số cũ và cả phép kiểm đảo chiều.
+        # Đo trên 12 mã tìm được: 10 mã vốn góp khớp tới từng đồng (SSB 1.980.898.268 so
+        # với 1.980.898.000), 1 mã (L10) vốn góp bênh số cũ, 1 mã (S99) cả ba đều khác —
+        # hai mã sau BỎ QUA, thà để nguyên còn hơn sửa theo một nguồn.
+        moi = sh[cuoi] / K
+        V = _vongop(s)
+        cp = (V or {}).get(_quy_truoc(d[cuoi]))
+        if not cp:
+            print("     %-6s BỎ QUA - không có vốn góp để đối chiếu" % s, flush=True)
+            continue
+        cp = cp * 1e9 / 10000.0
+        if abs(cp / moi - 1) > 0.02:
+            print("     %-6s BỎ QUA - vốn góp %s không khớp %s"
+                  % (s, format(int(cp), ","), format(int(moi), ",")), flush=True)
+            continue
+        for i in range(cuoi + 1):
+            if i < len(sh) and sh[i]:
+                sh[i] = int(round(sh[i] / K))
+        print("     %-6s chia %.4f cho %d phiên tới %s (vốn góp xác nhận)"
+              % (s, K, cuoi + 1, d[cuoi]), flush=True)
+        sua += 1
+        if not thu:
+            o["sh"] = sh
+            ghi(os.path.join(GD, s + ".json"), o)
+    print("  soi: sửa %d mã%s" % (sua, " (THỬ)" if thu else ""), flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ma", help="chỉ chạy mấy mã này, cách nhau bằng dấu phẩy")
     ap.add_argument("--thu", action="store_true", help="chỉ đếm, không ghi file")
+    ap.add_argument("--soi", action="store_true",
+                    help="soi lại bằng MARKETCAP của VNDirect (~13 lượt gọi mạng)")
     a = ap.parse_args()
 
     if a.ma:
@@ -202,6 +423,8 @@ def main():
         " (THỬ, không ghi)" if a.thu else ""), flush=True)
     if loi:
         print("  lỗi %d mã: %s" % (len(loi), loi[:5]), flush=True)
+    if a.soi:
+        soi(syms, a.thu)
 
 
 if __name__ == "__main__":

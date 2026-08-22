@@ -79,7 +79,10 @@ if ($LASTEXITCODE -ne 0) { "va_slcp_gdkhq EXIT $LASTEXITCODE - bo qua, chay tiep
 # LO NAY TU SINH LAI moi ngay (16 quy ~ 1.000 phien, hai moc troi song song) nen phai nam
 # trong luot EOD chu khong phai mot ban va chay tay. PHAI DUNG SAU va_slcp_gdkhq: no neo
 # vao o dau tien, ma o do chi dung sau khi buoc nhay da duoc doi ve ngay GDKHQ.
-& $py tools\lap_slcp_cu.py 2>&1
+# `--soi`: soi lai bang MARKETCAP tung phien cua VNDirect (~35 luot goi, 30 giay). Ban di
+# nguoc khong biet dot phat hanh rieng le / ESOP vi data/sukien khong ghi; MARKETCAP thi
+# thay, va `x_von_gop` cua data/finx xac nhan. CHI SUA KHI CA HAI NGUON CUNG DONG Y.
+& $py tools\lap_slcp_cu.py --soi 2>&1
 if ($LASTEXITCODE -ne 0) { "lap_slcp_cu EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
 # [2] THOẢ THUẬN — riêng `pv`/`pval` vẫn phải hỏi Vietstock. Đối chiếu phiên 21/08: khớp

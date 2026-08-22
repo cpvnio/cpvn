@@ -2557,11 +2557,59 @@ trên tập mã CẢ HAI cùng có:
 2023-01-03 vốn hoá **+3,11%** trong khi VN-Index **+3,66%** — cú nhảy đó là thị trường thật,
 không phải vết ghép.
 
-> **CÒN LẠI ~1% MÃ SAI VÀ KHÔNG NGUỒN NÀO BẮT ĐƯỢC.** Đối chiếu vùng vá với `MARKETCAP` trên
-> 141 mã: chỉ **2 mã lệch trung vị >2%**, và một trong hai (NAF) không phải lỗi — `MARKETCAP`
-> của họ tính trên cổ phiếu NIÊM YẾT còn `sh` là cổ phiếu LƯU HÀNH, chênh nhau đúng phần cổ
-> phiếu quỹ. Mã còn lại (SFI) là phát hành riêng lẻ mà `data/sukien` không ghi và `MARKETCAP`
-> cũng chở số mới về quá khứ. Ghi ra đây để đừng ai đi tìm lần nữa.
+**BƯỚC SOI LẠI (`--soi`) — HAI NGUỒN ĐỘC LẬP MỚI ĐƯỢC SỬA.** Bản đi ngược không biết đợt
+phát hành riêng lẻ / ESOP (bảng sự kiện không ghi). Đo trên **1.387 mã**: 64 mã lệch >0,5%
+so với `MARKETCAP`, tưởng là 4,6% mã hỏng. **Nhưng phân xử bằng nguồn thứ ba thì lật hẳn** —
+`x_von_gop` của `data/finx` bênh `sh` ở CẢ HAI vùng cho **37 mã**, tức ở đó `MARKETCAP` mới
+là bên lệch (nó không tính vốn hoá bằng giá đóng cửa của chính phiên đó với mã mỏng).
+
+Mã hỏng THẬT có hình dạng rất đặc trưng — `sh ÷ (MARKETCAP ÷ giá)` là một **BẬC THANG SẠCH**:
+giữ đúng một hằng số rồi rơi thẳng về 1,000 tại ngày phát hành.
+
+```
+SSB  1,030 1,030 1,030 1,030 1,030 | 1,000 1,000 1,000 …
+PAP  1,333 1,333 1,333 1,333 1,333 | 1,000 1,000 1,000 …
+HHV  1,151 1,151 1,151 1,151 | 1,000 1,000 …
+```
+
+`--soi` tìm đúng hình đó (~35 lượt gọi, 30 giây: 12 lượt hỏi CẢ SÀN ở 12 ngày rải đều để
+khoanh vùng nghi, rồi hỏi trọn chuỗi của riêng nhóm nghi) rồi **chỉ sửa khi vốn góp cũng gật
+đầu**. Đã sửa **13 mã**, khớp tới từng đồng: SSB `MARKETCAP` 1.980.898.268 · vốn góp
+1.980.898.000. Hai mã bị chặn đúng lúc — L10 (vốn góp bênh số cũ) và S99 (cả ba nguồn đều
+khác) — thà để nguyên còn hơn sửa theo một nguồn.
+
+> **VỐN GÓP PHẢI LẤY QUÝ LIỀN TRƯỚC NGÀY BẬC.** Bẫy đã dính và nó ĐẢO NGƯỢC KẾT LUẬN: bậc
+> 27/10 nằm trong Q4/22, lấy vốn góp cuối Q4 là lấy đúng số SAU đợt phát hành → nó "xác nhận"
+> con số CŨ và phép kiểm báo 10/12 mã *không* nên sửa. Lấy Q3/22 thì 10/12 khớp tuyệt đối.
+
+> **BA BẪY CỦA BỘ DÒ, mỗi cái đều làm nó im lặng báo "không có gì để sửa":**
+> ① **Trần 9.990 bản ghi mỗi lượt, và nguồn CẮT CÂM chứ không báo lỗi** — xin 60 mã × 999
+>    phiên = 60.000 bản ghi thì nhận về mảnh vụn, `_bac` trượt sạch. Chỉ xin `XET` phiên đầu,
+>    20 mã một lượt.
+> ② **Quét tìm bậc phải đi XUÔI TỪ ĐẦU, đừng quét ngược từ cuối** — SSB và PAP còn đợt phát
+>    hành nữa vào ~2024, quét ngược vấp đúng nó rồi dừng ở chỉ số 343/396, "đoạn đầu" gộp cả
+>    hai bậc, trung vị ra 1,0000 và trượt.
+> ③ **"Phẳng" phải đo bằng TỈ LỆ ĐIỂM BÁM TRUNG VỊ (90%), đừng đo bằng biên độ** — PAP có
+>    trung vị đoạn đầu ra ĐÚNG 1,3333 mà vài phiên nhiễu đẩy biên độ lên 0,66.
+
+**CÒN LẠI, ĐO TRÊN 1.388 MÃ SAU KHI SOI:**
+
+| | số mã | vốn hoá |
+|---|---|---|
+| `MARKETCAP` mới là bên lệch (vốn góp bênh `sh`) — **không phải lỗi** | 37 | 369.883 tỷ |
+| **`sh` sai thật, chưa sửa được** | **7** | 25.945 tỷ |
+| không có vốn góp để phân xử | 15 | 1.755 tỷ |
+
+Tức nhiều nhất **22 mã đáng ngờ trên 1.388 = 1,6%, chiếm 0,27% vốn hoá thị trường**. Lớn
+nhất là SIP 12.081 tỷ và PAP 10.710 tỷ — cả hai `MARKETCAP` nhiễu ngay tại chỗ bậc nên bộ dò
+không dám chốt. Tổng vốn hoá thị trường sau khi soi: lệch **−0,01% / +0,05% / −0,02%** ở ba
+phiên kiểm (trước khi soi là +0,08% / +0,10% / −0,02%).
+
+> **BỐN CỬA ĐÃ DÒ VÀ ĐÓNG — đừng dò lại:** TCBS `apipubaws` (404 cả ba endpoint) · Simplize
+> `historical/quote` (chỉ trả ảnh chụp hiện tại, không có vốn hoá theo ngày) · `api.hsx.vn`
+> `securities` (trả rỗng) · `shR` còn trong kho nhưng **chỉ 1/1.529 mã chạm tới trước 2023**
+> (Vietstock chặn 1 năm, mà lượt EOD đã thôi cào tầng đó từ 22/08). DNSE `entrade` có nến
+> nhưng không có số cổ phiếu.
 
 > **HAI CÔNG CỤ CHẠY CHUNG THÌ ỔN ĐỊNH.** `va_slcp_gdkhq` (dời bậc) phải đứng TRƯỚC
 > `lap_slcp_cu` (lấp đầu khung) vì bản lấp neo vào ô đầu tiên, mà ô đó chỉ đúng sau khi bậc
