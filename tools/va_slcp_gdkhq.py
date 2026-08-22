@@ -99,16 +99,36 @@ def va_mot(sym):
         # ── thử chia theo tỉ lệ của từng đợt ──
         moc = None
         if all(x.get("tl") for x in trong if x["k"] in CO_TL):
-            f = 1.0
+            # ── HAI ĐỢT CÙNG MỘT NGÀY GDKHQ thì CỘNG TỈ LỆ, ĐỪNG NHÂN ────────────────
+            # Cầm 100 cp, cùng ngày nhận cổ tức cổ phiếu 20% VÀ thưởng 30% -> nhận
+            # 20 + 30 = 50 cp mới, hệ số 1,50; nhân ra 1,20 × 1,30 = 1,56 là thừa 4%.
+            # Kiểm bằng vốn góp của TV2 quanh 15/11/2022: 450,18 -> 675,26 tỷ = 1,5000.
+            # 219 ngày GDKHQ có từ 2 đợt trở lên, trên 153 mã — không phải ca hiếm.
+            # Ở ĐÂY nó vốn KHÔNG gây hại (phép thử 3% trượt thì rơi về nhánh "dồn cả bậc
+            # vào đợt sớm nhất", mà mấy đợt cùng ngày thì đợt sớm nhất CHÍNH LÀ ngày đó),
+            # nhưng phải viết đúng để không lệch luật với `lap_slcp_cu.py` — hai công cụ
+            # dùng chung một bảng sự kiện thì phải nhân dồn cùng một kiểu.
+            ngay = []
             for x in trong:
-                if x["k"] in CO_TL:
-                    f *= 1 + (x["tl"] or 0) / 100.0
+                if x["k"] not in CO_TL:
+                    continue
+                if ngay and ngay[-1][0] == x["d"]:
+                    ngay[-1][1] += x["tl"] or 0
+                else:
+                    ngay.append([x["d"], x["tl"] or 0])
+            f = 1.0
+            for _, tl in ngay:
+                f *= 1 + tl / 100.0
             if len(trong) > 1 and f > 1 and abs(f / (b / a) - 1) <= 0.03:
                 moc = []
                 cum = 1.0
+                nho = {}
+                for dd, tl in ngay:
+                    cum *= 1 + tl / 100.0
+                    nho[dd] = cum
                 for x in trong:
                     if x["k"] in CO_TL:
-                        cum *= 1 + (x["tl"] or 0) / 100.0
+                        cum = nho[x["d"]]
                     moc.append((vi[x["d"]], round(a * cum)))
                 moc[-1] = (moc[-1][0], b)     # ép giá trị cuối bằng đúng số nguồn cho
         if moc is None:

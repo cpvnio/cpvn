@@ -47,6 +47,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/kho_thanhkhoan.py` | 60 | Thanh khoản CHÍNH THỨC từng sàn từng phiên → `data/thanhkhoan.json`. 3 lượt gọi |
 | `tools/soi_thanhkhoan.py` | 130 | Cộng kho rồi đặt cạnh số của sàn — **phép đo phải chạy sau mọi lượt đụng vào kho giao dịch**. KHÔNG gọi mạng |
 | `tools/kho_thoathuan.py` | 260 | Vá `pv`/`pval` từ Vietstock cho cả kho. **Lượt một lần**, không nằm trong pipeline |
+| `tools/lap_slcp_cu.py` | 190 | Lấp `sh` cho phần ĐẦU khung bằng cách đi ngược `data/sukien`. KHÔNG gọi mạng, bước `[1c]` của lượt EOD |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -2460,6 +2461,112 @@ khi đó ~5,4 TRIỆU tỷ. Một ô lệch 8.000 lần nằm lọt giữa chu�
 không đáng công bố vốn hoá. Sàn cách xa mọi phiên lành — phiên mỏng nhất trong kho vẫn có
 **1.446 mã**. Dựng lại `phantich.json` sau khi vá: **đúng 2 ô đổi** (`mcap`, `mcapFF` của
 31/12/2022 → `null`), không ô nào khác nhúc nhích.
+
+### CÁI LỖ TRƯỚC 2023 CỦA VỐN HOÁ — ĐÃ LẤP, `tools/lap_slcp_cu.py` (23/08/2026)
+
+User: *"vì sao mất 1 góc trước 2023, có thể fix triệt để lỗi này không"*.
+
+**GỐC: `ratios` của VNDirect CHẶN CỨNG 16 QUÝ.** Dò tận nơi —
+`v4/ratios?q=code:HPG~ratioCode:OUTSTANDING_SHARES` trả `totalElements=16`, kỳ cũ nhất
+**2022-12-31**; `LISTED_SHARES`, `TOTAL_SHARES`, `FREEFLOAT` cũng đúng 16. Kho giao dịch thì
+sâu 1.000 phiên (lùi tới ~2022-08-18). Chênh lệch đó chính là cái góc: **1.449/1.529 mã có
+`sh` bắt đầu ĐÚNG ngày 2023-01-03**, nên 95 phiên đầu khung không có vốn hoá và cả ba đường
+của trục ngoài cùng đều cụt.
+
+**LỖ NÀY TỰ SINH LẠI MỖI NGÀY** — 16 quý ≈ 4 năm ≈ 1.000 phiên, hai mốc trôi song song nên
+độ rộng của nó không đổi. Vì thế bản vá phải nằm TRONG lượt EOD (bước `[1c]`, ngay sau
+`va_slcp_gdkhq`), không phải một script chạy tay.
+
+**CÁCH LẤP — ĐI NGƯỢC TỪ Ô ĐẦU TIÊN ĐÃ BIẾT, KHÔNG GỌI MẠNG LƯỢT NÀO:**
+
+```
+sh(t) = sh(neo) ÷ Π (1 + tỉ lệ)      mọi sự kiện GDKHQ trong (t, neo]
+```
+
+`neo` = phiên đầu tiên có `sh`; tỉ lệ lấy từ `data/sukien` (đã có sẵn trong kho, lượt 7:30
+dựng). Ngược chiều với `va_slcp_gdkhq.py` nhưng cùng cơ chế và cùng bảng sự kiện. **Không
+bịa con số nào** — hai đầu bậc thang đều là số nguồn cho, việc duy nhất là đặt bậc đúng chỗ.
+Chạy **1,2 giây** cho cả kho, lấp **140.808 ô trên 1.509/1.529 mã**; phiên có vốn hoá thị
+trường **905 → 1.000**.
+
+**BỐN CÁCH ĐÃ ĐO, ĐỪNG THỬ LẠI.** Hồi kiểm: giấu `sh` của 105 phiên rồi dựng lại, so từng Ô
+PHIÊN với đáp án thật, 117 mã / ~12.000 ô:
+
+| cách dựng lại | ô đúng <0,5% | p99 lệch |
+|---|---|---|
+| **đi ngược sự kiện** (đang dùng) | **99,06%** | **0,01%** |
+| giữ nguyên số của neo | 98,80% | 4,55% |
+| hiệu vốn góp (`data/finx`) | 98,33% | 16,00% |
+| median `MARKETCAP` ÷ giá | 96,23% | 54,42% |
+| `MARKETCAP` ÷ giá từng phiên | 90,21% | 54,42% |
+
+> **CHỈ `cp` VÀ `thuong`.** Thêm `quyenmua`/`phathanh`: 99,06% → **98,76%**, p99 vọt từ
+> 0,01% lên **4,55%** — tỉ lệ quyền mua chỉ là mức TỐI ĐA, không phải ai cũng nộp tiền.
+> Đúng luật `CO_TL`/`KHONG_TL` của `va_slcp_gdkhq.py`.
+
+> **`MARKETCAP` THEO TỪNG PHIÊN CÓ THẬT VÀ SÂU TỚI 2017** (`ratioCode:MARKETCAP`, 2.171
+> phiên cho HPG, lọc ngày bằng `reportDate:gte:X~reportDate:lte:Y`) — nghe như lời giải hoàn
+> hảo, và trên HPG thì `MARKETCAP ÷ giá` khớp `sh` tới **0,0000%** suốt 899 phiên. **Nhưng
+> mã thanh khoản mỏng thì vốn hoá họ ghi KHÔNG tính bằng giá đóng cửa của chính phiên đó**:
+> thương số dao động BCA ±8,5% · SNZ ±18% · DSP ±37% · cao nhất **±51%**. Nó cũng **không
+> dùng làm trọng tài được** — đo trên 295 mã, ngưỡng 3% chỉ bắt **2/13** mã hỏng (15%), vì
+> VNDirect cũng chở số MỚI về quá khứ y như mình. Bỏ, và bỏ luôn ý định gọi mạng.
+
+> **VỐN GÓP (`data/finx` dòng `x_von_gop`, sâu tới Q1/07) BẮT ĐƯỢC THỨ SỰ KIỆN KHÔNG CÓ** —
+> VTR: vốn góp nhảy 172,95 → 292,95 tỷ = đúng 12.000.000 cp phát hành riêng lẻ mà bảng sự
+> kiện bỏ trống. Nhưng nó **đăng ký TRỄ hơn ngày GDKHQ** và chỉ có độ phân giải QUÝ, nên đẻ
+> ra lỗi ở mọi mốc quý nhiều hơn số ca nó cứu: 99,06% → **98,33%**.
+
+**TRẦN ĐỘ XA 150 PHIÊN — sai số DỒN theo quãng đường.** Neo ở phiên cuối rồi đi ngược suốt
+900 phiên có đáp án thật, 1.529 mã:
+
+```
+lùi     0-39    40-79   80-119  120-159  160-199  240-279  320-359
+đúng   99,68%  97,18%   95,95%   94,76%   92,67%   90,74%   89,18%
+p95     0,00%   0,00%    0,02%    1,41%    9,09%   19,86%   25,00%
+```
+
+Cái lỗ thật chỉ rộng ~95–113 phiên nên 150 phủ trọn với dư địa, mà vẫn chặn hai ca đi hoang:
+**PTM phải lùi 776 phiên, PEG 593** — ở tầm đó cứ 5 ô có 1 ô sai. Hai mã đó chỉ được lấp 150
+phiên rồi dừng; phần còn lại **vẫn để trống**, và trống là câu trả lời đúng.
+
+**LỖI THẬT BẮT ĐƯỢC TRONG LÚC LÀM: HAI ĐỢT CÙNG NGÀY GDKHQ PHẢI CỘNG TỈ LỆ, KHÔNG PHẢI
+NHÂN.** Cầm 100 cp, cùng ngày nhận cổ tức cổ phiếu 20% VÀ thưởng 30% thì nhận 20 + 30 = 50
+cp mới — hệ số **1,50**, không phải 1,20 × 1,30 = 1,56. Cả hai tỉ lệ tính trên CÙNG một số
+cổ phiếu trước sự kiện chứ không nối tiếp. Kiểm bằng nguồn khác hẳn — vốn góp của TV2 quanh
+15/11/2022: **450,18 → 675,26 tỷ = ĐÚNG 1,5000**; bản nhân ra 43.286.003 cp, lệch **3,8%** so
+với 45.018.000 mà cả vốn góp lẫn `MARKETCAP` cùng xác nhận. **Không phải ca hiếm: 219 ngày
+GDKHQ có từ 2 đợt trở lên, trên 153 mã = 10% kho.** Đã sửa ở CẢ HAI chỗ — `lap_slcp_cu.py`
+(gộp theo ngày trong `su_kien()`) và `va_slcp_gdkhq.py` (ở đó nó vốn không gây hại vì phép
+thử 3% trượt thì rơi về nhánh "dồn cả bậc vào đợt sớm nhất", mà đợt sớm nhất chính là ngày
+đó — nhưng hai công cụ dùng chung một bảng sự kiện thì phải nhân dồn cùng một kiểu).
+
+**PHÉP KIỂM CHẤP NHẬN — CỘNG `MARKETCAP` CỦA CẢ SÀN RỒI SO VỚI TỔNG CỦA KHO.** Đây là nguồn
+ĐỘC LẬP (endpoint khác, không dùng trong thuật toán), hỏi ĐÚNG MỘT NGÀY mỗi lượt và chỉ cộng
+trên tập mã CẢ HAI cùng có:
+
+| ngày | kho (tỷ) | VNDirect cộng (tỷ) | lệch | mã |
+|---|---|---|---|---|
+| **2022-08-19** | 6.594.617 | 6.589.518 | **+0,08%** | 1.448 |
+| **2022-10-14** | 5.519.696 | 5.514.255 | **+0,10%** | 1.449 |
+| **2022-12-30** | 5.190.948 | 5.191.909 | **−0,02%** | 1.452 |
+| 2023-01-03 *(vùng vốn đã đúng)* | 5.352.300 | 5.348.892 | +0,06% | 1.452 |
+| 2026-08-21 *(vùng vốn đã đúng)* | 10.294.691 | 10.308.719 | −0,14% | 1.524 |
+
+**Vùng vừa lấp chính xác NGANG vùng vốn đã đúng.** Chỗ nối cũng lành: 2022-12-30 →
+2023-01-03 vốn hoá **+3,11%** trong khi VN-Index **+3,66%** — cú nhảy đó là thị trường thật,
+không phải vết ghép.
+
+> **CÒN LẠI ~1% MÃ SAI VÀ KHÔNG NGUỒN NÀO BẮT ĐƯỢC.** Đối chiếu vùng vá với `MARKETCAP` trên
+> 141 mã: chỉ **2 mã lệch trung vị >2%**, và một trong hai (NAF) không phải lỗi — `MARKETCAP`
+> của họ tính trên cổ phiếu NIÊM YẾT còn `sh` là cổ phiếu LƯU HÀNH, chênh nhau đúng phần cổ
+> phiếu quỹ. Mã còn lại (SFI) là phát hành riêng lẻ mà `data/sukien` không ghi và `MARKETCAP`
+> cũng chở số mới về quá khứ. Ghi ra đây để đừng ai đi tìm lần nữa.
+
+> **HAI CÔNG CỤ CHẠY CHUNG THÌ ỔN ĐỊNH.** `va_slcp_gdkhq` (dời bậc) phải đứng TRƯỚC
+> `lap_slcp_cu` (lấp đầu khung) vì bản lấp neo vào ô đầu tiên, mà ô đó chỉ đúng sau khi bậc
+> đã về ngày GDKHQ. Chạy lại cả hai lượt thứ hai: `lap_slcp_cu` chỉ còn lấp 300 ô trên 2 mã
+> (hai mã có `dau` xê dịch vì bậc vừa dời) — **idempotent**, không giẫm lên nhau.
 
 ### THANH ĐỌC SỐ DÍNH PHẢI CÓ NỀN ĐẶC (23/08/2026)
 

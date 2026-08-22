@@ -72,6 +72,16 @@ if ($LASTEXITCODE -ne 0) { "kho_vnd_lo EXIT $LASTEXITCODE - bo qua, chay tiep" }
 & $py tools\va_slcp_gdkhq.py 2>&1
 if ($LASTEXITCODE -ne 0) { "va_slcp_gdkhq EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# [1c] LAP SO CO PHIEU CHO PHAN DAU KHUNG. `ratios` chan cung 16 QUY (ky cu nhat
+# 2022-12-31) trong khi kho giao dich sau 1.000 phien, nen 1.449/1.529 ma co `sh` bat dau
+# DUNG ngay 2023-01-03 va 95 phien truoc do khong co von hoa. Di NGUOC tu o dau tien da
+# biet bang ti le chia trong data/sukien. KHONG GOI MANG, chay 1,2 giay.
+# LO NAY TU SINH LAI moi ngay (16 quy ~ 1.000 phien, hai moc troi song song) nen phai nam
+# trong luot EOD chu khong phai mot ban va chay tay. PHAI DUNG SAU va_slcp_gdkhq: no neo
+# vao o dau tien, ma o do chi dung sau khi buoc nhay da duoc doi ve ngay GDKHQ.
+& $py tools\lap_slcp_cu.py 2>&1
+if ($LASTEXITCODE -ne 0) { "lap_slcp_cu EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # [2] THOẢ THUẬN — riêng `pv`/`pval` vẫn phải hỏi Vietstock. Đối chiếu phiên 21/08: khớp
 # lệnh hai nguồn khớp tuyệt đối (16.939 vs 16.940 tỷ) nhưng thoả thuận thì VNDirect BỎ SÓT
 # 394/3.001 tỷ, dồn vào 7 mã (VHM 298,9 tỷ ghi thành 0). Không phải trễ mà là sót — VHM
