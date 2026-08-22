@@ -1717,6 +1717,11 @@ Phiên đầu khung hai đường TRÙNG NHAU, sau đó khoảng cách giữa ch
 hiệu suất — **VN-Index nằm DƯỚI đường giá = mã chạy hơn thị trường**. Vì có nhân với
 `giá(i)` nên nó đi qua mọi cú hạ nền của chính mã, hai đường luôn so được bằng mắt.
 
+> **CÁCH NEO ĐÃ ĐỔI 23/08/2026** — nay neo TRUNG BÌNH HAI ĐẦU KHUNG (`neoHaiDau`), không
+> neo một phiên nữa; xem mục *Neo hai đầu khung* bên dưới. Phần "neo vào vốn hoá chứ không
+> neo vào giá" thì giữ nguyên. Đoạn dưới đây ghi lại vì sao KHÔNG được lấy `c[cuối]/c[đầu]`
+> — luật đó vẫn còn hiệu lực cho `vniTom`.
+
 > **LỢI SUẤT CỦA MÃ PHẢI DỒN TỪ `c/tc−1` TỪNG PHIÊN, ĐỪNG LẤY `c[cuối]/c[đầu]`.**
 > `c` trong `data/giaodich` là giá **THÔ, chưa hạ nền** — đo thật: VCB 12/03/2025 rơi
 > 96.800 -> 64.700 (chia cổ phiếu), HPG 26/06/2025 rơi 27.200 -> 22.650, VNM 16/10/2025
@@ -2323,7 +2328,7 @@ Vốn hoá = giá × số cổ phiếu, mà số cổ phiếu gần như đứng
 
 Công tắc `PT.vh` lưu ở `localStorage['cpvn_ptvh']`.
 
-### BA KIỂU NÉT LÀM THỨ BẬC + ĐƯỜNG VỐN HOÁ TOÀN THỊ TRƯỜNG (23/08/2026)
+### BA KIỂU NÉT LÀM THỨ BẬC + NEO HAI ĐẦU KHUNG CHO MỌI ĐƯỜNG QUY ĐỔI (23/08/2026)
 
 User chốt ba việc cùng lúc: *"đường vốn hoá thực chất là đường quan trọng nhất, quan trọng
 hơn cả đường giá cho nên đường vốn hoá phải là đường in đậm có màu sắc riêng"* · *"đường giá
@@ -2349,37 +2354,61 @@ ba ngang nhau thì hỏng đúng chỗ người ta đi tra.
 > Hai đường là hai phiên bản của cùng một đại lượng, chạy sát nhau suốt khung; cho đường
 > DẪN XUẤT thành nét đứt thì đường CHÍNH thức lộ ra qua các khoảng hở.
 
-**ĐƯỜNG VỐN HOÁ TOÀN THỊ TRƯỜNG — công thức user chốt, chia cho MỘT hằng số:**
+**`neoHaiDau` — LUẬT CHUNG cho MỌI đường quy đổi đứng cạnh vốn hoá của mã.** User chốt
+lần lượt cho hai đường: *"để 2 đường thực sự giao nhau"* (vốn hoá thị trường), rồi *"tương
+tự hãy tính với vnindex để có thể tạo ra giao cắt thực sự trên đồ thị"*. Một hàm, hai chỗ
+gọi — đừng viết lại phép neo lần thứ ba ở chỗ khác.
 
 ```
-vhTB(mã)      = (vốn hoá mã ở phiên ĐẦU khung + ở phiên CUỐI khung) ÷ 2
-vhTB(thị trg) = (vốn hoá thị trường phiên ĐẦU + phiên CUỐI)         ÷ 2
-tỉ số         = vhTB(thị trường) ÷ vhTB(mã)
-đường vẽ      = vốn hoá thị trường(i) ÷ tỉ số
+tỉ số    = (chuỗi[đầu] + chuỗi[cuối]) ÷ (vốn hoá mã[đầu] + vốn hoá mã[cuối])
+đường vẽ = chuỗi(i) ÷ tỉ số
 ```
 
-Vấn đề nó giải: vốn hoá thị trường 10,3 TRIỆU tỷ so với một mã 30 nghìn tỷ là gấp 343 lần —
-vẽ chung trục thì đường mã bẹp sát đáy, cho mỗi đường một trục riêng thì cả hai tự co giãn
-đầy khung và **không bao giờ cắt nhau**, mà chỗ cắt nhau mới là thứ cần nhìn.
+Vấn đề nó giải: vốn hoá thị trường 10,3 TRIỆU tỷ so với một mã 30 nghìn tỷ là gấp 343 lần,
+VN-Index thì tính bằng ĐIỂM — vẽ chung trục thì đường mã bẹp sát đáy, cho mỗi đường một
+trục riêng thì cả hai tự co giãn đầy khung và **không bao giờ cắt nhau**, mà chỗ cắt nhau
+mới là thứ cần nhìn.
 
-> **VÌ SAO NEO BẰNG TRUNG BÌNH HAI ĐẦU thì CHẮC CHẮN có điểm cắt.** Sau khi chia, tổng hai
-> đầu của đường thị trường đúng bằng tổng hai đầu của đường mã. Hai đường cùng tổng hai đầu
-> mà không trùng nhau thì bắt buộc một đường bắt đầu ở TRÊN và kết thúc ở DƯỚI. Quét cả kho:
-> **1.529/1.529 mã vẽ được đường và 0 mã không cắt lần nào** (VIC 13 lần · SHB 19 · VNM 5).
-> Neo vào MỘT phiên (kiểu VN-Index quy đổi) thì hai đường chỉ chạm nhau ở đúng phiên neo —
-> đọc ra được hơn kém, không đọc ra ĐẢO CHIỀU ở đâu.
+> **VÌ SAO NEO BẰNG TRUNG BÌNH HAI ĐẦU thì CHẮC CHẮN có điểm cắt.** Sau khi chia, TỔNG HAI
+> ĐẦU của đường quy đổi đúng bằng TỔNG HAI ĐẦU của đường vốn hoá. Hai đường cùng tổng hai
+> đầu mà không trùng nhau thì bắt buộc một đường bắt đầu ở TRÊN và kết thúc ở DƯỚI.
+> Hệ quả kèm theo: hai đường quy đổi cũng cùng tổng hai đầu VỚI NHAU, nên cả ba đường trên
+> trục ngoài cùng cắt nhau từng đôi một. Quét cả kho ở khung 1.000 phiên:
+>
+> | cặp đường | vẽ được | không cắt lần nào |
+> |---|---|---|
+> | vốn hoá ↔ VN-Index quy đổi | 1.529/1.529 | **0** |
+> | vốn hoá ↔ vốn hoá thị trường | 1.529/1.529 | **0** |
+> | VN-Index ↔ vốn hoá thị trường | 1.529/1.529 | **0** |
+
+> **ĐỔI PHÉP ĐỌC, KHÔNG PHẢI CHỈ ĐỔI THANG.** Neo MỘT phiên (bản cũ của VN-Index) đọc ra
+> *"kể từ phiên neo, ai hơn ai"* — nhưng hai đường tách hẳn sau đó và **không bao giờ cắt
+> lại**, nên không đọc ra đảo chiều. Neo HAI ĐẦU đọc ra *"phiên nào mã đắt/rẻ so với chính
+> nó trong khung, và đảo vai ở đâu"*. Con số hơn kém tuyệt đối vẫn còn nguyên ở `vniTom`
+> (`tu`/`vh`/`vni`/`ma`) — nó vẫn neo MỘT phiên vì câu nó trả lời cần một mốc cụ thể.
+
+> **NEO HAI ĐẦU CÒN THU HẸP TRỤC.** Đường VN-Index cũ chạy xa khỏi vùng vốn hoá khi mã
+> ngược chiều thị trường, kéo cả trục giãn ra và bóp mọi đường còn lại. Đo: VNM khung 1.000
+> phiên biên trục **100–303 → 96–207 nghìn tỷ (hẹp 1,84 lần)**, FPT khung 300 **hẹp 1,70
+> lần**. Mã bám sát thị trường (VIC, SHB) thì không đổi — không có mã nào bị giãn ra.
 
 > **CHIA CHO HẰNG SỐ, ĐỪNG CHUẨN HOÁ TỪNG PHIÊN.** Chia hằng số thì hình dạng đường thị
 > trường giữ nguyên tuyệt đối — nó vẫn là đúng đường vốn hoá thị trường, chỉ đổi đơn vị đọc.
 > Chuẩn hoá theo từng phiên ra một đường phẳng lì bằng 1, chẳng nói gì.
 
 Kiểm end-to-end trên VNM khung 1.000 phiên (đọc pixel canvas rồi đối chiếu với số tính lại
-bằng Python): cả hai đường khớp **một** phép ánh xạ tuyến tính chung, sai số ≤ 8px trên
-902px vùng vẽ ở cả 5 mốc thử — tức chúng thật sự đứng chung một trục, và đường xám thật sự
-là vốn hoá thị trường chia 52,61.
+bằng Python): **18 điểm của CẢ BA đường khớp MỘT phép ánh xạ tuyến tính chung**
+`y = 1521,4 − 6,881 × giá trị` — tức chúng thật sự đứng chung một trục và đúng bằng số
+Python tính ra. Điểm lệch nhất 21px là do cách dò pixel phải quét tối đa 18 cột để bắt được
+một vạch của nét đứt; ngay tại đó đường di chuyển 28px trong 8 phiên, nên sai số đó là của
+phép ĐO chứ không phải của thang. Chỗ đường phẳng thì lệch 0,3–2,3px.
 
 - **`PT.tt.tt.mcap` tính bằng TỶ, `mcap` của mã tính bằng ĐỒNG** — quên `×1e9` là lệch đúng
   10⁹ mà tỉ số vẫn ra một con số trông bình thường, chỉ có đồ thị là sai.
+- **Chỉ IN TỈ SỐ cho đường vốn hoá thị trường, đừng in cho VN-Index.** Bên kia hai vế cùng
+  là TIỀN nên "÷ 52,6" đọc được ngay là *thị trường lớn gấp 52,6 lần mã*. Tỉ số của
+  VN-Index là điểm-trên-đồng (`9,46e−12`), một phép đổi đơn vị chứ không phải một lần gấp —
+  in ra chỉ làm loãng đúng như user đã chốt.
 - **Neo vào phiên đầu CÓ ĐỦ CẢ HAI SỐ, không phải phiên đầu KHUNG.** Vốn hoá thị trường chỉ
   có từ 03/01/2023 nên ở khung 1.000 phiên đường này bắt đầu muộn hơn đường mã.
 - **Tỉ số in thẳng vào nhãn chú thích** (`vốn hoá thị trường ÷ 52,6`). Người xem phải biết

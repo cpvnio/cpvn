@@ -2067,6 +2067,48 @@ function ptVeMa(){
     if(k===1) continue;
     for(const A of [c,tc,op,hi,lo,vw,vwN,ptt]) if(A&&A[i]!=null) A[i]=A[i]*k;
   }
+  /* ---- NEO HAI ĐẦU KHUNG — LUẬT CHUNG CHO MỌI ĐƯỜNG "QUY ĐỔI" (user chốt 23/08/2026) --
+     *"tương tự hãy tính với vnindex để có thể tạo ra giao cắt thực sự trên đồ thị"*.
+
+     Mọi đại lượng muốn đặt cạnh VỐN HOÁ CỦA MÃ để so hình dạng đều gặp cùng một bài toán:
+     nó ở một tầm khác hẳn (VN-Index tính bằng ĐIỂM, vốn hoá thị trường gấp mã hàng trăm
+     lần), nên hoặc phải cho nó một trục riêng — và khi đó hai đường tự co giãn đầy khung,
+     KHÔNG BAO GIỜ cắt nhau — hoặc phải quy về cùng tầm bằng MỘT hằng số.
+
+         tỉ số     = trung bình hai đầu của chuỗi ÷ trung bình hai đầu của vốn hoá mã
+         đường vẽ  = chuỗi(i) ÷ tỉ số
+
+     CHIA CHO HẰNG SỐ nên HÌNH DẠNG giữ nguyên tuyệt đối — đường vẫn là đúng đường đó, chỉ
+     đổi đơn vị đọc. (Chuẩn hoá theo từng phiên thì ra một đường phẳng lì bằng 1.)
+
+     VÌ SAO NEO KIỂU NÀY THÌ CHẮC CHẮN CÓ ĐIỂM CẮT: sau khi chia, TỔNG HAI ĐẦU của đường
+     quy đổi đúng bằng TỔNG HAI ĐẦU của đường vốn hoá. Hai đường cùng tổng hai đầu mà không
+     trùng nhau thì bắt buộc một đường bắt đầu ở TRÊN và kết thúc ở DƯỚI — tức là cắt.
+     Hệ quả kèm theo: mọi đường quy đổi cũng có cùng tổng hai đầu VỚI NHAU, nên cả ba đường
+     trên trục ngoài cùng đều cắt nhau từng đôi một. Đó là điều kiện để chúng thật sự so
+     được, chứ không phải ba dải song song mỗi dải một tầng.
+
+     NEO VÀO PHIÊN ĐẦU/CUỐI **CÓ ĐỦ CẢ HAI SỐ**, không phải phiên đầu/cuối KHUNG. Vốn hoá
+     thị trường chỉ có từ 03/01/2023, và mã mới niêm yết thì `sh` cụt ở đầu khung — neo bừa
+     vào phiên khung là cả đường lệch một hệ số cố định.
+
+     KHÁC BẢN CŨ CỦA VN-INDEX Ở CHỖ ĐỌC. Bản cũ neo vào MỘT phiên (phiên đầu có đủ số) nên
+     hai đường trùng nhau ở đó rồi tách hẳn: đọc ra được AI HƠN AI kể từ phiên neo, nhưng
+     không bao giờ đọc ra ĐẢO CHIỀU vì chúng không cắt lại lần nào. Neo hai đầu thì đổi lại:
+     mất phép đọc "hơn kém so với phiên neo", được phép đọc "phiên nào mã đắt/rẻ so với
+     chính nó trong khung, và đảo vai ở đâu". Con số hơn kém tuyệt đối vẫn còn nguyên ở
+     `vniTom` (`tu`/`vh`/`vni`/`ma`) nếu muốn in ra. */
+  const neoHaiDau=(ng)=>{
+    if(!ng) return null;
+    let a=-1, b=-1;
+    for(let z=0;z<d.length;z++) if(ng[z]!=null&&mcap[z]!=null){ a=z; break; }
+    for(let z=d.length-1;z>=0;z--) if(ng[z]!=null&&mcap[z]!=null){ b=z; break; }
+    if(a<0||b<=a) return null;
+    const tbMa=(mcap[a]+mcap[b])/2, tbNg=(ng[a]+ng[b])/2;
+    if(!(tbMa>0)||!(tbNg>0)) return null;
+    const tis=tbNg/tbMa;
+    return {tis:tis, a:a, b:b, v:ng.map(x=>x==null?null:x/tis)};
+  };
   /* ---- VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) --------------------------
      *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
 
@@ -2096,60 +2138,34 @@ function ptVeMa(){
     if(cs&&cs.c&&td){
       const mp={}; for(let z=0;z<td.length;z++) if(cs.c[z]!=null) mp[td[z]]=cs.c[z];
       const vn=d.map(x=>mp[x]==null?null:mp[x]);
-      /* Neo ở phiên ĐẦU TIÊN có ĐỦ CẢ HAI số. Neo bừa vào phiên đầu khung mà hôm đó mã
-         chưa niêm yết (hoặc chỉ số thiếu) là cả đường lệch một hệ số cố định. */
-      let z0=-1; for(let z=0;z<d.length;z++) if(vn[z]!=null&&mcap[z]!=null){ z0=z; break; }
-      if(z0>=0){
-        const hs=new Array(d.length).fill(null); let f=1; hs[z0]=1;
-        for(let z=z0+1;z<d.length;z++){ if(pcs[z]!=null) f*=1+pcs[z]/100; hs[z]=f; }
-        /* NEO VÀO VỐN HOÁ, KHÔNG NEO VÀO GIÁ (user chốt 22/08/2026: *"giá có thể tụt do
-           nền tụt nhưng vốn hoá thì không hề tụt — VN-Index phụ thuộc vào vốn hoá chứ đâu
-           phụ thuộc vào những lúc sụt nền"*). Đúng, và nó gỡ được cả cái khó của bản trước.
-           Bản trước lấy `giá(i) × tỉ lệ` nên đường phải tụt theo mọi cú hạ nền của mã —
-           đúng về khoảng cách nhưng đọc ra như VN-Index đi xuống trong khi nó đi lên.
-           Nhân với VỐN HOÁ thì thành phần `mcap(i)/mcapTỉLệ(i)` triệt tiêu, còn lại đúng
-           `mcap(z0) × VN-Index(i)/VN-Index(z0)` — một đường CHỈ đi theo VN-Index, không
-           còn dính cú hạ nền nào. Vốn hoá của mã cũng liền mạch qua ngày GDKHQ (giá chia
-           đôi thì số cổ phiếu nhân đôi), nên hai đường so được với nhau bằng mắt.
-           ĐIỀU KIỆN: `sh` phải nhảy bậc ĐÚNG NGÀY GDKHQ — xem `tools/va_slcp_gdkhq.py`.
-           Không có nó thì chính đường vốn hoá mới là đường bị sụt, và cả phép so hỏng. */
-        vniL=vn.map((v)=>v==null?null:mcap[z0]*(v/vn[z0]));
-        let zN=-1; for(let z=d.length-1;z>z0;z--) if(vn[z]!=null&&mcap[z]!=null){ zN=z; break; }
-        if(zN>z0) vniTom={tu:d[z0], vh:(mcap[zN]/mcap[z0]-1)*100,
-                          vni:(vn[zN]/vn[z0]-1)*100, ma:(hs[zN]-1)*100};
+      /* KHÔNG DÍNH GÌ TỚI GIÁ, CHỈ DÍNH VỐN HOÁ (user chốt 22/08/2026: *"giá có thể tụt do
+         nền tụt nhưng vốn hoá thì không hề tụt — VN-Index phụ thuộc vào vốn hoá chứ đâu
+         phụ thuộc vào những lúc sụt nền"*). Bản đầu tiên lấy `giá(i) × tỉ lệ` nên đường
+         phải tụt theo mọi cú hạ nền của mã — đúng về khoảng cách nhưng đọc ra như VN-Index
+         đi xuống trong khi nó đi lên. Nay đường này chỉ là VN-Index nhân một hằng số, sạch
+         mọi sự kiện quyền theo đúng nghĩa đen.
+         Vốn hoá của mã cũng liền mạch qua ngày GDKHQ (giá chia đôi thì số cổ phiếu nhân
+         đôi) nên hai đường so được bằng mắt. ĐIỀU KIỆN: `sh` phải nhảy bậc ĐÚNG NGÀY GDKHQ
+         — xem `tools/va_slcp_gdkhq.py`. Không có nó thì chính đường vốn hoá mới là đường bị
+         sụt, và cả phép so hỏng. */
+      const r=neoHaiDau(vn);
+      if(r){
+        vniL=r.v;
+        /* CON SỐ HƠN KÉM vẫn tính theo lối cũ — neo MỘT phiên. Nó trả lời câu khác với đồ
+           thị ("từ phiên đầu khung tới nay ai hơn ai bao nhiêu phần trăm"), mà câu đó thì
+           điểm neo phải là một phiên cụ thể chứ không phải trung bình hai đầu. */
+        const hs=new Array(d.length).fill(null); let f=1; hs[r.a]=1;
+        for(let z=r.a+1;z<d.length;z++){ if(pcs[z]!=null) f*=1+pcs[z]/100; hs[z]=f; }
+        vniTom={tu:d[r.a], vh:(mcap[r.b]/mcap[r.a]-1)*100,
+                vni:(vn[r.b]/vn[r.a]-1)*100, ma:(hs[r.b]-1)*100};
       }
     }
   }
   /* ---- VỐN HOÁ TOÀN THỊ TRƯỜNG, HẠ VỀ ĐÚNG TẦM VỐN HOÁ CỦA MÃ (user chốt 23/08/2026) --
      *"khi đối chiếu đường này với đường vốn hoá 1 loại tài sản … để 2 đường thực sự giao
-     nhau"*. Bài toán: vốn hoá thị trường 10,3 TRIỆU tỷ so với một mã 30 nghìn tỷ là gấp
-     343 lần — vẽ chung trục thì đường mã bẹp thành vạch nằm sát đáy, còn cho mỗi đường
-     một trục riêng thì cả hai tự co giãn đầy khung và KHÔNG BAO GIỜ cắt nhau, mà chỗ cắt
-     nhau mới là thứ cần nhìn.
-
-     CÔNG THỨC USER CHỐT — chia cho MỘT hằng số, không chuẩn hoá theo từng phiên:
-         vhTB(mã)      = (vốn hoá mã ở phiên ĐẦU khung  + ở phiên CUỐI khung)  ÷ 2
-         vhTB(thị trg) = (vốn hoá thị trường phiên ĐẦU  + phiên CUỐI)          ÷ 2
-         tỉ số         = vhTB(thị trường) ÷ vhTB(mã)
-         đường vẽ      = vốn hoá thị trường(i) ÷ tỉ số
-     Chia cho HẰNG SỐ nên HÌNH DẠNG đường thị trường giữ nguyên tuyệt đối — nó vẫn là
-     đúng đường vốn hoá thị trường, chỉ đổi đơn vị đọc. (Chuẩn hoá theo từng phiên thì ra
-     một đường phẳng lì bằng 1, chẳng nói gì.)
-
-     VÌ SAO NEO BẰNG TRUNG BÌNH HAI ĐẦU thì hai đường CHẮC CHẮN cắt nhau: sau khi chia,
-     tổng hai đầu của đường thị trường đúng bằng tổng hai đầu của đường mã. Hai đường có
-     cùng tổng hai đầu mà không trùng nhau thì bắt buộc một đường phải bắt đầu ở trên và
-     kết thúc ở dưới — tức là cắt. Neo vào MỘT phiên (kiểu VN-Index quy đổi ở trên) thì
-     chúng chỉ chạm nhau đúng ở phiên neo rồi tách hẳn, đọc ra được hơn kém nhưng không
-     đọc ra ĐẢO CHIỀU ở đâu.
-
-     ĐỌC: đường mã ở TRÊN đường thị trường = mã đang lớn nhanh hơn thị trường trong nửa
-     khung đó. Chỗ hai đường CẮT nhau = phiên mã đổi vai với thị trường.
-
-     HAI ĐẦU KHUNG PHẢI CÓ ĐỦ CẢ HAI SỐ. Vốn hoá thị trường chỉ có từ 03/01/2023 (trước
-     đó `ratios` không đủ sâu, `build_phantich` để trống — xem chú thích ở đó), nên ở
-     khung 1.000 phiên đường này bắt đầu muộn hơn đường mã. Neo vào phiên đầu KHUNG thay
-     vì phiên đầu CÓ SỐ là cả đường lệch một hệ số cố định. */
+     nhau"*. Luật neo nằm ở `neoHaiDau` phía trên — đây chỉ là chỗ gọi nó.
+     ĐỌC: đường mã ở TRÊN đường thị trường = trong khung này mã đang được định giá cao hơn
+     mức trung bình của chính nó so với thị trường. Chỗ hai đường CẮT = phiên đổi vai. */
   let vhTT=null, vhTTis=null;
   if(PT.vhtt){
     const T=(PT.tt&&PT.tt.tt)||null;
@@ -2158,14 +2174,8 @@ function ptVeMa(){
          Không đổi đơn vị là lệch đúng 10⁹ — mà lệch kiểu đó thì tỉ số vẫn ra một con số
          trông bình thường, chỉ có đồ thị là sai. */
       const mp={}; for(let z=0;z<T.d.length;z++) if(T.mcap[z]!=null) mp[T.d[z]]=T.mcap[z]*1e9;
-      const tt=d.map(x=>mp[x]==null?null:mp[x]);
-      let a=-1, b=-1;
-      for(let z=0;z<d.length;z++) if(tt[z]!=null&&mcap[z]!=null){ a=z; break; }
-      for(let z=d.length-1;z>=0;z--) if(tt[z]!=null&&mcap[z]!=null){ b=z; break; }
-      if(a>=0&&b>a){
-        const tbMa=(mcap[a]+mcap[b])/2, tbTT=(tt[a]+tt[b])/2;
-        if(tbMa>0&&tbTT>0){ vhTTis=tbTT/tbMa; vhTT=tt.map(v=>v==null?null:v/vhTTis); }
-      }
+      const r=neoHaiDau(d.map(x=>mp[x]==null?null:mp[x]));
+      if(r){ vhTT=r.v; vhTTis=r.tis; }
     }
   }
   /* ---- CỘT KHỚP LỆNH TÁCH BA MẢNG THEO KHỐI (user chốt 22/08/2026) ------------------
