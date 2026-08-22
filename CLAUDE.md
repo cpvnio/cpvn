@@ -1828,6 +1828,41 @@ thêm một mảng mới về sau thì nó mặc định hiện, khỏi phải �
 > `data/phantich.json`), ô chú thích chỉ quyết định *có VẼ ra không*. Dùng chung khoá thì
 > bấm ở chú thích làm nút cách đó nửa màn hình đổi theo — loại tương tác khó đoán nhất.
 
+### GIÁ QUÁ KHỨ TRÊN TRANG MÃ NAY ĐƯỢC HẠ NỀN (22/08/2026)
+
+User: *"mặc dù giá quá khứ nhưng tôi muốn nó cũng phải hạ nền giống giá hiện tại … hạ nền
+chứ không phải 1 nến dump ở chart, điều đó làm sai khá nhiều khi đánh giá data theo chiều
+sâu"*. Đúng — `c` trong `data/giaodich` là giá **THÔ như đã khớp**, nên mỗi đợt chia tách
+để lại một VÁCH DỰNG: VIC 04/12/2025 rơi 267.000 -> 142.800, nhìn y như sập 47% trong khi
+phiên đó mã **TĂNG 6,97%**.
+
+**HỆ SỐ SUY TỪ CHÍNH KHO, KHÔNG CÀO GÌ THÊM:**
+
+```
+k(i) = k(i+1) × tc(i+1) ÷ c(i)        k(phiên cuối) = 1
+```
+
+Ngày thường `tc(i+1) = c(i)` nên hệ số giữ nguyên; ngày GDKHQ thì `tc` đã hạ nền sẵn nên hệ
+số tụt đúng bằng tỉ lệ chia. Kiểm VIC: hệ số ra **đúng 0,500** trước 05/12/2025, và
+`adj[cuối]/adj[đầu]−1` khớp tuyệt đối chuỗi dồn `c/tc−1` (**+502,1%** cả hai) — bằng chứng
+hai cách tính cùng một thứ.
+
+Công tắc **`Giá điều chỉnh`** ở thanh tiêu đề đồ thị, **mặc định BẬT**; tắt là xem giá thô
+đúng như đã khớp. Nhớ ở `localStorage['cpvn_ptdc']`.
+
+> **BA CHỖ TUYỆT ĐỐI KHÔNG ĐƯỢC HẠ NỀN:**
+> ① **VỐN HOÁ** — `mcap = giá THÔ × số cổ phiếu CỦA CHÍNH PHIÊN ĐÓ`. Hạ nền giá mà giữ số
+>    cổ phiếu là chia đôi vốn hoá, đúng con bệnh mục dưới vừa chữa. Vì thế khối hạ nền đặt
+>    **SAU** `mcap` và `pcs` trong `ptVeMa` — **đừng dời lên trên**. Kiểm VIC 14/10/2025:
+>    bật/tắt hạ nền thì đóng cửa đổi 105.950 ↔ 211.900 mà vốn hoá **giữ nguyên 816.454 tỷ**.
+> ② **`pcs`** — miễn nhiễm (tử và mẫu cùng nhân một hệ số) nhưng vẫn tính trước cho khỏi
+>    phải nghĩ lại. Đo được: +3,16% ở cả hai chế độ.
+> ③ **VÙNG GIÁ** (`data/phien`) là giá thô của đúng một phiên; bật lại đồ thị đó thì phải
+>    nhân cùng hệ số, bằng không hai đồ thị cạnh nhau ở hai nền khác nhau.
+
+> Mọi giá CÙNG MỘT PHIÊN nhân cùng một hệ số nên mọi quan hệ trong phiên giữ nguyên: đóng
+> cửa so giá TB, biên độ, giá thoả thuận so giá sàn. Đo: TB/đóng cửa = 1,018 ở cả hai chế độ.
+
 ### VỐN HOÁ SAI 4% VÌ SỐ CỔ PHIẾU NHẢY BẬC MUỘN HƠN NGÀY GDKHQ (22/08/2026)
 
 User: *"tổng vốn hoá toàn thị trường đang có vẻ sai"* — đúng. Đối chiếu với chính VNDirect

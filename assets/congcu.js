@@ -765,6 +765,9 @@ const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           vh:LS.get('cpvn_ptvh',true),
           vni:LS.get('cpvn_ptvni',false),
+          /* HẠ NỀN GIÁ QUÁ KHỨ — mặc định BẬT. Tắt là xem giá THÔ đúng như đã khớp phiên
+             đó; bật là mọi giá quá khứ quy về nền hôm nay, hết vách dựng ở ngày chia tách. */
+          dc:LS.get('cpvn_ptdc',true),
           /* Mảng/đường nào đang ẨN trên đồ thị chính — bấm vào chính ô chú thích của nó.
              Lưu theo khoá ẩn chứ không theo khoá hiện: thêm một mảng mới về sau thì nó
              mặc định HIỆN, không phải đi sửa bản đệm của mọi người dùng cũ. */
@@ -1992,6 +1995,40 @@ function ptVeMa(){
   const m=d.length-1;
   const mcap=c.map((x,i)=>(x&&sh[i])?x*sh[i]:null);
   const pcs=c.map((x,i)=>(x&&tc[i])?((x/tc[i]-1)*100):null);
+  /* ---- HẠ NỀN GIÁ QUÁ KHỨ (user chốt 22/08/2026) ------------------------------------
+     *"mặc dù giá quá khứ nhưng tôi muốn nó cũng phải hạ nền giống giá hiện tại … hạ nền
+     chứ không phải 1 nến dump ở chart, điều đó làm sai khá nhiều khi đánh giá data theo
+     chiều sâu"*. Đúng: `c` trong `data/giaodich` là giá THÔ như đã khớp, nên mỗi đợt chia
+     tách để lại một VÁCH DỰNG trên đồ thị — VIC 04/12/2025 267.000 rơi xuống 142.800 nhìn
+     y như sập 47%, trong khi phiên đó mã TĂNG 6,97%.
+
+     HỆ SỐ SUY TỪ CHÍNH KHO, KHÔNG CẦN CÀO GÌ THÊM:  k(i) = k(i+1) × tc(i+1) / c(i)
+     Ngày thường `tc(i+1) = c(i)` nên hệ số giữ nguyên; ngày GDKHQ thì `tc` đã hạ nền sẵn
+     nên hệ số tụt đúng bằng tỉ lệ chia. Kiểm trên VIC: hệ số ra ĐÚNG 0,500 trước ngày
+     05/12/2025, và lợi suất `adj[cuối]/adj[đầu]−1` khớp tuyệt đối với chuỗi dồn `c/tc−1`
+     (+502,1% cả hai) — đó là bằng chứng hai cách tính cùng một thứ.
+
+     BA CHỖ TUYỆT ĐỐI KHÔNG ĐƯỢC HẠ NỀN:
+     ① **VỐN HOÁ** — `mcap = giá THÔ × số cổ phiếu CỦA CHÍNH PHIÊN ĐÓ`. Hạ nền giá mà giữ
+        số cổ phiếu là chia đôi vốn hoá, đúng con bệnh vừa mất cả buổi để chữa. Vì thế khối
+        này đặt SAU `mcap` và `pcs`, đừng dời lên trên.
+     ② **`pcs`** — đã tính xong ở trên. Thật ra nó miễn nhiễm (tử và mẫu cùng nhân một hệ
+        số), nhưng vẫn tính trước cho khỏi phải nghĩ lại.
+     ③ **VÙNG GIÁ** (`data/phien`) là giá thô của đúng một phiên; nếu bật lại đồ thị đó thì
+        phải nhân cùng hệ số, bằng không hai đồ thị đứng cạnh nhau ở hai nền khác nhau.
+
+     Mọi giá CÙNG MỘT PHIÊN đều nhân cùng một hệ số nên mọi quan hệ trong phiên giữ nguyên:
+     đóng cửa so giá TB, biên độ, giá thoả thuận so giá sàn. */
+  const heso=new Array(d.length).fill(1);
+  for(let i=d.length-2;i>=0;i--){
+    const r=(tc[i+1]&&c[i])?tc[i+1]/c[i]:1;
+    heso[i]=heso[i+1]*(r||1);
+  }
+  if(PT.dc) for(let i=0;i<d.length;i++){
+    const k=heso[i];
+    if(k===1) continue;
+    for(const A of [c,tc,op,hi,lo,vw,vwN,ptt]) if(A&&A[i]!=null) A[i]=A[i]*k;
+  }
   /* ---- VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) --------------------------
      *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
 
@@ -2218,6 +2255,7 @@ function ptVeMa(){
               MUỐN DỰNG LẠI thì không phải tính lại gì: `skM` và `vniTom` (giữ `tu`/`vh`/
               `vni`/`ma`) vẫn còn nguyên ở trên, chỉ cần in ra. */, 1,
            '<span class="ptsw" id="ptSK">'
+             +'<button data-k="dc"'+(PT.dc?' class="on"':'')+'>Giá điều chỉnh</button>'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
              +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
@@ -2578,7 +2616,8 @@ function ptBindMa(){
   [$('#ptLeg'),$('#ptLeg2'),$('#ptLeg3'),$('#ptLeg4')].forEach(el=>{ if(el) el.onclick=legClick; });
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
-    if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
+    if(n.dataset.k==='dc'){ PT.dc=!PT.dc; LS.set('cpvn_ptdc',PT.dc); }
+    else if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
     else if(n.dataset.k==='vni'){ PT.vni=!PT.vni; LS.set('cpvn_ptvni',PT.vni); }
     else { PT.skH[n.dataset.k]=!PT.skH[n.dataset.k]; LS.set('cpvn_ptsk',PT.skH); }
     ptVeMa(); };
