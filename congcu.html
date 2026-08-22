@@ -650,7 +650,11 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    Và phải ĐỔI THEO CHỦ ĐỀ: gần-đen ở nền sáng, gần-trắng ở nền tối. Viết cứng một màu là
    một trong hai chế độ mất hẳn cái ô chú thích. */
 .ptleg i.pkA{background:var(--pkA);height:3px;border-radius:2px}
-.ptleg i.pkB{background:#d97706;height:3px;border-radius:2px}
+/* Ô CHÚ THÍCH PHẢI VẼ ĐÚNG KIỂU NÉT CỦA ĐƯỜNG NÓ CHÚ THÍCH. Đồ thị chính nay có ba kiểu
+   nét (liền dày · đứt thưa · đứt mảnh) làm thứ bậc — ô chú thích vẫn tô đặc hết thì
+   thứ bậc đó chỉ có trên canvas, còn chỗ tra cứu lại nói cả ba ngang nhau. */
+.ptleg i.pkB{background:repeating-linear-gradient(90deg,#d97706 0 4px,transparent 4px 7px);
+  height:3px;border-radius:0}
 .ptleg i.pkC{background:#16a34a}
 .ptleg i.pkD{background:#dc2626}
 /* CHẤM SỰ KIỆN DOANH NGHIỆP — TRÒN, không vuông như mấy chấm chú thích khác, vì trên đồ
@@ -664,7 +668,18 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
 .ptleg i.pkS2{background:#eab308;border-radius:50%}
 .ptleg i.pkS3{background:#c026d3;border-radius:50%}
 .ptleg i.pkS4{background:#8a8a99;border-radius:50%}
-.ptleg i.pkV{background:#16a34a;height:3px;border-radius:2px}
+/* VỐN HOÁ — ô DÀY NHẤT dòng chú thích (4px so với 3px của mọi đường khác), khớp với
+   đường dày nhất trên đồ thị. User chốt 23/08/2026: nó là đường quan trọng nhất,
+   quan trọng hơn cả đường giá — thứ bậc đó phải đọc được ngay ở dòng chú thích. */
+.ptleg i.pkV{background:#16a34a;height:4px;border-radius:2px}
+/* VỐN HOÁ TOÀN THỊ TRƯỜNG quy về tầm của mã — xám thép, nét đứt thưa. Xám vì tám ký
+   hiệu kia đã chiếm hết sắc phân biệt được, và vì nó đúng là cái NỀN để so chứ không
+   phải một khối tham gia thị trường. Hai chủ đề hai màu: xám đậm chìm nghỉm trên nền
+   tối, xám nhạt chìm nghỉm trên nền sáng. */
+.ptleg i.pkM{background:repeating-linear-gradient(90deg,#94a3b8 0 6px,transparent 6px 10px);
+  height:3px;border-radius:0}
+html[data-theme="light"] .ptleg i.pkM{
+  background:repeating-linear-gradient(90deg,#475569 0 6px,transparent 6px 10px)}
 /* VN-Index chồng lên đồ thị giá. Hồng sen vì bốn màu còn lại của đồ thị đó đã bị chiếm:
    xanh trời (cột khớp lệnh) · tím (cột thoả thuận) · hổ phách (giá TB) · xanh lá nét đứt
    (vốn hoá). Đây là đường ĐẶC — nét đứt đã là của vốn hoá, hai đường cùng nét đứt thì
@@ -711,7 +726,9 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    `.ptseg` nhưng NHỎ HƠN và KHÔNG DÍNH NHAU: `.ptseg` là chọn MỘT trong nhiều (khung 100
    / 300 / 600 / 1.000) nên các nút phải liền một khối; còn đây là hai công tắc ĐỘC LẬP,
    bật cả hai hoặc tắt cả hai đều được — dính liền nhau thì đọc nhầm thành chọn một. */
-.ptsw{display:inline-flex;gap:5px;vertical-align:-2px;margin-right:2px}
+/* `flex-wrap` từ khi thêm nút thứ SÁU (Vốn hoá thị trường): sáu nút bo tròn xếp một
+   hàng không xuống dòng thì ở khổ vừa chúng đẩy tràn khỏi thanh tiêu đề. */
+.ptsw{display:inline-flex;flex-wrap:wrap;gap:5px;vertical-align:-2px;margin-right:2px}
 .ptsw button{background:var(--card);color:var(--faint);border:1px solid var(--line);
   border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;
   font-family:inherit;line-height:1.5}
@@ -723,7 +740,12 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    nhãn nhỏ mờ · MỘT con số lớn là câu trả lời · một dòng chú thích cho chính con số đó.
    Bản cũ để 12 mẩu cùng cỡ cùng màu xếp một hàng dài nên mắt phải đọc hết nhãn mới tìm
    ra thứ cần, mà nhãn lại bé hơn số — đúng ngược. */
-.ptdoc{position:sticky;top:0;z-index:4;background:var(--card);border:1px solid var(--line);
+/* NỀN ĐẶC (`--solid`), KHÔNG PHẢI `--card`. `--card` là màu KÍNH MỜ (rgba .72 ở nền tối,
+   .86 ở nền sáng) — đẹp khi thẻ nằm yên trên nền trang, nhưng thanh này DÍNH và có cả
+   lưới đồ thị chui qua bên dưới, nên mọi thứ trượt qua đều hằn lên: đo tại chỗ thì sáu
+   cái nút bo tròn hồng của thanh tiêu đề đồ thị in đè lên đúng dòng "Vốn hoá" và
+   "VN-Index" của thanh đọc số. Thanh dính thì phải đục. */
+.ptdoc{position:sticky;top:0;z-index:4;background:var(--solid);border:1px solid var(--line);
   border-radius:12px;padding:10px 13px 11px;margin:0 0 12px;font-variant-numeric:tabular-nums}
 /* HÀNG TIÊU ĐỀ CAO CỨNG 30px VÀ KHÔNG XUỐNG DÒNG.
    `height` chứ không `min-height`: đã thử `min-height:26px` và vẫn giật 4px ở KHỔ HẸP —
@@ -1511,7 +1533,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823p"></script>
+<script defer src="assets/mobi.js?v=20260823q"></script>
 </head>
 <body>
 
@@ -1568,6 +1590,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823p"></script>
+<script src="assets/congcu.js?v=20260823q"></script>
 </body>
 </html>

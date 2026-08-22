@@ -1729,7 +1729,8 @@ hiệu suất — **VN-Index nằm DƯỚI đường giá = mã chạy hơn th�
 Hai chi tiết nhỏ mà bỏ là hỏng: **nối vào CUỐI `phai.series`** (ptVe1 lấy `P2[0]` làm
 đường NEO cho mốc cổ tức/BCTC — đẩy nó xuống thứ hai là mấy cái chấm bám vào đường
 VN-Index), và **màu hồng sen đặc** vì bốn màu kia của đồ thị đã bị chiếm (xanh trời cột
-khớp lệnh · tím cột thoả thuận · hổ phách giá TB · xanh lá NÉT ĐỨT vốn hoá).
+khớp lệnh · tím cột thoả thuận · hổ phách giá TB · xanh lá vốn hoá). *(Kiểu nét đã đổi
+23/08/2026 — xem mục **Ba kiểu nét…** bên dưới: vốn hoá nay LIỀN NÉT DÀY, giá TB nét đứt.)*
 
 Con số đi kèm nằm ở dòng chú thích dưới đồ thị (`từ phiên X: MÃ +a% · VN-Index +b% · chênh
 c điểm %`) — nhìn hai đường chỉ biết ai hơn, không biết hơn bao nhiêu. Nó tính trên CẢ
@@ -2313,12 +2314,104 @@ chung trục phải với giá thì một bên là đồng/cp một bên là t�
 Nên `ptVe1` nay có `cfg.phai2`: thang riêng, **nhãn ở cột ngoài cùng và tô đúng màu đường**
 (hai cột số cùng màu xám cạnh nhau thì không biết cột nào của đường nào — tệ hơn không nhãn).
 
-**VẼ NÉT ĐỨT.** Vốn hoá = giá × số cổ phiếu, mà số cổ phiếu gần như đứng yên, nên đường này
-trùng khít đường giá ở hầu hết mã — ba đường liền nét đè nhau thành một vệt. Nét đứt nói
-đúng bản chất: nó là bản sao của đường giá, và **chỗ nó tách ra là chỗ doanh nghiệp phát
-hành thêm**. HPG khung 1.000 phiên là ví dụ đọc được ngay: 5,81 tỷ → 8,44 tỷ cp.
+Vốn hoá = giá × số cổ phiếu, mà số cổ phiếu gần như đứng yên, nên đường này trùng khít
+đường giá ở hầu hết mã, và **chỗ nó tách ra là chỗ doanh nghiệp phát hành thêm**. HPG khung
+1.000 phiên là ví dụ đọc được ngay: 5,81 tỷ → 8,44 tỷ cp.
+
+> Bản đầu vẽ NÉT ĐỨT MẢNH cho đúng vai "bản sao của đường giá". **Đã đổi 23/08/2026** —
+> user chốt nó là đường quan trọng nhất khung; xem mục *Ba kiểu nét…* ngay dưới.
 
 Công tắc `PT.vh` lưu ở `localStorage['cpvn_ptvh']`.
+
+### BA KIỂU NÉT LÀM THỨ BẬC + ĐƯỜNG VỐN HOÁ TOÀN THỊ TRƯỜNG (23/08/2026)
+
+User chốt ba việc cùng lúc: *"đường vốn hoá thực chất là đường quan trọng nhất, quan trọng
+hơn cả đường giá cho nên đường vốn hoá phải là đường in đậm có màu sắc riêng"* · *"đường giá
+TB nên chuyển thành nét đứt"* · *"thêm 1 đường mới là đường vốn hoá thị trường"*.
+
+**KIỂU NÉT NAY LÀ THỨ BẬC, KHÔNG PHẢI TRANG TRÍ.** Đồ thị chính có 5 đường; xếp:
+
+| đường | nét | dày | màu |
+|---|---|---|---|
+| **vốn hoá của mã** | LIỀN | **3px** | xanh lá `#34d399`/`#16a34a` |
+| vốn hoá thị trường quy đổi | đứt thưa `[7,4]` | 2px | xám thép `#94a3b8`/`#475569` |
+| VN-Index quy đổi | liền | 1,6px | hồng sen `#f472b6`/`#db2777` |
+| đóng cửa | liền | 1,8px | gần trắng / gần đen |
+| giá TB (VWAP) | đứt mảnh `[4,3]` | 1,8px | hổ phách `#fbbf24`/`#d97706` |
+
+Ô chú thích trong `.ptleg` phải vẽ ĐÚNG kiểu nét đó (`repeating-linear-gradient` cho hai ô
+nét đứt, `height:4px` cho ô vốn hoá) — thứ bậc chỉ có trên canvas mà chỗ tra cứu lại nói cả
+ba ngang nhau thì hỏng đúng chỗ người ta đi tra.
+
+> **VÌ SAO GIÁ TB PHẢI LÀ ĐƯỜNG ĐỨT chứ không phải đóng cửa.** Đo tại chỗ trên VIC khung
+> 1.000 phiên: bật cả hai thì đường đóng cửa chỉ còn **11,0%** số cột có màu (81 đoạn rời) —
+> đường giá TB vẽ SAU nên nó phủ lên. Tắt giá TB đi thì đóng cửa lên **83,9%** (8 đoạn).
+> Hai đường là hai phiên bản của cùng một đại lượng, chạy sát nhau suốt khung; cho đường
+> DẪN XUẤT thành nét đứt thì đường CHÍNH thức lộ ra qua các khoảng hở.
+
+**ĐƯỜNG VỐN HOÁ TOÀN THỊ TRƯỜNG — công thức user chốt, chia cho MỘT hằng số:**
+
+```
+vhTB(mã)      = (vốn hoá mã ở phiên ĐẦU khung + ở phiên CUỐI khung) ÷ 2
+vhTB(thị trg) = (vốn hoá thị trường phiên ĐẦU + phiên CUỐI)         ÷ 2
+tỉ số         = vhTB(thị trường) ÷ vhTB(mã)
+đường vẽ      = vốn hoá thị trường(i) ÷ tỉ số
+```
+
+Vấn đề nó giải: vốn hoá thị trường 10,3 TRIỆU tỷ so với một mã 30 nghìn tỷ là gấp 343 lần —
+vẽ chung trục thì đường mã bẹp sát đáy, cho mỗi đường một trục riêng thì cả hai tự co giãn
+đầy khung và **không bao giờ cắt nhau**, mà chỗ cắt nhau mới là thứ cần nhìn.
+
+> **VÌ SAO NEO BẰNG TRUNG BÌNH HAI ĐẦU thì CHẮC CHẮN có điểm cắt.** Sau khi chia, tổng hai
+> đầu của đường thị trường đúng bằng tổng hai đầu của đường mã. Hai đường cùng tổng hai đầu
+> mà không trùng nhau thì bắt buộc một đường bắt đầu ở TRÊN và kết thúc ở DƯỚI. Quét cả kho:
+> **1.529/1.529 mã vẽ được đường và 0 mã không cắt lần nào** (VIC 13 lần · SHB 19 · VNM 5).
+> Neo vào MỘT phiên (kiểu VN-Index quy đổi) thì hai đường chỉ chạm nhau ở đúng phiên neo —
+> đọc ra được hơn kém, không đọc ra ĐẢO CHIỀU ở đâu.
+
+> **CHIA CHO HẰNG SỐ, ĐỪNG CHUẨN HOÁ TỪNG PHIÊN.** Chia hằng số thì hình dạng đường thị
+> trường giữ nguyên tuyệt đối — nó vẫn là đúng đường vốn hoá thị trường, chỉ đổi đơn vị đọc.
+> Chuẩn hoá theo từng phiên ra một đường phẳng lì bằng 1, chẳng nói gì.
+
+Kiểm end-to-end trên VNM khung 1.000 phiên (đọc pixel canvas rồi đối chiếu với số tính lại
+bằng Python): cả hai đường khớp **một** phép ánh xạ tuyến tính chung, sai số ≤ 8px trên
+902px vùng vẽ ở cả 5 mốc thử — tức chúng thật sự đứng chung một trục, và đường xám thật sự
+là vốn hoá thị trường chia 52,61.
+
+- **`PT.tt.tt.mcap` tính bằng TỶ, `mcap` của mã tính bằng ĐỒNG** — quên `×1e9` là lệch đúng
+  10⁹ mà tỉ số vẫn ra một con số trông bình thường, chỉ có đồ thị là sai.
+- **Neo vào phiên đầu CÓ ĐỦ CẢ HAI SỐ, không phải phiên đầu KHUNG.** Vốn hoá thị trường chỉ
+  có từ 03/01/2023 nên ở khung 1.000 phiên đường này bắt đầu muộn hơn đường mã.
+- **Tỉ số in thẳng vào nhãn chú thích** (`vốn hoá thị trường ÷ 52,6`). Người xem phải biết
+  đường đó bị chia bao nhiêu thì con số trên trục mới có nghĩa. Trung vị cả kho 28.780; mã
+  bé nhất (X77) lên tới 19,4 triệu.
+- **`PT.vhtt`** ở `localStorage['cpvn_ptvhtt']`, **mặc định TẮT** — bật sẵn cả bốn đường
+  trục ngoài là lần đầu mở trang thấy một mớ chồng nhau.
+- **Vốn hoá đứng ĐẦU mảng `phai2.series`** vì `ptVe1` tô nhãn trục ngoài cùng bằng `P3[0].mau`.
+
+> **MÀU XÁM PHẢI LÀ XÁM TRUNG (#94a3b8), KHÔNG PHẢI XÁM NHẠT.** Đã thử `#cbd5e1` và đo trên
+> VIC: đường này chạy đúng dải y 102..834, **trùng dải của đường đóng cửa** (`#f8fafc`,
+> y 101..834) — hai màu cách nhau ~50 đơn vị mỗi kênh nên chồng lên nhau là mất hẳn một
+> đường. Trùng dải là chuyện ngẫu nhiên của từng mã (hai đường ở hai trục khác nhau), nên
+> phải chọn màu chịu được mọi lần trùng chứ đừng chọn theo một mã.
+
+**LỖ THỦNG Ở CỬA VỐN HOÁ THỊ TRƯỜNG — đã vá cùng lượt.** `build_phantich` chỉ xét TỈ LỆ
+`nMcap/n < 0,80`, và nó thủng đúng một phiên: **31/12/2022 (thứ Bảy, không phải ngày giao
+dịch) có `n = nMcap = 1`** → tỉ lệ 100%, lọt cửa, ghi ra **671,5 tỷ** trong khi thị trường
+khi đó ~5,4 TRIỆU tỷ. Một ô lệch 8.000 lần nằm lọt giữa chuỗi thì **mọi phép neo theo hai
+đầu khung đều hỏng** — mà 31/12/2022 nằm gọn trong khung 1.000 phiên. Nay thêm SÀN TUYỆT
+ĐỐI dùng lại `MIN_MA = 100` của file ngày: phiên thưa tới mức không đáng dựng bảng thì cũng
+không đáng công bố vốn hoá. Sàn cách xa mọi phiên lành — phiên mỏng nhất trong kho vẫn có
+**1.446 mã**. Dựng lại `phantich.json` sau khi vá: **đúng 2 ô đổi** (`mcap`, `mcapFF` của
+31/12/2022 → `null`), không ô nào khác nhúc nhích.
+
+### THANH ĐỌC SỐ DÍNH PHẢI CÓ NỀN ĐẶC (23/08/2026)
+
+`.ptdoc` trước dùng `background:var(--card)` — màu KÍNH MỜ (rgba .72 nền tối / .86 nền
+sáng). Đẹp khi thẻ nằm yên trên nền trang, nhưng thanh này `position:sticky` và có cả lưới
+đồ thị chui qua bên dưới, nên mọi thứ trượt qua đều hằn lên: sáu cái nút bo tròn hồng của
+thanh tiêu đề đồ thị in đè lên đúng dòng "Vốn hoá" và "VN-Index". Đổi sang `var(--solid)`.
+**Thanh dính thì phải đục** — áp cho mọi thanh dính về sau.
 
 ### BA ĐỒ THỊ ĐÃ BỎ (22/08/2026) — ĐỪNG THÊM LẠI
 

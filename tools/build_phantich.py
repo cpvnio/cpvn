@@ -289,7 +289,16 @@ def main():
         # đồ thị thị trường — thà không vẽ còn hơn vẽ một con số không ai kiểm được.
         # Ngưỡng 80%: phiên đủ phủ thì tỉ lệ này luôn trên 99%, nên 80% cách xa mọi phiên
         # lành mà vẫn chặn sạch nhóm hỏng (108 phiên trước 2023).
-        if not t["nMcap"] or not t["n"] or t["nMcap"] / t["n"] < 0.80:
+        # CHỈ XÉT TỈ LỆ THÔI LÀ THỦNG, và nó đã thủng đúng MỘT phiên: 31/12/2022 (thứ Bảy,
+        # không phải ngày giao dịch) có `n = nMcap = 1` — tỉ lệ 100%, lọt cửa, ghi ra
+        # **671,5 tỷ** trong khi thị trường khi đó ~5,4 TRIỆU tỷ. Một ô lệch 8.000 lần nằm
+        # lọt giữa chuỗi thì mọi phép NEO THEO HAI ĐẦU KHUNG đều hỏng — đường "vốn hoá thị
+        # trường quy đổi" của trang mã neo đúng vào nó là cả đồ thị vô nghĩa.
+        # Vì thế thêm SÀN TUYỆT ĐỐI, dùng lại `MIN_MA` của file ngày: phiên thưa tới mức
+        # không đáng dựng bảng thì cũng không đáng công bố vốn hoá. Sàn này cách xa mọi
+        # phiên lành — phiên mỏng nhất trong kho vẫn có 1.446 mã.
+        if (not t["nMcap"] or not t["n"] or t["nMcap"] < MIN_MA
+                or t["nMcap"] / t["n"] < 0.80):
             t["mcap"] = None
             t["mcapFF"] = None
         for k in ("mv", "pv"):

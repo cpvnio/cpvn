@@ -764,6 +764,10 @@ const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           vh:LS.get('cpvn_ptvh',true),
+          /* VỐN HOÁ TOÀN THỊ TRƯỜNG quy về cùng tầm với vốn hoá của mã — mặc định TẮT.
+             Nó là đường thứ tư trên trục ngoài cùng; bật sẵn cả bốn thì lần đầu mở trang
+             là một mớ đường chồng nhau, chưa kịp nhìn ra cái nào. */
+          vhtt:LS.get('cpvn_ptvhtt',false),
           vni:LS.get('cpvn_ptvni',false),
           /* HẠ NỀN GIÁ QUÁ KHỨ — mặc định BẬT. Tắt là xem giá THÔ đúng như đã khớp phiên
              đó; bật là mọi giá quá khứ quy về nền hôm nay, hết vách dựng ở ngày chia tách. */
@@ -1695,11 +1699,11 @@ function ptVe1(cv, cfg){
   const veDuong=(ds,l3,h3)=>{
     const yy=v=>padT+plotH-(v-l3)/(h3-l3)*plotH;
     for(const s2 of ds){
-      /* VỐN HOÁ VẼ NÉT ĐỨT. Vốn hoá = giá đóng cửa × số cổ phiếu, mà số cổ phiếu gần như
-         đứng yên — nên đường này TRÙNG KHÍT đường giá ở hầu hết mã, ba đường liền nét đè
-         nhau thành một vệt không đọc ra đường nào. Nét đứt nói đúng bản chất: nó là bản
-         sao của đường giá, và chỗ nào nó TÁCH ra khỏi đường giá thì đúng chỗ đó doanh
-         nghiệp đã phát hành thêm (HPG 5,81 tỷ -> 8,44 tỷ cp trong 1.000 phiên). */
+      /* KIỂU NÉT DO NƠI GỌI ĐẶT, hàm này không tự quyết. Ở đồ thị chính thứ bậc là: vốn
+         hoá LIỀN NÉT DÀY (đường chủ) · vốn hoá thị trường nét đứt thưa · giá TB nét đứt
+         mảnh. Vốn hoá = giá đóng cửa × số cổ phiếu nên nó TRÙNG KHÍT đường giá ở hầu hết
+         mã; chỗ nó TÁCH ra là đúng chỗ doanh nghiệp phát hành thêm (HPG 5,81 tỷ -> 8,44
+         tỷ cp trong 1.000 phiên). */
       if(s2.net) g.setLineDash(s2.net); else g.setLineDash([]);
       g.strokeStyle=s2.mau; g.lineWidth=s2.day||1.8; g.beginPath(); let dau=true;
       for(let i=0;i<n;i++){ const v=s2.v[i];
@@ -2116,6 +2120,54 @@ function ptVeMa(){
       }
     }
   }
+  /* ---- VỐN HOÁ TOÀN THỊ TRƯỜNG, HẠ VỀ ĐÚNG TẦM VỐN HOÁ CỦA MÃ (user chốt 23/08/2026) --
+     *"khi đối chiếu đường này với đường vốn hoá 1 loại tài sản … để 2 đường thực sự giao
+     nhau"*. Bài toán: vốn hoá thị trường 10,3 TRIỆU tỷ so với một mã 30 nghìn tỷ là gấp
+     343 lần — vẽ chung trục thì đường mã bẹp thành vạch nằm sát đáy, còn cho mỗi đường
+     một trục riêng thì cả hai tự co giãn đầy khung và KHÔNG BAO GIỜ cắt nhau, mà chỗ cắt
+     nhau mới là thứ cần nhìn.
+
+     CÔNG THỨC USER CHỐT — chia cho MỘT hằng số, không chuẩn hoá theo từng phiên:
+         vhTB(mã)      = (vốn hoá mã ở phiên ĐẦU khung  + ở phiên CUỐI khung)  ÷ 2
+         vhTB(thị trg) = (vốn hoá thị trường phiên ĐẦU  + phiên CUỐI)          ÷ 2
+         tỉ số         = vhTB(thị trường) ÷ vhTB(mã)
+         đường vẽ      = vốn hoá thị trường(i) ÷ tỉ số
+     Chia cho HẰNG SỐ nên HÌNH DẠNG đường thị trường giữ nguyên tuyệt đối — nó vẫn là
+     đúng đường vốn hoá thị trường, chỉ đổi đơn vị đọc. (Chuẩn hoá theo từng phiên thì ra
+     một đường phẳng lì bằng 1, chẳng nói gì.)
+
+     VÌ SAO NEO BẰNG TRUNG BÌNH HAI ĐẦU thì hai đường CHẮC CHẮN cắt nhau: sau khi chia,
+     tổng hai đầu của đường thị trường đúng bằng tổng hai đầu của đường mã. Hai đường có
+     cùng tổng hai đầu mà không trùng nhau thì bắt buộc một đường phải bắt đầu ở trên và
+     kết thúc ở dưới — tức là cắt. Neo vào MỘT phiên (kiểu VN-Index quy đổi ở trên) thì
+     chúng chỉ chạm nhau đúng ở phiên neo rồi tách hẳn, đọc ra được hơn kém nhưng không
+     đọc ra ĐẢO CHIỀU ở đâu.
+
+     ĐỌC: đường mã ở TRÊN đường thị trường = mã đang lớn nhanh hơn thị trường trong nửa
+     khung đó. Chỗ hai đường CẮT nhau = phiên mã đổi vai với thị trường.
+
+     HAI ĐẦU KHUNG PHẢI CÓ ĐỦ CẢ HAI SỐ. Vốn hoá thị trường chỉ có từ 03/01/2023 (trước
+     đó `ratios` không đủ sâu, `build_phantich` để trống — xem chú thích ở đó), nên ở
+     khung 1.000 phiên đường này bắt đầu muộn hơn đường mã. Neo vào phiên đầu KHUNG thay
+     vì phiên đầu CÓ SỐ là cả đường lệch một hệ số cố định. */
+  let vhTT=null, vhTTis=null;
+  if(PT.vhtt){
+    const T=(PT.tt&&PT.tt.tt)||null;
+    if(T&&T.d&&T.mcap){
+      /* `PT.tt.tt.mcap` tính bằng TỶ (xem `build_phantich`), `mcap` của mã tính bằng ĐỒNG.
+         Không đổi đơn vị là lệch đúng 10⁹ — mà lệch kiểu đó thì tỉ số vẫn ra một con số
+         trông bình thường, chỉ có đồ thị là sai. */
+      const mp={}; for(let z=0;z<T.d.length;z++) if(T.mcap[z]!=null) mp[T.d[z]]=T.mcap[z]*1e9;
+      const tt=d.map(x=>mp[x]==null?null:mp[x]);
+      let a=-1, b=-1;
+      for(let z=0;z<d.length;z++) if(tt[z]!=null&&mcap[z]!=null){ a=z; break; }
+      for(let z=d.length-1;z>=0;z--) if(tt[z]!=null&&mcap[z]!=null){ b=z; break; }
+      if(a>=0&&b>a){
+        const tbMa=(mcap[a]+mcap[b])/2, tbTT=(tt[a]+tt[b])/2;
+        if(tbMa>0&&tbTT>0){ vhTTis=tbTT/tbMa; vhTT=tt.map(v=>v==null?null:v/vhTTis); }
+      }
+    }
+  }
   /* ---- CỘT KHỚP LỆNH TÁCH BA MẢNG THEO KHỐI (user chốt 22/08/2026) ------------------
      *"trên đồ thị của mã vẫn chưa đánh dấu màu sắc cho tự doanh và khối ngoại"*. Đồ thị
      TOÀN THỊ TRƯỜNG đã tô như vậy từ lâu; đồ thị của mã thì vẫn một khối xanh trơn, nên
@@ -2276,8 +2328,13 @@ function ptVeMa(){
            +'<br><b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg2">'
            +ptSw('c','pkA','đóng cửa')+ptSw('vw','pkB','giá TB (VWAP)')+'</span>'
            +'<span class="ptkr"> — trục phải</span>'
-           +((PT.vh||vniL)?'  <span class="ptlgs" id="ptLeg4">'
-              +(PT.vh?ptSw('vh2','pkV','vốn hoá (nét đứt)'):'')
+           /* GHI THẲNG TỈ SỐ VÀO NHÃN, không viết một câu giải thích riêng: người xem phải
+              biết đường thị trường đã bị chia bao nhiêu thì con số trên trục mới có nghĩa,
+              mà "÷ 343" là bốn ký tự nằm ngay cạnh cái ô màu — rẻ hơn mọi cách khác. */
+           +((PT.vh||vhTT||vniL)?'  <span class="ptlgs" id="ptLeg4">'
+              +(PT.vh?ptSw('vh2','pkV','vốn hoá'):'')
+              +(vhTT?ptSw('vhtt2','pkM','vốn hoá thị trường ÷ '
+                  +(vhTTis>=100?num(Math.round(vhTTis)):vhTTis.toFixed(1))):'')
               +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')+'</span>'
               +'<span class="ptkr"> — trục ngoài cùng, cùng đơn vị tiền</span>':'')
            /* BA DÒNG CHỮ ĐÃ BỎ 22/08/2026 — user chốt: *"tao không cần quá nhiều câu giải
@@ -2291,6 +2348,7 @@ function ptVeMa(){
            '<span class="ptsw" id="ptSK">'
              +'<button data-k="dc"'+(PT.dc?' class="on"':'')+'>Giá điều chỉnh</button>'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
+             +'<button data-k="vhtt"'+(PT.vhtt?' class="on"':'')+'>Vốn hoá thị trường</button>'
              +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
              +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
@@ -2416,12 +2474,34 @@ function ptVeMa(){
     /* VN-Index nối vào CUỐI mảng, đừng chèn lên đầu: `ptVe1` lấy `P2[0]` làm đường NEO cho
        mốc sự kiện (cổ tức, BCTC là chuyện của GIÁ) — đẩy nó xuống thứ hai là mấy cái chấm
        bám vào đường VN-Index, sai hẳn chỗ. */
+    /* GIÁ TB VẼ NÉT ĐỨT (user chốt 23/08/2026). Nó và đường đóng cửa là hai phiên bản
+       của CÙNG một đại lượng, chạy sát nhau suốt 1.000 phiên — khác màu thôi thì ở chỗ
+       chúng chập vào nhau (phần lớn khung) không tách nổi đường nào. Nét đứt cũng nói
+       đúng thứ bậc: đóng cửa là con số chính thức, giá TB là con số dẫn xuất. */
     phai:{nhan:num,series:[PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a'},
-                           PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706'}]},
-    /* VN-Index quy đổi nay đứng CHUNG TRỤC với vốn hoá — cùng đơn vị (đồng) và cùng là
-       đại lượng liền mạch qua ngày GDKHQ, nên so được trực tiếp. Trục phải chỉ còn giá. */
-    phai2:((PT.vh&&!PT.an.vh2)||(vniL&&!PT.an.vni2))?{nhan:v=>ptTien(v),series:[
-      (PT.vh&&!PT.an.vh2)?{v:mcap,mau:XANH,day:1.5,net:[5,3]}:null,
+                           PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706',net:[4,3]}]},
+    /* VN-Index quy đổi và vốn hoá thị trường đứng CHUNG TRỤC với vốn hoá của mã — cùng
+       đơn vị (đồng) và cùng là đại lượng liền mạch qua ngày GDKHQ, nên so được trực tiếp.
+       Trục phải chỉ còn giá.
+       VỐN HOÁ ĐỨNG ĐẦU MẢNG, CỐ Ý: `ptVe1` tô nhãn trục ngoài cùng bằng màu `P3[0]`.
+       ĐƯỜNG VỐN HOÁ IN ĐẬM VÀ LIỀN NÉT (user chốt 23/08/2026: *"đường vốn hoá thực chất
+       là đường quan trọng nhất, quan trọng hơn cả đường giá"*). Trước nó là nét đứt mảnh
+       1,5px vì hồi đó nó chỉ là bản sao của đường giá; nay nó là đường CHỦ của đồ thị nên
+       phải dày nhất khung (3px) và liền nét — nét đứt đã chuyển sang cho giá TB và cho
+       đường thị trường. */
+    phai2:((PT.vh&&!PT.an.vh2)||(vhTT&&!PT.an.vhtt2)||(vniL&&!PT.an.vni2))
+      ?{nhan:v=>ptTien(v),series:[
+      (PT.vh&&!PT.an.vh2)?{v:mcap,mau:XANH,day:3}:null,
+      /* THỊ TRƯỜNG LẤY MÀU XÁM THÉP, không lấy một màu nữa trong bảng: tám ký hiệu của đồ
+         thị này đã chiếm hết các sắc phân biệt được (lam, cam, lam nhạt, tím, đen/trắng,
+         hổ phách, lục, hồng sen). Xám cũng đúng vai — nó là cái NỀN để so, không phải một
+         khối tham gia thị trường. Phải đổi theo chủ đề, xám đậm trên nền tối là mất hút.
+         XÁM TRUNG (#94a3b8), ĐỪNG XÁM NHẠT. Đã thử #cbd5e1 và đo tại chỗ trên VIC: đường
+         này chạy đúng dải y 102..834, TRÙNG dải của đường đóng cửa (#f8fafc, y 101..834) —
+         hai màu chỉ cách nhau ~50 đơn vị mỗi kênh nên chồng lên nhau là mất hẳn một đường.
+         Trùng dải là chuyện ngẫu nhiên của từng mã (hai đường ở hai trục khác nhau), nên
+         phải chọn màu chịu được mọi lần trùng chứ không chọn theo một mã. */
+      (vhTT&&!PT.an.vhtt2)?{v:vhTT,mau:dark?'#94a3b8':'#475569',day:2,net:[7,4]}:null,
       (vniL&&!PT.an.vni2)?{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}:null]}:null}));
   ptVe1($('#mcL'),C({cao:230,kieu:'line',
     series:[PT.an.lk1?null:{v:lkFn,mau:cN,day:2},
@@ -2652,6 +2732,7 @@ function ptBindMa(){
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
     if(n.dataset.k==='dc'){ PT.dc=!PT.dc; LS.set('cpvn_ptdc',PT.dc); }
     else if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
+    else if(n.dataset.k==='vhtt'){ PT.vhtt=!PT.vhtt; LS.set('cpvn_ptvhtt',PT.vhtt); }
     else if(n.dataset.k==='vni'){ PT.vni=!PT.vni; LS.set('cpvn_ptvni',PT.vni); }
     else { PT.skH[n.dataset.k]=!PT.skH[n.dataset.k]; LS.set('cpvn_ptsk',PT.skH); }
     ptVeMa(); };
