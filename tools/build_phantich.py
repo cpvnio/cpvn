@@ -272,6 +272,32 @@ def main():
         os.replace(tmp, p)
         ghi += 1
 
+    # ── PHIÊN MA: THƯA MÀ KẸP GIỮA HAI PHIÊN ĐẦY ĐỦ ──────────────────────────────────
+    # User báo 23/08/2026: *"ngày 30-12-2022 không có vol"*. Đo ra thì 30/12 đúng (kho 6.274
+    # tỷ so với sàn 6.332, lệch 0,91%) — cột trống là phiên **31/12/2022, THỨ BẢY**, do đúng
+    # MỘT mã (BCF) mang một ô rác của nguồn. Nó lọt vào chuỗi toàn thị trường với `n = 1` và
+    # mọi số bằng 0, vẽ ra một cột trống giữa đồ thị, lại còn `mcap = None` nên ba đường của
+    # trục ngoài cùng cũng đứt đúng chỗ đó. Đối chiếu `data/thanhkhoan.json` (lịch phiên
+    # CHÍNH THỨC của sàn, 2.247 ngày): cả kho chỉ có ĐÚNG một ô như vậy.
+    #
+    # LUẬT TỰ CHỨA, KHÔNG DỰA VÀO LỊCH NGOÀI: phiên dưới `MIN_MA` mã mà TRƯỚC nó VÀ SAU nó
+    # đều có phiên đủ mã thì là phiên ma. Không dùng `data/thanhkhoan.json` làm lưới vì kho
+    # đó chụp một lần chứ không nằm trong lượt EOD — lấy nó làm lịch sống thì mọi phiên mới
+    # hơn ngày chụp đều bị xoá sạch.
+    # KHÔNG được xoá thẳng mọi phiên dưới `MIN_MA`: 770 phiên đầu kho (2015-2018 mỗi phiên
+    # 1 mã, rồi dải bồi dần 2022-07 tới 2022-08 với 93-95 mã) là phiên THẬT, chỉ thưa vì kho
+    # bồi dần — chúng nằm liền một dải ở ĐẦU chuỗi nên không có phiên đủ mã nào đứng trước.
+    du = [i for i, d in enumerate(ngays) if tt[d]["n"] >= MIN_MA]
+    if du:
+        dau, cuoi = du[0], du[-1]
+        ma_ngay = [d for i, d in enumerate(ngays)
+                   if tt[d]["n"] < MIN_MA and dau < i < cuoi]
+        if ma_ngay:
+            print("  bỏ %d phiên ma (thưa mà kẹp giữa hai phiên đủ mã): %s"
+                  % (len(ma_ngay), ", ".join(ma_ngay[:5])), flush=True)
+            bo_ma = set(ma_ngay)
+            ngays = [d for d in ngays if d not in bo_ma]
+
     # ── chuỗi toàn thị trường ──
     for d in ngays:
         t = tt[d]
