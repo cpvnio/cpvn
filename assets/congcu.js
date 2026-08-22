@@ -2011,13 +2011,25 @@ function ptVeMa(){
       const vn=d.map(x=>mp[x]==null?null:mp[x]);
       /* Neo ở phiên ĐẦU TIÊN có ĐỦ CẢ HAI số. Neo bừa vào phiên đầu khung mà hôm đó mã
          chưa niêm yết (hoặc chỉ số thiếu) là cả đường lệch một hệ số cố định. */
-      let z0=-1; for(let z=0;z<d.length;z++) if(vn[z]!=null&&c[z]!=null){ z0=z; break; }
+      let z0=-1; for(let z=0;z<d.length;z++) if(vn[z]!=null&&mcap[z]!=null){ z0=z; break; }
       if(z0>=0){
         const hs=new Array(d.length).fill(null); let f=1; hs[z0]=1;
         for(let z=z0+1;z<d.length;z++){ if(pcs[z]!=null) f*=1+pcs[z]/100; hs[z]=f; }
-        vniL=vn.map((v,z)=>(v==null||c[z]==null||!hs[z])?null:c[z]*(v/vn[z0])/hs[z]);
-        let zN=-1; for(let z=d.length-1;z>z0;z--) if(vn[z]!=null&&c[z]!=null){ zN=z; break; }
-        if(zN>z0) vniTom={tu:d[z0], ma:(hs[zN]-1)*100, vni:(vn[zN]/vn[z0]-1)*100};
+        /* NEO VÀO VỐN HOÁ, KHÔNG NEO VÀO GIÁ (user chốt 22/08/2026: *"giá có thể tụt do
+           nền tụt nhưng vốn hoá thì không hề tụt — VN-Index phụ thuộc vào vốn hoá chứ đâu
+           phụ thuộc vào những lúc sụt nền"*). Đúng, và nó gỡ được cả cái khó của bản trước.
+           Bản trước lấy `giá(i) × tỉ lệ` nên đường phải tụt theo mọi cú hạ nền của mã —
+           đúng về khoảng cách nhưng đọc ra như VN-Index đi xuống trong khi nó đi lên.
+           Nhân với VỐN HOÁ thì thành phần `mcap(i)/mcapTỉLệ(i)` triệt tiêu, còn lại đúng
+           `mcap(z0) × VN-Index(i)/VN-Index(z0)` — một đường CHỈ đi theo VN-Index, không
+           còn dính cú hạ nền nào. Vốn hoá của mã cũng liền mạch qua ngày GDKHQ (giá chia
+           đôi thì số cổ phiếu nhân đôi), nên hai đường so được với nhau bằng mắt.
+           ĐIỀU KIỆN: `sh` phải nhảy bậc ĐÚNG NGÀY GDKHQ — xem `tools/va_slcp_gdkhq.py`.
+           Không có nó thì chính đường vốn hoá mới là đường bị sụt, và cả phép so hỏng. */
+        vniL=vn.map((v)=>v==null?null:mcap[z0]*(v/vn[z0]));
+        let zN=-1; for(let z=d.length-1;z>z0;z--) if(vn[z]!=null&&mcap[z]!=null){ zN=z; break; }
+        if(zN>z0) vniTom={tu:d[z0], vh:(mcap[zN]/mcap[z0]-1)*100,
+                          vni:(vn[zN]/vn[z0]-1)*100, ma:(hs[zN]-1)*100};
       }
     }
   }
@@ -2179,10 +2191,12 @@ function ptVeMa(){
            +ptSw('con','pkR','còn lại')+ptSw('tt','pk2','thoả thuận')+'</span>'
            +'<span class="ptkr"> — phần tô là <b>mức tham gia</b> = (mua + bán) ÷ 2</span>'
            +'<br><b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg2">'
-           +ptSw('c','pkA','đóng cửa')+ptSw('vw','pkB','giá TB (VWAP)')
-           +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')
-           +(PT.vh?ptSw('vh2','pkV','vốn hoá (nét đứt)'):'')+'</span>'
-           +'<span class="ptkr"> — đọc ở <b>trục phải</b></span>'
+           +ptSw('c','pkA','đóng cửa')+ptSw('vw','pkB','giá TB (VWAP)')+'</span>'
+           +'<span class="ptkr"> — trục phải</span>'
+           +((PT.vh||vniL)?'  <span class="ptlgs" id="ptLeg4">'
+              +(PT.vh?ptSw('vh2','pkV','vốn hoá (nét đứt)'):'')
+              +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')+'</span>'
+              +'<span class="ptkr"> — trục ngoài cùng, cùng đơn vị tiền</span>':'')
            +(skM?(
               '<br><b class="ptlgn">mốc</b>'
               +(PT.skH.sk?' <i class="pkS1"></i> <b>D</b> cổ tức tiền'
@@ -2197,12 +2211,20 @@ function ptVeMa(){
               là chú thích dưới đồ thị).
               Lợi suất của mã lấy từ chuỗi dồn `c/tc−1` nên ĐÃ SẠCH cổ tức và chia tách —
               đừng thay bằng `c[cuối]/c[đầu]` cho gọn. */
-           +(vniTom?'<br>từ phiên <b>'+esc(vniTom.tu)+'</b>: '+esc(PT.ma)
-              +' <b class="'+cls(vniTom.ma)+'">'+(vniTom.ma>0?'+':'')+vniTom.ma.toFixed(1)+'%</b>'
+           /* HAI PHÉP SO KHÁC NHAU, PHẢI TÁCH RA. Đường trên đồ thị so VỐN HOÁ với
+              VN-Index — đó là thứ mắt đọc được. Nhưng vốn hoá tăng còn vì PHÁT HÀNH THÊM,
+              nên nó KHÔNG phải cái người cầm cổ phiếu lãi được; số đó là lợi suất dồn từ
+              `c/tc−1` (đã sạch cổ tức và chia tách). Gộp hai thứ vào một con số là nói sai
+              một trong hai. */
+           +(vniTom?'<br>từ phiên <b>'+esc(vniTom.tu)+'</b> — <b>vốn hoá</b>: '+esc(PT.ma)
+              +' <b class="'+cls(vniTom.vh)+'">'+(vniTom.vh>0?'+':'')+vniTom.vh.toFixed(1)+'%</b>'
               +' · VN-Index <b class="'+cls(vniTom.vni)+'">'+(vniTom.vni>0?'+':'')
-              +vniTom.vni.toFixed(1)+'%</b> · chênh <b class="'+cls(vniTom.ma-vniTom.vni)+'">'
-              +((vniTom.ma-vniTom.vni)>0?'+':'')+(vniTom.ma-vniTom.vni).toFixed(1)
-              +' điểm %</b> <span class="ptkr">— lợi suất của mã đã trừ cổ tức và chia tách</span>':'')
+              +vniTom.vni.toFixed(1)+'%</b> · chênh <b class="'+cls(vniTom.vh-vniTom.vni)+'">'
+              +((vniTom.vh-vniTom.vni)>0?'+':'')+(vniTom.vh-vniTom.vni).toFixed(1)+' điểm %</b>'
+              +'<span class="ptkr"> · lợi suất người cầm cổ phiếu <b class="'+cls(vniTom.ma)+'">'
+              +(vniTom.ma>0?'+':'')+vniTom.ma.toFixed(1)+'%</b> — khác vốn hoá vì vốn hoá còn'
+              +' đổi theo phát hành thêm (lên khi cổ phiếu mới về, và tụt tạm giữa ngày GDKHQ'
+              +' với ngày nguồn ghi nhận số mới)</span>':'')
            /* ĐƯỜNG HỒNG KHÔNG PHẢI ĐIỂM SỐ VN-INDEX — PHẢI NÓI RA (user chốt 22/08/2026:
               *"sao vnindex 1732 lại có đồ thị hiển thị thấp hơn 1636, lại sai rành rành"*).
               Phản ứng đó ĐÚNG với cái nhãn cũ: ô đọc số ghi "VN-Index 1.732,02" mà đường
@@ -2213,11 +2235,11 @@ function ptVeMa(){
               KHOẢNG CÁCH giữa hai đường mới luôn đúng bằng chênh lệch hiệu suất.
               Sửa bằng cách gọi đúng tên, KHÔNG đổi công thức: đổi sang vẽ điểm số thật thì
               mất luôn phép so, mà đó là lý do duy nhất nó có mặt. */
-           +(vniL?'<br><span class="ptkr"><i class="pkI"></i> <b>VN-Index quy đổi</b> là'
-              +' giá '+esc(PT.ma)+' SẼ Ở ĐÂU nếu chạy đúng bằng thị trường —'
-              +' nằm <b>dưới</b> đường giá nghĩa là mã chạy hơn VN-Index.'
-              +' Nó đi theo mọi cú hạ nền của chính mã, nên <b>đừng đọc nó như điểm số'
-              +' VN-Index</b>; điểm số thật nằm ở ô <b>VN-Index</b> phía trên.</span>':''), 1,
+           +(vniL?'<br><span class="ptkr"><i class="pkI"></i> <b>VN-Index quy đổi</b> = vốn'
+              +' hoá '+esc(PT.ma)+' SẼ LÀ BAO NHIÊU nếu nó lớn lên đúng bằng VN-Index kể từ'
+              +' phiên đầu khung. Nó chỉ đi theo VN-Index — <b>không</b> tụt ở ngày GDKHQ,'
+              +' vì vốn hoá không tụt khi hạ nền (giá chia đôi thì số cổ phiếu nhân đôi).'
+              +' Nằm <b>dưới</b> đường vốn hoá nghĩa là mã lớn nhanh hơn thị trường.</span>':''), 1,
            '<span class="ptsw" id="ptSK">'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
              +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
@@ -2346,9 +2368,12 @@ function ptVeMa(){
        mốc sự kiện (cổ tức, BCTC là chuyện của GIÁ) — đẩy nó xuống thứ hai là mấy cái chấm
        bám vào đường VN-Index, sai hẳn chỗ. */
     phai:{nhan:num,series:[PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a'},
-                           PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706'}]
-                          .concat((vniL&&!PT.an.vni2)?[{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}]:[])},
-    phai2:(PT.vh&&!PT.an.vh2)?{nhan:v=>ptTien(v),series:[{v:mcap,mau:XANH,day:1.5,net:[5,3]}]}:null}));
+                           PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706'}]},
+    /* VN-Index quy đổi nay đứng CHUNG TRỤC với vốn hoá — cùng đơn vị (đồng) và cùng là
+       đại lượng liền mạch qua ngày GDKHQ, nên so được trực tiếp. Trục phải chỉ còn giá. */
+    phai2:((PT.vh&&!PT.an.vh2)||(vniL&&!PT.an.vni2))?{nhan:v=>ptTien(v),series:[
+      (PT.vh&&!PT.an.vh2)?{v:mcap,mau:XANH,day:1.5,net:[5,3]}:null,
+      (vniL&&!PT.an.vni2)?{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}:null]}:null}));
   ptVe1($('#mcL'),C({cao:230,kieu:'line',
     series:[PT.an.lk1?null:{v:lkFn,mau:cN,day:2},
             PT.an.lk2?null:{v:lkTd,mau:cT,day:2,net:[6,4]},
@@ -2573,7 +2598,7 @@ function ptBindMa(){
     const k=n.dataset.s;
     if(PT.an[k]) delete PT.an[k]; else PT.an[k]=1;
     LS.set('cpvn_ptan',PT.an); ptVeMa(); };
-  [$('#ptLeg'),$('#ptLeg2'),$('#ptLeg3')].forEach(el=>{ if(el) el.onclick=legClick; });
+  [$('#ptLeg'),$('#ptLeg2'),$('#ptLeg3'),$('#ptLeg4')].forEach(el=>{ if(el) el.onclick=legClick; });
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
     if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }

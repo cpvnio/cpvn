@@ -181,11 +181,17 @@ def va_duoi(sym, moi):
         if sh[i] and sh[i - 1] and sh[i] != sh[i - 1]:
             j = i
             break
-    ev = [x for x in doc_sk(sym) if d[j] <= x["d"] <= d[-1]]
+    # NEO VÀO ĐỢT GẦN NHẤT, KHÔNG PHẢI ĐỢT SỚM NHẤT — và chỉ nhận đợt SAU bậc đã có.
+    # Đã trả giá ngay trong lượt vá đầu: MBB có đợt 13/08/2025 (đã nằm trong một bậc cũ) và
+    # đợt 11/08/2026 (chưa có bậc nào). Neo vào đợt sớm nhất là áp số cổ phiếu CUỐI CÙNG
+    # cho suốt một năm trước đó — vốn hoá vọt lên rồi ô ngày GDKHQ thật lại tụt, đúng cái
+    # bệnh file này sinh ra để chữa, chỉ khác chiều.
+    # Con số đang có là số CUỐI CÙNG nên nó chỉ đúng từ đợt CUỐI CÙNG trở đi.
+    ev = [x for x in doc_sk(sym) if d[j] < x["d"] <= d[-1]]
     if not ev:
         return 0
     vi = {x: i for i, x in enumerate(d)}
-    z0 = vi.get(ev[0]["d"])
+    z0 = vi.get(ev[-1]["d"])
     if z0 is None:
         return 0
     sh = list(sh)

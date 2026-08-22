@@ -1892,10 +1892,31 @@ Nhờ đi cùng nhau như vậy thì **khoảng cách** giữa hai đường m�
 hiệu suất — đó là lý do duy nhất đường này có mặt. Nhưng gọi nó là "VN-Index" trong khi ô
 đọc số ngay trên ghi "VN-Index 1.732,02" thì đọc ra là mâu thuẫn.
 
-> **SỬA BẰNG CÁCH GỌI ĐÚNG TÊN, ĐỪNG ĐỔI CÔNG THỨC.** Vẽ điểm số thật thì mất luôn phép so
-> (hai đường tự co giãn đầy khung, nhìn không ra ai hơn ai — xem mục VN-Index phía dưới).
-> Nay nhãn là `VN-Index quy đổi` và có một câu ngay dưới đồ thị nói rõ nó là gì, nằm dưới
-> đường giá nghĩa là gì, và **điểm số thật nằm ở ô VN-Index phía trên**.
+**RỒI USER CHỈ RA CÁI SÂU HƠN, VÀ NÓ GỠ ĐƯỢC CẢ CÁI KHÓ:** *"giá có thể tụt do nền tụt
+nhưng VỐN HOÁ thì không hề tụt — VN-Index phụ thuộc vào vốn hoá chứ đâu phụ thuộc vào những
+lúc sụt nền"*. Đúng. Neo đường vào **vốn hoá** thay vì giá thì thành phần
+`mcap(i)/mcapTỉLệ(i)` triệt tiêu, còn lại đúng:
+
+```
+L(i) = vốn hoá(z0) × VN-Index(i) / VN-Index(z0)
+```
+
+Một đường **chỉ đi theo VN-Index**, không còn dính cú hạ nền nào — đúng thứ trực giác đòi.
+Và vốn hoá của mã cũng liền mạch qua ngày GDKHQ (giá chia đôi thì số cổ phiếu nhân đôi),
+nên hai đường so được trực tiếp. Đường nay đứng CHUNG TRỤC với vốn hoá (cùng đơn vị tiền),
+trục phải chỉ còn giá.
+
+> **PHÉP SO NÀY CHỈ ĐÚNG KHI `sh` NHẢY BẬC ĐÚNG NGÀY GDKHQ** — tức phụ thuộc thẳng vào
+> `tools/va_slcp_gdkhq.py` ở mục trên. Không có nó thì chính đường vốn hoá mới là đường bị
+> sụt ở ngày GDKHQ, và cả phép so hỏng. Hai việc này là một.
+
+> **HAI PHÉP SO KHÁC NHAU, PHẢI TÁCH RA TRONG CHÚ THÍCH.** Đường trên đồ thị so **vốn hoá**
+> với VN-Index. Nhưng vốn hoá còn đổi theo **phát hành thêm** nên nó KHÔNG phải cái người
+> cầm cổ phiếu lãi được — số đó là lợi suất dồn từ `c/tc−1`. Đo VIC từ 03/01/2023: vốn hoá
+> +629,2% · lợi suất +621,8% (gần nhau vì VIC ít pha loãng). MBB 100 phiên thì ngược:
+> vốn hoá −9,5% mà lợi suất −1,8%, vì giá đã bị cắt cho cả cổ tức 15% LẪN quyền mua 10%
+> trong khi cổ phiếu của đợt quyền mua chưa về — vốn hoá tụt tạm rồi sẽ hồi. Gộp hai con số
+> làm một là nói sai một trong hai.
 
 ### RÒNG LUỸ KẾ THEO KHỐI — VÀ HAI THỨ TƯỞNG THIẾU DỮ LIỆU NHƯNG KHÔNG (22/08/2026)
 
