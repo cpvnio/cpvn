@@ -278,6 +278,20 @@ def main():
         for k in ("mval", "pval", "mcap", "mcapFF", "fnMua", "fnBan", "tdMua", "tdBan",
                   "fnMuaT", "fnBanT", "tdMuaT", "tdBanT"):
             t[k] = round(t[k] / 1e9, 1)
+        # ── PHIÊN THIẾU SỐ CỔ PHIẾU THÌ ĐỂ TRỐNG VỐN HOÁ, ĐỪNG CỘNG NỬA VỜI ──────────
+        # `ratios` của VNDirect chỉ sâu 16 quý (kỳ cũ nhất 2022-12-31), nên mọi phiên
+        # TRƯỚC 03/01/2023 chỉ có ĐÚNG MỘT mã có số cổ phiếu. Cộng lên vẫn ra một con số
+        # trông bình thường — 2022-09-05 ra 265.616 tỷ — mà sự thật khi đó là ~5,9 triệu
+        # tỷ. Đồ thị vẽ liền mạch qua chỗ đó thành ra "thị trường tăng 37 lần trong 4
+        # năm", và ô "Vốn hoá thị trường" in thẳng con số 4% sự thật không kèm dấu hiệu gì.
+        # Đây đúng loại sai nguy hiểm nhất của dự án này: KHÔNG có ô nào trống, không con
+        # số nào vô lý, chỉ là sai. Cùng luật với cột xám "phiên kho chưa cào đủ mã" của
+        # đồ thị thị trường — thà không vẽ còn hơn vẽ một con số không ai kiểm được.
+        # Ngưỡng 80%: phiên đủ phủ thì tỉ lệ này luôn trên 99%, nên 80% cách xa mọi phiên
+        # lành mà vẫn chặn sạch nhóm hỏng (108 phiên trước 2023).
+        if not t["nMcap"] or not t["n"] or t["nMcap"] / t["n"] < 0.80:
+            t["mcap"] = None
+            t["mcapFF"] = None
         for k in ("mv", "pv"):
             t[k] = round(t[k] / 1e3)
     # CHỈ SỐ — gióng theo đúng trục ngày của chuỗi giao dịch. Thiếu phiên nào thì để None

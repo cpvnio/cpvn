@@ -63,6 +63,15 @@ if ((Test-Path '.git\rebase-merge') -or (Test-Path '.git\rebase-apply')) {
 & $py tools\kho_vnd_lo.py --sau 30 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_vnd_lo EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# [1b] ĐẨY BƯỚC NHẢY SỐ CỔ PHIẾU VỀ ĐÚNG NGÀY GDKHQ. PHẢI ĐỨNG NGAY SAU kho_vnd_lo:
+# `ratios` ghi số cổ phiếu mới dưới `reportDate` CUỐI QUÝ, trong khi giá bị hạ nền NGAY
+# ngày GDKHQ — nên cửa sổ giữa hai mốc mang giá đã chia nhân số cổ phiếu chưa chia.
+# Đo 22/08/2026: 399 mã, 20.863 ô phiên sai; riêng phiên hôm đó 92 mã hụt 423.082 ty
+# = 4,1% von hoa thi truong (VHM chia 1:1 ngay 06/08 chiem 294.501 ty).
+# Doc data/sukien (luot 7:30 dung) + 13 luot goi ratios/latest.
+& $py tools\va_slcp_gdkhq.py 2>&1
+if ($LASTEXITCODE -ne 0) { "va_slcp_gdkhq EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # [2] THOẢ THUẬN — riêng `pv`/`pval` vẫn phải hỏi Vietstock. Đối chiếu phiên 21/08: khớp
 # lệnh hai nguồn khớp tuyệt đối (16.939 vs 16.940 tỷ) nhưng thoả thuận thì VNDirect BỎ SÓT
 # 394/3.001 tỷ, dồn vào 7 mã (VHM 298,9 tỷ ghi thành 0). Không phải trễ mà là sót — VHM

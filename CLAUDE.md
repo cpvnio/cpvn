@@ -1828,6 +1828,75 @@ thêm một mảng mới về sau thì nó mặc định hiện, khỏi phải �
 > `data/phantich.json`), ô chú thích chỉ quyết định *có VẼ ra không*. Dùng chung khoá thì
 > bấm ở chú thích làm nút cách đó nửa màn hình đổi theo — loại tương tác khó đoán nhất.
 
+### VỐN HOÁ SAI 4% VÌ SỐ CỔ PHIẾU NHẢY BẬC MUỘN HƠN NGÀY GDKHQ (22/08/2026)
+
+User: *"tổng vốn hoá toàn thị trường đang có vẻ sai"* — đúng. Đối chiếu với chính VNDirect
+(`ratios/latest`, vốn hoá của cả 1.528 mã): họ **10.311.473 tỷ**, kho **9.895.019 tỷ**,
+hụt **416.454 tỷ = 4,0%**.
+
+**GỐC — và đây là luật CHÍNH TAO viết sáng cùng ngày, đúng ở mọi chỗ trừ chỗ này.**
+`gop_sh` lấy kỳ mới nhất có `reportDate <= ngày phiên`, để khỏi gán số của quý chưa tới cho
+hôm nay. Nhưng doanh nghiệp phát hành **giữa quý**, mà VNDirect ghi số mới dưới `reportDate`
+**cuối quý ấy** — trong khi nguồn **hạ nền giá NGAY** ngày GDKHQ. Kết quả: mọi phiên từ ngày
+GDKHQ tới hết quý mang **giá đã chia** nhân **số cổ phiếu chưa chia**.
+
+Ca user chỉ ra, VIC — sạch tới mức dùng làm ví dụ mẫu:
+
+```
+05/12/2025  thưởng cổ phiếu 1:1, ngày GDKHQ  ->  giá hạ nền ngay
+31/12/2025  `ratios` mới ghi 3,853 tỷ -> 7,706 tỷ cp
+10/12/2025  kho ghi 573.329 tỷ · sự thật ~1.147.000 tỷ   (sai đúng MỘT NỬA)
+```
+
+Đo toàn kho: **399 mã · 20.863 ô phiên** sai kiểu này.
+
+**`tools/va_slcp_gdkhq.py` — CHỈ DỜI NGÀY, KHÔNG TỰ CHẾ CON SỐ.** Hai giá trị trước/sau đã
+có sẵn (nguồn cho); thứ duy nhất sai là chỗ đặt bậc thang, và `data/sukien` có ngày GDKHQ
+chính xác. Tỉ lệ chia **chỉ dùng để đối chiếu** xem có đúng đợt đó không.
+Ba cái bẫy đã xử: ① `quyenmua`/`phathanh` thì tỉ lệ chỉ là mức TỐI ĐA (không phải ai cũng
+nộp tiền) nên chỉ lấy NGÀY · ② một quý có nhiều đợt thì chia bậc theo thứ tự rồi **ép giá
+trị cuối bằng đúng số nguồn cho** · ③ bậc nhảy không có sự kiện nào giải thích thì **để
+nguyên** (phát hành riêng lẻ không có ngày GDKHQ, và `ratios` cũng có ô rác).
+
+**PHẦN HAI — ĐỢT VỪA PHÁT HÀNH, KHO KHÔNG CÓ BẬC NÀO ĐỂ DỜI.** Số mới nhất nằm ở kỳ TƯƠNG
+LAI (VHM: `reportDate 2026-09-30`) nên `gop_sh` lọc bỏ, kho không có bậc. Phải hỏi
+`ratios/latest` (không kẹp theo ngày phiên) rồi áp **từ ngày GDKHQ của đợt gần nhất** —
+đừng áp từ hôm nay, làm vậy là để lại đúng cái cửa sổ sai mà cả file này sinh ra để xoá.
+
+Kết quả: **9.892.264 -> 10.299.132 tỷ**, lệch VNDirect còn **−0,12%** (trước −4,0%).
+Bước `[1b]` của lượt EOD, ngay sau `kho_vnd_lo`.
+
+> **PHIÊN THIẾU SỐ CỔ PHIẾU THÌ ĐỂ TRỐNG VỐN HOÁ.** `ratios` chỉ sâu 16 quý (kỳ cũ nhất
+> 2022-12-31) nên **108 phiên trước 03/01/2023 chỉ có 1-2 mã** có SLCP. Cộng lên vẫn ra một
+> con số trông bình thường — 2022-09-05 ra **265.616 tỷ** trong khi sự thật ~5,9 triệu tỷ —
+> và đồ thị vẽ liền mạch qua đó thành "thị trường tăng 37 lần trong 4 năm". Đây đúng loại
+> sai nguy hiểm nhất của dự án: không ô nào trống, không số nào vô lý, chỉ là sai.
+> `build_phantich` nay để `mcap = null` khi dưới **80%** số mã có SLCP (phiên lành luôn
+> trên 99% nên ngưỡng này cách xa mọi phiên thật), và ô "Vốn hoá thị trường" in `—` kèm câu
+> *"kho chưa có số cổ phiếu cho phiên này — chỉ 2/1.452 mã có số"*. Cùng luật với cột xám
+> "phiên kho chưa cào đủ mã".
+
+### ĐƯỜNG "VN-INDEX" TRÊN ĐỒ THỊ MÃ ĐÃ ĐỔI TÊN THÀNH "VN-INDEX QUY ĐỔI" (22/08/2026)
+
+User: *"sao vnindex 1732 lại có đồ thị hiển thị thấp hơn 1636, lại sai rành rành"*. **Không
+có lỗi tính — lỗi ĐẶT TÊN, và là lỗi của tao.** Đường đó là
+`giá(i) × (VN-Index tăng) ÷ (mã tăng)` = **giá của mã SẼ Ở ĐÂU nếu chạy đúng bằng thị
+trường**, nên nó tụt theo mọi cú hạ nền của chính mã, y như đường giá:
+
+```
+MBB   10/08/2026  giá thô 24.250  đường 16.731
+      11/08/2026  giá thô 20.350  đường 13.911   <- MBB chia cổ phiếu
+```
+
+Nhờ đi cùng nhau như vậy thì **khoảng cách** giữa hai đường mới luôn đúng bằng chênh lệch
+hiệu suất — đó là lý do duy nhất đường này có mặt. Nhưng gọi nó là "VN-Index" trong khi ô
+đọc số ngay trên ghi "VN-Index 1.732,02" thì đọc ra là mâu thuẫn.
+
+> **SỬA BẰNG CÁCH GỌI ĐÚNG TÊN, ĐỪNG ĐỔI CÔNG THỨC.** Vẽ điểm số thật thì mất luôn phép so
+> (hai đường tự co giãn đầy khung, nhìn không ra ai hơn ai — xem mục VN-Index phía dưới).
+> Nay nhãn là `VN-Index quy đổi` và có một câu ngay dưới đồ thị nói rõ nó là gì, nằm dưới
+> đường giá nghĩa là gì, và **điểm số thật nằm ở ô VN-Index phía trên**.
+
 ### RÒNG LUỸ KẾ THEO KHỐI — VÀ HAI THỨ TƯỞNG THIẾU DỮ LIỆU NHƯNG KHÔNG (22/08/2026)
 
 User: *"tôi có thể tính sum từ vol buy sell ròng … vấn đề nằm ở chỗ chúng ta chưa phân

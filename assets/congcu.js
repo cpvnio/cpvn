@@ -906,11 +906,20 @@ function ptTop(){
        Đây cũng đúng luật sẵn có của dự án mà đoạn cũ đã phá: *một đơn vị `tỷ` duy nhất,
        viết hẳn số, không đổi bậc; chỉ CÂU CHỮ mới viết "nghìn tỷ"* — xem mục Quy ước
        toàn site trong CLAUDE.md. Cùng lý do đã bỏ hậu tố tự chế "N"/"Tr" ở bảng giá. */
-    +box('Vốn hoá thị trường', num(t.mcap[i])+' tỷ',
-         (t.mcapFF&&t.mcapFF[i]!=null)
-           ?('giao dịch được <b>'+num(t.mcapFF[i])+' tỷ</b> · <b>'
-             +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'%</b> lưu thông')
-           :('<b>'+num(t.nMcap[i])+'</b> mã có số cổ phiếu'))
+    /* PHIÊN KHÔNG ĐỦ SỐ CỔ PHIẾU THÌ Ô NÀY ĐỂ TRỐNG VÀ NÓI RA LÝ DO, đừng in "— tỷ".
+       `build_phantich` để `mcap = null` khi dưới 80% số mã có SLCP (xem chú thích ở đó):
+       `ratios` chỉ sâu 16 quý nên mọi phiên trước 03/01/2023 chỉ có 1-2 mã có số, cộng lên
+       ra 265.616 tỷ trong khi sự thật là ~5,9 triệu tỷ. In "— tỷ" thì đọc như một đơn vị
+       bị lỗi; nói "kho chưa có số cổ phiếu cho phiên này" mới đúng chuyện đang xảy ra. */
+    +box('Vốn hoá thị trường',
+         t.mcap[i]==null?'—':(num(t.mcap[i])+' tỷ'),
+         t.mcap[i]==null
+           ?('kho chưa có số cổ phiếu cho phiên này — chỉ <b>'+num(t.nMcap[i])+'</b>/'
+             +num(t.n[i])+' mã có số')
+           :((t.mcapFF&&t.mcapFF[i]!=null)
+             ?('giao dịch được <b>'+num(t.mcapFF[i])+' tỷ</b> · <b>'
+               +(t.mcap[i]?(t.mcapFF[i]/t.mcap[i]*100).toFixed(1):'—')+'%</b> lưu thông')
+             :('<b>'+num(t.nMcap[i])+'</b> mã có số cổ phiếu')))
     /* KHỐI NGOẠI và TỰ DOANH: hiện RÒNG làm số chính, mua/bán làm phụ. `nFn`/`nTd` phải nói
        ra vì hai tầng này phủ khác nhau — tự doanh phiên 20/08 chỉ có 62 mã trong khi khối
        ngoại có 1.525, mà phần lớn 1.463 mã kia KHÔNG PHẢI thiếu dữ liệu: chúng không có
@@ -2171,7 +2180,7 @@ function ptVeMa(){
            +'<span class="ptkr"> — phần tô là <b>mức tham gia</b> = (mua + bán) ÷ 2</span>'
            +'<br><b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg2">'
            +ptSw('c','pkA','đóng cửa')+ptSw('vw','pkB','giá TB (VWAP)')
-           +(vniL?ptSw('vni2','pkI','VN-Index'):'')
+           +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')
            +(PT.vh?ptSw('vh2','pkV','vốn hoá (nét đứt)'):'')+'</span>'
            +'<span class="ptkr"> — đọc ở <b>trục phải</b></span>'
            +(skM?(
@@ -2193,7 +2202,22 @@ function ptVeMa(){
               +' · VN-Index <b class="'+cls(vniTom.vni)+'">'+(vniTom.vni>0?'+':'')
               +vniTom.vni.toFixed(1)+'%</b> · chênh <b class="'+cls(vniTom.ma-vniTom.vni)+'">'
               +((vniTom.ma-vniTom.vni)>0?'+':'')+(vniTom.ma-vniTom.vni).toFixed(1)
-              +' điểm %</b> <span class="ptkr">— lợi suất của mã đã trừ cổ tức và chia tách</span>':''), 1,
+              +' điểm %</b> <span class="ptkr">— lợi suất của mã đã trừ cổ tức và chia tách</span>':'')
+           /* ĐƯỜNG HỒNG KHÔNG PHẢI ĐIỂM SỐ VN-INDEX — PHẢI NÓI RA (user chốt 22/08/2026:
+              *"sao vnindex 1732 lại có đồ thị hiển thị thấp hơn 1636, lại sai rành rành"*).
+              Phản ứng đó ĐÚNG với cái nhãn cũ: ô đọc số ghi "VN-Index 1.732,02" mà đường
+              cùng tên lại đi xuống. Không có lỗi tính — đường này là `giá(i) × (VN-Index
+              tăng) ÷ (mã tăng)`, tức GIÁ CỦA MÃ SẼ Ở ĐÂU nếu nó chạy đúng bằng thị trường,
+              nên nó tụt theo mọi cú hạ nền của chính mã y như đường giá (MBB chia cổ phiếu
+              11/08/2026: giá thô 24.250 -> 20.350, đường hồng 16.731 -> 13.911). Nhờ vậy
+              KHOẢNG CÁCH giữa hai đường mới luôn đúng bằng chênh lệch hiệu suất.
+              Sửa bằng cách gọi đúng tên, KHÔNG đổi công thức: đổi sang vẽ điểm số thật thì
+              mất luôn phép so, mà đó là lý do duy nhất nó có mặt. */
+           +(vniL?'<br><span class="ptkr"><i class="pkI"></i> <b>VN-Index quy đổi</b> là'
+              +' giá '+esc(PT.ma)+' SẼ Ở ĐÂU nếu chạy đúng bằng thị trường —'
+              +' nằm <b>dưới</b> đường giá nghĩa là mã chạy hơn VN-Index.'
+              +' Nó đi theo mọi cú hạ nền của chính mã, nên <b>đừng đọc nó như điểm số'
+              +' VN-Index</b>; điểm số thật nằm ở ô <b>VN-Index</b> phía trên.</span>':''), 1,
            '<span class="ptsw" id="ptSK">'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
              +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
