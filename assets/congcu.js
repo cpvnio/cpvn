@@ -2067,47 +2067,62 @@ function ptVeMa(){
     if(k===1) continue;
     for(const A of [c,tc,op,hi,lo,vw,vwN,ptt]) if(A&&A[i]!=null) A[i]=A[i]*k;
   }
-  /* ---- NEO HAI ĐẦU KHUNG — LUẬT CHUNG CHO MỌI ĐƯỜNG "QUY ĐỔI" (user chốt 23/08/2026) --
-     *"tương tự hãy tính với vnindex để có thể tạo ra giao cắt thực sự trên đồ thị"*.
+  /* ---- NEO THEO TRUNG BÌNH CẢ KHUNG — LUẬT CHUNG CHO MỌI ĐƯỜNG "QUY ĐỔI" ------------
+     User chốt 23/08/2026: *"vốn hoá trung bình nó không thể cộng đầu cuối rồi chia 2 được
+     … 1000 phiên thì lấy trung bình 1000 phiên luôn (tổng 1000 phiên cộng lại / 1000),
+     tương tự 100 thì trung bình 100, 300 thì trung bình 300"*.
 
      Mọi đại lượng muốn đặt cạnh VỐN HOÁ CỦA MÃ để so hình dạng đều gặp cùng một bài toán:
      nó ở một tầm khác hẳn (VN-Index tính bằng ĐIỂM, vốn hoá thị trường gấp mã hàng trăm
      lần), nên hoặc phải cho nó một trục riêng — và khi đó hai đường tự co giãn đầy khung,
      KHÔNG BAO GIỜ cắt nhau — hoặc phải quy về cùng tầm bằng MỘT hằng số.
 
-         tỉ số     = trung bình hai đầu của chuỗi ÷ trung bình hai đầu của vốn hoá mã
+         tỉ số     = trung bình CẢ KHUNG của chuỗi ÷ trung bình CẢ KHUNG của vốn hoá mã
          đường vẽ  = chuỗi(i) ÷ tỉ số
 
      CHIA CHO HẰNG SỐ nên HÌNH DẠNG giữ nguyên tuyệt đối — đường vẫn là đúng đường đó, chỉ
      đổi đơn vị đọc. (Chuẩn hoá theo từng phiên thì ra một đường phẳng lì bằng 1.)
 
-     VÌ SAO NEO KIỂU NÀY THÌ CHẮC CHẮN CÓ ĐIỂM CẮT: sau khi chia, TỔNG HAI ĐẦU của đường
-     quy đổi đúng bằng TỔNG HAI ĐẦU của đường vốn hoá. Hai đường cùng tổng hai đầu mà không
-     trùng nhau thì bắt buộc một đường bắt đầu ở TRÊN và kết thúc ở DƯỚI — tức là cắt.
-     Hệ quả kèm theo: mọi đường quy đổi cũng có cùng tổng hai đầu VỚI NHAU, nên cả ba đường
-     trên trục ngoài cùng đều cắt nhau từng đôi một. Đó là điều kiện để chúng thật sự so
-     được, chứ không phải ba dải song song mỗi dải một tầng.
+     VÌ SAO NEO KIỂU NÀY THÌ VẪN CHẮC CHẮN CÓ ĐIỂM CẮT — và chắc hơn cách cũ. Sau khi chia,
+     TRUNG BÌNH của đường quy đổi đúng bằng TRUNG BÌNH của đường vốn hoá. Nếu đường quy đổi
+     nằm TRÊN ở mọi phiên thì trung bình của nó phải lớn hơn — mâu thuẫn; nằm dưới ở mọi
+     phiên cũng vậy. Nên bắt buộc có phiên ở trên và có phiên ở dưới, mà hai đường là nét
+     liền nên giữa hai phiên đó có điểm cắt.
+     Hệ quả kèm theo: hai đường quy đổi cũng có cùng trung bình VỚI NHAU, nên cả ba đường
+     trên trục ngoài cùng cắt nhau từng đôi một. Đó là điều kiện để chúng thật sự so được,
+     chứ không phải ba dải song song mỗi dải một tầng.
 
-     NEO VÀO PHIÊN ĐẦU/CUỐI **CÓ ĐỦ CẢ HAI SỐ**, không phải phiên đầu/cuối KHUNG. Vốn hoá
-     thị trường chỉ có từ 03/01/2023, và mã mới niêm yết thì `sh` cụt ở đầu khung — neo bừa
-     vào phiên khung là cả đường lệch một hệ số cố định.
+     VÌ SAO BỎ CÁCH CŨ (trung bình hai đầu): nó chỉ nhìn ĐÚNG 2 phiên trong 1.000, nên một
+     phiên đầu khung rơi vào đáy hay một phiên cuối rơi vào đỉnh là kéo lệch cả đường —
+     998 phiên còn lại không có tiếng nói nào. Điểm cắt vẫn có nhưng vị trí của nó do hai
+     phiên rìa quyết định, tức đúng cái nhiễu mà đồ thị 1.000 phiên sinh ra để dập đi.
 
-     KHÁC BẢN CŨ CỦA VN-INDEX Ở CHỖ ĐỌC. Bản cũ neo vào MỘT phiên (phiên đầu có đủ số) nên
-     hai đường trùng nhau ở đó rồi tách hẳn: đọc ra được AI HƠN AI kể từ phiên neo, nhưng
-     không bao giờ đọc ra ĐẢO CHIỀU vì chúng không cắt lại lần nào. Neo hai đầu thì đổi lại:
-     mất phép đọc "hơn kém so với phiên neo", được phép đọc "phiên nào mã đắt/rẻ so với
-     chính nó trong khung, và đảo vai ở đâu". Con số hơn kém tuyệt đối vẫn còn nguyên ở
-     `vniTom` (`tu`/`vh`/`vni`/`ma`) nếu muốn in ra. */
-  const neoHaiDau=(ng)=>{
+     TRUNG BÌNH PHẢI LẤY TRÊN CÙNG MỘT TẬP PHIÊN — chỉ những phiên CÓ ĐỦ CẢ HAI SỐ. Vốn hoá
+     thị trường chỉ có từ 03/01/2023, mã mới niêm yết thì `sh` cụt ở đầu khung. Lấy mỗi
+     đường trung bình trên tập phiên của riêng nó là hai con số đo hai quãng thời gian khác
+     nhau — đẳng thức trung bình gãy, và mất luôn bảo đảm cắt nhau. Đường vẫn VẼ ra ngoài
+     tập đó (chỗ vốn hoá trống), chỉ là không tham gia tính trung bình.
+
+     KHÁC BẢN ĐẦU CỦA VN-INDEX Ở CHỖ ĐỌC. Bản đầu neo vào MỘT phiên nên hai đường trùng
+     nhau ở đó rồi tách hẳn: đọc ra được AI HƠN AI kể từ phiên neo, nhưng không bao giờ đọc
+     ra ĐẢO CHIỀU vì chúng không cắt lại lần nào. Neo trung bình thì đổi lại: mất phép đọc
+     "hơn kém so với phiên neo", được phép đọc "phiên nào mã đắt/rẻ so với mức trung bình
+     của chính khung, và đảo vai ở đâu". Con số hơn kém tuyệt đối vẫn còn nguyên ở `vniTom`
+     (`tu`/`vh`/`vni`/`ma`) nếu muốn in ra. */
+  const neoTrungBinh=(ng)=>{
     if(!ng) return null;
-    let a=-1, b=-1;
-    for(let z=0;z<d.length;z++) if(ng[z]!=null&&mcap[z]!=null){ a=z; break; }
-    for(let z=d.length-1;z>=0;z--) if(ng[z]!=null&&mcap[z]!=null){ b=z; break; }
-    if(a<0||b<=a) return null;
-    const tbMa=(mcap[a]+mcap[b])/2, tbNg=(ng[a]+ng[b])/2;
+    let sMa=0, sNg=0, dem=0, a=-1, b=-1;
+    for(let z=0;z<d.length;z++){
+      if(ng[z]==null||mcap[z]==null) continue;
+      sMa+=mcap[z]; sNg+=ng[z]; dem++;
+      if(a<0) a=z;
+      b=z;
+    }
+    if(dem<2) return null;
+    const tbMa=sMa/dem, tbNg=sNg/dem;
     if(!(tbMa>0)||!(tbNg>0)) return null;
     const tis=tbNg/tbMa;
-    return {tis:tis, a:a, b:b, v:ng.map(x=>x==null?null:x/tis)};
+    return {tis:tis, a:a, b:b, n:dem, v:ng.map(x=>x==null?null:x/tis)};
   };
   /* ---- VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) --------------------------
      *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
@@ -2148,7 +2163,7 @@ function ptVeMa(){
          đôi) nên hai đường so được bằng mắt. ĐIỀU KIỆN: `sh` phải nhảy bậc ĐÚNG NGÀY GDKHQ
          — xem `tools/va_slcp_gdkhq.py`. Không có nó thì chính đường vốn hoá mới là đường bị
          sụt, và cả phép so hỏng. */
-      const r=neoHaiDau(vn);
+      const r=neoTrungBinh(vn);
       if(r){
         vniL=r.v;
         /* CON SỐ HƠN KÉM vẫn tính theo lối cũ — neo MỘT phiên. Nó trả lời câu khác với đồ
@@ -2163,7 +2178,7 @@ function ptVeMa(){
   }
   /* ---- VỐN HOÁ TOÀN THỊ TRƯỜNG, HẠ VỀ ĐÚNG TẦM VỐN HOÁ CỦA MÃ (user chốt 23/08/2026) --
      *"khi đối chiếu đường này với đường vốn hoá 1 loại tài sản … để 2 đường thực sự giao
-     nhau"*. Luật neo nằm ở `neoHaiDau` phía trên — đây chỉ là chỗ gọi nó.
+     nhau"*. Luật neo nằm ở `neoTrungBinh` phía trên — đây chỉ là chỗ gọi nó.
      ĐỌC: đường mã ở TRÊN đường thị trường = trong khung này mã đang được định giá cao hơn
      mức trung bình của chính nó so với thị trường. Chỗ hai đường CẮT = phiên đổi vai. */
   let vhTT=null, vhTTis=null;
@@ -2174,7 +2189,7 @@ function ptVeMa(){
          Không đổi đơn vị là lệch đúng 10⁹ — mà lệch kiểu đó thì tỉ số vẫn ra một con số
          trông bình thường, chỉ có đồ thị là sai. */
       const mp={}; for(let z=0;z<T.d.length;z++) if(T.mcap[z]!=null) mp[T.d[z]]=T.mcap[z]*1e9;
-      const r=neoHaiDau(d.map(x=>mp[x]==null?null:mp[x]));
+      const r=neoTrungBinh(d.map(x=>mp[x]==null?null:mp[x]));
       if(r){ vhTT=r.v; vhTTis=r.tis; }
     }
   }

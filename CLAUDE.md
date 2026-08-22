@@ -1717,10 +1717,10 @@ Phiên đầu khung hai đường TRÙNG NHAU, sau đó khoảng cách giữa ch
 hiệu suất — **VN-Index nằm DƯỚI đường giá = mã chạy hơn thị trường**. Vì có nhân với
 `giá(i)` nên nó đi qua mọi cú hạ nền của chính mã, hai đường luôn so được bằng mắt.
 
-> **CÁCH NEO ĐÃ ĐỔI 23/08/2026** — nay neo TRUNG BÌNH HAI ĐẦU KHUNG (`neoHaiDau`), không
-> neo một phiên nữa; xem mục *Neo hai đầu khung* bên dưới. Phần "neo vào vốn hoá chứ không
-> neo vào giá" thì giữ nguyên. Đoạn dưới đây ghi lại vì sao KHÔNG được lấy `c[cuối]/c[đầu]`
-> — luật đó vẫn còn hiệu lực cho `vniTom`.
+> **CÁCH NEO ĐÃ ĐỔI 23/08/2026** — nay neo theo TRUNG BÌNH CẢ KHUNG (`neoTrungBinh`), không
+> neo một phiên nữa; xem mục *Neo theo trung bình cả khung* bên dưới. Phần "neo vào vốn hoá
+> chứ không neo vào giá" thì giữ nguyên. Đoạn dưới đây ghi lại vì sao KHÔNG được lấy
+> `c[cuối]/c[đầu]` — luật đó vẫn còn hiệu lực cho `vniTom`.
 
 > **LỢI SUẤT CỦA MÃ PHẢI DỒN TỪ `c/tc−1` TỪNG PHIÊN, ĐỪNG LẤY `c[cuối]/c[đầu]`.**
 > `c` trong `data/giaodich` là giá **THÔ, chưa hạ nền** — đo thật: VCB 12/03/2025 rơi
@@ -2328,7 +2328,7 @@ Vốn hoá = giá × số cổ phiếu, mà số cổ phiếu gần như đứng
 
 Công tắc `PT.vh` lưu ở `localStorage['cpvn_ptvh']`.
 
-### BA KIỂU NÉT LÀM THỨ BẬC + NEO HAI ĐẦU KHUNG CHO MỌI ĐƯỜNG QUY ĐỔI (23/08/2026)
+### BA KIỂU NÉT LÀM THỨ BẬC + NEO THEO TRUNG BÌNH CẢ KHUNG (23/08/2026)
 
 User chốt ba việc cùng lúc: *"đường vốn hoá thực chất là đường quan trọng nhất, quan trọng
 hơn cả đường giá cho nên đường vốn hoá phải là đường in đậm có màu sắc riêng"* · *"đường giá
@@ -2354,13 +2354,13 @@ ba ngang nhau thì hỏng đúng chỗ người ta đi tra.
 > Hai đường là hai phiên bản của cùng một đại lượng, chạy sát nhau suốt khung; cho đường
 > DẪN XUẤT thành nét đứt thì đường CHÍNH thức lộ ra qua các khoảng hở.
 
-**`neoHaiDau` — LUẬT CHUNG cho MỌI đường quy đổi đứng cạnh vốn hoá của mã.** User chốt
-lần lượt cho hai đường: *"để 2 đường thực sự giao nhau"* (vốn hoá thị trường), rồi *"tương
-tự hãy tính với vnindex để có thể tạo ra giao cắt thực sự trên đồ thị"*. Một hàm, hai chỗ
-gọi — đừng viết lại phép neo lần thứ ba ở chỗ khác.
+**`neoTrungBinh` — LUẬT CHUNG cho MỌI đường quy đổi đứng cạnh vốn hoá của mã.** User chốt
+qua ba lượt: *"để 2 đường thực sự giao nhau"* (vốn hoá thị trường) → *"tương tự hãy tính với
+vnindex"* → *"vốn hoá trung bình nó không thể cộng đầu cuối rồi chia 2 được … 1000 phiên thì
+lấy trung bình 1000 phiên luôn"*. Một hàm, hai chỗ gọi — đừng viết lại phép neo ở chỗ khác.
 
 ```
-tỉ số    = (chuỗi[đầu] + chuỗi[cuối]) ÷ (vốn hoá mã[đầu] + vốn hoá mã[cuối])
+tỉ số    = trung bình CẢ KHUNG của chuỗi ÷ trung bình CẢ KHUNG của vốn hoá mã
 đường vẽ = chuỗi(i) ÷ tỉ số
 ```
 
@@ -2369,39 +2369,65 @@ VN-Index thì tính bằng ĐIỂM — vẽ chung trục thì đường mã bẹ
 trục riêng thì cả hai tự co giãn đầy khung và **không bao giờ cắt nhau**, mà chỗ cắt nhau
 mới là thứ cần nhìn.
 
-> **VÌ SAO NEO BẰNG TRUNG BÌNH HAI ĐẦU thì CHẮC CHẮN có điểm cắt.** Sau khi chia, TỔNG HAI
-> ĐẦU của đường quy đổi đúng bằng TỔNG HAI ĐẦU của đường vốn hoá. Hai đường cùng tổng hai
-> đầu mà không trùng nhau thì bắt buộc một đường bắt đầu ở TRÊN và kết thúc ở DƯỚI.
-> Hệ quả kèm theo: hai đường quy đổi cũng cùng tổng hai đầu VỚI NHAU, nên cả ba đường trên
-> trục ngoài cùng cắt nhau từng đôi một. Quét cả kho ở khung 1.000 phiên:
+> **VÌ SAO VẪN CHẮC CHẮN CÓ ĐIỂM CẮT.** Sau khi chia, TRUNG BÌNH của đường quy đổi đúng bằng
+> TRUNG BÌNH của đường vốn hoá. Nếu nó nằm TRÊN ở mọi phiên thì trung bình phải lớn hơn —
+> mâu thuẫn; nằm dưới ở mọi phiên cũng vậy. Nên bắt buộc có phiên trên và có phiên dưới, mà
+> hai đường là nét liền nên giữa chúng có điểm cắt.
+> Hệ quả kèm theo: hai đường quy đổi cũng cùng trung bình VỚI NHAU, nên cả ba đường trên
+> trục ngoài cùng cắt nhau từng đôi một. Quét cả kho, cả ba khung:
 >
-> | cặp đường | vẽ được | không cắt lần nào |
-> |---|---|---|
-> | vốn hoá ↔ VN-Index quy đổi | 1.529/1.529 | **0** |
-> | vốn hoá ↔ vốn hoá thị trường | 1.529/1.529 | **0** |
-> | VN-Index ↔ vốn hoá thị trường | 1.529/1.529 | **0** |
+> | cặp đường | vẽ được | không cắt lần nào | số lần cắt (trung vị, khung 1.000) |
+> |---|---|---|---|
+> | vốn hoá ↔ VN-Index quy đổi | 1.529/1.529 | **0** | 13 → **19** |
+> | vốn hoá ↔ vốn hoá thị trường | 1.529/1.529 | **0** | 11 → **18** |
+> | VN-Index ↔ vốn hoá thị trường | 1.529/1.529 | **0** | — |
+>
+> Đẳng thức trung bình đo lại trên toàn kho: lệch tối đa **1,4 × 10⁻¹⁵** — đúng tới giới hạn
+> số thực dấu phẩy động.
 
-> **ĐỔI PHÉP ĐỌC, KHÔNG PHẢI CHỈ ĐỔI THANG.** Neo MỘT phiên (bản cũ của VN-Index) đọc ra
+> **VÌ SAO BỎ CÁCH CŨ (trung bình hai đầu) — ĐO ĐƯỢC, KHÔNG PHẢI CẢM TÍNH.** Nó chỉ nhìn
+> ĐÚNG 2 phiên trong 1.000; 998 phiên còn lại không có tiếng nói nào, nên một phiên mép khung
+> rơi vào đáy hay đỉnh là kéo lệch cả đường. Phép đo độ vững: **xê dịch mép khung 300 phiên
+> đi ±4 phiên** (khung là một lát cắt tuỳ ý, dời vài phiên vẫn phải là cùng một câu trả lời),
+> đo trên 400 mã:
+>
+> | | trung vị | p90 | lớn nhất |
+> |---|---|---|---|
+> | neo HAI ĐẦU | 2,22% | 8,80% | 22,78% |
+> | neo TRUNG BÌNH | **0,61%** | **1,29%** | 23,63% |
+>
+> Vững hơn **3,6 lần** ở trung vị, **6,8 lần** ở p90. Cột "lớn nhất" gần bằng nhau vì đó là
+> mã có đợt phát hành thêm bước vào/ra khỏi khung — chuyện đó làm lệch cả hai cách như nhau.
+
+> **ĐỔI PHÉP ĐỌC, KHÔNG PHẢI CHỈ ĐỔI THANG.** Neo MỘT phiên (bản đầu của VN-Index) đọc ra
 > *"kể từ phiên neo, ai hơn ai"* — nhưng hai đường tách hẳn sau đó và **không bao giờ cắt
-> lại**, nên không đọc ra đảo chiều. Neo HAI ĐẦU đọc ra *"phiên nào mã đắt/rẻ so với chính
-> nó trong khung, và đảo vai ở đâu"*. Con số hơn kém tuyệt đối vẫn còn nguyên ở `vniTom`
-> (`tu`/`vh`/`vni`/`ma`) — nó vẫn neo MỘT phiên vì câu nó trả lời cần một mốc cụ thể.
+> lại**, nên không đọc ra đảo chiều. Neo trung bình đọc ra *"phiên nào mã đắt/rẻ so với mức
+> trung bình của chính khung, và đảo vai ở đâu"*. Con số hơn kém tuyệt đối vẫn còn nguyên ở
+> `vniTom` (`tu`/`vh`/`vni`/`ma`) — nó vẫn neo MỘT phiên vì câu nó trả lời cần một mốc cụ thể.
 
-> **NEO HAI ĐẦU CÒN THU HẸP TRỤC.** Đường VN-Index cũ chạy xa khỏi vùng vốn hoá khi mã
-> ngược chiều thị trường, kéo cả trục giãn ra và bóp mọi đường còn lại. Đo: VNM khung 1.000
-> phiên biên trục **100–303 → 96–207 nghìn tỷ (hẹp 1,84 lần)**, FPT khung 300 **hẹp 1,70
-> lần**. Mã bám sát thị trường (VIC, SHB) thì không đổi — không có mã nào bị giãn ra.
+> **TRUNG BÌNH PHẢI LẤY TRÊN CÙNG MỘT TẬP PHIÊN** — chỉ phiên có ĐỦ CẢ HAI số. Vốn hoá thị
+> trường chỉ có từ 03/01/2023, mã mới niêm yết thì `sh` cụt ở đầu khung; ở VNM khung 1.000
+> phiên thì trung bình thật ra tính trên **905 phiên**. Lấy mỗi đường trung bình trên tập
+> phiên của riêng nó là hai con số đo hai quãng thời gian khác nhau — đẳng thức gãy, mất
+> luôn bảo đảm cắt nhau. Đường vẫn VẼ ra ngoài tập đó, chỉ là không tham gia tính trung bình.
+
+> **TRỤC KHÔNG HẸP THÊM, VÀ ĐỪNG HỨA LÀ CÓ.** Đo 16 cặp mã × khung: trung vị **1,00 lần**,
+> dải 0,88–1,16. Phần thu hẹp trục là công của lượt trước (bỏ neo-một-phiên); lượt này đổi
+> ĐỘ VỮNG của phép neo và số điểm cắt, không đổi bề rộng trục.
 
 > **CHIA CHO HẰNG SỐ, ĐỪNG CHUẨN HOÁ TỪNG PHIÊN.** Chia hằng số thì hình dạng đường thị
 > trường giữ nguyên tuyệt đối — nó vẫn là đúng đường vốn hoá thị trường, chỉ đổi đơn vị đọc.
 > Chuẩn hoá theo từng phiên ra một đường phẳng lì bằng 1, chẳng nói gì.
 
 Kiểm end-to-end trên VNM khung 1.000 phiên (đọc pixel canvas rồi đối chiếu với số tính lại
-bằng Python): **18 điểm của CẢ BA đường khớp MỘT phép ánh xạ tuyến tính chung**
-`y = 1521,4 − 6,881 × giá trị` — tức chúng thật sự đứng chung một trục và đúng bằng số
-Python tính ra. Điểm lệch nhất 21px là do cách dò pixel phải quét tối đa 18 cột để bắt được
-một vạch của nét đứt; ngay tại đó đường di chuyển 28px trong 8 phiên, nên sai số đó là của
-phép ĐO chứ không phải của thang. Chỗ đường phẳng thì lệch 0,3–2,3px.
+bằng Python): **17 điểm của CẢ BA đường khớp MỘT phép ánh xạ tuyến tính chung**
+`y = 1490,8 − 6,895 × giá trị`, lệch **trung vị 2,9px** trên vùng vẽ ~900px — tức chúng thật
+sự đứng chung một trục và đúng bằng số Python tính ra. Điểm lệch nhất 16,9px nằm ở đầu chuỗi,
+do cách dò pixel phải quét tối đa 18 cột mới bắt được một vạch của nét đứt; đó là sai số của
+phép ĐO chứ không phải của thang.
+Tỉ số đối chiếu từng khung trên VNM — web và Python khớp cả bốn: 100 phiên **83,0** · 300
+**75,1** · 600 **63,1** · 1.000 **54,1**. Tỉ số ĐỔI THEO KHUNG là đúng thiết kế: mỗi khung có
+trung bình của riêng nó.
 
 - **`PT.tt.tt.mcap` tính bằng TỶ, `mcap` của mã tính bằng ĐỒNG** — quên `×1e9` là lệch đúng
   10⁹ mà tỉ số vẫn ra một con số trông bình thường, chỉ có đồ thị là sai.
@@ -2427,8 +2453,9 @@ phép ĐO chứ không phải của thang. Chỗ đường phẳng thì lệch 0
 **LỖ THỦNG Ở CỬA VỐN HOÁ THỊ TRƯỜNG — đã vá cùng lượt.** `build_phantich` chỉ xét TỈ LỆ
 `nMcap/n < 0,80`, và nó thủng đúng một phiên: **31/12/2022 (thứ Bảy, không phải ngày giao
 dịch) có `n = nMcap = 1`** → tỉ lệ 100%, lọt cửa, ghi ra **671,5 tỷ** trong khi thị trường
-khi đó ~5,4 TRIỆU tỷ. Một ô lệch 8.000 lần nằm lọt giữa chuỗi thì **mọi phép neo theo hai
-đầu khung đều hỏng** — mà 31/12/2022 nằm gọn trong khung 1.000 phiên. Nay thêm SÀN TUYỆT
+khi đó ~5,4 TRIỆU tỷ. Một ô lệch 8.000 lần nằm lọt giữa chuỗi thì **mọi phép neo đều hỏng**
+— neo hai đầu thì hỏng thảm nếu nó rơi đúng mép; neo trung bình thì nhẹ hơn (một ô trong
+905) nhưng vẫn kéo lệch. Mà 31/12/2022 nằm gọn trong khung 1.000 phiên. Nay thêm SÀN TUYỆT
 ĐỐI dùng lại `MIN_MA = 100` của file ngày: phiên thưa tới mức không đáng dựng bảng thì cũng
 không đáng công bố vốn hoá. Sàn cách xa mọi phiên lành — phiên mỏng nhất trong kho vẫn có
 **1.446 mã**. Dựng lại `phantich.json` sau khi vá: **đúng 2 ô đổi** (`mcap`, `mcapFF` của
