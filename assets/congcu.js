@@ -751,6 +751,13 @@ const PT_HIEN={
   dongtien: false,   // "Khối ngoại và tự doanh mua bán gì"
   diemsang: false,   // "Điểm sáng phiên"
   boloc:    false,   // "Bộ lọc đặc trưng"
+  /* TRANG MỘT MÃ (user chốt 22/08/2026: *"tạm ẩn khỏi web mục khối ngoại luỹ kế cổ phiếu
+     và toàn bộ các ô phía dưới"*). Trang mã nay chỉ còn thanh đọc số + đồ thị giá.
+     ĐÂY LÀ ẨN, KHÔNG PHẢI GỠ — y như bốn cờ trên: mọi mạch tính (`lkFn`/`lkTd`/`lkNoi`/
+     `lkTt`, `fnPart`, `vg`, `vgGhi`…) và mọi lệnh vẽ vẫn còn nguyên, `ptVe1` tự thoát khi
+     không thấy canvas. Đổi một cờ thành `true` là hiện lại, không phải dựng lại gì. */
+  maLuyKe:  false,   // đồ thị "Khối lượng ròng luỹ kế"
+  maPhu:    false,   // 6 đồ thị nhỏ dưới nó (khối ngoại · tự doanh · % · thoả thuận · vùng giá)
 };
 
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
@@ -2223,7 +2230,7 @@ function ptVeMa(){
          "tại phiên X" — mà vì đường cộng dồn bắt đầu từ 0 ở phiên đầu khung nên GIÁ TRỊ Ở
          PHIÊN CUỐI CHÍNH LÀ tổng cả khung; chỉ là không ai đọc ra điều đó từ một dòng ghi
          "tại phiên". Nay in thẳng, và đổi khung 100/300/600/1.000 là đổi luôn kỳ cộng. */
-      +ptO('Khối lượng ròng luỹ kế — triệu cổ phiếu', 'mcL',
+      +(!PT_HIEN.maLuyKe?'':ptO('Khối lượng ròng luỹ kế — triệu cổ phiếu', 'mcL',
            '<b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg3">'
            +ptSw('lk1','pkL1','khối ngoại')+ptSw('lk2','pkL2','tự doanh')
            +ptSw('lk3','pkL3','nội địa còn lại')
@@ -2245,8 +2252,8 @@ function ptVeMa(){
            +' Thoả thuận là <b>cái chợ, không phải một bên</b>, nên không có "thoả thuận ròng";'
            +' đường thứ tư là phần ròng của KHỐI NGOẠI đi qua thoả thuận'
            +(lkTt[lkN]!=null?' (chỉ '+lkTt.filter(x=>x!=null).length+' phiên gần nhất có số)':'')
-           +'</span>', 1)
-      +ptO('Khối ngoại mua / bán', 'mc3',
+           +'</span>', 1))
+      +(!PT_HIEN.maPhu?'':(ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
            +' <b>tổng</b> (gồm thoả thuận)')
       +ptO('Khối ngoại ròng', 'mc4', 'mua trừ bán — cột xanh là mua ròng, đỏ là bán ròng')
@@ -2269,7 +2276,7 @@ function ptVeMa(){
       +ptO('Giá thoả thuận so với giá sàn', 'mcP',
            '<i class="pkA"></i> đóng cửa &nbsp; <i class="pkP"></i> giá bình quân thoả thuận'
            +' &nbsp;·&nbsp; chỉ vẽ phiên CÓ thoả thuận')
-      +ptO('Vùng giá khớp lệnh — phiên '+esc(ngVG), 'mc9', vgGhi)
+      +ptO('Vùng giá khớp lệnh — phiên '+esc(ngVG), 'mc9', vgGhi)))
     +'</div>';
   /* DÒ CHỦ ĐỀ BẰNG `isLight()`, ĐỪNG DÒ BẰNG `classList`. Trang đặt chủ đề vào
      `document.documentElement.dataset.theme` (xem đoạn inline đầu congcu.html và nút đổi
