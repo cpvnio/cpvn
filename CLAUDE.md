@@ -3673,7 +3673,8 @@ phải cuộn qua trọn hai bảng kia là quá xa.
 > nhất — **trang ở trạng thái nền (`document.hidden`) thì ResizeObserver không bắn**, nên
 > thử trong tab ẩn mà thấy im là chuyện bình thường, không phải nó hỏng.
 
-**`assets/chart.js`** — **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
+**`assets/chart.js`** — hai đường phủ `Vốn hoá`/`chỉ số sàn`: xem mục **HAI ĐƯỜNG PHỦ TRÊN
+CHART NẾN CỦA TRANG MÃ** ngay dưới. **EMA khác MA, phải tính DỒN từ đầu chuỗi.** MA cắt cửa sổ `per` kỳ
 rồi lấy trung bình nên tính thẳng trong vòng vẽ được; EMA thì mỗi giá trị phụ thuộc TOÀN BỘ
 quá khứ nên phải chạy một lượt từ đầu chuỗi và **đệm lại** (`emaCache` khoá theo kỳ + độ dài
 + mốc nến cuối) — tính trong vòng vẽ là 200 kỳ × 3.000 nến mỗi khung hình, rê chuột một cái
@@ -3713,6 +3714,85 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `draw()` — để nguyên chỗ cũ thì lúc lớp vẽ chạy `geo.rsiTop` còn rỗng, hình lặng lẽ biến mất.
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
+
+### HAI ĐƯỜNG PHỦ TRÊN CHART NẾN CỦA TRANG MÃ — VỐN HOÁ VÀ CHỈ SỐ SÀN (23/08/2026)
+
+User: *"ở trang cổ phiếu tôi muốn tìm cách để bật được đường vốn hoá của cổ phiếu và đường
+VNindex trên các mã thuộc sàn hose ngay trong chart"*. Hai nút mới `Vốn hoá` · `VN-Index` ở
+**cả hai** hàng chỉ báo (`#cvInd` chart nhỏ và `#ptInd` chart toàn màn hình), đi qua đúng
+`batChiBao()` như mọi chỉ báo khác. Cờ trong `chart.js`: `ind.vh` · `ind.idx`.
+
+**VÌ SAO ĐƯỜNG VỐN HOÁ KHÔNG PHẢI ĐƯỜNG GIÁ VẼ LẠI** — chỗ dễ tưởng thừa nhất, và là lý do
+duy nhất đường này đáng tồn tại. Nến của trang mã **đã hạ nền** (kho `data/hist`/VNDirect hồi
+tố quyền), còn vốn hoá lấy **giá THÔ × số cổ phiếu của chính phiên đó**. Thưởng/chia cổ phiếu
+thì hai vế triệt tiêu (giá chia đôi ↔ số cổ phiếu nhân đôi) nên hai đường đi song song; chúng
+chỉ **tách ra** ở đúng hai chỗ:
+
+- **phát hành thêm · chào bán riêng lẻ · ESOP** — số cổ phiếu tăng mà giá không hạ nền theo,
+  nên vốn hoá vọt lên trong khi giá đứng yên. Đó là **pha loãng**, nhìn thấy bằng mắt.
+- **cổ tức TIỀN** — nguồn VN hạ nền cả cổ tức tiền (xem mục *Nến vẽ chart*) nên giá quá khứ bị
+  kéo xuống, còn vốn hoá rơi đúng bằng số tiền đã trả ra khỏi doanh nghiệp.
+
+Đo tỉ số `vốn hoá ÷ giá đã hạ nền` trên 1.000 phiên — hằng số nghĩa là hai đường trùng hình:
+
+| mã | tỉ số đầu → cuối | biên độ |
+|---|---|---|
+| KSF | 3,0e8 → 9,0e8 | **gấp 3,00** |
+| VIX | 1,09e9 → 2,57e9 | gấp 2,36 |
+| VCI | 8,31e8 → 1,15e9 | gấp 1,48 |
+| BID | 7,54e9 → 7,78e9 | gấp 1,04 |
+| HPG | 8,60e9 → 8,44e9 | gấp 1,02 |
+
+**NGUỒN — MỘT SỐ, MỘT KHO.** Vốn hoá đọc `data/giaodich/{MÃ}.json` và tính `mcap = c × sh`,
+**đúng một công thức với đồ thị /phantich** (`assets/congcu.js`). Đừng đổi sang
+`data/dactrung/{MÃ}.json` dù ở đó có sẵn cột `mcap` và file nhẹ hơn 15 KB đã nén: kho đặc
+trưng dựng ở **bước cuối** lượt EOD (`run_refresh.ps1` bước sau `build_phantich`) nên có lúc
+còn là bản hôm trước — đo 23/08/2026: `dactrung` còn 95 phiên đầu `mcap=null` trong khi
+`giaodich` đã lấp xong. Hai trang đọc hai kho là hai con số vốn hoá lệch nhau mà không ai ngờ.
+
+**CHỈ SỐ THEO ĐÚNG SÀN CỦA MÃ**, không ép mọi mã về VN-Index: `data/chiso.json` có sẵn cả
+`HNX` lẫn `UPCOM`, mà đem mã UPCOM so với VN-Index thì phép so hỏng từ đầu — chính lý do user
+nêu khi bỏ đường vốn hoá thị trường bên /phantich. `IDX_SAN` ánh xạ HOSE→`VNINDEX`/`VN-Index`,
+HNX→`HNX`/`HNX-Index`, UPCOM→`UPCOM`/`UPCOM-Index`; nhãn nút viết sẵn "VN-Index" trong HTML
+(đa số mã) và được sửa lại trong `init` cho hai sàn kia.
+
+**NEO THEO TRUNG BÌNH CỦA KHUNG ĐANG NHÌN** — cùng phép neo với `neoTrungBinh` bên congcu.js
+(xem mục *ĐỒ THỊ CHÍNH CÒN BA ĐƯỜNG* để biết vì sao chắc chắn có điểm cắt và vì sao không
+dùng neo hai đầu). Khác **đúng một chỗ**: ở đây neo vào **giá đóng cửa**, không neo vào vốn
+hoá. Bên kia phải tránh giá vì `data/giaodich` giữ giá thô nên đường giá tụt ở mọi ngày
+GDKHQ; chart này thì nến đã hạ nền sẵn nên liền mạch qua ngày chốt quyền đúng như vốn hoá —
+và nến mới là chủ thể của trang.
+
+> **NEO LẠI THEO TỪNG KHUNG NHÌN, đừng neo một lần cho cả chuỗi.** Trục giá của `chart.js` tự
+> khít theo **nến đang hiện**, nên neo cố định là kéo/phóng một cái hai đường bay khỏi màn
+> hình. Đổi lại phải **nới `mn`/`mx` ôm luôn hai đường** — bằng không đường vừa bật lên lại
+> nằm ngoài khung, trông y như nó không được vẽ. Hệ quả chấp nhận được: kéo chart thì hai
+> đường phủ dịch lên xuống theo, còn nến thì không.
+
+**BA THỨ NHỎ MÀ BỎ LÀ HỎNG:**
+
+1. **`aggregate()` phải chép `vh`/`ix` sang rổ tuần/tháng/năm** (theo luật ĐÓNG CỬA — giá trị
+   cuối cùng còn số trong rổ, đúng như `cur.c`). Rổ là object dựng tay: quên là bấm
+   Tuần/Tháng/Năm thì hai đường lặng lẽ biến mất, **không lỗi, không dấu hiệu gì**.
+2. **`gopPhu()` phải chạy lại sau MỌI lượt nạp nến.** Bấm Tháng/Năm là `loadChart` xin thêm
+   10 năm và **thay hẳn** `dailyRows` bằng mảng khác — mảng mới không có hai trường đó.
+3. **Ngắt nét ở phiên thiếu số** (`st=false`), đừng nối thẳng. Ba nguồn ba độ sâu: vốn hoá
+   1.000 phiên (từ 18/08/2022) · chỉ số từ 24/08/2017 · nến tới 13 năm. Nối thẳng qua chỗ
+   trống là tự tay bịa một đoạn không có dữ liệu.
+
+**Màu và bề dày ĐỒNG BỘ với /phantich**: vốn hoá xanh lá `#34d399`/`#16a34a` dày 2,4px, chỉ số
+hồng sen `#f472b6`/`#db2777` dày 1,8px. Xanh lá trùng màu nến TĂNG là biết trước và chấp nhận
+— bề dày tách nó khỏi thân nến, và đây là đường người dùng vừa tự tay bật lên nên không bất
+ngờ. Người xem đi qua lại hai trang, đổi màu ở một bên là mất luôn phép nhận mặt.
+
+**CHỈ TẢI KHI BẤM**, mỗi thứ một lượt mạng (~80 KB và ~130 KB đã nén) — không đáng bắt 1.527
+trang mã × mọi lượt crawler trả giá cho thứ chưa ai bật. Dòng đọc số in **số thật** (vốn hoá
+theo đơn vị tỷ, chỉ số theo điểm), không in số đã quy đổi để vẽ: tỉ số neo đổi theo khung nhìn
+nên in nó ra là mỗi lần kéo chart một con số khác.
+
+**KHUNG "TRONG NGÀY" KHOÁ MỜ HAI NÚT** (`khoaPhuTheoKhung`) — nến 5 phút, mà hai kho này chỉ có
+số theo PHIÊN. Bấm mà màn hình không đổi gì là người ta bấm lại mấy lần rồi kết luận tính năng
+hỏng.
 
 **`bubbles.html`** — **Đừng "dọn rác" bằng cách xoá lõi giá trong file này để gọi `CP.*`.**
 Nó giữ `state.coins` riêng. Các cặp hàm trùng lặp phải sửa **đồng thời** cả hai file:

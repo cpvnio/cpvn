@@ -254,6 +254,7 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
   .ptseg button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);
     border-radius:7px;padding:5px 10px;font-size:12.5px;font-weight:700;cursor:pointer}
   .ptseg button.on{color:#fff;background:var(--accent);border-color:var(--accent)}
+  .ptseg button:disabled{opacity:.38;cursor:not-allowed}
   .ptsep{width:1px;height:20px;background:var(--line)}
   #ptLegend{padding:4px 12px 0;font-size:12px}
   /* thân: cột công cụ vẽ bên trái + biểu đồ chiếm phần còn lại */
@@ -519,12 +520,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260823u"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260823v"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823u"></script>
+<script defer src="assets/mobi.js?v=20260823v"></script>
 </head>
 <body>
 <header>
@@ -612,6 +613,7 @@ document.addEventListener(MO,function(e){
       <button data-k="ma20" class="on">MA20</button>
       <button data-k="ema50">EMA50</button><button data-k="ema200">EMA200</button>
       <button data-k="rsi">RSI</button><button data-k="vol" class="on">Khối lượng</button>
+      <button data-k="vh">Vốn hoá</button><button data-k="idx">VN-Index</button>
       <button data-k="sk" class="on">Cổ tức</button><button data-k="bctc">BCTC</button>
     </div>
     <div class="clg" id="cvLegend"></div>
@@ -729,6 +731,7 @@ document.addEventListener(MO,function(e){
       <button data-k="bb">Bollinger</button>
       <button data-k="vol" class="on">Khối lượng</button>
       <button data-k="rsi">RSI</button><button data-k="macd">MACD</button>
+      <button data-k="vh">Vốn hoá</button><button data-k="idx">VN-Index</button>
       <button data-k="sk" class="on">Cổ tức</button><button data-k="bctc">BCTC</button>
     </span>
   </div>
@@ -746,8 +749,8 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260823u"></script>
-<script src="assets/chart.js?v=20260823u"></script>
+<script src="assets/core.js?v=20260823v"></script>
+<script src="assets/chart.js?v=20260823v"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1002,6 +1005,7 @@ function ensureChart(){
     wm:()=>C?{sym:C.sym,phu:C.ex}:null,   // tên mã in ở góc trái trên chart
     onTool:t=>markCv&&markCv(t),          // vẽ xong 1 hình -> nút tự sáng lại ở con trỏ
   });
+  chart.setChiSoTen(idxSan()[1]);
   $('cvTool').innerHTML=CPChart.paletteHTML('gon');
   markCv=CPChart.bindPalette($('cvTool'),chart);
   chart.setDraws(loadDraws());
@@ -1057,6 +1061,7 @@ async function loadChart(){
     dailyRows=r.rows; candleSrc=r.src; dailyNam=canNam;
   }
   CP.gopNenHomNay(dailyRows,C.sym);   // nến phiên đang chạy, dựng từ bảng giá — xem core.js
+  gopPhu();                           // vốn hoá / chỉ số (nếu đã bật) — PHẢI trước lúc gộp khung
   const rows=CPChart.aggregate(dailyRows,tf);
   if(rows.length<2){ setCnote('Chưa đủ dữ liệu'); return; }
   candles=rows;
@@ -1102,6 +1107,86 @@ function gopGiaSongVaoNen(){
   return true;
 }
 
+/* ---------- HAI ĐƯỜNG PHỦ TRÊN CHART NẾN: VỐN HOÁ CỦA MÃ · CHỈ SỐ SÀN -----------
+   User chốt 23/08/2026: *"ở trang cổ phiếu tôi muốn tìm cách để bật được đường vốn hoá của
+   cổ phiếu và đường VNindex trên các mã thuộc sàn hose ngay trong chart"*.
+
+   VÌ SAO ĐƯỜNG VỐN HOÁ KHÔNG PHẢI LÀ ĐƯỜNG GIÁ VẼ LẠI — chỗ dễ tưởng thừa nhất.
+   Nến của chart này ĐÃ HẠ NỀN (kho `data/hist` / VNDirect hồi tố quyền), còn vốn hoá lấy
+   GIÁ THÔ × số cổ phiếu CỦA CHÍNH PHIÊN ĐÓ. Với thưởng/chia cổ phiếu hai vế triệt tiêu
+   nhau (giá chia đôi thì số cổ phiếu nhân đôi) nên hai đường đi song song; chúng chỉ TÁCH
+   RA ở đúng hai chỗ, và đó là toàn bộ giá trị của đường này:
+     · phát hành thêm · chào bán riêng lẻ · ESOP -> số cổ phiếu tăng mà giá KHÔNG hạ nền
+       theo -> vốn hoá vọt lên trong khi giá đứng yên. Đó là PHA LOÃNG, nhìn thấy bằng mắt.
+     · cổ tức TIỀN -> nguồn VN hạ nền cả cổ tức tiền (xem CLAUDE.md mục Nến) nên giá quá
+       khứ bị kéo xuống, còn vốn hoá rơi đúng bằng số tiền đã trả ra khỏi doanh nghiệp.
+
+   NGUỒN VỐN HOÁ: `data/giaodich/{MÃ}.json`, `mcap = c × sh` — ĐÚNG MỘT công thức với đồ
+   thị /phantich (`assets/congcu.js`). Đừng đổi sang `data/dactrung/{MÃ}.json` dù ở đó có
+   sẵn cột `mcap` và file nhẹ hơn 15 KB: kho đặc trưng dựng ở BƯỚC CUỐI lượt EOD nên có
+   lúc còn là bản hôm trước, và hai trang đọc hai kho là hai con số vốn hoá lệch nhau mà
+   không ai ngờ tới. Một số, một nguồn.
+
+   CHỈ SỐ THEO ĐÚNG SÀN CỦA MÃ, không ép mọi mã về VN-Index: `data/chiso.json` có sẵn cả
+   HNX và UPCOM, mà đem một mã UPCOM so với VN-Index thì phép so đã hỏng từ đầu (chính lý
+   do user nêu khi bỏ đường vốn hoá thị trường bên /phantich). HOSE -> VN-Index.
+
+   CẢ HAI CHỈ TẢI KHI NGƯỜI DÙNG BẤM: mỗi thứ thêm một lượt mạng (~80 KB và ~130 KB đã
+   nén), không đáng bắt 1.527 trang mã × mọi lượt crawler trả giá cho thứ chưa ai bật.
+
+   ĐỘ SÂU BA NGUỒN LỆCH NHAU, VÀ PHẢI ĐỂ NÓ LỘ RA: vốn hoá chỉ có 1.000 phiên gần nhất (từ
+   18/08/2022), chỉ số có từ 24/08/2017, nến thì tới 13 năm. `chart.js` NGẮT NÉT ở phiên
+   thiếu số chứ không nối thẳng — nối thẳng là tự tay bịa một đoạn không có dữ liệu. */
+const IDX_SAN={HOSE:['VNINDEX','VN-Index'],HNX:['HNX','HNX-Index'],UPCOM:['UPCOM','UPCOM-Index']};
+const idxSan=()=>IDX_SAN[(C&&C.ex)||'']||IDX_SAN.HOSE;
+let phuVH=null, phuIX=null;        // Map 'YYYY-MM-DD' -> số; null = chưa nạp
+let pVH=null, pIX=null;            // lời hứa đang bay: bấm tắt/bật liên tục vẫn chỉ 1 lượt mạng
+function taiVonHoa(){
+  return pVH||(pVH=fetch('data/giaodich/'+SYM+'.json').then(r=>r.ok?r.json():null).then(j=>{
+    if(!j||!j.d||!j.c||!j.sh) return null;
+    const m=new Map();
+    for(let i=0;i<j.d.length;i++) if(j.c[i]&&j.sh[i]) m.set(j.d[i],j.c[i]*j.sh[i]);
+    phuVH=m; return m;
+  }).catch(()=>null));
+}
+function taiChiSo(){
+  return pIX||(pIX=fetch('data/chiso.json').then(r=>r.ok?r.json():null).then(j=>{
+    const o=j&&j[idxSan()[0]];
+    if(!o||!o.d||!o.c) return null;
+    const m=new Map();
+    for(let i=0;i<o.d.length;i++) if(o.c[i]!=null) m.set(o.d[i],o.c[i]);
+    phuIX=m; return m;
+  }).catch(()=>null));
+}
+/* GHI THẲNG VÀO `dailyRows` rồi mới gộp khung — cùng luật với `gopGiaSongVaoNen`. Gộp
+   khung tuần/tháng/năm dựng object MỚI nên phải có sẵn trường trước lúc gộp; ghi vào mảng
+   đã gộp là bấm đổi khung một cái là mất. Phải gọi lại sau MỌI lượt nạp nến (bấm Tháng/Năm
+   xin thêm 10 năm là `dailyRows` bị thay hẳn bằng mảng khác). */
+/* KHUNG "TRONG NGÀY" LÀ NẾN 5 PHÚT, hai kho này chỉ có số THEO PHIÊN -> khoá mờ hai nút
+   thay vì để chúng bật lên rồi không vẽ gì. Bấm mà màn hình không đổi là người ta bấm lại
+   mấy lần rồi kết luận tính năng hỏng. */
+function khoaPhuTheoKhung(){
+  document.querySelectorAll('#cvInd button[data-k="vh"],#cvInd button[data-k="idx"]')
+    .forEach(b=>b.disabled=(tf==='i'));
+  document.querySelectorAll('#ptInd button[data-k="vh"],#ptInd button[data-k="idx"]')
+    .forEach(b=>b.disabled=(ptTf==='i'));
+}
+function gopPhu(){
+  if(!dailyRows||(!phuVH&&!phuIX)) return;
+  for(const r of dailyRows){
+    const k=ngayVN(r.t);
+    if(phuVH) r.vh=phuVH.get(k);
+    if(phuIX) r.ix=phuIX.get(k);
+  }
+}
+function veLaiPhu(){
+  if(!dailyRows) return;              // bấm trước khi nến về: `aggregate(null)` trả [] và xoá trắng chart
+  gopPhu();
+  if(chart&&tf!=='i'){ candles=CPChart.aggregate(dailyRows,tf); chart.setRows(candles,tf,true); }
+  if(ptChart&&ptTf!=='i'&&$('ptkt').classList.contains('on'))
+    ptChart.setRows(CPChart.aggregate(dailyRows,ptTf),ptTf,true);
+}
+
 /* ---------- PTKT TOÀN MÀN HÌNH ----------------------------------------------
    Dùng lại đúng engine biểu đồ, chỉ đổi khung: chiếm trọn màn hình, thêm bật/tắt
    MA20/50/200 · khối lượng · RSI. Nến lấy từ dailyRows đã nạp nên mở ra là có ngay. */
@@ -1121,12 +1206,13 @@ function ptOpen(){
       wm:()=>C?{sym:C.sym,phu:C.name||C.ex}:null,
       onTool:t=>markPt&&markPt(t),
     });
+    ptChart.setChiSoTen(idxSan()[1]);
     napSuKien(ptChart);
     $('ptTool').innerHTML=CPChart.paletteHTML('full');
     markPt=CPChart.bindPalette($('ptTool'),ptChart);
   }
   ptChart.setDraws(loadDraws());          // lấy luôn hình đã vẽ ở biểu đồ nhỏ
-  ptTf=tf; setSeg('ptTf',ptTf);
+  ptTf=tf; setSeg('ptTf',ptTf); khoaPhuTheoKhung();
   ptLoad();
 }
 function ptClose(){
@@ -1146,6 +1232,7 @@ async function ptLoad(){
   }
   if(!dailyRows) await loadChart();          // dùng chung kho nến đã nạp cho biểu đồ nhỏ
   if(!dailyRows) return;
+  gopPhu();
   ptChart.setRows(CPChart.aggregate(dailyRows,ptTf),ptTf);
 }
 /* HÌNH VẼ lưu theo TỪNG MÃ trong máy người dùng -> mở lại vẫn còn nguyên */
@@ -1205,11 +1292,19 @@ addEventListener('keydown',e=>{
   if(c&&c.cancelTool()) return;
   if($('ptkt').classList.contains('on')) ptClose();
 });
-document.querySelectorAll('#ptTf button').forEach(b=>b.onclick=()=>{ ptTf=b.dataset.v; setSeg('ptTf',ptTf); ptLoad(); });
+document.querySelectorAll('#ptTf button').forEach(b=>b.onclick=()=>{ ptTf=b.dataset.v; setSeg('ptTf',ptTf); khoaPhuTheoKhung(); ptLoad(); });
 /* MỘT MẠCH cho cả hai bộ nút: chart nhỏ và chart toàn màn hình dùng chung luật bật/tắt,
    khỏi phải nhớ sửa hai chỗ mỗi lần thêm một chỉ báo. */
 function batChiBao(c,k,on){
   const cur=c.ind();
+  /* HAI ĐƯỜNG PHỦ tự đi nạp kho lần đầu được bật. Bật cờ TRƯỚC rồi mới chờ mạng: nút phải
+     sáng ngay lúc bấm, còn đường thì hiện khi dữ liệu về (nút sáng mà chưa thấy gì trong
+     nửa giây là người ta bấm lại lần nữa). Tắt thì khỏi tải — cờ tắt là chart bỏ qua. */
+  if(k==='vh'||k==='idx'){
+    c.setInd({[k]:on});
+    if(on) (k==='vh'?taiVonHoa():taiChiSo()).then(veLaiPhu);
+    return;
+  }
   if(k==='vol'||k==='rsi'||k==='bb'||k==='macd'||k==='sk'||k==='bctc') c.setInd({[k]:on});
   else if(k.startsWith('ema')){ const per=+k.slice(3);
     c.setInd({ema:on?[...new Set([...cur.ema,per])].sort((x,y)=>x-y):cur.ema.filter(z=>z!==per)}); }
@@ -2297,7 +2392,7 @@ function renderProfile(){
 /* ---------- điều khiển ---------- */
 document.querySelectorAll('#tf button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tf button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); tf=b.dataset.v; loadChart();
+  b.classList.add('on'); tf=b.dataset.v; khoaPhuTheoKhung(); loadChart();
 });
 document.querySelectorAll('#secTabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#secTabs button').forEach(x=>x.classList.remove('on'));
@@ -2374,6 +2469,12 @@ applyThmIcon();
   // lấy giá sống của ĐÚNG MÃ NÀY trước khi vẽ (1 lượt mạng ~30ms) -> không loé giá phiên trước
   await CP.warmPrices([SYM],800);
   C=CP.coins.get(SYM);
+  /* Nhãn nút chỉ số viết sẵn "VN-Index" trong HTML cho mã HOSE (đa số); mã HNX/UPCOM thì
+     sửa lại ở đây, kẻo nút nói một đằng đường vẽ một nẻo. */
+  const tenIdx=idxSan()[1];
+  if(tenIdx!=='VN-Index')
+    document.querySelectorAll('#cvInd button[data-k="idx"],#ptInd button[data-k="idx"]')
+      .forEach(b=>b.textContent=tenIdx);
   renderHero(); loadChart(); renderFromHist();
   renderFin();          // Báo cáo tài chính là tab mặc định -> nạp ngay
   loadNganh();          // chỉ số đặc thù ngành — kho data/nganh, nạp xong tự nối vào bảng CĐKT

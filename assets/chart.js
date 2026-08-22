@@ -84,7 +84,11 @@ const dayNum=t=>Math.floor((t+VNOFF)/86400);
 const weekNum=t=>Math.floor((dayNum(t)+3)/7);       // tuần bắt đầu THỨ HAI
 const p2=n=>String(n).padStart(2,'0');
 
-/* gộp nến ngày -> tuần/tháng/năm (mở của nến đầu, đóng của nến cuối, cao/thấp/KL cộng dồn) */
+/* gộp nến ngày -> tuần/tháng/năm (mở của nến đầu, đóng của nến cuối, cao/thấp/KL cộng dồn)
+   HAI ĐƯỜNG PHỦ đi kèm mỗi nến — `vh` vốn hoá của mã · `ix` chỉ số sàn — theo luật ĐÓNG
+   CỬA: giữ giá trị CUỐI CÙNG còn số trong rổ, đúng như `cur.c`. Rổ ở đây là object dựng
+   TAY nên trường nào quên chép là mất hẳn: bỏ sót hai dòng dưới thì bấm Tuần/Tháng/Năm là
+   hai đường lặng lẽ biến mất, không lỗi, không dấu hiệu gì. */
 function aggregate(rows,iv){
   if(!rows||!rows.length||iv==='i'||iv==='D') return rows||[];
   const keyOf = iv==='W' ? r=>weekNum(r.t)
@@ -93,8 +97,9 @@ function aggregate(rows,iv){
   const out=[]; let cur=null,k0=null;
   for(const r of rows){
     const k=keyOf(r);
-    if(k!==k0){ if(cur) out.push(cur); cur={t:r.t,o:r.o,h:r.h,l:r.l,c:r.c,v:r.v||0}; k0=k; }
-    else{ if(r.h>cur.h)cur.h=r.h; if(r.l<cur.l)cur.l=r.l; cur.c=r.c; cur.v+=r.v||0; }
+    if(k!==k0){ if(cur) out.push(cur); cur={t:r.t,o:r.o,h:r.h,l:r.l,c:r.c,v:r.v||0,vh:r.vh,ix:r.ix}; k0=k; }
+    else{ if(r.h>cur.h)cur.h=r.h; if(r.l<cur.l)cur.l=r.l; cur.c=r.c; cur.v+=r.v||0;
+          if(r.vh!=null) cur.vh=r.vh; if(r.ix!=null) cur.ix=r.ix; }
   }
   if(cur) out.push(cur);
   return out;
@@ -140,6 +145,9 @@ function fullLabel(iv,t){
 }
 const fmtP=v=>v>=1000?(v/1000).toLocaleString('en-US',{maximumFractionDigits:v>=10000?1:2})+'K':String(Math.round(v));
 const fmtV=v=>v>=1e9?(v/1e9).toFixed(2)+' tỷ':v>=1e6?(v/1e6).toFixed(2)+' tr':v>=1e3?(v/1e3).toFixed(1)+' N':String(Math.round(v||0));
+/* VỐN HOÁ VIẾT HẲN SỐ THEO ĐƠN VỊ TỶ, đừng đổi bậc sang "nghìn tỷ" — luật toàn site
+   (CLAUDE.md): mắt bắt lấy con số rồi dừng, chữ "nghìn" phía sau thành cái đuôi. */
+const fmtTy=v=>Math.round(v/1e9).toLocaleString('vi-VN')+' tỷ';
 
 function Chart(cvs,opt){
   opt=opt||{};
@@ -203,7 +211,17 @@ let veBut=false;                                   // bút đang được giữ 
      mỗi quý một cái, mà chart mặc định mở ở khung Tháng/Năm — VCB ra 27 mốc BCTC chen với
      19 mốc cổ tức trên cùng một hàng, thành một dải chấm liền không đọc được gì. Cổ tức thì
      thưa (19 mốc trải 16 năm) nên bật sẵn được. Ai cần ngày ra báo cáo thì bấm một nút. */
-  const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false};
+  /* HAI ĐƯỜNG PHỦ — VỐN HOÁ CỦA MÃ (`vh`) và CHỈ SỐ SÀN (`idx`), cả hai MẶC ĐỊNH TẮT vì
+     đều phải gọi mạng thêm một lượt. Màu và bề dày ĐỒNG BỘ với đồ thị /phantich (bảng ở
+     mục "ĐỒ THỊ CHÍNH CÒN BA ĐƯỜNG" trong CLAUDE.md): xanh lá DÀY = vốn hoá, hồng sen =
+     chỉ số. Người xem đi qua lại hai trang, đổi màu ở một bên là mất luôn phép nhận mặt.
+     Xanh lá trùng màu nến TĂNG là biết trước và chấp nhận: bề dày 2,4px tách nó ra khỏi
+     thân nến, và đây là đường người dùng vừa tự tay bật lên nên không bất ngờ. */
+  const VHCOL=()=>light()?'#16a34a':'#34d399';
+  const IXCOL=()=>light()?'#db2777':'#f472b6';
+  let ixTen='VN-Index';                    // đổi theo sàn của mã — xem self.setChiSoTen
+  const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false,
+             vh:false, idx:false};
   /* ---- MỐC SỰ KIỆN DOANH NGHIỆP (data/sukien) --------------------------------
      Mỗi mốc: {t, k, gc} — t là giây UNIX ở 00:00 UTC của NGÀY sự kiện, đúng quy ước
      mốc nến của kho. `xOfT` lo phần chiếu sang pixel nên khung Tuần/Tháng/Năm tự đúng,
@@ -240,6 +258,9 @@ let veBut=false;                                   // bút đang được giữ 
   }
   self.ind=()=>ind;
   self.setInd=function(o){ Object.assign(ind,o||{}); self.draw(); };
+  /* Tên chỉ số hiện ở chú thích và ở dòng đọc số. Mã HOSE thì "VN-Index", HNX thì
+     "HNX-Index", UPCOM thì "UPCOM-Index" — chart không tự biết sàn, trang gọi phải nói. */
+  self.setChiSoTen=function(t){ ixTen=t||'VN-Index'; self.draw(); return self; };
   self.draw=function(){
     const DPR=Math.min(2,window.devicePixelRatio||1);
     const w=cvs.clientWidth||600, h=cvs.clientHeight||300;
@@ -267,6 +288,35 @@ let veBut=false;                                   // bút đang được giữ 
     geo.plotW=plotW; geo.plotH=plotH; geo.volTop=h-padB+6;
     let mn=Infinity,mx=-Infinity,vmax=0;
     for(const r of vis){ if(r.l<mn)mn=r.l; if(r.h>mx)mx=r.h; if((r.v||0)>vmax)vmax=r.v||0; }
+    /* ---- HAI ĐƯỜNG PHỦ: NEO THEO TRUNG BÌNH CỦA KHUNG ĐANG NHÌN ---------------------
+       Luật neo lấy NGUYÊN của đồ thị /phantich (`neoTrungBinh` trong congcu.js), đừng nghĩ
+       lại một phép khác:
+           tỉ số   = trung bình chuỗi ÷ trung bình giá đóng cửa, trên GIAO các phiên có cả hai
+           đường vẽ = chuỗi(i) ÷ tỉ số
+       Sau khi chia, trung bình hai đường BẰNG NHAU nên chắc chắn có điểm cắt: nằm trên ở mọi
+       phiên thì trung bình phải lớn hơn — mâu thuẫn. Chỗ cắt mới là thứ cần nhìn; cho mỗi
+       đường một trục riêng thì cả hai tự co giãn đầy khung và không bao giờ cắt nhau.
+
+       KHÁC congcu ĐÚNG MỘT CHỖ — ở đây neo vào GIÁ ĐÓNG CỬA chứ không neo vào vốn hoá. Bên
+       kia phải tránh giá vì `data/giaodich` giữ giá THÔ nên đường giá tụt ở mọi ngày GDKHQ;
+       chart này thì nến ĐÃ HẠ NỀN sẵn (kho `data/hist` / VNDirect hồi tố quyền) nên nó liền
+       mạch qua ngày chốt quyền đúng như vốn hoá, và nến mới là chủ thể của trang này.
+
+       NEO LẠI THEO TỪNG KHUNG NHÌN, không neo một lần cho cả chuỗi: trục giá của chart tự
+       khít theo nến ĐANG HIỆN, neo cố định là kéo/phóng một cái hai đường bay khỏi màn hình.
+       Đổi lại, biên độ giá phải NỚI ra ôm luôn hai đường (vòng dưới) — bằng không đường vừa
+       bật lên lại nằm ngoài khung, trông y như nó không được vẽ. */
+    const phu=[];
+    for(const P of [{k:'vh',bat:ind.vh,mau:VHCOL(),day:2.4},
+                    {k:'ix',bat:ind.idx,mau:IXCOL(),day:1.8}]){
+      if(!P.bat) continue;
+      let sc=0,sv=0,m=0;
+      for(const r of vis){ if(r[P.k]==null||!(r.c>0)) continue; sc+=r.c; sv+=r[P.k]; m++; }
+      if(m<2||!(sc>0)||!(sv>0)) continue;
+      P.tis=(sv/m)/(sc/m); phu.push(P);
+      for(const r of vis){ if(r[P.k]==null) continue; const q=r[P.k]/P.tis;
+        if(q<mn)mn=q; if(q>mx)mx=q; }
+    }
     if(mx-mn<1e-9) mx=mn+1;
     const pad=(mx-mn)*0.06; mn-=pad; mx+=pad;
     if(yZoom!==1||yPan!==0){                    // người dùng đã kéo/giãn trục giá bằng tay
@@ -373,6 +423,17 @@ let veBut=false;                                   // bút đang được giữ 
       const a=y(Math.max(r.o,r.c)), b=y(Math.min(r.o,r.c));
       x.fillRect(X-bw/2,a,bw,Math.max(1,b-a));
     }
+    /* HAI ĐƯỜNG PHỦ vẽ SAU nến để nến không che mất — đây là đường người dùng vừa tự bật.
+       Ngắt nét ở phiên thiếu số (`st=false`) chứ đừng nối thẳng qua: vốn hoá chỉ có 1.000
+       phiên gần nhất còn nến có tới 13 năm, nối thẳng là bịa ra một đoạn không có dữ liệu. */
+    for(const P of phu){
+      x.strokeStyle=P.mau; x.lineWidth=P.day; x.lineJoin='round';
+      x.beginPath(); let st=false;
+      for(let i=0;i<n;i++){ const v=vis[i][P.k];
+        if(v==null){ st=false; continue; }
+        const X=cx(i), yy=y(v/P.tis); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
+      x.stroke(); x.lineWidth=1; x.lineJoin='miter';
+    }
     paintDraws(x,y,'main');       // khung giá: sơn ngay sau nến
     // vạch giá mới nhất
     const lastC=vis[n-1].c, yl=y(lastC), lcol=lastC>=vis[0].o?UP:DOWN;
@@ -422,6 +483,8 @@ let veBut=false;                                   // bút đang được giữ 
       const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     for(const per of ind.ema){ x.fillStyle=EMACOL[per]||'rgba(148,163,184,.9)';
       const t='— EMA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
+    for(const P of phu){ x.fillStyle=P.mau;
+      const t='— '+(P.k==='vh'?'Vốn hoá':ixTen); x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     // RSI 14 phiên (dải riêng dưới cùng)
     if(ind.rsi&&rows.length>15){
       const top=geo.rsiTop, bh=geo.rsiH;
@@ -609,7 +672,11 @@ let veBut=false;                                   // bút đang được giữ 
     host.innerHTML=`<u>${fullLabel(iv,r.t)}</u>`+
       it('O',fmtP(r.o))+it('H',fmtP(r.h))+it('L',fmtP(r.l))+it('C',fmtP(r.c),col)+
       it('',(chg>=0?'+':'')+chg.toFixed(2)+'%',col)+
-      (r.v?it('KL',fmtV(r.v)):'');
+      (r.v?it('KL',fmtV(r.v)):'')+
+      /* SỐ THẬT, không phải số đã quy đổi để vẽ. Tỉ số neo đổi theo khung nhìn nên in nó ra
+         là mỗi lần kéo chart một con số khác — vốn hoá thì phải là vốn hoá, chỉ số là điểm. */
+      (ind.vh&&r.vh!=null?it('Vốn hoá',fmtTy(r.vh),VHCOL()):'')+
+      (ind.idx&&r.ix!=null?it(ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()):'');
     host.classList.add('on');
   }
 
