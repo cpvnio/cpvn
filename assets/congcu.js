@@ -1044,8 +1044,10 @@ function ptVeChart(){
   ptCols=[];
   for(let i=i0;i<i1;i++){
     const x=padL+(i-i0)*gap+(gap-bw)/2, du=duPhu(i);
-    if(t.d[i]===PT.ngay){ g.fillStyle=dark?'rgba(244,63,94,.20)':'rgba(244,63,94,.13)';
-      g.fillRect(padL+(i-i0)*gap, padT, gap, plotH); }
+    /* DẢI ĐỎ CAO SUỐT VÙNG VẼ ĐÃ BỎ — nay là hai tam giác, vẽ SAU vòng lặp (xem cuối hàm).
+       Cùng lý do đã bỏ nó ở đồ thị của mã: dải cao suốt khung CẮT NGANG chính dữ liệu đang
+       xem, và ở khung 1.000 phiên thì bề ngang một cột chỉ ~1,1px nên dải đó rộng hơn cả
+       cột nó đánh dấu. Tam giác chỉ vào đúng cột mà không che gì. */
     /* MỘT CỘT = TỔNG GIÁ TRỊ KHỚP LỆNH của phiên, tô theo MỨC THAM GIA của từng khối.
        User chốt 21/08/2026: hai cột cạnh nhau (mua/bán) rối mắt — cột cứ hiện tổng, màu
        nói khối nào mạnh, bấm vào mới xem chi tiết mua/bán/ròng.
@@ -1111,6 +1113,22 @@ function ptVeChart(){
       g.textBaseline='bottom'; g.fillText(num2(lo+bien), W-2, padT+plotH-1);
     }
   }
+  /* MỐC PHIÊN ĐANG CHỌN = HAI TAM GIÁC KẸP TRÊN DƯỚI (user chốt 22/08/2026: *"vẫn còn 1
+     cột màu đỏ dài làm khá khó nhìn, nên chuyển sang dạng tam giác đánh dấu"*). Sao y đồ
+     thị của mã trong `ptVe1` — cùng một ý nghĩa thì phải cùng một hình.
+     VẼ SAU CÙNG, không vẽ làm nền như bản cũ: nền thì cột và đường VN-Index đè lên mất,
+     mà muốn nó nổi lên trên thì lại che chính dữ liệu. Tam giác nằm ngoài rìa vùng vẽ nên
+     không đè lên gì cả. */
+  { const j=t.d.indexOf(PT.ngay);
+    if(j>=i0&&j<i1){
+      const xm=padL+(j-i0)*gap+gap/2, w0=6.5, h0=8;
+      g.fillStyle=dark?'#fb7185':'#e11d48';
+      g.beginPath(); g.moveTo(xm-w0,padT+.5); g.lineTo(xm+w0,padT+.5); g.lineTo(xm,padT+.5+h0);
+      g.closePath(); g.fill();
+      const yb=padT+plotH-.5;
+      g.beginPath(); g.moveTo(xm-w0,yb); g.lineTo(xm+w0,yb); g.lineTo(xm,yb-h0);
+      g.closePath(); g.fill();
+    } }
   g.fillStyle=ct; g.font='11px system-ui,sans-serif'; g.textBaseline='top'; g.textAlign='left';
   g.fillText(t.d[i0], padL, H-15);
   g.textAlign='right'; g.fillText(t.d[i1-1], W, H-15);

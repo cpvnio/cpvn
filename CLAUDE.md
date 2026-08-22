@@ -2085,6 +2085,18 @@ Chữ đã rút, và chỗ những mẩu bị cắt đi đã chuyển tới:
 Kiểm cuối ở 375px: quét 2 chiều khắp đồ thị + ghim/bỏ ghim → chiều cao `#ptDoc` **một giá
 trị duy nhất (290,5px)**, **0 chuỗi bị cắt**.
 
+### MỐC PHIÊN LÀ TAM GIÁC — CẢ HAI ĐỒ THỊ (22/08/2026)
+
+Lần đầu chỉ sửa đồ thị của MÃ; đồ thị TOÀN THỊ TRƯỜNG (`ptVeChart`) vẫn còn dải đỏ cao suốt
+vùng vẽ và user báo lại: *"vẫn còn 1 cột màu đỏ dài làm khá khó nhìn"*. Nay hai chỗ dùng
+cùng một hình — cùng một ý nghĩa thì phải cùng một ký hiệu.
+> Ở `ptVeChart` phải **vẽ SAU vòng lặp cột**, không vẽ làm nền như bản cũ: làm nền thì cột
+> và đường VN-Index đè lên mất, mà cho nổi lên trên thì lại che chính dữ liệu. Tam giác nằm
+> ngoài rìa vùng vẽ nên không đè lên gì. Ở khung 1.000 phiên bề ngang một cột chỉ ~1,1px —
+> dải đỏ cũ rộng hơn cả cái cột nó đánh dấu.
+> Đo lại bằng cách đếm pixel đỏ theo dải y: chỉ còn ở **y 0–40 và y 400–440** trên canvas
+> cao 480, giữa sạch trơn; bấm vào cột khác thì tam giác nhảy theo (x 684 -> 243).
+
 ### MỐC PHIÊN LÀ TAM GIÁC, KHÔNG PHẢI CỘT ĐỎ (22/08/2026)
 
 User: *"lúc chọn không phải là 1 cột màu đỏ mà nên là 1 dấu tam giác chỉ vị trí"*. Cột đỏ
