@@ -1645,10 +1645,18 @@ function ptVe1(cv, cfg){
   }
   const gap=plotW/n, bw=Math.max(1,gap*0.7);
   if(cfg.kieu==='line'){
-    for(const s of S){ g.strokeStyle=s.mau; g.lineWidth=1.8; g.beginPath(); let dau=true;
+    /* NÉT ĐỨT THEO TỪNG CHUỖI. Nhiều đường chồng nhau mà chỉ khác MÀU thì người mù màu
+       (và cả ảnh chụp đen trắng) không tách được — thêm kiểu nét là tách được bằng hình. */
+    for(const s of S){ if(s.net) g.setLineDash(s.net); else g.setLineDash([]);
+      g.strokeStyle=s.mau; g.lineWidth=s.day||1.8; g.beginPath(); let dau=true;
       for(let i=0;i<n;i++){ const v=s.v[i]; if(v==null||isNaN(v)){ dau=true; continue; }
         const x=padL+i*gap+gap/2; if(dau){ g.moveTo(x,y(v)); dau=false; } else g.lineTo(x,y(v)); }
       g.stroke(); }
+    g.setLineDash([]);
+    /* ĐƯỜNG 0 cho đồ thị có giá trị âm — không có nó thì không biết đường đang ở trên hay
+       dưới mốc, mà với "ròng luỹ kế" thì đó đúng là câu hỏi duy nhất. */
+    if(lo<0&&hi>0){ g.strokeStyle=ct; g.globalAlpha=.45; g.lineWidth=1;
+      g.beginPath(); g.moveTo(padL,y(0)+.5); g.lineTo(W-padR,y(0)+.5); g.stroke(); g.globalAlpha=1; }
   } else {
     const y0=y(0);
     if(lo<0){ g.strokeStyle=ct; g.lineWidth=1; g.beginPath();
@@ -2030,6 +2038,50 @@ function ptVeMa(){
     }
     fnPart.push(f); tdPart.push(t2); conPart.push(Math.max(0,m0-f-t2));
   }
+  /* ---- RÒNG LUỸ KẾ THEO KHỐI, TÍNH BẰNG CỔ PHIẾU (user chốt 22/08/2026) -------------
+     *"tôi có thể tính sum từ vol buy sell ròng trong thời gian theo số phiên … chúng ta
+     chưa phân tích được thoả thuận ở đây thực chất là buy hay sell … khối lượng của còn
+     lại cũng chưa có phân tách rõ là buy hay sell ròng"*.
+
+     HAI CHỖ TƯỞNG THIẾU DỮ LIỆU, THẬT RA KHÔNG THIẾU:
+     ① **Thoả thuận đã nằm sẵn trong số.** `fnMuaTKL`/`fnBanTKL` là TỔNG (khớp lệnh +
+        thoả thuận), nên một lô sang tay của khối ngoại đã được tính. Thứ không tách được
+        sâu quá ~250 phiên chỉ là *bao nhiêu phần của số ròng đến từ thoả thuận* — bản
+        thân số ròng thì đủ 1.000 phiên.
+     ② **"Còn lại" là ĐẲNG THỨC KẾ TOÁN, không phải dữ liệu phải đi cào.** Mỗi cổ phiếu có
+        người mua thì phải có người bán, nên `khối ngoại + tự doanh + còn lại = 0` với MỌI
+        phiên. Suy ra `còn lại = −(khối ngoại + tự doanh)`, không sai số.
+
+     TÍNH BẰNG CỔ PHIẾU CHỨ KHÔNG BẰNG TIỀN: luỹ kế theo tiền thì cộng số của bốn năm giá
+     khác nhau lại với nhau, ra một đại lượng không có nghĩa. Cổ phiếu thì cộng được, và
+     chia cho SLCP ra ngay "đã sang tay bao nhiêu phần trăm công ty".
+
+     ĐƠN VỊ TRIỆU CP, KHAI Ở TIÊU ĐỀ — cùng lối `ptVeChart` khai "tỷ đồng" một lần ở góc,
+     chứ không dán hậu tố tự chế vào từng con số (luật ở mục Quy ước toàn site).
+
+     Ô TRỐNG CỦA TỰ DOANH = 0, VÀ ĐÓ LÀ ĐÚNG. Đo 185.676 ô: ô nào nguồn có trả thì 22.845
+     ô > 0 và chỉ 199 ô bằng 0 — tức nguồn KHÔNG trả dòng nghĩa là mã đó phiên đó không có
+     tự doanh, khác hẳn "có dòng mà bằng 0". Đối chiếu độc lập với `data/hist` (`fb`/`fs`,
+     cào bằng đường khác hẳn): SHB · VHM · FPT · HPG · VRE lệch **0,00%**. */
+  const fnTKm=lay('fnMuaTKL'), fnTKb=lay('fnBanTKL'),
+        tdTKm=lay('tdMuaTKL'), tdTKb=lay('tdBanTKL'),
+        fnTTm=lay('fnMuaTTKL'), fnTTb=lay('fnBanTTKL');
+  const lkFn=[], lkTd=[], lkNoi=[], lkTt=[];
+  { let af=0, at=0, ap=0, coTT=false;
+    for(let i=0;i<d.length;i++){
+      af+=((fnTKm[i]||0)-(fnTKb[i]||0))/1e6;
+      at+=((tdTKm[i]||0)-(tdTKb[i]||0))/1e6;
+      lkFn.push(af); lkTd.push(at); lkNoi.push(-(af+at));
+      /* THOẢ THUẬN LÀ CÁI CHỢ, KHÔNG PHẢI MỘT BÊN — nên không có "thoả thuận ròng".
+         Mỗi lô sang tay cũng có người mua và người bán, cộng lại bằng 0 y như khớp lệnh.
+         Thứ HỎI ĐƯỢC là: trong số ròng của KHỐI NGOẠI, bao nhiêu đi qua thoả thuận. Đó
+         là `fnMuaTTKL − fnBanTTKL`, và nó CHỈ SÂU ~250 phiên (trường của Vietstock) nên
+         phải để `null` ở đoạn chưa có — vẽ 0 là bịa ra một quãng "không sang tay gì". */
+      if(fnTTm[i]!=null||fnTTb[i]!=null){ coTT=true; ap+=((fnTTm[i]||0)-(fnTTb[i]||0))/1e6; }
+      lkTt.push(coTT?ap:null);
+    } }
+  const lkN=d.length-1;
+  const lkSo=(v)=>(v==null?'—':(v>0?'+':'')+v.toFixed(1));
   const fnRong=fnM.map((x,i)=>(x==null&&fnB[i]==null)?null:((x||0)-(fnB[i]||0)));
   const tdRong=tdM.map((x,i)=>(x==null&&tdB[i]==null)?null:((x||0)-(tdB[i]||0)));
   /* % giá trị phiên là của khối ngoại — tính trên (mua+bán)/2 so với giá trị khớp lệnh,
@@ -2148,6 +2200,41 @@ function ptVeMa(){
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
              +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
            +'</span>')
+      /* RÒNG LUỸ KẾ ĐỨNG NGAY SAU ĐỒ THỊ CHÍNH và chiếm cả chiều ngang: nó trả lời câu
+         "bốn năm qua ai gom ai xả" — câu lớn thứ hai của cả trang, sau "giá và tiền đi
+         thế nào". Nhồi ba đường 1.000 phiên vào một ô rộng 397px của lưới ba cột thì
+         chúng dính thành một búi.
+         Con số tại phiên đang chọn in ngay dưới, cạnh chú thích — mấy đồ thị nhỏ đọc số
+         bằng thanh đọc số ở trên, nhưng thanh đó đã 10 ô, thêm nữa là tràn sang hàng thứ
+         ba và cao thêm 60px cho một thứ chỉ đọc khi đang nhìn đúng đồ thị này. */
+      /* TỔNG CẢ KHUNG ĐỨNG TRƯỚC, GIÁ TRỊ TẠI PHIÊN ĐỨNG SAU (user chốt 22/08/2026:
+         *"tao muốn xem tổng 100 phiên ròng của các khối thì làm ntn"*). Bản đầu chỉ in
+         "tại phiên X" — mà vì đường cộng dồn bắt đầu từ 0 ở phiên đầu khung nên GIÁ TRỊ Ở
+         PHIÊN CUỐI CHÍNH LÀ tổng cả khung; chỉ là không ai đọc ra điều đó từ một dòng ghi
+         "tại phiên". Nay in thẳng, và đổi khung 100/300/600/1.000 là đổi luôn kỳ cộng. */
+      +ptO('Khối lượng ròng luỹ kế — triệu cổ phiếu', 'mcL',
+           '<b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg3">'
+           +ptSw('lk1','pkL1','khối ngoại')+ptSw('lk2','pkL2','tự doanh')
+           +ptSw('lk3','pkL3','nội địa còn lại')
+           +ptSw('lk4','pkL4','khối ngoại qua thoả thuận')+'</span>'
+           +'<span class="ptkr"> — cộng dồn từ phiên đầu khung</span>'
+           +'<br><b>tổng '+d.length+' phiên</b>: khối ngoại <b class="'+cls(lkFn[lkN])+'">'
+           +lkSo(lkFn[lkN])+'</b> · tự doanh <b class="'+cls(lkTd[lkN])+'">'+lkSo(lkTd[lkN])
+           +'</b> · nội địa <b class="'+cls(lkNoi[lkN])+'">'+lkSo(lkNoi[lkN])+'</b> triệu cp'
+           +(sh[lkN]?'<span class="ptkr"> · khối ngoại = <b>'
+             +(lkFn[lkN]/(sh[lkN]/1e6)*100).toFixed(2)+'%</b> số cổ phiếu</span>':'')
+           +'<br>tại phiên <b>'+esc(d[k])+'</b>: '+lkSo(lkFn[k])+' · '+lkSo(lkTd[k])
+           +' · '+lkSo(lkNoi[k])
+           +'<span class="ptkr"> — rê chuột trên đồ thị để đổi phiên</span>'
+           /* BA ĐƯỜNG CỘNG LẠI BẰNG 0 phải nói ra, bằng không người xem tưởng đường nội
+              địa là một chuỗi dữ liệu thứ ba đi cào về — nó là ẢNH GƯƠNG của hai đường
+              kia. Và phải nói RÕ thoả thuận không phải một bên tham gia. */
+           +'<br><span class="ptkr">ba đường đầu luôn cộng lại bằng <b>0</b> — mỗi cổ phiếu'
+           +' có người mua thì phải có người bán, nên <b>nội địa = −(khối ngoại + tự doanh)</b>.'
+           +' Thoả thuận là <b>cái chợ, không phải một bên</b>, nên không có "thoả thuận ròng";'
+           +' đường thứ tư là phần ròng của KHỐI NGOẠI đi qua thoả thuận'
+           +(lkTt[lkN]!=null?' (chỉ '+lkTt.filter(x=>x!=null).length+' phiên gần nhất có số)':'')
+           +'</span>', 1)
       +ptO('Khối ngoại mua / bán', 'mc3',
            '<i class="pkC"></i> mua &nbsp; <i class="pkD"></i> bán &nbsp;·&nbsp; giá trị mỗi phiên,'
            +' <b>tổng</b> (gồm thoả thuận)')
@@ -2238,6 +2325,12 @@ function ptVeMa(){
                            PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706'}]
                           .concat((vniL&&!PT.an.vni2)?[{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}]:[])},
     phai2:(PT.vh&&!PT.an.vh2)?{nhan:v=>ptTien(v),series:[{v:mcap,mau:XANH,day:1.5,net:[5,3]}]}:null}));
+  ptVe1($('#mcL'),C({cao:230,kieu:'line',
+    series:[PT.an.lk1?null:{v:lkFn,mau:cN,day:2},
+            PT.an.lk2?null:{v:lkTd,mau:cT,day:2,net:[6,4]},
+            PT.an.lk3?null:{v:lkNoi,mau:XANH,day:2,net:[2,3]},
+            PT.an.lk4?null:{v:lkTt,mau:dark?'#f472b6':'#db2777',day:1.6,net:[1,3]}],
+    nhan:v=>(v>0?'+':'')+v.toFixed(0)}));
   ptVe1($('#mc3'),C({kieu:'bar',series:[{v:fnM,mau:XANH},{v:fnB,mau:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mc4'),C({kieu:'bar',series:[{v:fnRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
   ptVe1($('#mcT'),C({kieu:'bar',series:[{v:tdRong,mau:XANH,mauAm:DO}],nhan:v=>ptTien(v)}));
@@ -2311,6 +2404,19 @@ function ptVeMa(){
         : '<span class="ptdg">rê chuột lên đồ thị để xem phiên khác · <b>bấm để ghim</b></span>')
     +'</div>'
     +'<div class="ptdw">'
+    /* THỨ TỰ MƯỜI Ô — user chốt 22/08/2026: *"khối ngoại · tự doanh · thoả thuận chung
+       1 hàng, nhìn 1 cái thấy ngay"*. Xếp sao cho ba ô DÒNG TIỀN nằm ở vị trí 7-8-9,
+       vì đó là chỗ DUY NHẤT chúng ở chung hàng ở CẢ HAI khổ lưới:
+         5 cột (≥1080px): hàng 2 = lưu thông · khối ngoại · tự doanh · thoả thuận · VN-Index
+         3 cột (≥700px) : hàng 1 GIÁ · hàng 2 QUY MÔ · hàng 3 DÒNG TIỀN · hàng 4 thị trường
+       Đặt chúng ở 6-7-8 thì khổ 3 cột sẽ cắt đôi nhóm (6 kết hàng 2, 7-8 mở hàng 3).
+       Khổ 2 cột thì không nhóm nào giữ nguyên được — chấp nhận, đó là khổ điện thoại.
+       Đổi thứ tự ở đây là đổi luôn trên màn hình: `.ptdw` xếp theo thứ tự DOM. */
+    /* THỨ TỰ MƯỜI Ô — user chốt 22/08/2026 bằng hai lượt đổi chỗ: khối ngoại ròng
+       <-> vốn hoá, rồi vốn hoá <-> biên độ. Kết quả là hai hàng có chủ đề rõ hơn hẳn:
+       HÀNG 1 giá và quy mô (đóng cửa · giá TB · giá trị · vốn hoá · biên độ),
+       HÀNG 2 dòng tiền và sở hữu (tự doanh · thoả thuận · khối ngoại · lưu thông · VN-Index).
+       Đổi thứ tự ở đây là đổi luôn trên màn hình — lưới `.ptdw` xếp theo thứ tự DOM. */
     +oo('Đóng cửa', num(c[k]), (pcs[k]==null?'':ph(pcs[k])+' · ')+'TB '+num(vw[k]),
         pcs[k]==null?'':cls(pcs[k]))
     /* GIÁ KHỚP LỆNH TB đứng thành Ô RIÊNG, không nhét vào dòng phụ của ô đóng cửa
@@ -2323,7 +2429,6 @@ function ptVeMa(){
           ?('<b class="'+cls(vw[k]/c[k]-1)+'">'+((vw[k]/c[k]-1)>0?'+':'')
             +((vw[k]/c[k]-1)*100).toFixed(1)+'%</b> so đóng cửa')
           :'')
-    +oo('Giá trị khớp lệnh', ptTien(mval[k]), num(mv[k])+' cp')
     /* BIÊN ĐỘ PHIÊN — mở/cao/thấp. Không có nó thì "đóng cửa 52.000, giá TB 48.579" là
        một mâu thuẫn không giải thích được; có nó thì đọc ra ngay: mở 47.250 đúng giá SÀN,
        thấp nhất cũng 47.250, tức cả phiên là một cú kéo từ sàn lên. */
@@ -2331,6 +2436,30 @@ function ptVeMa(){
         ((lo[k]&&hi[k])?('<b>'+num(lo[k])+'</b>–<b>'+num(hi[k])+'</b>'):'')
           +(op[k]?(' · mở <b>'+num(op[k])+'</b>'+(tc[k]&&Math.abs(op[k]/tc[k]-1)>=0.0695
             ?' <b class="'+cls(op[k]-tc[k])+'">'+(op[k]>tc[k]?'trần':'sàn')+'</b>':'')):''))
+    +oo('Giá trị khớp lệnh', ptTien(mval[k]), num(mv[k])+' cp')
+    /* TỈ LỆ SỞ HỮU NƯỚC NGOÀI CHUYỂN VÀO ĐÂY (22/08/2026). Nó vốn nằm ở đuôi dòng Khối
+       ngoại ròng, nhưng dòng đó nay chỉ còn mua/bán theo yêu cầu — mà `sở hữu` là chuyện
+       của SỔ CỔ ĐÔNG chứ không phải của dòng tiền phiên này, nên ô Vốn hoá mới đúng chỗ:
+       "công ty có bao nhiêu cổ phiếu, trong đó nước ngoài giữ bao nhiêu phần trăm".
+       Chỉ có ở ~249 phiên gần nhất (trường của Vietstock), phiên xa hơn thì bỏ trống. */
+    +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul,
+        (sh[k]?num(sh[k])+' cp':'')
+        /* Đuôi "nước ngoài x%" bọc `.ptdq2` để KHỔ HẸP ẨN ĐI. Ở 375px lưới còn 2 cột,
+           mỗi ô ~155px — để nguyên là cắt đuôi ngay giữa con số, mà cắt một CON SỐ thì tệ
+           hơn hẳn bỏ một chữ định tính: "bán 2…" đọc ra một số sai. */
+        +(fnSH[k]!=null?'<i class="ptdq2">'+(sh[k]?' · ':'')+'nước ngoài <b>'
+            +fnSH[k].toFixed(1)+'%</b></i>':''))
+    /* LƯU THÔNG ĐỨNG THÀNH Ô RIÊNG, không nhét thêm vào dòng phụ của ô Vốn hoá — dòng đó
+       đã có "số cổ phiếu · nước ngoài x%" và bị khoá MỘT DÒNG (`nowrap` + `ellipsis`), nhét
+       mẩu thứ ba vào là nó cắt đuôi ngay giữa một con số.
+       Mà nó cũng đáng một ô: TCB vốn hoá 225.342 tỷ nhìn như một mã khổng lồ, nhưng phần
+       THỰC SỰ mua bán được mới là thứ quyết định giá chạy hay không — BID vốn hoá 279
+       nghìn tỷ mà lưu thông 2,6%, tức chỉ 7 nghìn tỷ trôi nổi, trong khi STB 140 nghìn tỷ
+       với 95% thì gần như toàn bộ. Cùng lập luận đã ghi ở mục FREE FLOAT. */
+    +oo('Lưu thông', ffM!=null?(ffM.toFixed(1)+'%'):oNul,
+        ffM==null?'nguồn chưa có tỉ lệ lưu thông'
+          :((sh[k]?num(Math.round(sh[k]*ffM/100))+' cp':'')
+            +(mcap[k]?(sh[k]?' · ':'')+'<b>'+ptTien(mcap[k]*ffM/100)+'</b>':'')))
     /* PHIÊN NÀO CÓ BẢN TÁCH (Vietstock, 249 phiên gần nhất) thì in bản tách vì nó nói
        được nhiều hơn — khớp lệnh riêng, thoả thuận riêng. Phiên xa hơn chỉ có TỔNG của
        VNDirect thì in tổng và NÓI RA LÀ TỔNG, đừng để người đọc tưởng đó là khớp lệnh. */
@@ -2361,29 +2490,6 @@ function ptVeMa(){
         ptt[k]!=null?('giá <b>'+num(ptt[k])+'</b> · <b class="'+cls(ptt[k]/c[k]-1)+'">'
           +((ptt[k]/c[k]-1)>0?'+':'')+((ptt[k]/c[k]-1)*100).toFixed(1)+'%</b> so giá sàn')
           :'phiên này không có thoả thuận')
-    /* TỈ LỆ SỞ HỮU NƯỚC NGOÀI CHUYỂN VÀO ĐÂY (22/08/2026). Nó vốn nằm ở đuôi dòng Khối
-       ngoại ròng, nhưng dòng đó nay chỉ còn mua/bán theo yêu cầu — mà `sở hữu` là chuyện
-       của SỔ CỔ ĐÔNG chứ không phải của dòng tiền phiên này, nên ô Vốn hoá mới đúng chỗ:
-       "công ty có bao nhiêu cổ phiếu, trong đó nước ngoài giữ bao nhiêu phần trăm".
-       Chỉ có ở ~249 phiên gần nhất (trường của Vietstock), phiên xa hơn thì bỏ trống. */
-    +oo('Vốn hoá', mcap[k]?ptTien(mcap[k]):oNul,
-        (sh[k]?num(sh[k])+' cp':'')
-        /* Đuôi "nước ngoài x%" bọc `.ptdq2` để KHỔ HẸP ẨN ĐI. Ở 375px lưới còn 2 cột,
-           mỗi ô ~155px — để nguyên là cắt đuôi ngay giữa con số, mà cắt một CON SỐ thì tệ
-           hơn hẳn bỏ một chữ định tính: "bán 2…" đọc ra một số sai. */
-        +(fnSH[k]!=null?'<i class="ptdq2">'+(sh[k]?' · ':'')+'nước ngoài <b>'
-            +fnSH[k].toFixed(1)+'%</b></i>':''))
-    /* LƯU THÔNG ĐỨNG THÀNH Ô RIÊNG, không nhét thêm vào dòng phụ của ô Vốn hoá — dòng đó
-       đã có "số cổ phiếu · nước ngoài x%" và bị khoá MỘT DÒNG (`nowrap` + `ellipsis`), nhét
-       mẩu thứ ba vào là nó cắt đuôi ngay giữa một con số.
-       Mà nó cũng đáng một ô: TCB vốn hoá 225.342 tỷ nhìn như một mã khổng lồ, nhưng phần
-       THỰC SỰ mua bán được mới là thứ quyết định giá chạy hay không — BID vốn hoá 279
-       nghìn tỷ mà lưu thông 2,6%, tức chỉ 7 nghìn tỷ trôi nổi, trong khi STB 140 nghìn tỷ
-       với 95% thì gần như toàn bộ. Cùng lập luận đã ghi ở mục FREE FLOAT. */
-    +oo('Lưu thông', ffM!=null?(ffM.toFixed(1)+'%'):oNul,
-        ffM==null?'nguồn chưa có tỉ lệ lưu thông'
-          :((sh[k]?num(Math.round(sh[k]*ffM/100))+' cp':'')
-            +(mcap[k]?(sh[k]?' · ':'')+'<b>'+ptTien(mcap[k]*ffM/100)+'</b>':'')))
     /* Ô THỊ TRƯỜNG — CHỈ HIỆN KHI ĐANG BẬT VN-INDEX (user chốt 22/08/2026: *"khi bật
        vnindex vào tao không thể xem giá vnindex và vol tổng ngày đó khi rà trong đồ thị"*).
        Đúng: đường VN-Index vẽ ra rồi mà không có chỗ nào đọc được số của nó, và cũng
@@ -2443,7 +2549,7 @@ function ptBindMa(){
     const k=n.dataset.s;
     if(PT.an[k]) delete PT.an[k]; else PT.an[k]=1;
     LS.set('cpvn_ptan',PT.an); ptVeMa(); };
-  [$('#ptLeg'),$('#ptLeg2')].forEach(el=>{ if(el) el.onclick=legClick; });
+  [$('#ptLeg'),$('#ptLeg2'),$('#ptLeg3')].forEach(el=>{ if(el) el.onclick=legClick; });
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
     if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }

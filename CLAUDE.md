@@ -1828,6 +1828,69 @@ thêm một mảng mới về sau thì nó mặc định hiện, khỏi phải �
 > `data/phantich.json`), ô chú thích chỉ quyết định *có VẼ ra không*. Dùng chung khoá thì
 > bấm ở chú thích làm nút cách đó nửa màn hình đổi theo — loại tương tác khó đoán nhất.
 
+### RÒNG LUỸ KẾ THEO KHỐI — VÀ HAI THỨ TƯỞNG THIẾU DỮ LIỆU NHƯNG KHÔNG (22/08/2026)
+
+User: *"tôi có thể tính sum từ vol buy sell ròng … vấn đề nằm ở chỗ chúng ta chưa phân
+tích được thoả thuận ở đây thực chất là buy hay sell, khối lượng của còn lại cũng chưa có
+phân tách rõ là buy hay sell ròng"*. Cả hai đều **không phải dữ liệu phải đi cào**:
+
+1. **Thoả thuận đã nằm sẵn trong số.** `fnMuaTKL`/`fnBanTKL` là TỔNG (khớp lệnh + thoả
+   thuận) nên một lô sang tay của khối ngoại đã được tính. Thứ không tách được sâu quá
+   ~250 phiên chỉ là *bao nhiêu phần của số ròng đi qua thoả thuận*, không phải số ròng.
+2. **"Còn lại" là ĐẲNG THỨC KẾ TOÁN.** Mỗi cổ phiếu có người mua thì phải có người bán:
+   `khối ngoại + tự doanh + còn lại = 0` ở MỌI phiên -> `còn lại = −(hai cái trên)`, không
+   sai số. Kiểm trên SHB: tổng ba vế ra đúng 0.
+3. **KHÔNG CÓ "THOẢ THUẬN RÒNG".** Thoả thuận là **cái chợ, không phải một bên** — mỗi lô
+   cũng có người mua và người bán, ròng luôn bằng 0. Câu hỏi được phép là *"trong số ròng
+   của KHỐI NGOẠI, bao nhiêu đi qua thoả thuận"* = `fnMuaTTKL − fnBanTTKL`, chỉ sâu ~250
+   phiên nên đoạn chưa có phải để `null` (vẽ 0 là bịa ra một quãng "không sang tay gì").
+
+**ĐỘ PHỦ ĐÃ ĐO, ĐỦ ĐỂ LÀM CHO CẢ RỔ.** Top 500 thanh khoản: khối ngoại **500/500 mã phủ
+≥95%** (trung vị 100%), 480/500 đủ 1.000 phiên. Tự doanh trung vị chỉ 3,8% — **nhưng đó
+không phải thiếu dữ liệu**: soi 185.676 ô thì ô nào nguồn có trả cũng >0 (22.845 ô) và chỉ
+199 ô bằng 0, tức nguồn KHÔNG trả dòng nghĩa là mã đó phiên đó **không có tự doanh**. Coi
+trống = 0 khi cộng ròng là ĐÚNG.
+
+> **ĐỐI CHIẾU BẰNG NGUỒN ĐỘC LẬP TRƯỚC KHI TIN.** `data/hist` có `fb`/`fs` cào qua
+> `v4/foreigns` — đường khác hẳn `stock_prices`. Cộng dồn 1.000 phiên:
+> SHB −85.477.163 vs −85.477.183 · VHM −817.527.517 vs −817.527.507 · FPT · HPG · VRE —
+> **lệch 0,00%** cả năm mã. Đơn vị cũng kiểm: 983/984 phiên có `giá trị ÷ khối lượng` rơi
+> trong 0,5×–2× giá đóng cửa.
+
+**TÍNH BẰNG CỔ PHIẾU, KHÔNG BẰNG TIỀN.** Luỹ kế theo tiền là cộng số của bốn năm giá khác
+nhau — ra một đại lượng không có nghĩa. Cổ phiếu thì cộng được, và chia cho SLCP ra ngay
+"đã sang tay bao nhiêu phần trăm công ty". Đơn vị **triệu cp khai ở TIÊU ĐỀ** đồ thị, cùng
+lối `ptVeChart` khai "tỷ đồng" một lần ở góc — không dán hậu tố vào từng con số.
+
+**TỔNG CẢ KHUNG ĐỨNG TRƯỚC GIÁ TRỊ TẠI PHIÊN.** Bản đầu chỉ in "tại phiên X" và user hỏi
+ngay *"tao muốn xem tổng 100 phiên ròng của các khối thì làm ntn"* — đường cộng dồn bắt đầu
+từ 0 ở phiên đầu khung nên **giá trị ở phiên cuối CHÍNH LÀ tổng cả khung**, chỉ là không ai
+đọc ra điều đó từ một dòng ghi "tại phiên". Đổi khung 100/300/600/1.000 là đổi luôn kỳ cộng.
+SHB: 100 phiên −29,6 triệu cp (−0,61% SLCP) · 1.000 phiên −85,5 (−1,75%).
+
+Kèm hai thứ nhỏ trong `ptVe1`: nhánh `kieu:'line'` nay nhận **nét đứt riêng từng chuỗi**
+(ba đường chỉ khác màu thì người mù màu và ảnh đen trắng không tách được) và vẽ **đường 0**
+khi có giá trị âm — với "ròng luỹ kế" thì trên hay dưới mốc 0 đúng là câu hỏi duy nhất.
+
+### THỨ TỰ MƯỜI Ô CỦA THANH ĐỌC SỐ — NHÓM PHẢI GIỮ Ở CẢ 5 CỘT LẪN 3 CỘT (22/08/2026)
+
+User: *"khối ngoại · tự doanh · thoả thuận chung 1 hàng, nhìn 1 cái thấy ngay"*. Ba ô đó
+phải nằm ở **vị trí 7-8-9** — chỗ DUY NHẤT chúng ở chung hàng ở cả hai khổ lưới:
+
+```
+5 cột (≥1080px)   hàng 1  đóng cửa · giá TB · biên độ · giá trị khớp lệnh · vốn hoá
+                  hàng 2  lưu thông · KHỐI NGOẠI · TỰ DOANH · THOẢ THUẬN · VN-Index
+3 cột (≥700px)    hàng 1 GIÁ · hàng 2 QUY MÔ · hàng 3 DÒNG TIỀN · hàng 4 thị trường
+```
+
+Đặt ở 6-7-8 thì khổ 3 cột **cắt đôi nhóm** (ô 6 kết hàng 2, ô 7-8 mở hàng 3). Khổ 2 cột
+(điện thoại) không nhóm nào giữ nguyên được — chấp nhận.
+
+> Mười ô nay khai thành **một danh sách thứ tự** ở đầu khối thay vì nối chuỗi thẳng: mỗi ô
+> mang theo mấy chục dòng chú thích, xê dịch bằng cắt dán là kiểu sửa dễ làm rơi mất một ô
+> mà không ai thấy. Đổi thứ tự trong danh sách là đổi luôn trên màn hình — `.ptdw` xếp
+> theo thứ tự DOM.
+
 ### CỘT KHỚP LỆNH CỦA TRANG MÃ TÁCH MÀU THEO KHỐI (22/08/2026)
 
 User: *"trên đồ thị của mã vẫn chưa đánh dấu màu sắc cho tự doanh và khối ngoại"*. Đồ thị

@@ -670,6 +670,16 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    (vốn hoá). Đây là đường ĐẶC — nét đứt đã là của vốn hoá, hai đường cùng nét đứt thì
    phải dóng bằng màu ở cỡ chú thích 11,5px, quá nhỏ để phân biệt chắc chắn. */
 .ptleg i.pkI{background:#db2777;height:3px;border-radius:2px}
+/* Ba đường của đồ thị ròng luỹ kế. Dùng lại ĐÚNG hai biến màu của cột (`--pkN` khối ngoại,
+   `--pkT` tự doanh) để hai đồ thị nói cùng một ngôn ngữ; nội địa lấy xanh lá — nó là mảng
+   duy nhất không có màu riêng ở đồ thị cột (ở đó nó là "còn lại" xanh nhạt, mà xanh nhạt
+   vẽ thành đường thì mờ quá không thấy). */
+.ptleg i.pkL1{background:var(--pkN);height:3px;border-radius:2px}
+.ptleg i.pkL2{background:var(--pkT);height:3px;border-radius:2px}
+.ptleg i.pkL3{background:#16a34a;height:3px;border-radius:2px}
+/* Phần ròng của khối ngoại đi qua thoả thuận — hồng sen, cùng màu với VN-Index ở đồ
+   thị trên vì hai chỗ không bao giờ đứng chung một khung. */
+.ptleg i.pkL4{background:#db2777;height:3px;border-radius:2px}
 /* NHÃN ĐẦU DÒNG CHÚ THÍCH (`cột` · `đường` · `mốc`). Chú thích của đồ thị này có ba loại
    ký hiệu khác hẳn nhau — ô vuông đặc là mảng cột, vạch ngang là đường, chấm tròn có chữ
    là mốc sự kiện — mà bản cũ đổ chung một dòng chảy tràn thì mắt không có chỗ bám. Nhãn
@@ -1501,7 +1511,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823h"></script>
+<script defer src="assets/mobi.js?v=20260823i"></script>
 </head>
 <body>
 
@@ -1558,6 +1568,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823h"></script>
+<script src="assets/congcu.js?v=20260823i"></script>
 </body>
 </html>
