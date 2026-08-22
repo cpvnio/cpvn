@@ -1842,10 +1842,32 @@ function ptVe1(cv, cfg){
    không có mốc), còn nhánh giao dịch mới trả `{err:1}` để `ptVeMa` in câu "chưa có trong
    kho giao dịch". Hai loại thiếu khác nhau, đừng gộp làm một. */
 async function ptNapMa(sym){
-  const [g,e]=await Promise.all([
+  /* KHO NẾN `data/hist` LÀ NGUỒN HẠ NỀN — nạp cùng lượt, không nối đuôi.
+     Nó là chuỗi ĐÃ HẠ NỀN của VNDirect, tức đúng chuỗi mọi trang chart trên thị trường
+     đang vẽ. Lấy hệ số từ đó (`hạ nền ÷ thô`) thì trang này khớp với chart ngoài kia THEO
+     ĐỊNH NGHĨA, khỏi phải tự suy rồi lệch.
+     ĐÃ THỬ TỰ SUY TỪ `tc` VÀ HỎNG — đừng làm lại: `tc` của HOSE/HNX đúng bằng giá đóng cửa
+     phiên trước nên hệ số chỉ nhảy ở ngày GDKHQ (đo: lệch trung vị 0,0000%), NHƯNG `tc` của
+     UPCOM là **BÌNH QUÂN** phiên trước nên lệch MỖI NGÀY (p90 0,417%/phiên) — nhân dồn
+     1.000 phiên là nổ. Đo trên 390 mã: cách `tc` chỉ khớp chart ở 176 mã, chặn theo lịch sự
+     kiện + ngưỡng 5% cũng chỉ lên 188. Lấy thẳng `data/hist` thì độ phủ ngày **100%** và hệ
+     số ra gần như hằng số — trung vị 3 bậc mỗi mã, đúng hình dạng của hệ số chia tách. */
+  const [g,e,h]=await Promise.all([
     fetch('data/giaodich/'+sym+'.json').then(r=>r.ok?r.json():{err:1}).catch(()=>({err:1})),
-    fetch('data/sukien/'+sym+'.json').then(r=>r.ok?r.json():null).catch(()=>null)]);
+    fetch('data/sukien/'+sym+'.json').then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('data/hist/'+sym+'.json').then(r=>r.ok?r.json():null).catch(()=>null)]);
   PT.maD=g; PT.skD=(e&&e.ev)||[];
+  /* Mốc `t` của kho nến là 00:00 UTC của NGÀY PHIÊN (quy ước kho) — cắt chuỗi ISO là ra
+     đúng ngày, đừng đổi múi giờ máy. */
+  PT.hisD=null;
+  if(h&&h.t&&h.c){
+    const mp={};
+    for(let i=0;i<h.t.length;i++){
+      const v=h.c[i];
+      if(v) mp[new Date(h.t[i]*1000).toISOString().slice(0,10)]=v;
+    }
+    PT.hisD=mp;
+  }
 }
 
 /* TRANG MỘT MÃ = MỘT MỤC RIÊNG TRONG LỊCH SỬ TRÌNH DUYỆT (user chốt 22/08/2026: *"bấm vào
@@ -2020,9 +2042,21 @@ function ptVeMa(){
      Mọi giá CÙNG MỘT PHIÊN đều nhân cùng một hệ số nên mọi quan hệ trong phiên giữ nguyên:
      đóng cửa so giá TB, biên độ, giá thoả thuận so giá sàn. */
   const heso=new Array(d.length).fill(1);
-  for(let i=d.length-2;i>=0;i--){
-    const r=(tc[i+1]&&c[i])?tc[i+1]/c[i]:1;
-    heso[i]=heso[i+1]*(r||1);
+  if(PT.hisD){
+    const mp=PT.hisD, tam=new Array(d.length).fill(null);
+    let cuoi=null;
+    for(let i=0;i<d.length;i++){
+      const hv=mp[d[i]];
+      if(hv&&c[i]) cuoi=hv/c[i];
+      tam[i]=cuoi;                       // thiếu ngày -> giữ hệ số phiên trước
+    }
+    const dau=tam.find(x=>x!=null);
+    for(let i=0;i<d.length&&tam[i]==null;i++) tam[i]=dau;   // lấp phần đầu chuỗi
+    /* CHUẨN HOÁ VỀ PHIÊN CUỐI = 1. Kho nến có thể chưa kịp phiên hôm nay (lượt EOD ghi hai
+       kho ở hai bước khác nhau); chuẩn hoá thì giá hôm nay LUÔN đúng bằng giá đã khớp, còn
+       mọi tỉ lệ quá khứ giữ nguyên. */
+    const kn=tam[d.length-1]||dau||1;
+    for(let i=0;i<d.length;i++) heso[i]=(tam[i]==null?kn:tam[i])/kn;
   }
   if(PT.dc) for(let i=0;i<d.length;i++){
     const k=heso[i];

@@ -1832,36 +1832,47 @@ thêm một mảng mới về sau thì nó mặc định hiện, khỏi phải �
 
 User: *"mặc dù giá quá khứ nhưng tôi muốn nó cũng phải hạ nền giống giá hiện tại … hạ nền
 chứ không phải 1 nến dump ở chart, điều đó làm sai khá nhiều khi đánh giá data theo chiều
-sâu"*. Đúng — `c` trong `data/giaodich` là giá **THÔ như đã khớp**, nên mỗi đợt chia tách
-để lại một VÁCH DỰNG: VIC 04/12/2025 rơi 267.000 -> 142.800, nhìn y như sập 47% trong khi
-phiên đó mã **TĂNG 6,97%**.
+sâu"*, và chốt tiêu chuẩn: *"miễn chính xác với chart hiện tại đang sử dụng trên thị
+trường"*. `c` trong `data/giaodich` là giá **THÔ như đã khớp**, nên mỗi đợt chia tách để lại
+một VÁCH DỰNG: VIC 04/12/2025 rơi 267.000 -> 142.800, nhìn y như sập 47% trong khi phiên đó
+mã **TĂNG 6,97%**.
 
-**HỆ SỐ SUY TỪ CHÍNH KHO, KHÔNG CÀO GÌ THÊM:**
+**HỆ SỐ LẤY THẲNG TỪ `data/hist`:  k(i) = giá đã hạ nền(i) ÷ giá thô(i)**
 
-```
-k(i) = k(i+1) × tc(i+1) ÷ c(i)        k(phiên cuối) = 1
-```
+`data/hist` là chuỗi đã hạ nền của VNDirect — đúng chuỗi mọi trang chart trên thị trường
+đang vẽ. Lấy hệ số từ đó thì trang này khớp chart ngoài kia **theo định nghĩa**. `ptNapMa`
+nạp nó trong cùng `Promise.all` với `data/giaodich` và `data/sukien`, không nối đuôi.
+Đo trên 390 mã: **390/390 khớp ≥99% số phiên, trung vị 100% — cả HOSE, HNX lẫn UPCOM.**
 
-Ngày thường `tc(i+1) = c(i)` nên hệ số giữ nguyên; ngày GDKHQ thì `tc` đã hạ nền sẵn nên hệ
-số tụt đúng bằng tỉ lệ chia. Kiểm VIC: hệ số ra **đúng 0,500** trước 05/12/2025, và
-`adj[cuối]/adj[đầu]−1` khớp tuyệt đối chuỗi dồn `c/tc−1` (**+502,1%** cả hai) — bằng chứng
-hai cách tính cùng một thứ.
-
-Công tắc **`Giá điều chỉnh`** ở thanh tiêu đề đồ thị, **mặc định BẬT**; tắt là xem giá thô
-đúng như đã khớp. Nhớ ở `localStorage['cpvn_ptdc']`.
+> **ĐÃ THỬ TỰ SUY TỪ `tc` VÀ HỎNG — ĐỪNG LÀM LẠI.** Công thức `k(i) = k(i+1) × tc(i+1)/c(i)`
+> đúng về mặt toán và chạy hoàn hảo trên HOSE/HNX (ở đó `tc` đúng bằng giá đóng cửa phiên
+> trước — đo được lệch trung vị **0,0000%**, p90 0,000%). Nhưng **`tc` của UPCOM là BÌNH
+> QUÂN phiên trước**, lệch mỗi ngày (p90 **0,417%/phiên**) — nhân dồn 1.000 phiên là nổ:
+> HHG lệch tới **2.199.570%**. Đo trên 390 mã, cách này chỉ khớp chart ở **176 mã**; chặn
+> thêm bằng lịch `data/sukien` + ngưỡng 5% cũng chỉ lên **188**. Đây đúng cái bẫy UPCOM đã
+> ghi ở mục *Nến vẽ chart* — chỉ khác là ở đó nó chỉ làm báo nhầm, còn ở đây nó phá cả chuỗi.
 
 > **BA CHỖ TUYỆT ĐỐI KHÔNG ĐƯỢC HẠ NỀN:**
 > ① **VỐN HOÁ** — `mcap = giá THÔ × số cổ phiếu CỦA CHÍNH PHIÊN ĐÓ`. Hạ nền giá mà giữ số
 >    cổ phiếu là chia đôi vốn hoá, đúng con bệnh mục dưới vừa chữa. Vì thế khối hạ nền đặt
->    **SAU** `mcap` và `pcs` trong `ptVeMa` — **đừng dời lên trên**. Kiểm VIC 14/10/2025:
->    bật/tắt hạ nền thì đóng cửa đổi 105.950 ↔ 211.900 mà vốn hoá **giữ nguyên 816.454 tỷ**.
+>    **SAU** `mcap` và `pcs` trong `ptVeMa` — **đừng dời lên trên**. Kiểm VIC 04/12/2025:
+>    bật/tắt hạ nền thì đóng cửa đổi 133.500 ↔ 267.000 mà vốn hoá **giữ nguyên 1.028.755 tỷ**.
 > ② **`pcs`** — miễn nhiễm (tử và mẫu cùng nhân một hệ số) nhưng vẫn tính trước cho khỏi
->    phải nghĩ lại. Đo được: +3,16% ở cả hai chế độ.
+>    phải nghĩ lại. Đo được −0,89% ở cả hai chế độ.
 > ③ **VÙNG GIÁ** (`data/phien`) là giá thô của đúng một phiên; bật lại đồ thị đó thì phải
 >    nhân cùng hệ số, bằng không hai đồ thị cạnh nhau ở hai nền khác nhau.
 
-> Mọi giá CÙNG MỘT PHIÊN nhân cùng một hệ số nên mọi quan hệ trong phiên giữ nguyên: đóng
-> cửa so giá TB, biên độ, giá thoả thuận so giá sàn. Đo: TB/đóng cửa = 1,018 ở cả hai chế độ.
+> **CHUẨN HOÁ VỀ PHIÊN CUỐI = 1.** Kho nến có thể chưa kịp phiên hôm nay (lượt EOD ghi hai
+> kho ở hai bước khác nhau); chuẩn hoá thì giá hôm nay LUÔN đúng bằng giá đã khớp, còn mọi
+> tỉ lệ quá khứ giữ nguyên.
+
+> **KHO VẪN LƯU GIÁ THÔ, hạ nền tính tại chỗ lúc vẽ** (user chốt: *"lưu giá thô thì kết hợp
+> với dữ kiện để hạ nền thôi"*). Giá thô là dữ kiện gốc không dựng lại được, còn hệ số thì
+> lúc nào cũng suy ra được. Ghi đè giá đã hạ nền vào kho thì đợt chia tách kế tiếp là phải
+> cào lại toàn bộ, và vốn hoá mất luôn cơ sở tính.
+
+Công tắc **`Giá điều chỉnh`** ở thanh tiêu đề đồ thị, **mặc định BẬT**; tắt là xem giá thô
+đúng như đã khớp. Nhớ ở `localStorage['cpvn_ptdc']`.
 
 ### VỐN HOÁ SAI 4% VÌ SỐ CỔ PHIẾU NHẢY BẬC MUỘN HƠN NGÀY GDKHQ (22/08/2026)
 
