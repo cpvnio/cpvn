@@ -1878,8 +1878,11 @@ nạp nó trong cùng `Promise.all` với `data/giaodich` và `data/sukien`, kh�
 > lúc nào cũng suy ra được. Ghi đè giá đã hạ nền vào kho thì đợt chia tách kế tiếp là phải
 > cào lại toàn bộ, và vốn hoá mất luôn cơ sở tính.
 
-Công tắc **`Giá điều chỉnh`** ở thanh tiêu đề đồ thị, **mặc định BẬT**; tắt là xem giá thô
-đúng như đã khớp. Nhớ ở `localStorage['cpvn_ptdc']`.
+**CÔNG TẮC `Giá điều chỉnh` ĐÃ BỎ 23/08/2026 — hạ nền nay LUÔN BẬT.** User chốt: *"biểu đồ
+giá mặc định là biểu đồ giá đã điều chỉnh nền, ô chọn giá đã điều chỉnh cũng nên biến mất
+đi"*. Cờ `PT.dc` và khoá `localStorage['cpvn_ptdc']` **gỡ luôn chứ đừng để lại**: gỡ nút mà
+giữ cờ thì ai từng TẮT nó sẽ mắc kẹt vĩnh viễn ở giá thô và không còn chỗ nào bật lại.
+Kiểm sau khi gỡ — VIC 04/12/2025 hiện **133.500** trong khi kho ghi giá thô 267.000.
 
 ### VỐN HOÁ SAI 4% VÌ SỐ CỔ PHIẾU NHẢY BẬC MUỘN HƠN NGÀY GDKHQ (22/08/2026)
 
@@ -2329,31 +2332,40 @@ Vốn hoá = giá × số cổ phiếu, mà số cổ phiếu gần như đứng
 
 Công tắc `PT.vh` lưu ở `localStorage['cpvn_ptvh']`.
 
-### BA KIỂU NÉT LÀM THỨ BẬC + NEO THEO TRUNG BÌNH CẢ KHUNG (23/08/2026)
+### ĐỒ THỊ CHÍNH CÒN BA ĐƯỜNG + NEO THEO TRUNG BÌNH CẢ KHUNG (23/08/2026)
 
 User chốt ba việc cùng lúc: *"đường vốn hoá thực chất là đường quan trọng nhất, quan trọng
 hơn cả đường giá cho nên đường vốn hoá phải là đường in đậm có màu sắc riêng"* · *"đường giá
 TB nên chuyển thành nét đứt"* · *"thêm 1 đường mới là đường vốn hoá thị trường"*.
 
-**KIỂU NÉT NAY LÀ THỨ BẬC, KHÔNG PHẢI TRANG TRÍ.** Đồ thị chính có 5 đường; xếp:
+**ĐỒ THỊ CHÍNH CÒN ĐÚNG BA ĐƯỜNG (user chốt 23/08/2026):**
 
-| đường | nét | dày | màu |
-|---|---|---|---|
-| **vốn hoá của mã** | LIỀN | **3px** | xanh lá `#34d399`/`#16a34a` |
-| vốn hoá thị trường quy đổi | đứt thưa `[7,4]` | 2px | xám thép `#94a3b8`/`#475569` |
-| VN-Index quy đổi | liền | 1,6px | hồng sen `#f472b6`/`#db2777` |
-| đóng cửa | liền | 1,8px | gần trắng / gần đen |
-| giá TB (VWAP) | đứt mảnh `[4,3]` | 1,8px | hổ phách `#fbbf24`/`#d97706` |
+| đường | dày | màu |
+|---|---|---|
+| **vốn hoá của mã** | **3px** | xanh lá `#34d399`/`#16a34a` |
+| đóng cửa | 1,8px | gần trắng / gần đen |
+| VN-Index quy đổi | 1,6px | hồng sen `#f472b6`/`#db2777` |
 
-Ô chú thích trong `.ptleg` phải vẽ ĐÚNG kiểu nét đó (`repeating-linear-gradient` cho hai ô
-nét đứt, `height:4px` cho ô vốn hoá) — thứ bậc chỉ có trên canvas mà chỗ tra cứu lại nói cả
-ba ngang nhau thì hỏng đúng chỗ người ta đi tra.
+**KHÔNG ĐƯỜNG NÀO NÉT ĐỨT NỮA** — phân biệt hoàn toàn bằng màu và bề dày. Ô chú thích
+`.ptleg i.pkV` giữ `height:4px` (dày hơn 3px của đường khác) để thứ bậc đọc được ngay ở
+dòng chú thích, không chỉ trên canvas.
 
-> **VÌ SAO GIÁ TB PHẢI LÀ ĐƯỜNG ĐỨT chứ không phải đóng cửa.** Đo tại chỗ trên VIC khung
-> 1.000 phiên: bật cả hai thì đường đóng cửa chỉ còn **11,0%** số cột có màu (81 đoạn rời) —
-> đường giá TB vẽ SAU nên nó phủ lên. Tắt giá TB đi thì đóng cửa lên **83,9%** (8 đoạn).
-> Hai đường là hai phiên bản của cùng một đại lượng, chạy sát nhau suốt khung; cho đường
-> DẪN XUẤT thành nét đứt thì đường CHÍNH thức lộ ra qua các khoảng hở.
+> **HAI ĐƯỜNG ĐÃ GỠ CÙNG NGÀY — ĐỪNG DỰNG LẠI.**
+> · **giá TB (VWAP)** — user chốt *"đường giá trung bình cũng không cần nữa, nên ẩn đường
+>   giá trung bình luôn"*. **Ô đọc số `Giá khớp lệnh TB` thì GIỮ**: nó trả lời câu khác
+>   (giá của ĐÚNG phiên đang ghim), và là thứ duy nhất lộ ra phiên mà giá đóng cửa nói dối
+>   — PNJ 08/07/2026 đóng cửa 52.000 (+2,36%) trong khi giá TB 48.579, cả phiên là một cú
+>   kéo từ giá sàn lên. `vw` vẫn tính, vẫn được hạ nền cùng `c`.
+> · **vốn hoá toàn thị trường quy đổi** — user chốt *"vnindex cũng đại diện cho vốn hoá TT
+>   rồi"*. Đúng: VN-Index LÀ chỉ số gia quyền theo vốn hoá, hai đường nói gần như cùng một
+>   chuyện mà chen nhau trên cùng một trục. Lý do thứ hai user nêu: mã UPCOM/HNX đem so với
+>   VN-Index vốn đã không chuẩn, thêm một thước đo nữa cũng không chữa được chỗ đó.
+>   `neoTrungBinh` GIỮ NGUYÊN vì VN-Index quy đổi vẫn dùng; dựng lại chỉ cần gọi nó với
+>   `PT.tt.tt.mcap` (nhớ ×1e9 — kho đó tính bằng TỶ còn `mcap` của mã bằng ĐỒNG).
+>
+> Đo cũ vẫn đáng giữ vì nó nói về thứ tự VẼ: bật cả đóng cửa lẫn giá TB thì đường đóng cửa
+> chỉ còn **11,0%** số cột có màu (81 đoạn rời) vì giá TB vẽ SAU nên phủ lên; tắt giá TB đi
+> thì lên **83,9%** (8 đoạn). Thêm đường nào chạy sát đường giá thì nhớ chuyện này.
 
 **`neoTrungBinh` — LUẬT CHUNG cho MỌI đường quy đổi đứng cạnh vốn hoá của mã.** User chốt
 qua ba lượt: *"để 2 đường thực sự giao nhau"* (vốn hoá thị trường) → *"tương tự hãy tính với

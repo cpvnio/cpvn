@@ -650,11 +650,10 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    Và phải ĐỔI THEO CHỦ ĐỀ: gần-đen ở nền sáng, gần-trắng ở nền tối. Viết cứng một màu là
    một trong hai chế độ mất hẳn cái ô chú thích. */
 .ptleg i.pkA{background:var(--pkA);height:3px;border-radius:2px}
-/* Ô CHÚ THÍCH PHẢI VẼ ĐÚNG KIỂU NÉT CỦA ĐƯỜNG NÓ CHÚ THÍCH. Đồ thị chính nay có ba kiểu
-   nét (liền dày · đứt thưa · đứt mảnh) làm thứ bậc — ô chú thích vẫn tô đặc hết thì
-   thứ bậc đó chỉ có trên canvas, còn chỗ tra cứu lại nói cả ba ngang nhau. */
-.ptleg i.pkB{background:repeating-linear-gradient(90deg,#d97706 0 4px,transparent 4px 7px);
-  height:3px;border-radius:0}
+/* `.pkB` (giá TB) VÀ `.pkM` (vốn hoá thị trường) ĐÃ GỠ 23/08/2026 cùng với hai đường đó.
+   Luật vẫn còn hiệu lực nếu sau này có đường nét đứt: ô chú thích phải vẽ ĐÚNG kiểu nét
+   của đường nó chú thích, bằng `repeating-linear-gradient` — tô đặc hết thì thứ bậc chỉ
+   có trên canvas còn chỗ tra cứu lại nói mọi đường ngang nhau. */
 .ptleg i.pkC{background:#16a34a}
 .ptleg i.pkD{background:#dc2626}
 /* CHẤM SỰ KIỆN DOANH NGHIỆP — TRÒN, không vuông như mấy chấm chú thích khác, vì trên đồ
@@ -672,18 +671,10 @@ main{min-width:0;padding:26px 28px 60px;max-width:1420px;margin:0 auto}
    đường dày nhất trên đồ thị. User chốt 23/08/2026: nó là đường quan trọng nhất,
    quan trọng hơn cả đường giá — thứ bậc đó phải đọc được ngay ở dòng chú thích. */
 .ptleg i.pkV{background:#16a34a;height:4px;border-radius:2px}
-/* VỐN HOÁ TOÀN THỊ TRƯỜNG quy về tầm của mã — xám thép, nét đứt thưa. Xám vì tám ký
-   hiệu kia đã chiếm hết sắc phân biệt được, và vì nó đúng là cái NỀN để so chứ không
-   phải một khối tham gia thị trường. Hai chủ đề hai màu: xám đậm chìm nghỉm trên nền
-   tối, xám nhạt chìm nghỉm trên nền sáng. */
-.ptleg i.pkM{background:repeating-linear-gradient(90deg,#94a3b8 0 6px,transparent 6px 10px);
-  height:3px;border-radius:0}
-html[data-theme="light"] .ptleg i.pkM{
-  background:repeating-linear-gradient(90deg,#475569 0 6px,transparent 6px 10px)}
-/* VN-Index chồng lên đồ thị giá. Hồng sen vì bốn màu còn lại của đồ thị đó đã bị chiếm:
-   xanh trời (cột khớp lệnh) · tím (cột thoả thuận) · hổ phách (giá TB) · xanh lá nét đứt
-   (vốn hoá). Đây là đường ĐẶC — nét đứt đã là của vốn hoá, hai đường cùng nét đứt thì
-   phải dóng bằng màu ở cỡ chú thích 11,5px, quá nhỏ để phân biệt chắc chắn. */
+/* VN-Index chồng lên đồ thị giá. Hồng sen vì mấy màu còn lại của đồ thị đó đã bị chiếm:
+   xanh trời (cột khớp lệnh) · tím (cột thoả thuận) · xanh lá (vốn hoá) · đen/trắng (đóng
+   cửa). Từ 23/08/2026 đồ thị chỉ còn ba đường và KHÔNG đường nào nét đứt nữa, nên phân
+   biệt hoàn toàn bằng màu và bề dày. */
 .ptleg i.pkI{background:#db2777;height:3px;border-radius:2px}
 /* Ba đường của đồ thị ròng luỹ kế. Dùng lại ĐÚNG hai biến màu của cột (`--pkN` khối ngoại,
    `--pkT` tự doanh) để hai đồ thị nói cùng một ngôn ngữ; nội địa lấy xanh lá — nó là mảng
@@ -726,8 +717,9 @@ html[data-theme="light"] .ptleg i.pkM{
    `.ptseg` nhưng NHỎ HƠN và KHÔNG DÍNH NHAU: `.ptseg` là chọn MỘT trong nhiều (khung 100
    / 300 / 600 / 1.000) nên các nút phải liền một khối; còn đây là hai công tắc ĐỘC LẬP,
    bật cả hai hoặc tắt cả hai đều được — dính liền nhau thì đọc nhầm thành chọn một. */
-/* `flex-wrap` từ khi thêm nút thứ SÁU (Vốn hoá thị trường): sáu nút bo tròn xếp một
-   hàng không xuống dòng thì ở khổ vừa chúng đẩy tràn khỏi thanh tiêu đề. */
+/* `flex-wrap` GIỮ dù nay chỉ còn BỐN nút (bỏ `Giá điều chỉnh` và `Vốn hoá thị trường`
+   ngày 23/08/2026): ở khổ vừa, bốn nút cộng tên đồ thị vẫn đủ đẩy tràn thanh tiêu đề, và
+   thêm nút nữa về sau thì khỏi phải nhớ bật lại. */
 .ptsw{display:inline-flex;flex-wrap:wrap;gap:5px;vertical-align:-2px;margin-right:2px}
 .ptsw button{background:var(--card);color:var(--faint);border:1px solid var(--line);
   border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;
@@ -1533,7 +1525,7 @@ body.shotmode *{animation:none!important;transition:none!important}  /* clone ch
 }
 </style>
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823t"></script>
+<script defer src="assets/mobi.js?v=20260823u"></script>
 </head>
 <body>
 
@@ -1590,6 +1582,6 @@ document.addEventListener(MO,function(e){
 <div id="htip"></div>
 <div id="toast"></div>
 
-<script src="assets/congcu.js?v=20260823t"></script>
+<script src="assets/congcu.js?v=20260823u"></script>
 </body>
 </html>

@@ -767,11 +767,9 @@ const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:
           /* VỐN HOÁ TOÀN THỊ TRƯỜNG quy về cùng tầm với vốn hoá của mã — mặc định TẮT.
              Nó là đường thứ tư trên trục ngoài cùng; bật sẵn cả bốn thì lần đầu mở trang
              là một mớ đường chồng nhau, chưa kịp nhìn ra cái nào. */
-          vhtt:LS.get('cpvn_ptvhtt',false),
           vni:LS.get('cpvn_ptvni',false),
           /* HẠ NỀN GIÁ QUÁ KHỨ — mặc định BẬT. Tắt là xem giá THÔ đúng như đã khớp phiên
              đó; bật là mọi giá quá khứ quy về nền hôm nay, hết vách dựng ở ngày chia tách. */
-          dc:LS.get('cpvn_ptdc',true),
           /* Mảng/đường nào đang ẨN trên đồ thị chính — bấm vào chính ô chú thích của nó.
              Lưu theo khoá ẩn chứ không theo khoá hiện: thêm một mảng mới về sau thì nó
              mặc định HIỆN, không phải đi sửa bản đệm của mọi người dùng cũ. */
@@ -2062,7 +2060,11 @@ function ptVeMa(){
     const kn=tam[d.length-1]||dau||1;
     for(let i=0;i<d.length;i++) heso[i]=(tam[i]==null?kn:tam[i])/kn;
   }
-  if(PT.dc) for(let i=0;i<d.length;i++){
+  /* HẠ NỀN NAY LUÔN BẬT — công tắc `Giá điều chỉnh` đã bỏ 23/08/2026 (user chốt: *"biểu đồ
+     giá mặc định là biểu đồ giá đã điều chỉnh nền, ô chọn giá đã điều chỉnh cũng nên biến
+     mất đi"*). Cờ `PT.dc` gỡ luôn chứ đừng để lại: gỡ nút mà giữ cờ thì ai từng TẮT nó sẽ
+     mắc kẹt vĩnh viễn ở giá thô, và không còn chỗ nào bật lại. */
+  for(let i=0;i<d.length;i++){
     const k=heso[i];
     if(k===1) continue;
     for(const A of [c,tc,op,hi,lo,vw,vwN,ptt]) if(A&&A[i]!=null) A[i]=A[i]*k;
@@ -2176,23 +2178,16 @@ function ptVeMa(){
       }
     }
   }
-  /* ---- VỐN HOÁ TOÀN THỊ TRƯỜNG, HẠ VỀ ĐÚNG TẦM VỐN HOÁ CỦA MÃ (user chốt 23/08/2026) --
-     *"khi đối chiếu đường này với đường vốn hoá 1 loại tài sản … để 2 đường thực sự giao
-     nhau"*. Luật neo nằm ở `neoTrungBinh` phía trên — đây chỉ là chỗ gọi nó.
-     ĐỌC: đường mã ở TRÊN đường thị trường = trong khung này mã đang được định giá cao hơn
-     mức trung bình của chính nó so với thị trường. Chỗ hai đường CẮT = phiên đổi vai. */
-  let vhTT=null, vhTTis=null;
-  if(PT.vhtt){
-    const T=(PT.tt&&PT.tt.tt)||null;
-    if(T&&T.d&&T.mcap){
-      /* `PT.tt.tt.mcap` tính bằng TỶ (xem `build_phantich`), `mcap` của mã tính bằng ĐỒNG.
-         Không đổi đơn vị là lệch đúng 10⁹ — mà lệch kiểu đó thì tỉ số vẫn ra một con số
-         trông bình thường, chỉ có đồ thị là sai. */
-      const mp={}; for(let z=0;z<T.d.length;z++) if(T.mcap[z]!=null) mp[T.d[z]]=T.mcap[z]*1e9;
-      const r=neoTrungBinh(d.map(x=>mp[x]==null?null:mp[x]));
-      if(r){ vhTT=r.v; vhTTis=r.tis; }
-    }
-  }
+  /* ---- ĐƯỜNG VỐN HOÁ TOÀN THỊ TRƯỜNG ĐÃ GỠ 23/08/2026 — ĐỪNG DỰNG LẠI --------------
+     User chốt: *"vnindex cũng đại diện cho vốn hoá TT rồi, vậy thì xoá chỉ báo vốn hoá TT
+     khỏi đồ thị"*. Đúng: VN-Index LÀ chỉ số gia quyền theo vốn hoá, nên vẽ thêm một đường
+     vốn hoá toàn thị trường là hai đường nói gần như cùng một chuyện chen nhau trên cùng
+     một trục. Lý do thứ hai user nêu: mã UPCOM/HNX đem so với VN-Index vốn đã không chuẩn,
+     thêm một thước đo nữa cũng không chữa được chỗ đó.
+     `neoTrungBinh` GIỮ NGUYÊN vì đường VN-Index quy đổi vẫn dùng nó. Dựng lại thì gọi:
+         const mp={}; for(z…) if(T.mcap[z]!=null) mp[T.d[z]]=T.mcap[z]*1e9;
+         const r=neoTrungBinh(d.map(x=>mp[x]==null?null:mp[x]));
+     Nhớ ×1e9 — `PT.tt.tt.mcap` tính bằng TỶ còn `mcap` của mã tính bằng ĐỒNG. */
   /* ---- CỘT KHỚP LỆNH TÁCH BA MẢNG THEO KHỐI (user chốt 22/08/2026) ------------------
      *"trên đồ thị của mã vẫn chưa đánh dấu màu sắc cho tự doanh và khối ngoại"*. Đồ thị
      TOÀN THỊ TRƯỜNG đã tô như vậy từ lâu; đồ thị của mã thì vẫn một khối xanh trơn, nên
@@ -2351,15 +2346,13 @@ function ptVeMa(){
            +ptSw('con','pkR','còn lại')+ptSw('tt','pk2','thoả thuận')+'</span>'
            +'<span class="ptkr"> — phần tô là <b>mức tham gia</b> = (mua + bán) ÷ 2</span>'
            +'<br><b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg2">'
-           +ptSw('c','pkA','đóng cửa')+ptSw('vw','pkB','giá TB (VWAP)')+'</span>'
+           +ptSw('c','pkA','đóng cửa')+'</span>'
            +'<span class="ptkr"> — trục phải</span>'
            /* GHI THẲNG TỈ SỐ VÀO NHÃN, không viết một câu giải thích riêng: người xem phải
               biết đường thị trường đã bị chia bao nhiêu thì con số trên trục mới có nghĩa,
               mà "÷ 343" là bốn ký tự nằm ngay cạnh cái ô màu — rẻ hơn mọi cách khác. */
-           +((PT.vh||vhTT||vniL)?'  <span class="ptlgs" id="ptLeg4">'
+           +((PT.vh||vniL)?'  <span class="ptlgs" id="ptLeg4">'
               +(PT.vh?ptSw('vh2','pkV','vốn hoá'):'')
-              +(vhTT?ptSw('vhtt2','pkM','vốn hoá thị trường ÷ '
-                  +(vhTTis>=100?num(Math.round(vhTTis)):vhTTis.toFixed(1))):'')
               +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')+'</span>'
               +'<span class="ptkr"> — trục ngoài cùng, cùng đơn vị tiền</span>':'')
            /* BA DÒNG CHỮ ĐÃ BỎ 22/08/2026 — user chốt: *"tao không cần quá nhiều câu giải
@@ -2371,9 +2364,7 @@ function ptVeMa(){
               MUỐN DỰNG LẠI thì không phải tính lại gì: `skM` và `vniTom` (giữ `tu`/`vh`/
               `vni`/`ma`) vẫn còn nguyên ở trên, chỉ cần in ra. */, 1,
            '<span class="ptsw" id="ptSK">'
-             +'<button data-k="dc"'+(PT.dc?' class="on"':'')+'>Giá điều chỉnh</button>'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
-             +'<button data-k="vhtt"'+(PT.vhtt?' class="on"':'')+'>Vốn hoá thị trường</button>'
              +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
              +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
@@ -2503,8 +2494,7 @@ function ptVeMa(){
        của CÙNG một đại lượng, chạy sát nhau suốt 1.000 phiên — khác màu thôi thì ở chỗ
        chúng chập vào nhau (phần lớn khung) không tách nổi đường nào. Nét đứt cũng nói
        đúng thứ bậc: đóng cửa là con số chính thức, giá TB là con số dẫn xuất. */
-    phai:{nhan:num,series:[PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a'},
-                           PT.an.vw?null:{v:vw,mau:dark?'#fbbf24':'#d97706',net:[4,3]}]},
+    phai:{nhan:num,series:[PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a'}]},
     /* VN-Index quy đổi và vốn hoá thị trường đứng CHUNG TRỤC với vốn hoá của mã — cùng
        đơn vị (đồng) và cùng là đại lượng liền mạch qua ngày GDKHQ, nên so được trực tiếp.
        Trục phải chỉ còn giá.
@@ -2514,7 +2504,7 @@ function ptVeMa(){
        1,5px vì hồi đó nó chỉ là bản sao của đường giá; nay nó là đường CHỦ của đồ thị nên
        phải dày nhất khung (3px) và liền nét — nét đứt đã chuyển sang cho giá TB và cho
        đường thị trường. */
-    phai2:((PT.vh&&!PT.an.vh2)||(vhTT&&!PT.an.vhtt2)||(vniL&&!PT.an.vni2))
+    phai2:((PT.vh&&!PT.an.vh2)||(vniL&&!PT.an.vni2))
       ?{nhan:v=>ptTien(v),series:[
       (PT.vh&&!PT.an.vh2)?{v:mcap,mau:XANH,day:3}:null,
       /* THỊ TRƯỜNG LẤY MÀU XÁM THÉP, không lấy một màu nữa trong bảng: tám ký hiệu của đồ
@@ -2526,7 +2516,6 @@ function ptVeMa(){
          hai màu chỉ cách nhau ~50 đơn vị mỗi kênh nên chồng lên nhau là mất hẳn một đường.
          Trùng dải là chuyện ngẫu nhiên của từng mã (hai đường ở hai trục khác nhau), nên
          phải chọn màu chịu được mọi lần trùng chứ không chọn theo một mã. */
-      (vhTT&&!PT.an.vhtt2)?{v:vhTT,mau:dark?'#94a3b8':'#475569',day:2,net:[7,4]}:null,
       (vniL&&!PT.an.vni2)?{v:vniL,mau:dark?'#f472b6':'#db2777',day:1.6}:null]}:null}));
   ptVe1($('#mcL'),C({cao:230,kieu:'line',
     series:[PT.an.lk1?null:{v:lkFn,mau:cN,day:2},
@@ -2755,9 +2744,7 @@ function ptBindMa(){
   [$('#ptLeg'),$('#ptLeg2'),$('#ptLeg3'),$('#ptLeg4')].forEach(el=>{ if(el) el.onclick=legClick; });
   const sk=$('#ptSK');
   if(sk) sk.onclick=e=>{ const n=e.target.closest('button'); if(!n) return;
-    if(n.dataset.k==='dc'){ PT.dc=!PT.dc; LS.set('cpvn_ptdc',PT.dc); }
-    else if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
-    else if(n.dataset.k==='vhtt'){ PT.vhtt=!PT.vhtt; LS.set('cpvn_ptvhtt',PT.vhtt); }
+    if(n.dataset.k==='vh'){ PT.vh=!PT.vh; LS.set('cpvn_ptvh',PT.vh); }
     else if(n.dataset.k==='vni'){ PT.vni=!PT.vni; LS.set('cpvn_ptvni',PT.vni); }
     else { PT.skH[n.dataset.k]=!PT.skH[n.dataset.k]; LS.set('cpvn_ptsk',PT.skH); }
     ptVeMa(); };
