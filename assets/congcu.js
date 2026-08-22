@@ -2197,49 +2197,14 @@ function ptVeMa(){
               +(PT.vh?ptSw('vh2','pkV','vốn hoá (nét đứt)'):'')
               +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')+'</span>'
               +'<span class="ptkr"> — trục ngoài cùng, cùng đơn vị tiền</span>':'')
-           +(skM?(
-              '<br><b class="ptlgn">mốc</b>'
-              +(PT.skH.sk?' <i class="pkS1"></i> <b>D</b> cổ tức tiền'
-                +' &nbsp;<i class="pkS2"></i> <b>C</b> cổ phiếu / thưởng'
-                +' &nbsp;<i class="pkS3"></i> <b>P</b> quyền mua / phát hành':'')
-              +(PT.skH.bctc?' &nbsp;<i class="pkS4"></i> <b>B</b> báo cáo tài chính':'')
-              +'<span class="ptkr"> — bấm vào chấm để xem chi tiết</span>')
-             :'')
-           /* CON SỐ ĐI KÈM ĐƯỜNG — nhìn hai đường chỉ biết ai hơn ai, không biết hơn bao
-              nhiêu. Nó tính trên CẢ KHUNG nên đứng yên khi rê chuột, đặt ở đây thì không
-              đụng luật "thanh đọc số phải cao cố định" (thanh đó là `.ptdoc` dính, còn đây
-              là chú thích dưới đồ thị).
-              Lợi suất của mã lấy từ chuỗi dồn `c/tc−1` nên ĐÃ SẠCH cổ tức và chia tách —
-              đừng thay bằng `c[cuối]/c[đầu]` cho gọn. */
-           /* HAI PHÉP SO KHÁC NHAU, PHẢI TÁCH RA. Đường trên đồ thị so VỐN HOÁ với
-              VN-Index — đó là thứ mắt đọc được. Nhưng vốn hoá tăng còn vì PHÁT HÀNH THÊM,
-              nên nó KHÔNG phải cái người cầm cổ phiếu lãi được; số đó là lợi suất dồn từ
-              `c/tc−1` (đã sạch cổ tức và chia tách). Gộp hai thứ vào một con số là nói sai
-              một trong hai. */
-           +(vniTom?'<br>từ phiên <b>'+esc(vniTom.tu)+'</b> — <b>vốn hoá</b>: '+esc(PT.ma)
-              +' <b class="'+cls(vniTom.vh)+'">'+(vniTom.vh>0?'+':'')+vniTom.vh.toFixed(1)+'%</b>'
-              +' · VN-Index <b class="'+cls(vniTom.vni)+'">'+(vniTom.vni>0?'+':'')
-              +vniTom.vni.toFixed(1)+'%</b> · chênh <b class="'+cls(vniTom.vh-vniTom.vni)+'">'
-              +((vniTom.vh-vniTom.vni)>0?'+':'')+(vniTom.vh-vniTom.vni).toFixed(1)+' điểm %</b>'
-              +'<span class="ptkr"> · lợi suất người cầm cổ phiếu <b class="'+cls(vniTom.ma)+'">'
-              +(vniTom.ma>0?'+':'')+vniTom.ma.toFixed(1)+'%</b> — khác vốn hoá vì vốn hoá còn'
-              +' đổi theo phát hành thêm (lên khi cổ phiếu mới về, và tụt tạm giữa ngày GDKHQ'
-              +' với ngày nguồn ghi nhận số mới)</span>':'')
-           /* ĐƯỜNG HỒNG KHÔNG PHẢI ĐIỂM SỐ VN-INDEX — PHẢI NÓI RA (user chốt 22/08/2026:
-              *"sao vnindex 1732 lại có đồ thị hiển thị thấp hơn 1636, lại sai rành rành"*).
-              Phản ứng đó ĐÚNG với cái nhãn cũ: ô đọc số ghi "VN-Index 1.732,02" mà đường
-              cùng tên lại đi xuống. Không có lỗi tính — đường này là `giá(i) × (VN-Index
-              tăng) ÷ (mã tăng)`, tức GIÁ CỦA MÃ SẼ Ở ĐÂU nếu nó chạy đúng bằng thị trường,
-              nên nó tụt theo mọi cú hạ nền của chính mã y như đường giá (MBB chia cổ phiếu
-              11/08/2026: giá thô 24.250 -> 20.350, đường hồng 16.731 -> 13.911). Nhờ vậy
-              KHOẢNG CÁCH giữa hai đường mới luôn đúng bằng chênh lệch hiệu suất.
-              Sửa bằng cách gọi đúng tên, KHÔNG đổi công thức: đổi sang vẽ điểm số thật thì
-              mất luôn phép so, mà đó là lý do duy nhất nó có mặt. */
-           +(vniL?'<br><span class="ptkr"><i class="pkI"></i> <b>VN-Index quy đổi</b> = vốn'
-              +' hoá '+esc(PT.ma)+' SẼ LÀ BAO NHIÊU nếu nó lớn lên đúng bằng VN-Index kể từ'
-              +' phiên đầu khung. Nó chỉ đi theo VN-Index — <b>không</b> tụt ở ngày GDKHQ,'
-              +' vì vốn hoá không tụt khi hạ nền (giá chia đôi thì số cổ phiếu nhân đôi).'
-              +' Nằm <b>dưới</b> đường vốn hoá nghĩa là mã lớn nhanh hơn thị trường.</span>':''), 1,
+           /* BA DÒNG CHỮ ĐÃ BỎ 22/08/2026 — user chốt: *"tao không cần quá nhiều câu giải
+              thích rườm rà gây loãng"*. Cụ thể: dải chú giải MỐC SỰ KIỆN (D/C/P/B), DÒNG SỐ
+              so sánh vốn hoá với VN-Index, và câu giải thích đường "VN-Index quy đổi".
+              Cả ba đều đúng và có ích, nhưng đặt dưới một đồ thị đã có hai dòng chú thích
+              màu thì không ai đọc dòng nào — và mấy chấm sự kiện vốn đã rê/bấm ra hộp chi
+              tiết, không cần đọc trước mới hiểu.
+              MUỐN DỰNG LẠI thì không phải tính lại gì: `skM` và `vniTom` (giữ `tu`/`vh`/
+              `vni`/`ma`) vẫn còn nguyên ở trên, chỉ cần in ra. */, 1,
            '<span class="ptsw" id="ptSK">'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
              +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
