@@ -1573,13 +1573,18 @@ function ptVe1(cv, cfg){
      là một công tắc, người dùng tắt được cả bốn mảng cột để chỉ còn xem mấy đường giá —
      bản cũ `return` ngay ở đây nên cả khung trắng trơn, đọc ra như trang hỏng. */
   const coPhai=!!(cfg.phai&&cfg.phai.series&&cfg.phai.series.filter(x=>x&&x.v).length);
-  if(!S.length&&!coPhai) return;
+  /* PHẢI XÉT CẢ `phai2`, KHÔNG CHỈ `phai` — bản vá đầu bỏ sót và user dính ngay: tắt bốn
+     mảng cột + hai đường giá để CHỈ xem vốn hoá với VN-Index thì cả khung trắng, dù hai
+     đường đó nằm ở `phai2` và có đủ số. Đúng cái tổ hợp tự nhiên nhất khi người ta muốn
+     đối chiếu quy mô với thị trường. */
+  const coPhai2=!!(cfg.phai2&&cfg.phai2.series&&cfg.phai2.series.filter(x=>x&&x.v).length);
+  if(!S.length&&!coPhai&&!coPhai2) return;
   const n=cfg.d.length;
   let lo=Infinity, hi=-Infinity;
   for(const s of S) for(let i=0;i<n;i++){ const v=cfg.chong?S.reduce((a,x)=>a+(x.v[i]||0),0):s.v[i];
     if(v!=null&&!isNaN(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); } }
   const coCot=hi>-Infinity;
-  if(!coCot){ if(!coPhai) return; lo=0; hi=1; }
+  if(!coCot){ if(!coPhai&&!coPhai2) return; lo=0; hi=1; }
   /* Đồ thị CỘT phải CHỨA MỐC 0 — cột mà không từ 0 thì tỉ lệ chiều cao nói dối.
      Nhưng ghim `lo=0` thì cột ÂM biến mất: đồ thị "% thay đổi mỗi phiên" chỉ còn phiên
      tăng, đọc ra như mã chỉ có lên chứ không có xuống. Nên lấy `min(0, …)`/`max(0, …)`
