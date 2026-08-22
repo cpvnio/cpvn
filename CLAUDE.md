@@ -2592,18 +2592,53 @@ khác) — thà để nguyên còn hơn sửa theo một nguồn.
 > ③ **"Phẳng" phải đo bằng TỈ LỆ ĐIỂM BÁM TRUNG VỊ (90%), đừng đo bằng biên độ** — PAP có
 >    trung vị đoạn đầu ra ĐÚNG 1,3333 mà vài phiên nhiễu đẩy biên độ lên 0,66.
 
-**CÒN LẠI, ĐO TRÊN 1.388 MÃ SAU KHI SOI:**
+**ĐƯỜNG THỨ HAI — VỐN GÓP ĐỨNG RA KHI `MARKETCAP` NHIỄU QUÁ (`_theo_vongop`).** PAP và SIP
+là hai ca `MARKETCAP` thấy có gì đó sai nhưng không định vị nổi ngày bậc. Vốn góp nói được,
+nhưng **chỉ ở chỗ nó thật sự nói**: quý mà số cổ phiếu KHÔNG ĐỔI suốt quý (`vg[q]==vg[q-1]`
+— vốn góp là số CUỐI kỳ, áp cho phiên giữa quý chỉ đúng khi trong quý không có gì đổi), VÀ
+vốn góp phải khớp `MARKETCAP` của chính quý đó.
+
+```
+SIP  cổ phiếu quỹ bị HUỶ trong Q4/22   929,04 -> 909,04 tỷ = −2.000.000 cp
+     92.904.149 tới hết Q3/22, rồi 90.904.146   (bản đi ngược chỉ biết CHIA, không biết HUỶ)
+PAP  phát hành thêm 50 triệu cp        1.500 -> 2.000 tỷ
+     150.000.000 tới 11/11/2022, rồi 200.000.000  (ngày lấy từ MARKETCAP, chuẩn tới phiên)
+```
+
+> **BA CỔNG, GỠ CỔNG NÀO CŨNG PHÁ SỐ ĐANG ĐÚNG:**
+> ① **Phải có cờ của `MARKETCAP` trước.** Chạy luật vốn góp một mình thì nó "sửa" **79 mã**
+>    với hệ số loạn xạ (DHT 0,357 · DXP 0,618 · CAP 0,781) — toàn mã bản đi ngược vốn đã
+>    đúng, sai là do vốn góp đăng ký TRỄ hơn ngày GDKHQ. Đúng cái hồi kiểm đã đo: vốn góp
+>    một mình 98,33% so với 99,06%.
+> ② **BỎ HẲN QUÝ CÓ NGÀY GDKHQ.** Ở đó vốn góp và `MARKETCAP` **KHÔNG CÒN ĐỘC LẬP** — cả
+>    hai cùng lấy số cổ phiếu ở CUỐI QUÝ nên cùng trễ mấy phiên sau ngày GDKHQ, rồi cùng
+>    chỉ vào số CŨ và "xác nhận" lẫn nhau. Suýt phá hai ngân hàng lớn: VPB (thưởng 50%
+>    ngày 28/09/2022) và HDB (cổ tức 25% ngày 27/09) — bản đi ngược đặt bậc ĐÚNG ngày, luật
+>    này định kéo 3-4 phiên sau đó về nền cũ.
+> ③ **Mép vùng lấp phải hỏi nguồn, và phải tính theo lịch RIÊNG của mã.** Lấy `LUI_TOI_DA`
+>    (150) làm trần thì bậc ở phiên 148 vẫn lọt — DPR và GKM có bậc ngày 24/03/2023, chỗ đó
+>    `sh` là số `ratios` cho. `_moc_ratios()` hỏi thẳng kỳ cũ nhất của `OUTSTANDING_SHARES`
+>    (nó trôi dần vì chặn 16 quý, viết cứng một ngày là vài tháng nữa sai). Và `ngay` trong
+>    `soi()` là lịch DÀI NHẤT của kho — mã có phiên đầu sớm hơn (SIP bắt đầu 11/08 trong khi
+>    phần lớn 18/08) thì chỉ số lệch, phải dò lại `tran` trên `d` của chính mã.
+
+> **VÒNG 1 PHẢI LẤY MẪU TRONG VÙNG LẤP, VÀ ĐO BẰNG TRUNG VỊ.** Bản đầu rải 12 ngày khắp
+> 1.769 phiên nên chỉ trúng ĐÚNG MỘT phiên trong vùng lấp — SIP trượt sát nút (max|v−1| =
+> 0,0191 so với ngưỡng 0,02) chỉ vì cái mẫu duy nhất đó rơi vào phiên ít nhiễu. Nay 8 ngày
+> trong vùng lấp + 4 ngày đối chứng, và so TRUNG VỊ hai vùng: max thì một phiên nhiễu cũng
+> dựng cờ, trung vị mới nói được "cả vùng lệch". Nhóm nghi từ **445 xuống 29 mã**.
+
+**CÒN LẠI, ĐO TRÊN 1.379 MÃ:**
 
 | | số mã | vốn hoá |
 |---|---|---|
-| `MARKETCAP` mới là bên lệch (vốn góp bênh `sh`) — **không phải lỗi** | 37 | 369.883 tỷ |
-| **`sh` sai thật, chưa sửa được** | **7** | 25.945 tỷ |
-| không có vốn góp để phân xử | 15 | 1.755 tỷ |
+| `MARKETCAP` mới là bên lệch (vốn góp bênh `sh`) — **không phải lỗi** | 36 | — |
+| **`sh` sai thật** — AGG 0,9% · SFI 5,0% | **2** | 2.435 tỷ |
+| không có vốn góp để phân xử (đều là mã bé) | 15 | 1.755 tỷ |
 
-Tức nhiều nhất **22 mã đáng ngờ trên 1.388 = 1,6%, chiếm 0,27% vốn hoá thị trường**. Lớn
-nhất là SIP 12.081 tỷ và PAP 10.710 tỷ — cả hai `MARKETCAP` nhiễu ngay tại chỗ bậc nên bộ dò
-không dám chốt. Tổng vốn hoá thị trường sau khi soi: lệch **−0,01% / +0,05% / −0,02%** ở ba
-phiên kiểm (trước khi soi là +0,08% / +0,10% / −0,02%).
+**17 mã đáng ngờ = 1,23%, chiếm 0,041% vốn hoá thị trường** (trước đường thứ hai: 22 mã /
+0,269%). Tổng vốn hoá thị trường đối chiếu với `MARKETCAP` cộng cả sàn: **−0,07% / +0,04% /
+−0,02%** ở ba phiên trong vùng lấp, ngang đúng vùng `ratios` vốn đã đúng (+0,06% / −0,14%).
 
 > **BỐN CỬA ĐÃ DÒ VÀ ĐÓNG — đừng dò lại:** TCBS `apipubaws` (404 cả ba endpoint) · Simplize
 > `historical/quote` (chỉ trả ảnh chụp hiện tại, không có vốn hoá theo ngày) · `api.hsx.vn`

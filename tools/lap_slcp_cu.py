@@ -237,6 +237,11 @@ def _quy_truoc(ngay):
     return "Q%d/%02d" % (q, y % 100)
 
 
+def _ky(ngay):
+    """Nhãn quý chứa `ngay`, dạng 'Qn/yy'."""
+    return "Q%d/%02d" % ((int(ngay[5:7]) - 1) // 3 + 1, int(ngay[:4]) % 100)
+
+
 def _hoi(q, t1, t2):
     o = json.loads(nhipmang.get(API % (q, t1, t2), timeout=90))
     ra = {}
@@ -245,7 +250,25 @@ def _hoi(q, t1, t2):
     return ra
 
 
-def _bac(r):
+def _moc_ratios():
+    """Phiên đầu tiên mà `ratios` có số — tức MÉP THẬT của vùng vừa lấp.
+
+    ĐỪNG DÙNG `LUI_TOI_DA` LÀM TRẦN CHO BƯỚC SỬA: nó là 150 trong khi vùng lấp thật chỉ
+    ~95 phiên, nên bậc nằm ở phiên 148 (DPR, GKM — 24/03/2023) vẫn lọt. Chỗ đó `sh` là số
+    `ratios` cho, đã đúng; sửa vào là phá số tốt. Hỏi thẳng nguồn cho chắc: `ratios` chặn
+    16 quý nên kỳ cũ nhất trôi dần theo thời gian, viết cứng một ngày là vài tháng nữa sai.
+    """
+    try:
+        o = json.loads(nhipmang.get(
+            "https://api-finfo.vndirect.com.vn/v4/ratios?q=code:HPG,VNM,VCB"
+            "~ratioCode:OUTSTANDING_SHARES&order=reportDate&size=4000", timeout=60))
+        rd = sorted({x["reportDate"] for x in (o.get("data") or []) if x.get("reportDate")})
+        return rd[0] if rd else None
+    except Exception:
+        return None
+
+
+def _bac(r, tran):
     """r = [(chỉ số, thương số)] theo thứ tự thời gian. Trả hằng số K của đoạn đầu nếu
     chuỗi đúng hình BẬC THANG SẠCH (đoạn đầu là hằng K, đoạn cuối phẳng ở 1,000)."""
     r = [x for x in r if x[0] < XET]
@@ -258,7 +281,11 @@ def _bac(r):
     # nhiễu lẻ mà vẫn loại được chuỗi nhiễu thật (SIP dao động 0,949-0,997, không mức
     # nào gom nổi 90%).
     def phang(v, moc):
-        return sum(1 for x in v if abs(x / moc - 1) <= DEU) >= 0.9 * len(v)
+        # 80% chứ không 90%: PAP có đoạn đầu K = 1,3333 chuẩn xác nhưng 9/60 phiên nhiễu
+        # (2-11/11/2022, MARKETCAP lấy nền giá khác) nên chỉ bám 85%. Nới được vì chốt
+        # chặn thật là phép đối chiếu VỐN GÓP phía dưới — dò lỏng chỉ làm ứng viên nhiều
+        # hơn, không làm bản sửa lỏng hơn.
+        return sum(1 for x in v if abs(x / moc - 1) <= DEU) >= 0.8 * len(v)
 
     duoi = [v for _, v in r[-DAY:]]
     if abs(statistics.median(duoi) - 1) > DEU or not phang(duoi, 1.0):
@@ -281,13 +308,92 @@ def _bac(r):
         return None
     # BẬC PHẢI NẰM TRONG VÙNG VỪA LẤP. Ngoài đó là số `ratios` cho — sai lệch ở đấy là
     # chuyện của MARKETCAP chứ không phải của mình, sửa vào là phá số đúng.
-    if r[p - 1][0] >= LUI_TOI_DA:
+    if r[p - 1][0] >= tran:
         return None
     dau = [v for _, v in r[:p]]
     K = statistics.median(dau)
     if abs(K - 1) < BAC or not phang(dau, K):
         return None
-    return K, r[p - 1][0]
+    # TINH CHỈNH NGÀY BẬC: lấy phiên CUỐI CÙNG mà thương số gần K hơn gần 1. Vòng quét
+    # trên chỉ tìm chỗ BẮT ĐẦU phẳng nên nó dừng sớm khi ngay trước bậc có phiên nhiễu —
+    # PAP dừng ở 09/11 trong khi hai phiên 10 và 11/11 vẫn thuộc nền cũ.
+    cuoi = r[p - 1][0]
+    for i, v in r:
+        if i >= tran:
+            break
+        if abs(v - K) < abs(v - 1):
+            cuoi = max(cuoi, i)
+    return K, cuoi
+
+
+def _theo_vongop(sym, o, sh, r, tran, thu):
+    """ĐƯỜNG THỨ HAI — khi `MARKETCAP` thấy có gì đó sai nhưng NHIỄU quá, không định vị nổi
+    ngày bậc. Lúc đó vốn góp đứng ra, nhưng chỉ ở chỗ nó thật sự nói được:
+
+      · CHỈ QUÝ MÀ SỐ CỔ PHIẾU KHÔNG ĐỔI SUỐT QUÝ (`vg[q] == vg[q-1]`). Vốn góp là số ở
+        CUỐI kỳ; áp nó cho một phiên giữa quý chỉ đúng khi trong quý không có gì đổi. Quý
+        có biến động thì bỏ hẳn — thà để nguyên còn hơn đặt bậc sai ngày.
+      · VÀ VỐN GÓP PHẢI KHỚP `MARKETCAP` của chính quý đó. Hai nguồn độc lập cùng chỉ vào
+        một số thì mới sửa; một mình vốn góp thì không.
+
+    ĐỪNG BỎ CỔNG THỨ HAI. Chạy luật này KHÔNG có cờ của `MARKETCAP` thì nó "sửa" **79 mã**
+    với hệ số loạn xạ (DHT 0,357 · DXP 0,618 · CAP 0,781) — toàn mã mà bản đi ngược vốn đã
+    đúng, sai là do vốn góp đăng ký TRỄ hơn ngày GDKHQ. Đúng cái đã đo ở hồi kiểm: dùng vốn
+    góp một mình ăn 98,33% so với 99,06% của bản đi ngược.
+
+    Đo trên nhóm sai chắc chắn: SIP 35 phiên · AGG 30 · DDG 37. Cả ba đều có vốn góp và
+    `MARKETCAP` khớp nhau tới bốn chữ số (SIP 92.904.149 so với 92.905.514) trong khi `sh`
+    lệch hẳn. SCJ thì vốn góp bênh `sh` -> bỏ qua, đúng như phải thế.
+    """
+    V = _vongop(sym)
+    if not V:
+        return 0
+    d = o["d"]
+    ref = min(tran + 60, len(d) - 1)
+    kref = _ky(d[ref])
+    if kref not in V or ref >= len(sh) or not sh[ref] or not V[kref]:
+        return 0
+    mc = {}
+    for i, v in r:
+        if i < tran:
+            mc.setdefault(_ky(d[i]), []).append(sh[i] / v if v else None)
+    # ── BỎ HẲN QUÝ NÀO CÓ NGÀY GDKHQ ────────────────────────────────────────────────
+    # Ở đó vốn góp và `MARKETCAP` **KHÔNG CÒN ĐỘC LẬP**: cả hai cùng lấy số cổ phiếu ở CUỐI
+    # QUÝ nên cùng trễ đúng mấy phiên sau ngày GDKHQ, rồi cùng chỉ vào con số CŨ và "xác
+    # nhận" lẫn nhau. Đúng con bệnh `va_slcp_gdkhq.py` sinh ra để chữa, chỉ là lần này nó
+    # nằm trong chính nguồn đối chiếu.
+    # Suýt phá hai mã to: VPB có thưởng 50% ngày 28/09/2022 và HDB cổ tức 25% ngày 27/09 —
+    # bản đi ngược đặt bậc ĐÚNG ngày, mà luật này định kéo 3-4 phiên sau đó về nền cũ.
+    # Sự kiện đã biết thì bản đi ngược mới là bên đúng; vốn góp chỉ được nói ở chỗ nó im.
+    co_sk = {_ky(x) for x, _ in su_kien(sym)}
+    dat = 0
+    for i in range(min(tran, len(sh))):
+        if not sh[i]:
+            continue
+        k = _ky(d[i])
+        if k in co_sk:
+            continue
+        q, y = int(k[1]), int(k[3:])
+        kp = "Q%d/%02d" % ((4, y - 1) if q == 1 else (q - 1, y))
+        if k not in V or kp not in V or V[k] != V[kp]:
+            continue                       # quý có biến động -> nguồn không nói được gì
+        moi = sh[ref] * V[k] / V[kref]
+        if not moi or abs(moi / sh[i] - 1) <= 0.01:
+            continue                       # vốn góp không phản đối `sh`
+        goi = [x for x in (mc.get(k) or []) if x]
+        if len(goi) < 5:
+            continue
+        if abs(moi / statistics.median(goi) - 1) > 0.01:
+            continue                       # MARKETCAP không đồng ý với vốn góp -> bỏ
+        sh[i] = int(round(moi))
+        dat += 1
+    if dat:
+        print("     %-6s theo vốn góp: %d phiên đầu -> %s (MARKETCAP đồng ý)"
+              % (sym, dat, format(sh[0], ",")), flush=True)
+        if not thu:
+            o["sh"] = sh
+            ghi(os.path.join(GD, sym + ".json"), o)
+    return dat
 
 
 def soi(syms, thu=False):
@@ -298,10 +404,23 @@ def soi(syms, thu=False):
             ngay = o["d"]
     if not ngay:
         return
+    moc = _moc_ratios()
+    if not moc:
+        print("  soi: không hỏi được độ sâu của ratios - bỏ qua cả bước", flush=True)
+        return
+    print("  soi: ratios có số từ %s -> chỉ được sửa phiên trước mốc đó" % moc, flush=True)
     # ── vòng 1: 12 ngày rải đều cả khung, hỏi cả sàn ──
-    moc = [ngay[i] for i in range(0, len(ngay), max(1, len(ngay) // 12))][:12]
+    # ── LẤY MẪU ĐÚNG TRONG VÙNG LẤP, ĐỪNG RẢI ĐỀU CẢ KHO ────────────────────────────
+    # Bản đầu rải 12 ngày khắp 1.769 phiên nên chỉ trúng ĐÚNG MỘT phiên trong vùng lấp —
+    # SIP trượt sát nút (max|v-1| = 0,0191 so với ngưỡng 0,02) chỉ vì cái mẫu duy nhất đó
+    # rơi vào một phiên MARKETCAP ít nhiễu. Vùng lấp mới là chỗ có lỗi, phải soi vào đó.
+    # Và đo bằng TRUNG VỊ chứ đừng đo bằng max: max thì một phiên nhiễu cũng đủ dựng cờ,
+    # còn trung vị nói được "cả vùng lệch" — đúng thứ đang tìm.
+    k0 = next((i for i, x in enumerate(ngay) if x >= moc), len(ngay))
+    lo = [ngay[i] for i in range(0, k0, max(1, k0 // 8))][:8]
+    ref = [ngay[i] for i in range(k0, len(ngay), max(1, (len(ngay) - k0) // 4))][:4]
     mc = {}
-    for n in moc:
+    for n in lo + ref:
         try:
             mc.update(_hoi("", n, n))
         except Exception as e:
@@ -310,18 +429,25 @@ def soi(syms, thu=False):
     nghi = []
     for s, o in kho.items():
         d, c, sh = o["d"], o.get("c") or [], o.get("sh") or []
-        r = []
-        for i, x in enumerate(d):
-            if x not in mc or i >= len(sh) or not sh[i] or i >= len(c) or not c[i]:
-                continue
-            v = mc[x].get(s)
-            if v:
-                r.append((i, sh[i] / (v / c[i])))
-        if len(r) < 8:
+        vi = {x: i for i, x in enumerate(d)}
+
+        def ty(ds):
+            ra = []
+            for n in ds:
+                i = vi.get(n)
+                if i is None or i >= len(sh) or not sh[i] or i >= len(c) or not c[i]:
+                    continue
+                v = (mc.get(n) or {}).get(s)
+                if v:
+                    ra.append(sh[i] / (v / c[i]))
+            return ra
+
+        a, b = ty(lo), ty(ref)
+        if len(a) < 3 or len(b) < 2:
             continue
-        if abs(statistics.median([v for _, v in r[-4:]]) - 1) > DEU:
+        if abs(statistics.median(b) - 1) > DEU:
             continue        # MARKETCAP đo khác định nghĩa với mã này (cổ phiếu quỹ) -> bỏ
-        if max(abs(v - 1) for _, v in r) > BAC:
+        if abs(statistics.median(a) - 1) > DEU:
             nghi.append(s)
     print("  soi: %d mã nghi có bậc thiếu" % len(nghi), flush=True)
     if not nghi:
@@ -355,8 +481,17 @@ def soi(syms, thu=False):
             v = (day.get(x) or {}).get(s)
             if v:
                 r.append((i, sh[i] / (v / c[i])))
-        kq = _bac(r)
+        # MÉP PHẢI TÍNH THEO LỊCH RIÊNG CỦA MÃ. `ngay` là lịch DÀI NHẤT trong kho; mã nào
+        # có phiên đầu sớm hơn (SIP bắt đầu 11/08 trong khi phần lớn 18/08) thì chỉ số của
+        # nó lệch với chỉ số của lịch chung, lấy nhầm là cắt cụt hoặc lấn sang vùng ratios.
+        tran = next((i for i, x in enumerate(d) if x >= moc), len(d))
+        if tran <= 0:
+            continue
+        kq = _bac(r, tran)
         if not kq:
+            n = _theo_vongop(s, o, sh, r, tran, thu)
+            if n:
+                sua += 1
             continue
         K, cuoi = kq
         # ── CHỈ SỬA KHI VỐN GÓP CŨNG GẬT ĐẦU ────────────────────────────────────────
