@@ -1315,7 +1315,10 @@ const DTM={
   room:  {t:'Room ngoại còn',         d:'0% là hết room; mã nguồn không biết trần thì để trống', f:v=>v.toFixed(2)+'%', don:'%'},
   shu:   {t:'Sở hữu nước ngoài',      d:'', f:v=>v.toFixed(1)+'%', don:'%'},
   ttp:   {t:'Tỉ trọng thoả thuận',    d:'giá trị thoả thuận ÷ giá trị khớp lệnh', f:v=>v.toFixed(2), don:'lần'},
-  ff:    {t:'Lưu thông',              d:'% cổ phiếu đang thật sự lưu thông trên sàn', f:v=>v.toFixed(1)+'%', don:'%'},
+  /* ĐỊNH NGHĨA PHẢI NÓI RA PHÉP TÍNH, đừng để "đang thật sự lưu thông" — câu đó nghe như
+     một con số đo được, trong khi nó là 100% trừ đi phần cổ đông lớn nắm. Người đọc mở
+     bảng cổ đông ngay dưới là cộng lại kiểm được. Xem `tools/kho_luuthong.py`. */
+  ff:    {t:'Lưu thông',              d:'100% trừ phần các cổ đông nắm từ 5% trở lên (tính từ sổ cổ đông)', f:v=>v.toFixed(1)+'%', don:'%'},
   pc:    {t:'% thay đổi phiên',       d:'', f:v=>(v>0?'+':'')+v.toFixed(2)+'%', don:'%'},
 };
 /* Ba dòng điều kiện là đủ: bốn dòng trở lên thì gần như lượt lọc nào cũng ra rỗng, mà
@@ -2698,7 +2701,7 @@ function ptVeMa(){
        nghìn tỷ mà lưu thông 2,6%, tức chỉ 7 nghìn tỷ trôi nổi, trong khi STB 140 nghìn tỷ
        với 95% thì gần như toàn bộ. Cùng lập luận đã ghi ở mục FREE FLOAT. */
     +oo('Lưu thông', ffM!=null?(ffM.toFixed(1)+'%'):oNul,
-        ffM==null?'nguồn chưa có tỉ lệ lưu thông'
+        ffM==null?'kho chưa đủ sổ cổ đông để tính'
           :((sh[k]?num(Math.round(sh[k]*ffM/100))+' cp':'')
             +(mcap[k]?(sh[k]?' · ':'')+'<b>'+ptTien(mcap[k]*ffM/100)+'</b>':'')))
     /* PHIÊN NÀO CÓ BẢN TÁCH (Vietstock, 249 phiên gần nhất) thì in bản tách vì nó nói

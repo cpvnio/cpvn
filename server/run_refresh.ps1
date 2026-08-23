@@ -107,6 +107,14 @@ if ($LASTEXITCODE -ne 0) { "kho_giaodich --chiso EXIT $LASTEXITCODE - bo qua, ch
 
 # [4] DỰNG BẢNG PHIÊN LẦN ĐẦU — vài giây. Tới đây trang /phantich đã có đủ giá, khối lượng,
 # giá trị, thoả thuận, khối ngoại, tự doanh, vốn hoá.
+# [3b] TI LE LUU THONG tinh lai tu so co dong -> ghi de `freeFloat` trong data/profile.
+# KHONG goi mang, ~1 giay. PHAI DUNG TRUOC build_phantich vi buoc do nuong `ff` vao file
+# phien. Va phai chay MOI NGAY: refresh_daily.work_prof dung lai ho so 3 ngay mot lan bang
+# dict moi, tuc no tra `freeFloatRate` cua nguon ve cho `freeFloat` va xoa `ffNguon` — chay
+# lai moi ngay thi so luon duoc tinh lai tu so co dong vua cao.
+& $py tools\kho_luuthong.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_luuthong EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 & $py tools\build_phantich.py 2>&1
 if ($LASTEXITCODE -ne 0) { "build_phantich (luot 1) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 

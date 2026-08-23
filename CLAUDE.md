@@ -48,6 +48,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/soi_thanhkhoan.py` | 130 | Cộng kho rồi đặt cạnh số của sàn — **phép đo phải chạy sau mọi lượt đụng vào kho giao dịch**. KHÔNG gọi mạng |
 | `tools/kho_thoathuan.py` | 260 | Vá `pv`/`pval` từ Vietstock cho cả kho. **Lượt một lần**, không nằm trong pipeline |
 | `tools/lap_slcp_cu.py` | 190 | Lấp `sh` cho phần ĐẦU khung bằng cách đi ngược `data/sukien`. KHÔNG gọi mạng, bước `[1c]` của lượt EOD |
+| `tools/kho_luuthong.py` | 130 | Tỉ lệ **lưu thông** tính từ sổ cổ đông (`100% − Σ cổ đông ≥5%`) -> ghi đè `freeFloat` trong `data/profile`. KHÔNG gọi mạng, bước `[3b]` của lượt EOD |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -1375,6 +1376,12 @@ Mắt bắt lấy con số `10.167` rồi dừng ở đó, chữ "nghìn" phía 
 > Nhắc lại ở đây vì nó tái phạm được: mỗi lần thấy một con số 8 chữ số là rất muốn rút gọn.
 
 ### FREE FLOAT — có sẵn trong kho từ lâu mà không chỗ nào đọc (21/08/2026)
+
+> ⚠️ **CON SỐ TRONG MỤC NÀY ĐÃ LỖI THỜI TỪ 24/08/2026** — hồi đó `freeFloat` còn lấy thẳng
+> `freeFloatRate` của Simplize, thứ hoá ra là **ước lượng theo dải** chứ không phải tỉ lệ
+> tính ra. Mọi số ở đoạn dưới (20,1% vốn hoá lưu thông, 1.429 mã có tỉ lệ, thứ hạng BID/VGI)
+> vì thế **đừng trích lại**. Cách tính nay ở mục *LƯU THÔNG TỰ TÍNH TỪ SỔ CỔ ĐÔNG*; phần
+> vẫn đúng của mục này là LÝ DO free float đáng đọc và phép kiểm chéo bằng vòng quay.
 
 `data/profile/{MÃ}.json` có trường `freeFloat` cho **1.429/1.525 mã**. Đo phiên 20/08:
 
@@ -3732,6 +3739,77 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `draw()` — để nguyên chỗ cũ thì lúc lớp vẽ chạy `geo.rsiTop` còn rỗng, hình lặng lẽ biến mất.
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
+
+### LƯU THÔNG TỰ TÍNH TỪ SỔ CỔ ĐÔNG — `tools/kho_luuthong.py` (24/08/2026)
+
+User: *"lưu thông của nhiều mã cần xác định lại. ví dụ DNSE ghi nhận BIDV có lưu thông 6%
+trong khi chúng ta chỉ ghi 2%. cần kiểm tra và lưu lại tỉ lệ lưu thông cho toàn bộ các mã"*.
+
+**`freeFloatRate` CỦA SIMPLIZE LÀ ƯỚC LƯỢNG THEO DẢI, KHÔNG PHẢI TỈ LỆ TÍNH RA** — đo trên
+988 mã có cả hai số:
+
+- lệch sổ cổ đông của **chính nó** trung vị **10,17 điểm %**, p75 23,9 · p90 40,4;
+- **48% giá trị là số NGUYÊN**, dồn vào bội số của 5: 35 · 40 · 30 · 20 · 10 · 25 · 45 · 50;
+- BID ghi **2,6%** trong khi sổ cổ đông ngay trong cùng file nói rõ: Ngân hàng Nhà nước
+  **80,99%** + KEB Hana Bank **15,00%** = 95,99% → còn **4,01%**.
+
+**CÁCH TÍNH NAY LÀ MỘT CÂU, AI CŨNG KIỂM LẠI ĐƯỢC BẰNG BẢNG CỔ ĐÔNG NGAY TRÊN TRANG:**
+
+```
+lưu thông = 100% − tổng tỉ lệ của các cổ đông nắm từ 5% trở lên
+```
+
+> **NGƯỠNG 5% KHÔNG PHẢI SỐ CHỌN BỪA** — đó đúng là mốc "cổ đông lớn" mà Luật Chứng khoán
+> bắt công bố, nên cũng là ranh giới của thứ mình NHÌN THẤY. Dưới mốc đó `data/profile` đã
+> lọc bỏ cổ đông cá nhân (quyết định về dữ liệu cá nhân, xem mục *Cổ đông*) — có muốn trừ
+> cũng không có số.
+
+> **HỆ QUẢ PHẢI BIẾT: đây là CẬN TRÊN của lưu thông.** Mã mà người nội bộ nắm rải rác mỗi
+> người dưới 5% thì phần đó không trừ được — FPT ra 87,3%, MWG 89,5%. Với mã có cổ đông chi
+> phối lộ diện (nhà nước, tập đoàn mẹ, nhà sáng lập) thì con số là ĐÚNG, không phải cận trên:
+> BID 4,01 · VCB 10,20 · VGI 0,97 · ACV 4,59 · GVR 3,23 · CTG 15,81.
+
+> **ĐÃ THỬ MIỄN TRỪ QUỸ ĐẦU TƯ RỒI BỎ.** Lý lẽ nghe xuôi (cổ phiếu quỹ nắm vẫn mua bán hằng
+> ngày) nhưng nó đẻ ra số không tin được: **STB ra đúng 100,00%** vì cổ đông ≥5% duy nhất là
+> một quỹ nắm 5,21%. Không doanh nghiệp niêm yết nào có 100% cổ phiếu tự do chuyển nhượng, mà
+> một con số như thế nhảy thẳng lên đầu mọi bảng xếp theo lưu thông. Thêm nữa nó bắt phải
+> NHẬN DẠNG tên quỹ bằng từ khoá — nhận nhầm một công ty mẹ thành quỹ là thổi lưu thông lên
+> mà không có gì báo.
+
+> **KHÔNG CÓ AI TỪ 5% TRỞ LÊN = ĐỂ TRỐNG, ĐỪNG TRẢ VỀ 100%.** Nhìn thì giống "công ty đại
+> chúng thật sự", soi ra toàn là sổ cổ đông KHUYẾT: **AMV đúng 1 dòng tổng 3,05%**, DDG 1
+> dòng 0,94%, DRH 1 dòng 0,29%, HQC 2 dòng 0,36%; **EIB 13 dòng mà tổng chỉ 6,85%** trong
+> khi mã đó có cổ đông tổ chức nắm hàng chục phần trăm. Không phân biệt được *"không có cổ
+> đông lớn"* với *"nguồn chưa ghi cổ đông lớn"* thì 100% là đẩy đúng nhóm KHÔNG BIẾT GÌ lên
+> đầu bảng. Chặn 18 mã.
+
+**BỐN NGUỒN KHÁC ĐÃ ĐO VÀ LOẠI — đừng dò lại:**
+
+| nguồn | vì sao loại |
+|---|---|
+| VNDirect `ratioCode:FREEFLOAT` | thực chất là `1 − TOTAL_INTERNAL_OWNERSHIP`, **bỏ qua sở hữu nhà nước**: báo **VGI 100%** trong khi Viettel nắm 99,03%; BID 89%, VCB 89,97% |
+| `STATE_OWNERSHIP` + `TOTAL_INTERNAL_OWNERSHIP` | hai trường điền KHÔNG NHẤT QUÁN: GVR có NN 0% / nội bộ 96,77%, còn BID có NN 59,35% (thật 80,99%) / nội bộ 0,01% → `1−NN−nb` ra 40,6% cho BID |
+| khối `own` của Simplize | tự mâu thuẫn — 32 mã tổng vượt 100%, POB ra **−84,3%**, KTC **−106,1%** |
+| HOSE và DNSE | không mở endpoint nào trả tỉ lệ free-float (đã dò `api.hsx.vn` indices · index-constituents · stock-info, và 6 đường của `services.entrade.com.vn`) |
+
+**CÁI GIÁ, BIẾT TRƯỚC: ĐỘ PHỦ 1.432 → 1.009 MÃ.** 467 hồ sơ không có sổ cổ đông và phần lớn
+là do NGUỒN không có (hỏi thẳng Simplize: `shareholderDetails` trả mảng rỗng), cộng 32 mã sổ
+tổng vượt 100% và 18 mã không ai đạt 5%. Điền số ước lượng vào đó là quay lại đúng thứ vừa
+bỏ — trang in *"kho chưa đủ sổ cổ đông để tính"*.
+
+> **VỐN HOÁ LƯU THÔNG TOÀN THỊ TRƯỜNG ĐỔI TỪ 20,1% LÊN 36,9%** (3.798 nghìn tỷ). Hai thứ
+> cùng đẩy: số từng mã sát hơn, và mẫu chỉ còn mã tính được. Đừng so con số này với bản ghi
+> cũ trong mục *FREE FLOAT* — mục đó đã dán cảnh báo lỗi thời.
+
+**BƯỚC `[3b]` CỦA LƯỢT EOD, ĐỨNG TRƯỚC `build_phantich`** (bước đó nướng `ff` vào file phiên).
+KHÔNG gọi mạng, ~1 giây. **Phải chạy MỖI NGÀY**: `refresh_daily.work_prof` dựng lại hồ sơ 3
+ngày một lần bằng một dict MỚI, tức nó trả `freeFloatRate` của nguồn về cho `freeFloat` và
+xoá luôn `ffNguon` — chạy lại mỗi ngày thì số luôn được tính lại từ sổ cổ đông vừa cào.
+`ffNguon` giữ số cũ của nguồn để còn đối chiếu; `ffN` là số cổ đông lớn đã trừ.
+
+> Nhãn ô đọc số phải NÓI RA PHÉP TÍNH — *"100% trừ phần các cổ đông nắm từ 5% trở lên"* —
+> chứ đừng để câu cũ *"% cổ phiếu đang thật sự lưu thông"*: câu đó nghe như một con số đo
+> được, trong khi nó là một phép trừ mà người đọc cộng lại kiểm được ngay dưới trang.
 
 ### HÀNG NÚT CHART NHỎ CÒN SÁU Ô, HAI CÔNG TẮC MỐC VÀO TRONG KHUNG (24/08/2026)
 
