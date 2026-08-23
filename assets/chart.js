@@ -198,7 +198,18 @@ let veBut=false;                                   // bút đang được giữ 
        tức dải vĩnh viễn rỗng. Đây là đường duy nhất thay `rows` nên xoá ở đây là đủ. */
     nenCache.k='';
     rows=r||[]; if(interval) iv=interval;
-    if(!keepView||i1<=i0||i1>rows.length) resetView(); else clampView();
+    /* ĐIỀU KIỆN RESET KHÔNG ĐƯỢC BẮT VÀO `i1 > rows.length` (sửa 25/08/2026).
+       User: *"khi bấm vào vốn hoá / VN-Index / cách nền, chart không bị reset — hiện tại cứ
+       chọn là bị reset, mất công kéo lại để nhìn xa hơn"*.
+       `clampView` CHO PHÉP chừa tới `span*OFFMAX` nến trống bên phải (vùng trống tương lai,
+       để vẽ dự phóng), nên `i1 > rows.length` là trạng thái HỢP LỆ chứ không phải hỏng —
+       ai kéo sang phải hoặc thu nhỏ đủ xa là rơi vào đó. Bắt nó rồi gọi `resetView` nghĩa
+       là mọi lần bật/tắt đường phủ (đều đi qua `setRows` để gắn dữ liệu vào nến) đều quăng
+       người dùng về khung mặc định.
+       Chỉ reset khi mép TRÁI thật sự nằm ngoài dữ liệu (`i0 >= rows.length`) — vẫn giữ
+       nguyên hành vi reset khi đổi khung Ngày→Tháng, vì lúc đó số nến co lại hàng chục lần
+       nên `i0` cũ chắc chắn vượt. */
+    if(!keepView||i1<=i0||i0>=rows.length) resetView(); else clampView();
     self.draw(); return self;
   };
   self.rows=()=>rows;
@@ -1093,7 +1104,7 @@ let veBut=false;                                   // bút đang được giữ 
        rìa và vẫn chỉ đúng cột. Khác thanh ngắm ở NÉT: thanh ngắm là nét đứt và chạy theo
        chuột, mốc ghim là nét LIỀN và đứng yên — không phân biệt được hai cái thì bấm xong
        không biết mình đã ghim hay chưa. */
-    const gI=ghimIdx();
+    const gI=choGhim()?ghimIdx():-1;   // tắt đường phủ thì mốc ghim cũ cũng thôi hiện
     if(gI>=0&&gI>=i0&&gI<i1){
       const X=cx(gI-i0), y0=padT, y1=padT+plotH;
       x.strokeStyle=light()?'rgba(0,0,0,.45)':'rgba(255,255,255,.45)'; x.lineWidth=1;
@@ -1554,10 +1565,15 @@ let veBut=false;                                   // bút đang được giữ 
     return false;
   }
   /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó. */
+  const choGhim=()=>!!(ind.vh||ind.idx);
   function bamGhim(px){
-    /* `rs` cũng mở khoá cú ghim: hộp ghim nay in cả dòng "Cách nền", nên bật dải mà bấm
-       không ra gì thì đúng là thứ người ta sẽ bấm lại mấy lần rồi cho là hỏng. */
-    if(!(ind.vh||ind.idx||ind.rs)) return false;
+    /* CHỈ MỞ KHOÁ KHI CÓ ĐƯỜNG PHỦ TRÊN VÙNG GIÁ (user chốt 25/08: *"thanh dọc này chỉ
+       xuất hiện khi bật vốn hoá hoặc VN-Index"*). Có lúc tao cho `rs` mở khoá luôn vì hộp
+       ghim in được dòng "Cách nền" — nhưng dải nằm ở khung riêng phía dưới, ghim một thanh
+       dọc xuyên qua vùng giá để đọc nó thì thanh ấy che nến mà chẳng phục vụ cái gì đang
+       xem. Bật vốn hoá/VN-Index thì khác: lúc đó thanh dọc trỏ đúng vào thứ người ta đang
+       so sánh. */
+    if(!choGhim()) return false;
     if(!(px>=0&&px<=geo.plotW)||!rows.length) return false;
     const gi=i0+idxAt(px);
     if(gi<0||gi>=rows.length) return false;      // rê vào vùng trống tương lai

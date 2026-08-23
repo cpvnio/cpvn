@@ -4312,6 +4312,22 @@ nến và số điểm của hai đường phủ rơi vào ô chữ nhật — r
 tự cũ để hộp không nhảy chỗ giữa các lần bấm. **Đếm trên DỮ LIỆU chứ đừng dò pixel**: lúc chọn
 chỗ thì hộp chưa vẽ, mà hai đường phủ lại nằm trên TRỤC RIÊNG nên nhìn vị trí nến không đoán ra.
 
+**BẬT/TẮT ĐƯỜNG PHỦ KHÔNG ĐƯỢC RESET KHUNG NHÌN.** User 25/08: *"khi bấm vào vốn hoá /
+VN-Index / cách nền, chart không bị reset — hiện tại cứ chọn là bị reset, mất công kéo lại để
+nhìn xa hơn"*. Thủ phạm là điều kiện trong `setRows`: nó bắt vào `i1 > rows.length` rồi gọi
+`resetView`. Nhưng `clampView` **cho phép** chừa tới `span*OFFMAX` nến trống bên phải (vùng
+trống tương lai, để vẽ dự phóng) nên `i1 > rows.length` là trạng thái **hợp lệ** — ai thu nhỏ
+đủ xa hoặc kéo sang phải là rơi vào đó, và mọi lần bật/tắt đường phủ đều đi qua `setRows` để
+gắn dữ liệu vào nến. Nay chỉ reset khi mép TRÁI thật sự ra ngoài dữ liệu (`i0 >= rows.length`);
+đổi khung Ngày→Tháng vẫn reset như cũ vì số nến co hàng chục lần nên `i0` cũ chắc chắn vượt.
+Kiểm: khung `[579, 3979]` trên chuỗi 3.400 nến (đúng trạng thái ảnh user gửi, trục kéo tới
+Q3/30) giữ nguyên qua cả ba lần bật Vốn hoá · VN-Index · Cách nền.
+
+**THANH DỌC GHIM CHỈ HIỆN KHI BẬT VỐN HOÁ HOẶC VN-INDEX** (`choGhim()`). Có lúc `rs` cũng mở
+khoá vì hộp ghim in được dòng "Cách nền" — bỏ rồi: dải nằm ở khung riêng phía dưới, ghim một
+thanh dọc xuyên qua vùng giá để đọc nó thì thanh ấy che nến mà không phục vụ thứ đang xem.
+Gác ở CẢ `bamGhim` lẫn chỗ vẽ, để tắt đường phủ thì mốc ghim cũ cũng thôi hiện.
+
 **BẬT/TẮT Ô CÔNG TẮC TRÊN ĐIỆN THOẠI — CHẶN BẰNG `preventDefault`, ĐỪNG CHẶN BẰNG THỜI GIAN.**
 Trình duyệt di động phát thêm một cặp `mousedown`/`mouseup` giả sau mỗi cú chạm; cả `touchstart`
 lẫn `mousedown` đều gọi `bamMoc` nên ô bật rồi TẮT ngay lại — nhìn ra y như nút hỏng.
