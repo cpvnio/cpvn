@@ -141,7 +141,7 @@ const lam=()=>CPChart(cvs,{});
      mạnh lên liên tục luôn nằm TRÊN nền của chính nó, nên không dấu nào nổ và ca kiểm mất
      hết ý nghĩa — đúng lỗi của bản đầu ca này. Sóng sin cho g cắt qua 0 nhiều lần, tức có
      cả đoạn "còn dưới nền mà vừa lập đỉnh cửa sổ" để hai dấu có chỗ mà nổ. */
-  const n=900;
+  const n=2500;                                  // phải > cửa sổ nền (1.250) thì mới có đuôi để nổ dấu
   const ch=lam(); ch.setRows(chuoi(n,i=>[1e12*(1+0.5*Math.sin(i/90)),1000]),'d');
   const N=ch.nenSo();
   kiem('không có ● nào nằm trên nền', N.dinh.some((v,i)=>v&&N.g[i]>=0), false);
@@ -188,6 +188,24 @@ const lam=()=>CPChart(cvs,{});
   const N=ngan.nenSo();
   kiem('chuỗi ngắn co cửa sổ lại', N.W1<100&&N.W2<200, true);
   kiem('cửa sổ ngắn vẫn nằm trong chuỗi', N.W2<=180, true);
+}
+
+/* ── ⑧ MÃ MỚI NIÊM YẾT: KHÔNG CÓ NỀN, KHÔNG BỊA RA MỘT CÁI ─────────────────
+   VCK niêm yết 16/12/2025, cả kho 169 phiên. Bản trước cho trung bình nở dần rồi in ra từ
+   nến thứ 60 — nhãn vẫn ghi "1.250 phiên" mà thực chất là trung bình 8 tháng, lại hụt đầu
+   chuỗi (user thấy đường VN-Index mất một khoảng) và lệch hẳn build_screen (bên đó đòi đủ
+   1.250+400 phiên nên VCK không có `nen`). */
+{
+  const it=lam(); it.setRows(chuoi(169,i=>[1e12*(1+0.2*Math.sin(i/25)),1000]),'d');
+  const N=it.nenSo();
+  kiem('169 nến -> không có nền', N.Wma, 0);
+  kiem('169 nến -> g rỗng hoàn toàn', N.g.some(v=>v!=null), false);
+  kiem('169 nến -> không dấu nào', N.pk.concat(N.dinh,N.dinhN).some(Boolean), false);
+  const du=lam(); du.setRows(chuoi(1500,i=>[1e12*(1+0.3*Math.sin(i/100)),1000]),'d');
+  kiem('1.500 nến -> lấy đúng 1.250 (khớp bảng giá)', du.nenSo().Wma, 1250);
+  const vua=lam(); vua.setRows(chuoi(1000,i=>[1e12*(1+0.3*Math.sin(i/100)),1000]),'d');
+  kiem('1.000 nến -> 60% = 600', vua.nenSo().Wma, 600);
+  kiem('g chỉ có từ nến thứ Wma trở đi', vua.nenSo().g.findIndex(v=>v!=null), 599);
 }
 
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);

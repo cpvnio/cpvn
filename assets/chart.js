@@ -341,6 +341,10 @@ let veBut=false;                                   // bút đang được giữ 
      bật Tuần một cái là nền tụt còn 2,5 năm mà nhãn vẫn ghi "phiên" — user bắt đúng lỗi
      này trên ảnh PVP: "Cách nền 128 phiên" trong khi đang ở khung Tuần. */
   const NEN_MA_KHUNG={d:NEN_MA, W:Math.round(NEN_MA/5), M:Math.round(NEN_MA/21), Y:5};
+  /* SỐ NẾN TỐI THIỂU để còn gọi là "nền", quy theo khung (20% cửa sổ đích): Ngày 250 ·
+     Tuần 50 · Tháng 12 · Năm 5. Dưới mức đó thì mã quá mới, không có dải và không có đường
+     nền — đúng như `build_screen` không ghi `nen` cho mã chưa đủ dữ liệu. */
+  const nenToiThieu=iv2=>Math.max(5,Math.round((NEN_MA_KHUNG[iv2]||NEN_MA)*0.2));
   const NEN_DV={W:'tuần', M:'tháng', Y:'năm'};
   const nenCache={k:'',v:null};
   function nenArr(){
@@ -371,12 +375,26 @@ let veBut=false;                                   // bút đang được giữ 
          trả lời "mạnh/yếu so với chính mình 5 năm qua". Nhãn dải ghi rõ số nến để không
          ai đọc nhầm thành cùng một câu hỏi. */
       const k=Math.exp(sa/co-sb/co); out.k=k;
-      /* KHÔNG cắt còn `n/2` như bản đầu. Chuỗi ngày nạp mặc định chỉ ~1.246 nến nên `n/2`
-         hạ cửa sổ xuống 623 — tức chart đo trên 2,5 năm còn bảng giá đo trên 5 năm, đúng
-         cái lệch vừa mất công sửa. Cửa sổ cứ để nguyên; phần đầu chuỗi chưa đủ nến thì
-         trung bình chạy trên số nến ĐANG CÓ (nở dần rồi mới trượt), và chỉ bắt đầu cho ra
-         giá trị khi đã gom đủ `min(Wma,60)` điểm. */
-      const Wma=Math.min(NEN_MA_KHUNG[iv]||NEN_MA,Math.max(20,n)); out.Wma=Wma;
+      /* CỬA SỔ PHẢI ĐẦY MỚI CHO RA SỐ, và chuỗi quá ngắn thì KHÔNG CÓ NỀN.
+         User 25/08: *"ở VCK đường VN-Index bị mất một khoảng hơn 10 phiên trong khi vốn hoá
+         thể hiện đúng"*. VCK niêm yết 16/12/2025, cả kho chỉ có **169 phiên**. Bản trước cho
+         trung bình chạy trên số nến ĐANG CÓ (nở dần) và chỉ cần gom đủ 60 điểm là in ra —
+         nên VCK vẫn hiện một cái "nền", nhãn vẫn ghi 1.250 phiên, mà thực chất là trung
+         bình 8 tháng. Vừa hụt đầu chuỗi (chỗ user thấy mất), vừa nói dối ở nhãn, vừa lệch
+         hẳn `build_screen` — bên đó đòi đủ `1250 + 400` phiên mới tính, nên VCK KHÔNG có
+         `nen` trong bảng giá. Chart hiện thứ bảng giá bảo là không có.
+
+         Nay: `Wma` là cửa sổ THẬT SỰ dùng, `g` chỉ có từ nến thứ `Wma` trở đi (cửa sổ đầy,
+         đúng cách `nen_tuoi()` tính), và dưới `NEN_MIN` nến thì bỏ hẳn nền — chuỗi 8 tháng
+         không có "trung bình 5 năm" nào để mà so. */
+      const dich=NEN_MA_KHUNG[iv]||NEN_MA, toiThieu=nenToiThieu(iv);
+      if(n<toiThieu){ nenCache.k=khoa; nenCache.v=out; return out; }
+      /* ĐỦ DÀI thì lấy ĐÚNG cửa sổ đích — đây là ca thường gặp và là ca duy nhất khớp
+         tuyệt đối với bảng giá. CHƯA ĐỦ thì lấy 60% chuỗi (vẫn chừa 40% để dải có chỗ mà
+         vẽ), sàn ở `toiThieu`. Đừng viết thành một biểu thức `min` gộp cả ba: bản đầu làm
+         vậy và `n*0.6` biến thành cái TRẦN, chuỗi 1.500 nến ra cửa sổ 900 thay vì 1.250. */
+      const Wma=(n>=dich)?dich:Math.min(n,Math.max(toiThieu,Math.floor(n*0.6)));
+      out.Wma=Wma;
       const L=new Array(n).fill(null);
       for(let i=0;i<n;i++) if(b[i]!=null) L[i]=Math.log(b[i]/rows[i].ix);
       let tong=0, dem=0;
@@ -384,7 +402,7 @@ let veBut=false;                                   // bút đang được giữ 
       for(let i=0;i<n;i++){
         if(L[i]!=null){ cua.push(i); tong+=L[i]; dem++; }
         while(cua.length&&cua[0]<=i-Wma){ tong-=L[cua[0]]; dem--; cua.shift(); }
-        if(L[i]!=null&&dem>=Math.min(Wma,60)) g[i]=L[i]-tong/dem;
+        if(L[i]!=null&&dem>=Wma) g[i]=L[i]-tong/dem;   // ĐỦ cửa sổ mới in, không nở dần
       }
       const W1=Math.min(NEN_W1,Math.max(20,Math.floor(n/6)));
       const W2=Math.min(NEN_W2,Math.max(40,Math.floor(n/3)));
@@ -743,7 +761,7 @@ let veBut=false;                                   // bút đang được giữ 
          BẬT MÌNH `VN-Index` (không bật vốn hoá) thì vẫn vẽ CHỈ SỐ THÔ theo điểm — lúc đó
          không có tử số nên nền vô nghĩa, mà chỉ số thô tự nó vẫn đọc được. */
       const NA=nenArr();
-      const coNen=(NA.co>=2&&NA.vh);
+      const coNen=(NA.co>=2&&NA.vh&&NA.Wma>0);
       const layNen=(r,gi)=>{ const q=NA.g[gi];
         return (q==null||!(r.vh>0))?null:r.vh/Math.exp(q); };
       if(P2.cVH) veP(r=>r.vh,VHCOL(),2.4);
@@ -829,7 +847,7 @@ let veBut=false;                                   // bút đang được giữ 
          nhân một hằng số — gọi trần "VN-Index quy đổi" là mời người xem hiểu sai. Bật một
          mình thì nó đúng là chỉ số thô, giữ nguyên tên. */
       const NAl=nenArr(), coNenl=(P2.cVH&&NAl.co>=2&&NAl.vh);
-      const t=coNenl ? ('— nền '+(NAl.Wma||NEN_MA)+' '+(NEN_DV[iv]||'phiên')+' · '+ixTen)
+      const t=coNenl ? ('— nền '+NAl.Wma+' '+(NEN_DV[iv]||'phiên')+' · '+ixTen)
                      : ('— '+ixTen+(P2.cVH?' quy đổi':''));
       x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     /* HAI Ô CÔNG TẮC — hàng thứ ba của góc trái trên, dưới tên mã và dòng chú thích.
@@ -950,13 +968,18 @@ let veBut=false;                                   // bút đang được giữ 
        nên kéo đi đâu nó vẫn nói đúng một điều. */
     if(ind.rs&&rsH){
       const top=h-22-rsH+4, bh=rsH-10, NA=nenArr();
-      const nhan='Cách nền '+(NA.Wma||NEN_MA)+' '+(NEN_DV[iv]||'phiên')+' — '
+      const nhan='Cách nền'+(NA.Wma?(' '+NA.Wma+' '+(NEN_DV[iv]||'phiên')):'')+' — '
                  +((wm&&wm.sym)?wm.sym+' ':'')+(NA.vh?'vốn hoá':'giá')+' ÷ '+ixTen;
       x.textAlign='left'; x.textBaseline='middle';
-      if(NA.co<2){
+      if(NA.co<2||!NA.Wma){
         x.fillStyle=MUT(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
         x.font='11px system-ui';
-        x.fillText(NA.co?'khoảng này chưa có dữ liệu chỉ số':'đang tải dữ liệu chỉ số…',8,top+bh/2);
+        /* Nói rõ THIẾU BAO NHIÊU. "Chưa đủ dữ liệu" trơn thì người ta chờ mãi không hiểu
+           chờ cái gì; mã mới niêm yết thì phải chờ hàng năm chứ không phải chờ tải xong. */
+        const ttt=nenToiThieu(iv), dv=NEN_DV[iv]||'phiên';
+        x.fillText(!NA.co ? 'đang tải dữ liệu chỉ số…'
+                 : !NA.Wma ? ('mã mới — cần ít nhất '+ttt+' '+dv+', hiện có '+NA.co)
+                 : 'khoảng này chưa có dữ liệu chỉ số',8,top+bh/2);
       }else{
         /* THANG CỐ ĐỊNH THEO CẢ CHUỖI, KHÔNG THEO KHUNG NHÌN. Dải cũ lấy min/max của
            `vis` nên kéo ngang một cái là đường đổi hình — đúng lỗi user đã bắt ở đường

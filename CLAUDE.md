@@ -4301,6 +4301,37 @@ Vẫn mang HÌNH của chỉ số, chỉ khác là quy đổi lại ở TỪNG p
 > **ĐỪNG DÙNG `rows.indexOf` TRONG VÒNG VẼ.** `veP` nay truyền sẵn chỉ số toàn cục `gi`; tra
 > ngược bằng `indexOf` biến vòng vẽ thành O(n²) mà chart vẽ lại mỗi lần rê chuột.
 
+**MÃ MỚI NIÊM YẾT: KHÔNG CÓ NỀN, VÀ KHÔNG BỊA RA MỘT CÁI.** User 25/08: *"ở VCK đường
+VN-Index bị mất một khoảng hơn 10 phiên trong khi vốn hoá thể hiện đúng"*. VCK niêm yết
+16/12/2025, cả kho **169 phiên**. Bản trước cho trung bình **nở dần** rồi in ra từ nến thứ 60 —
+ba cái sai cùng lúc: hụt đầu chuỗi (chỗ user thấy mất), nhãn vẫn ghi "1.250 phiên" trong khi
+thực chất là trung bình 8 tháng, và lệch hẳn `build_screen` (bên đó đòi đủ `1250+400` phiên nên
+VCK **không có** `nen` trong bảng giá — chart lại hiện thứ bảng giá bảo là không có).
+
+Nay:
+- `g` chỉ có **từ nến thứ `Wma` trở đi** — cửa sổ ĐẦY, đúng cách `nen_tuoi()` tính;
+- dưới `nenToiThieu(iv)` nến (Ngày 250 · Tuần 50 · Tháng 12 · Năm 5) thì **bỏ hẳn nền**: không
+  dải, không đường nền, và đường thứ hai lui về `VN-Index quy đổi` **dài đúng bằng chart** —
+  đó là thứ user cần thấy ở VCK;
+- dải in thẳng lý do: *"mã mới — cần ít nhất 250 phiên, hiện có 169"*, chứ không phải "chưa đủ
+  dữ liệu" trơn (mã mới thì phải chờ hàng năm, không phải chờ tải xong).
+
+```
+Wma = (n >= đích) ? đích : min(n, max(nenToiThieu, ⌊n×0,6⌋))
+```
+
+**ĐỪNG GỘP THÀNH MỘT `min` BA VẾ** — bản đầu viết `min(đích, n, max(...))` và `n×0,6` biến
+thành cái TRẦN: chuỗi 1.500 nến ra cửa sổ 900 thay vì 1.250. `test_nen.js` khoá cả bốn ca
+(169 → không nền · 1.500 → đúng 1.250 · 1.000 → 600 · `g` bắt đầu đúng nến thứ `Wma`).
+
+> **`canNam` ĐỔI 5 → 6 NĂM** (`cophieu.html`). 5 năm ra ~1.246 nến — **hụt đúng 4 nến** so với
+> cửa sổ 1.250, nên mã nào rơi vào nhánh nguồn ngoài (nhánh tôn trọng `from`) là chart phải hạ
+> cửa sổ xuống 60% chuỗi và ra số khác bảng giá. Sáu năm ~1.500 nến, luôn đủ.
+
+> **ĐƯỜNG NỀN NGẮN HƠN ĐƯỜNG VỐN HOÁ ĐÚNG `Wma` NẾN ĐẦU LÀ ĐÚNG, ĐỪNG "SỬA".** Không thể tính
+> trung bình 1.250 phiên khi chưa có 1.250 phiên. VNM: 3.400 nến thì 2.151 nến có nền. Nối tạm
+> bằng `k×chỉ số` cho đủ dài là ghép hai định nghĩa vào một đường — tệ hơn hẳn việc để trống.
+
 **CỬA SỔ NỀN QUY THEO KHUNG** (`NEN_MA_KHUNG`): Ngày 1.250 · Tuần 250 · Tháng 60 · Năm 5 — đều
 là ~5 năm. Nhãn dải in kèm đơn vị đúng khung (`NEN_DV`), vì user bắt được ảnh PVP ghi *"Cách
 nền 128 phiên"* trong khi đang ở khung Tuần. **Đừng cắt cửa sổ còn `n/2`**: chuỗi ngày nạp mặc
