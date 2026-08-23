@@ -695,8 +695,39 @@ let veBut=false;                                   // bút đang được giữ 
           const X=cx(i), yy=P2.y(v); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
         x.stroke(); x.lineWidth=1; x.lineJoin='miter';
       };
+      /* ---- ĐƯỜNG NỀN TRƯỢT (thêm 25/08/2026) ---------------------------------------
+         User: *"ở mã VNM hình như cách nền bị sai, 14/03/2022 khoảng cách nền sao lớn hơn
+         02/07/2026 được?"*. Số không sai — VNM ra −48,3% và −44,0% — nhưng cái user thấy
+         mâu thuẫn là THẬT, và lỗi là ở chỗ không vẽ ra cái mốc đang so.
+
+         Hai đường phủ neo bằng MỘT hằng số `k`, nên khoảng hở giữa chúng là độ lệch so với
+         một mốc CỐ ĐỊNH — VNM yếu dần nhiều năm thì khoảng hở đó cứ toác rộng mãi. Còn dải
+         "Cách nền" so với trung bình TRƯỢT 1.250 phiên, mà cái nền ấy tụt theo chính mã;
+         tới 2026 VNM chỉ còn dưới một cái nền đã hạ sẵn. Hai câu trả lời khác nhau, đều
+         đúng, mà trên màn hình không có gì nói ra điều đó.
+
+         Vẽ thẳng nền trượt ra là hết mâu thuẫn: chỗ đường vốn hoá chạm đường này CHÍNH LÀ
+         chỗ dải cắt vạch 0, và cũng chính là dấu mà bộ lọc bảng giá dùng.
+         `nền(i) = vốn hoá(i) ÷ exp(g(i))` — suy thẳng từ `g` nên khỏi lưu thêm mảng nào,
+         và khỏi lo hai chỗ tính lệch nhau. Chỉ vẽ khi đang bật vốn hoá (không có tử số thì
+         nền vô nghĩa) và khi dải có số. */
       if(P2.cVH) veP(r=>r.vh,VHCOL(),2.4);
       if(P2.cIX) veP(r=>P2.k*r.ix,IXCOL(),1.8);
+      if(P2.cVH){
+        const NA=nenArr();
+        if(NA.co>=2&&NA.vh){
+          x.save(); x.setLineDash([5,4]); x.strokeStyle=RSCOL(); x.globalAlpha=.85;
+          x.lineWidth=1.4; x.beginPath(); let st=false;
+          for(let i=0;i<n;i++){
+            const gi=i0+i, q=NA.g[gi], r=vis[i];
+            if(q==null||!(r&&r.vh>0)){ st=false; continue; }
+            if(gi<P2.a||gi>P2.b){ st=false; continue; }
+            const X=cx(i), yy=P2.y(r.vh/Math.exp(q));
+            st?x.lineTo(X,yy):x.moveTo(X,yy); st=true;
+          }
+          x.stroke(); x.restore();
+        }
+      }
       /* TRỤC PHẢI THỨ HAI — 4 nhãn. Thang loga nên nhãn KHÔNG cách đều nhau về giá trị; đó
          là đúng, và cũng là dấu hiệu duy nhất cho biết đây là thang loga. Đơn vị in một lần
          ở đỉnh cột chứ đừng dán vào từng số: cột chỉ rộng 62px. */
@@ -771,6 +802,12 @@ let veBut=false;                                   // bút đang được giữ 
       /* Nói rõ đây là đường ĐÃ QUY ĐỔI về thang vốn hoá, đừng để trần chữ "VN-Index" —
          số trên trục là tỷ đồng chứ không phải điểm, mà ô đọc số thì in điểm thật. */
       const t='— '+ixTen+(P2.cVH?' quy đổi':''); x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
+    if(P2&&P2.cVH){ const NA=nenArr();
+      if(NA.co>=2&&NA.vh){ x.fillStyle=RSCOL();
+        /* Ghi rõ số nến: đây là mốc TRƯỢT, khác hẳn đường chỉ số quy đổi neo bằng một hằng
+           số — không nói ra thì người xem lại tưởng hai đường cùng trả lời một câu. */
+        const t='-- nền '+(NA.Wma||NEN_MA)+' '+(NEN_DV[iv]||'phiên');
+        x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; } }
     /* HAI Ô CÔNG TẮC — hàng thứ ba của góc trái trên, dưới tên mã và dòng chú thích.
        VỊ TRÍ CỐ ĐỊNH, không nối đuôi dòng chú thích: dòng đó dài ngắn theo số chỉ báo đang
        bật, nối vào đó là hai cái ô nhảy chỗ mỗi lần bật/tắt một đường — thứ bấm được thì

@@ -4257,6 +4257,27 @@ tỷ so với đường chỉ số 4.712 tỷ, đúng **−17,8%**.
 > chỉ mang được MỘT hằng số nên không thể khớp nền trượt ở mọi thời điểm — đó là giới hạn của
 > việc vẽ nền bằng một đường thẳng quy đổi, không phải lỗi.
 
+**ĐƯỜNG NỀN TRƯỢT ĐƯỢC VẼ HẲN LÊN CHART** (nét đứt màu mòng két, hiện cùng đường vốn hoá).
+User: *"ở mã VNM hình như cách nền bị sai, 14/03/2022 khoảng cách nền sao lớn hơn 02/07/2026
+được?"*. Số không sai, nhưng mâu thuẫn user thấy là THẬT — và lỗi là ở chỗ **không vẽ ra cái
+mốc đang so**. VNM:
+
+| phiên | vốn hoá | đường nền | cách nền |
+|---|---|---|---|
+| 14/03/2022 | 161.345 tỷ | **312.201 tỷ** | −48,3% |
+| 02/07/2026 | 115.993 tỷ | **207.239 tỷ** | −44,0% |
+| 21/08/2026 | 133.339 tỷ | 192.555 tỷ | −30,8% |
+
+Nền tụt từ 312 nghìn tỷ xuống 193 nghìn tỷ vì nó là trung bình TRƯỢT của chính mã — VNM yếu
+dần nhiều năm nên tới 2026 nó chỉ còn dưới một cái nền đã hạ sẵn. Trong khi đó hai đường phủ
+neo bằng MỘT hằng số `k`, nên khoảng hở giữa chúng cứ toác rộng mãi. Hai câu trả lời khác nhau,
+đều đúng, mà trên màn hình trước đó không có gì nói ra điều đó.
+
+`nền(i) = vốn hoá(i) ÷ exp(g(i))` — suy thẳng từ `g` nên **không lưu thêm mảng nào và không có
+đường nào để hai chỗ tính lệch nhau**. Chỗ đường vốn hoá chạm nét đứt CHÍNH LÀ chỗ dải cắt vạch
+0, và cũng chính là điều kiện `nen < 0` của bộ lọc bảng giá. Chú giải ghi rõ số nến (`-- nền
+1.250 phiên`) để không ai tưởng nó cùng loại với đường chỉ số quy đổi.
+
 **CỬA SỔ NỀN QUY THEO KHUNG** (`NEN_MA_KHUNG`): Ngày 1.250 · Tuần 250 · Tháng 60 · Năm 5 — đều
 là ~5 năm. Nhãn dải in kèm đơn vị đúng khung (`NEN_DV`), vì user bắt được ảnh PVP ghi *"Cách
 nền 128 phiên"* trong khi đang ở khung Tuần. **Đừng cắt cửa sổ còn `n/2`**: chuỗi ngày nạp mặc
