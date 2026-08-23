@@ -62,26 +62,37 @@ const lam=()=>CPChart(cvs,{});
 /* ── ① NỀN LÀ TRUNG BÌNH TRƯỢT, và phải khớp định nghĩa của build_screen ────
    `g[i]` = log(vốn hoá/chỉ số) trừ trung bình trượt Wma nến của chính nó. Kiểm bằng cách
    dựng lại công thức ngay tại đây rồi so từng phiên — nếu ai đó đổi về "trung bình cả
-   chuỗi" như bản đầu thì ca này gãy, và đó đúng là thứ làm chart lệch bảng giá. */
+   chuỗi" như bản đầu, hoặc cắt cửa sổ còn `n/2` như bản thứ hai, thì ca này gãy. Cả hai
+   lỗi đó đều làm chart lệch bảng giá mà không báo gì. */
 {
-  const ch=lam();
-  const n=600;
+  const n=1500, Wmong=1250;
   const f=i=>[1e12*(1+0.4*Math.sin(i/50)), 1000*(1+0.2*Math.sin(i/37))];
-  ch.setRows(chuoi(n,f),'d');
+  const ch=lam(); ch.setRows(chuoi(n,f),'d');
   const N=ch.nenSo();
   kiem('miền neo đếm đủ phiên', N.co, n);
   kiem('có dùng vốn hoá (không phải giá)', N.vh, true);
-  kiem('Wma co lại theo độ dài chuỗi', N.Wma, Math.min(1250,Math.max(120,Math.floor(n/2))));
+  kiem('khung Ngày dùng đúng 1.250 nến — trùng build_screen', N.Wma, Wmong);
   const L=[]; for(let i=0;i<n;i++){ const [v,x]=f(i); L.push(Math.log(v/x)); }
   let lech=0, dem=0;
-  for(let i=N.Wma-1;i<n;i++){
-    let s2=0; for(let j=i-N.Wma+1;j<=i;j++) s2+=L[j];
-    if(N.g[i]!=null){ lech=Math.max(lech,Math.abs(N.g[i]-(L[i]-s2/N.Wma))); dem++; }
+  for(let i=Wmong-1;i<n;i++){
+    let s2=0; for(let j=i-Wmong+1;j<=i;j++) s2+=L[j];
+    if(N.g[i]!=null){ lech=Math.max(lech,Math.abs(N.g[i]-(L[i]-s2/Wmong))); dem++; }
   }
   kiem('có tính được g ở phần đuôi', dem>0, true);
   gan('g khớp trung bình trượt dựng lại độc lập', lech, 0, 1e-9);
-  gan('g KHÔNG phải trung bình cả chuỗi',
-      Math.abs(N.g[n-1]-(L[n-1]-L.reduce((a,b)=>a+b,0)/n))>1e-6?1:0, 1, 0);
+  const caChuoi=L[n-1]-L.reduce((a,b)=>a+b,0)/n;
+  kiem('g KHÔNG phải trung bình cả chuỗi', Math.abs(N.g[n-1]-caChuoi)>1e-6, true);
+}
+
+/* ── ①b CỬA SỔ NỀN QUY THEO KHUNG — cùng ~5 năm ở mọi khung ────────────────
+   Quên quy đổi thì bật Tuần là nền tụt còn 2,5 năm mà nhãn vẫn ghi "phiên". */
+{
+  const mong={d:1250, W:250, M:60, Y:5};
+  for(const [iv,W] of Object.entries(mong)){
+    const ch=lam();
+    ch.setRows(chuoi(2000,i=>[1e12*(1+0.3*Math.sin(i/70)),1000*(1+0.1*Math.cos(i/40))]),iv);
+    kiem(`khung ${iv} -> cửa sổ ${W} nến`, ch.nenSo().Wma, W);
+  }
 }
 
 /* ── ② HAI DẤU BẤT BIẾN THEO `k` ───────────────────────────────────────────

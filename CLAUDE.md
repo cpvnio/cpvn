@@ -4239,6 +4239,46 @@ thì W1 = 120 *tuần*. Chuỗi ngắn thì co lại (`W1 = min(120, max(20, n/6
 250/40/`n`/3) để khung Tháng không mất trắng dải. Đo được: ngày `120/250` · tuần `43/86` ·
 tháng `27/54`.
 
+**HAI ĐƯỜNG PHỦ NAY NEO TRÊN ĐÚNG CỬA SỔ NỀN, KHÔNG PHẢI TRÊN CẢ CHUỖI NẠP** (sửa 25/08 sau
+khi user báo *"DHC rõ ràng đã cắt và trên nền rồi tại sao vẫn báo dưới nền ở bộ lọc?"*). Đúng,
+và lỗi nằm ở `k` của `P2`: nó lấy trung bình TOÀN BỘ số nến đang nạp, mà số đó đổi theo mã —
+DHC về **3.400** nến, VHM về **1.246**. Đo DHC phiên 21/08/2026:
+
+| nền tính trên | cách nền | hai đường trên chart |
+|---|---|---|
+| cả 3.400 nến đang nạp | **+46,7%** | vốn hoá nằm **TRÊN** đường chỉ số |
+| 1.250 phiên (dải + bộ lọc dùng) | **−17,8%** | vốn hoá nằm **DƯỚI** |
+
+Hai câu trả lời ngược nhau trên cùng một màn hình. Nay `k` chỉ lấy `NEN_MA_KHUNG[iv]` nến cuối
+nên **dấu của "đang trên hay dưới" ở MÉP PHẢI luôn khớp bộ lọc** — kiểm lại DHC: vốn hoá 3.873
+tỷ so với đường chỉ số 4.712 tỷ, đúng **−17,8%**.
+
+> Các lần cắt trong QUÁ KHỨ vẫn đọc theo `k` cố định này chứ không theo nền trượt. Hai đường
+> chỉ mang được MỘT hằng số nên không thể khớp nền trượt ở mọi thời điểm — đó là giới hạn của
+> việc vẽ nền bằng một đường thẳng quy đổi, không phải lỗi.
+
+**CỬA SỔ NỀN QUY THEO KHUNG** (`NEN_MA_KHUNG`): Ngày 1.250 · Tuần 250 · Tháng 60 · Năm 5 — đều
+là ~5 năm. Nhãn dải in kèm đơn vị đúng khung (`NEN_DV`), vì user bắt được ảnh PVP ghi *"Cách
+nền 128 phiên"* trong khi đang ở khung Tuần. **Đừng cắt cửa sổ còn `n/2`**: chuỗi ngày nạp mặc
+định chỉ ~1.246 nến nên `n/2` hạ xuống 623, tức chart đo 2,5 năm còn bảng giá đo 5 năm.
+
+**HỘP ĐỌC SỐ TỰ TRÁNH DỮ LIỆU.** User: *"bấm vào 1 vị trí khiến bảng thông báo hiện ra che mất
+một phần phía sau"*. Bản cũ luôn dán vào phải-trên. Nay chấm bốn góc bằng `demDe()` — đếm số
+nến và số điểm của hai đường phủ rơi vào ô chữ nhật — rồi lấy góc ít đè nhất; hoà thì giữ thứ
+tự cũ để hộp không nhảy chỗ giữa các lần bấm. **Đếm trên DỮ LIỆU chứ đừng dò pixel**: lúc chọn
+chỗ thì hộp chưa vẽ, mà hai đường phủ lại nằm trên TRỤC RIÊNG nên nhìn vị trí nến không đoán ra.
+
+**BẬT/TẮT Ô CÔNG TẮC TRÊN ĐIỆN THOẠI — CHẶN BẰNG `preventDefault`, ĐỪNG CHẶN BẰNG THỜI GIAN.**
+Trình duyệt di động phát thêm một cặp `mousedown`/`mouseup` giả sau mỗi cú chạm; cả `touchstart`
+lẫn `mousedown` đều gọi `bamMoc` nên ô bật rồi TẮT ngay lại — nhìn ra y như nút hỏng.
+Bản vá đầu chặn theo mốc thời gian (bỏ qua chuột trong 700ms sau khi chạm) và **sai ở đúng chỗ
+dễ bỏ sót**: cú chạm kích hoạt vẽ lại (`nenArr` chạy O(n·W) trên 3.400 nến), máy chậm thì lượt
+vẽ nuốt trọn cửa sổ 700ms rồi chuột giả mới tới — **đo được 1.124ms** ngay trên máy đang thử.
+Hàng rào dựa vào "đủ nhanh" thì hỏng đúng lúc máy chậm. Nay `touchstart` đăng ký
+`{passive:false}` và gọi `preventDefault()` **chỉ khi cú chạm trúng ô công tắc**, nên cuộn ở
+mọi chỗ khác không đổi; canvas này vốn đã `{passive:false}` ở `touchmove`. Mốc thời gian giữ
+lại làm lớp hai.
+
 **Ô CÔNG TẮC NẰM TRONG KHUNG ĐỒ THỊ**, hàng thứ ba góc trái trên, cạnh `Cổ tức` và `BCTC` —
 đúng quy ước user chốt 24/08 (*"cần gọn hơn"*): hàng nút dưới chart giữ nguyên **sáu nút 3×2**
 ở khổ hẹp. Danh sách ô phải dựng ĐỘNG (`cvNut`) vì `Cách nền` có điều kiện hiện riêng.

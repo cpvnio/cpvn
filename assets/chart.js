@@ -325,6 +325,12 @@ let veBut=false;                                   // bút đang được giữ 
      một mã hiện `nd100 = 2 phiên` ở bảng giá mà trên chart lại không có dấu nào gần đây —
      đã xảy ra thật khi chart dùng 120/250: dấu gần nhất của GAS lùi tận 144 phiên. */
   const NEN_W1=100, NEN_W2=200, NEN_MA=1250;
+  /* CỬA SỔ NỀN QUY THEO KHUNG để mọi khung nói về CÙNG MỘT quãng thời gian (~5 năm), và
+     để khung Ngày trùng đúng 1.250 phiên của `build_screen.nen_tuoi()`. Không quy đổi thì
+     bật Tuần một cái là nền tụt còn 2,5 năm mà nhãn vẫn ghi "phiên" — user bắt đúng lỗi
+     này trên ảnh PVP: "Cách nền 128 phiên" trong khi đang ở khung Tuần. */
+  const NEN_MA_KHUNG={d:NEN_MA, W:Math.round(NEN_MA/5), M:Math.round(NEN_MA/21), Y:5};
+  const NEN_DV={W:'tuần', M:'tháng', Y:'năm'};
   const nenCache={k:'',v:null};
   function nenArr(){
     const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'');
@@ -354,7 +360,12 @@ let veBut=false;                                   // bút đang được giữ 
          trả lời "mạnh/yếu so với chính mình 5 năm qua". Nhãn dải ghi rõ số nến để không
          ai đọc nhầm thành cùng một câu hỏi. */
       const k=Math.exp(sa/co-sb/co); out.k=k;
-      const Wma=Math.min(NEN_MA,Math.max(120,Math.floor(n/2))); out.Wma=Wma;
+      /* KHÔNG cắt còn `n/2` như bản đầu. Chuỗi ngày nạp mặc định chỉ ~1.246 nến nên `n/2`
+         hạ cửa sổ xuống 623 — tức chart đo trên 2,5 năm còn bảng giá đo trên 5 năm, đúng
+         cái lệch vừa mất công sửa. Cửa sổ cứ để nguyên; phần đầu chuỗi chưa đủ nến thì
+         trung bình chạy trên số nến ĐANG CÓ (nở dần rồi mới trượt), và chỉ bắt đầu cho ra
+         giá trị khi đã gom đủ `min(Wma,60)` điểm. */
+      const Wma=Math.min(NEN_MA_KHUNG[iv]||NEN_MA,Math.max(20,n)); out.Wma=Wma;
       const L=new Array(n).fill(null);
       for(let i=0;i<n;i++) if(b[i]!=null) L[i]=Math.log(b[i]/rows[i].ix);
       let tong=0, dem=0;
@@ -413,7 +424,8 @@ let veBut=false;                                   // bút đang được giữ 
   self.nenSo=()=>nenArr();
   /* Khung nhìn hiện hành — bộ kiểm thử cần biết ĐANG vẽ từ nến nào tới nến nào và mỗi nến
      rộng bao nhiêu, để phân biệt "dấu tính sai" với "dấu nằm ngoài khung". */
-  self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH});
+  self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH,
+                       oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w))});
   const fmtNen=g=>{ const p=(Math.exp(g)-1)*100;
     return (p>=0?'+':'')+p.toLocaleString('vi-VN',{maximumFractionDigits:Math.abs(p)<10?1:0})+'%'; };
 
@@ -535,9 +547,22 @@ let veBut=false;                                   // bút đang được giữ 
       if(mien.length>=2){
         let k=1;
         if(cVH&&cIX){
+          /* `k` NEO TRÊN ĐÚNG SỐ NẾN CỦA NỀN (1.250 phiên quy theo khung), KHÔNG phải trên
+             toàn bộ chuỗi đang nạp — sửa 25/08/2026 sau khi user báo:
+             *"DHC rõ ràng đã cắt và trên nền rồi tại sao vẫn báo dưới nền ở bộ lọc?"*.
+             Đúng, và lỗi ở đây. Số nến nạp đổi theo mã (DHC về 3.400, VHM về 1.246) nên
+             mốc của hai đường trôi theo từng mã, trong khi dải và bộ lọc neo cố định
+             1.250 phiên. Đo DHC phiên 21/08/2026: neo cả 3.400 nến ra **+46,7%** (vốn hoá
+             nằm TRÊN đường chỉ số) còn neo 1.250 phiên ra **−17,8%** (dưới nền) — hai câu
+             trả lời ngược nhau trên cùng một màn hình.
+             Neo theo đuôi thì dấu của "đang trên hay dưới" ở MÉP PHẢI luôn khớp bộ lọc.
+             Các lần cắt trong quá khứ vẫn đọc theo `k` cố định này chứ không theo nền
+             trượt — hai đường chỉ mang được MỘT hằng số, không thể khớp mọi thời điểm. */
+          const nNeo=Math.min(mien.length, NEN_MA_KHUNG[iv]||NEN_MA);
+          const duoi=mien.slice(mien.length-nNeo);
           let sa=0,sb=0;
-          for(const z of mien){ sa+=Math.log(rows[z].vh); sb+=Math.log(rows[z].ix); }
-          k=Math.exp(sa/mien.length-sb/mien.length);
+          for(const z of duoi){ sa+=Math.log(rows[z].vh); sb+=Math.log(rows[z].ix); }
+          k=Math.exp(sa/duoi.length-sb/duoi.length);
         }
         let lo=Infinity,hi=-Infinity;
         for(const z of mien){
@@ -864,8 +889,8 @@ let veBut=false;                                   // bút đang được giữ 
        nên kéo đi đâu nó vẫn nói đúng một điều. */
     if(ind.rs&&rsH){
       const top=h-22-rsH+4, bh=rsH-10, NA=nenArr();
-      const nhan='Cách nền '+(NA.Wma||NEN_MA)+' phiên — '+((wm&&wm.sym)?wm.sym+' ':'')
-                 +(NA.vh?'vốn hoá':'giá')+' ÷ '+ixTen;
+      const nhan='Cách nền '+(NA.Wma||NEN_MA)+' '+(NEN_DV[iv]||'phiên')+' — '
+                 +((wm&&wm.sym)?wm.sym+' ':'')+(NA.vh?'vốn hoá':'giá')+' ÷ '+ixTen;
       x.textAlign='left'; x.textBaseline='middle';
       if(NA.co<2){
         x.fillStyle=MUT(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
@@ -1038,7 +1063,26 @@ let veBut=false;                                   // bút đang được giữ 
          là đang hỏi "lúc đó mạnh hay yếu hơn mặt bằng chung", mà đó đúng là con số này. */
       { const NA=nenArr(), q=NA.g[gI];
         if(q!=null) dong.push(['Cách nền',fmtNen(q)+(NA.pk[gI]?' △':'')+(NA.dinhN[gI]?' ○':'')+(NA.dinh[gI]?' ●':''),RSCOL()]); }
-      veHopGhim(x,X,y0,w,fullLabel(iv,r.t),dong);
+      /* ĐẾM XEM MỘT Ô CHỮ NHẬT CÓ ĐÈ LÊN DỮ LIỆU KHÔNG — dùng để chọn chỗ đặt hộp đọc số.
+         Đếm trên DỮ LIỆU chứ không dò pixel: pixel thì phải đọc ngược canvas (chậm, và
+         lúc này hộp chưa vẽ nên vẫn phải đoán), còn dữ liệu thì có sẵn ngay đây và cho
+         đúng câu trả lời. Tính cả nến lẫn hai đường phủ vì user bắt lỗi ở chỗ hộp đè lên
+         cặp vốn hoá ↔ chỉ số, mà cặp đó nằm trên TRỤC RIÊNG nên vị trí nến không đoán được. */
+      const demDe=(bx,by,bw,bh)=>{
+        let dem=0;
+        for(let i=0;i<n;i++){
+          const xx=cx(i);
+          if(xx<bx-2||xx>bx+bw+2) continue;
+          const rr=vis[i];
+          if(!(y(rr.l)<by||y(rr.h)>by+bh)) dem++;          // thân+bóng nến cắt ô
+          if(P2){
+            if(P2.cVH&&rr.vh>0){ const y2=P2.y(rr.vh); if(y2>=by&&y2<=by+bh) dem++; }
+            if(P2.cIX&&rr.ix>0){ const y2=P2.y(P2.k*rr.ix); if(y2>=by&&y2<=by+bh) dem++; }
+          }
+        }
+        return dem;
+      };
+      veHopGhim(x,X,y0,w,fullLabel(iv,r.t),dong,demDe,plotH);
     }
     // thanh ngắm
     if(hover>=0&&hover<span){
@@ -1075,14 +1119,28 @@ let veBut=false;                                   // bút đang được giữ 
   /* Hộp đọc số của phiên ĐANG GHIM. Hai cột: nhãn trái, số phải — số phải thẳng cột thì
      mới liếc một cái là so được, dồn thành một dòng chảy là phải đọc từng chữ.
      Vẽ thẳng lên canvas cùng lý do với `veHopSK`: toạ độ đổi theo mọi lượt kéo/phóng. */
-  function veHopGhim(x,X,yTop,w,tieu,dong){
+  function veHopGhim(x,X,yTop,w,tieu,dong,demDe,plotH){
     x.font='700 11px system-ui'; x.textBaseline='middle';
     const wN=Math.max(x.measureText(tieu).width,
       ...dong.map(d=>x.measureText(d[0]).width+14+x.measureText(d[1]).width));
     const bw=Math.min(240,wN+20), bh=18+dong.length*16+8;
+    /* CHỌN GÓC ÍT ĐÈ NHẤT TRONG BỐN GÓC (user 25/08: *"bảng thông báo hiện ra che mất một
+       phần phía sau gây khó chịu khi đọc"*). Bản cũ luôn dán vào phải-trên và chỉ lật sang
+       trái khi hết chỗ, nên ở mã nào có đường phủ chạy cao là đè trúng ngay.
+       Bốn ứng viên, chấm bằng `demDe` rồi lấy ít nhất; hoà thì giữ thứ tự ưu tiên cũ
+       (phải-trên trước) để hộp không nhảy lung tung giữa các lần bấm. */
+    const kepX=v=>Math.max(4,Math.min(v,w-bw-4));
+    const dayHop=(plotH?yTop+plotH:yTop+220)-bh-10;
     let bx=X+12, by=yTop+10;
-    if(bx+bw>w-4) bx=X-bw-12;                 // sát mép phải -> lật sang trái
-    if(bx<4) bx=4;
+    if(demDe){
+      const uv=[[X+12,yTop+10],[X-bw-12,yTop+10],[X+12,dayHop],[X-bw-12,dayHop]]
+        .map(([a,b])=>[kepX(a),Math.max(yTop+4,b)]);
+      let tot=Infinity;
+      for(const [a,b] of uv){ const d=demDe(a,b,bw,bh); if(d<tot){ tot=d; bx=a; by=b; } }
+    }else{
+      if(bx+bw>w-4) bx=X-bw-12;               // sát mép phải -> lật sang trái
+    }
+    bx=kepX(bx);
     x.fillStyle=light()?'rgba(255,255,255,.98)':'rgba(24,26,34,.98)';
     x.strokeStyle=light()?'rgba(0,0,0,.16)':'rgba(255,255,255,.18)'; x.lineWidth=1;
     if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,bw,bh,8); x.fill(); x.stroke(); }
@@ -1477,8 +1535,9 @@ let veBut=false;                                   // bút đang được giữ 
     zoomAt(e.clientX-r.left, e.deltaY>0?1.18:0.85);
   },{passive:false});
   cvs.addEventListener('mousedown',e=>{
+    if(vuaCham()) return;                         // xem chú thích ở `chamLuc`
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
-    if(!tool&&bamMoc(px,py)) return;              // hai ô công tắc trong khung
+    if(!tool&&bamMoc(px,py)) return;              // các ô công tắc trong khung
     if(tool){                                     // đang chọn công cụ vẽ
       addPoint(px,py);
       if(tool==='pen'&&pending){ veBut=true; return; }   // bút: rê tới đâu ghi tới đó
@@ -1499,6 +1558,7 @@ let veBut=false;                                   // bút đang được giữ 
     cvs.style.cursor=drag.axis?'ns-resize':'grabbing';
   });
   window.addEventListener('mouseup',e=>{
+    if(vuaCham()) return;
     if(veBut){ veBut=false; chotMo(); return; }   // bút: nhả tay là xong nét
     // nhả chuột sau khi KÉO -> chốt luôn điểm cuối (kiểu bấm–kéo–thả)
     if(dpen&&pending&&pending.p.length===dpen.n){
@@ -1599,7 +1659,29 @@ let veBut=false;                                   // bút đang được giữ 
      nhảy vùng giá, vuốt dọc không được làm trôi khung thời gian. */
   const NGUONG=18;             // vuốt rõ ràng mới tính, kẻo chạm xem giá cũng dời khung
   let chamCuoi=0, chamXY=null; // mốc chạm trước, để bắt chạm-hai-lần
+  /* ---- CHẶN SỰ KIỆN CHUỘT GIẢ SAU KHI CHẠM (sửa 25/08/2026) -------------------
+     User: *"bật tắt cổ tức và cách nền trên điện thoại bị lỗi"*. Trình duyệt di động phát
+     THÊM một cặp `mousedown`/`mouseup` giả sau mỗi lần chạm để tương thích với trang chỉ
+     viết cho chuột. Cả `touchstart` lẫn `mousedown` đều gọi `bamMoc`, nên một cú chạm vào
+     ô "Cổ tức"/"Cách nền" bật rồi TẮT ngay lại — nhìn ra y như nút hỏng.
+
+     CHẶN BẰNG `preventDefault`, KHÔNG BẰNG MỐC THỜI GIAN. Bản đầu tao chặn theo thời gian
+     (bỏ qua chuột trong 700ms sau khi chạm) và nó SAI ở đúng chỗ dễ bỏ sót: cú chạm kích
+     hoạt vẽ lại (`nenArr` chạy O(n·W) trên 3.400 nến), máy chậm thì lượt vẽ nuốt trọn cửa
+     sổ 700ms rồi chuột giả mới tới — đo được **1.124ms** ngay trên máy đang thử. Hàng rào
+     nào dựa vào "đủ nhanh" thì hỏng đúng lúc máy chậm, tức đúng lúc cần nó nhất.
+     `preventDefault` trên `touchstart` thì theo chuẩn là huỷ hẳn cặp chuột giả, không phụ
+     thuộc máy nhanh hay chậm.
+
+     GIÁ PHẢI TRẢ LÀ `{passive:false}` cho `touchstart`. Chấp nhận được vì: chỉ gọi
+     `preventDefault` khi cú chạm TRÚNG một ô công tắc, còn lại vẫn cho cuộn bình thường;
+     và canvas này vốn đã `{passive:false}` ở `touchmove` (cần chặn để kéo/chụm), nên nó
+     không phải vùng cuộn mượt sẵn có.
+     Mốc thời gian vẫn giữ làm lớp hai cho trình duyệt cũ nào lỡ vẫn phát chuột giả. */
+  let chamLuc=0;
+  const vuaCham=()=>Date.now()-chamLuc<700;
   cvs.addEventListener('touchstart',e=>{
+    chamLuc=Date.now();
     if(e.touches.length===2){
       const a=e.touches[0], b=e.touches[1];
       pinch={dx:Math.abs(a.clientX-b.clientX), dy:Math.abs(a.clientY-b.clientY),
@@ -1607,7 +1689,7 @@ let veBut=false;                                   // bút đang được giữ 
     }else if(e.touches.length===1){
       const r=cvs.getBoundingClientRect();
       const p0=e.touches[0], px=p0.clientX-r.left, py=p0.clientY-r.top;
-      if(!tool&&bamMoc(px,py)){ drag=null; return; }
+      if(!tool&&bamMoc(px,py)){ drag=null; if(e.cancelable) e.preventDefault(); return; }
       if(tool){ addPoint(px,py); if(pending) dpen={x:px,y:py,n:pending.p.length}; return; }
       if(px<=geo.plotW){                       // chạm trúng hình vẽ -> chọn và kéo được bằng ngón
         const hit=hitTest(px,py);
@@ -1620,7 +1702,7 @@ let veBut=false;                                   // bút đang được giữ 
       drag={x:p0.clientX,y:p0.clientY,i0,yZoom,truc:null,moved:false};
       hover=idxAt(px); self.draw();
     }
-  },{passive:true});
+  },{passive:false});
   cvs.addEventListener('touchmove',e=>{
     const r=cvs.getBoundingClientRect();
     if(tool&&pending&&e.touches.length===1){   // đang kéo ra hình -> xem trước
@@ -1675,6 +1757,7 @@ let veBut=false;                                   // bút đang được giữ 
     }
   },{passive:false});
   cvs.addEventListener('touchend',e=>{
+    chamLuc=Date.now();
     const t=e.changedTouches&&e.changedTouches[0];
     // nhấc ngón sau khi kéo -> chốt điểm cuối, giống bấm–kéo–thả bằng chuột
     if(dpen&&pending&&pending.p.length===dpen.n){
