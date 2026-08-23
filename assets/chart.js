@@ -203,7 +203,20 @@ let veBut=false;                                   // bút đang được giữ 
   /* ---- vẽ ---- */
   const geo={padR:64,padT:14,plotW:0,plotH:0,cw:0,h:0,w:0,volTop:0};
   /* CHỈ BÁO bật/tắt được — mặc định chỉ MA20 như cũ; chế độ PTKT toàn màn hình bật thêm */
-  const MACOL={20:'rgba(234,179,8,.85)',50:'rgba(56,189,248,.85)',200:'rgba(192,38,211,.8)'};
+  /* MA200 LÀ ĐƯỜNG MẶC ĐỊNH TỪ 24/08/2026 (user: *"nên đổi ma20 thành 200"*) — trước là
+     MA20. Chart của trang mã nay bày 13 năm nến cạnh vốn hoá và chỉ số, mà ở tầm đó một
+     trung bình 20 phiên chỉ là cái bóng của chính đường giá; 200 mới nói được xu hướng.
+     MA200 ĐỔI SANG XÁM THÉP, không giữ tím tía nữa. Nó nay là đường LUÔN BẬT, mà tím
+     `rgb(192,38,211)` đứng cạnh hồng sen của VN-Index quy đổi `rgb(219,39,119)` thì lệch
+     nhau đúng một kênh (ΔG=1, ΔR=27) — nhìn ra hai đường thì được, nhưng cùng đọc là
+     "hồng tím" nên mắt phải dừng lại phân biệt, đúng chỗ không nên phải dừng.
+     Xám cũng ĐÚNG VAI: MA200 là cái NỀN để so, không phải một nhân vật của câu chuyện —
+     hai nhân vật là vốn hoá (xanh lá) và chỉ số (hồng sen). Cùng lý lẽ đã ghi cho đường
+     vốn hoá thị trường hồi trước.
+     XÁM TRUNG chứ đừng xám nhạt (luật đã ghi): `#cbd5e1` từng bị đo là trùng dải với
+     đường gần trắng. MA20 giữ hổ phách và MA50 giữ xanh trời — hai nút đó chỉ còn ở cửa
+     sổ PTKT, đổi màu chúng là đổi thứ người dùng PTKT đã quen. */
+  const MACOL={20:'rgba(234,179,8,.85)',50:'rgba(56,189,248,.85)',200:'rgba(148,163,184,.95)'};
   /* EMA màu RIÊNG, không mượn màu MA: bật cả MA50 lẫn EMA50 mà cùng màu thì hai đường
      chạy sát nhau thành một vệt, không đọc ra đường nào là đường nào. */
   const EMACOL={20:'rgba(52,211,153,.9)',50:'rgba(251,146,60,.9)',200:'rgba(232,121,249,.85)'};
@@ -233,7 +246,7 @@ let veBut=false;                                   // bút đang được giữ 
      đỉnh/đáy của chính mấy cây nến đang ẩn, nhờ vậy MA/Bollinger và mọi hình vẽ PTKT vẫn
      đứng nguyên chỗ cũ. Bật/tắt nến là đổi thứ NHÌN THẤY, không đổi hệ toạ độ — bằng không
      ẩn nến một cái là hình vẽ trôi đi mất. */
-  const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false,
+  const ind={ma:[200], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false,
              vh:false, idx:false, rs:false, nen:true};
   /* ---- MỐC SỰ KIỆN DOANH NGHIỆP (data/sukien) --------------------------------
      Mỗi mốc: {t, k, gc} — t là giây UNIX ở 00:00 UTC của NGÀY sự kiện, đúng quy ước

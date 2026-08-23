@@ -3741,10 +3741,25 @@ bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong 
 
 | | trước | sau |
 |---|---|---|
-| `#cvInd` (chart nhỏ) | 11 nút | **6**: MA20 · RSI · Nến · Khối lượng · Vốn hoá · VN-Index |
+| `#cvInd` (chart nhỏ) | 11 nút | **6**: MA200 · RSI · Nến · Khối lượng · Vốn hoá · VN-Index |
 | `#ptInd` (toàn màn hình) | 15 nút | **13** (bỏ Cổ tức/BCTC, giữ EMA và Sức mạnh) |
 | khổ 375px | 3 hàng · ~85px | **2 hàng đều nhau · 56px** |
 | khổ máy bàn | 2 hàng | **1 hàng · 27px** |
+
+> **ĐƯỜNG MẶC ĐỊNH LÀ MA200, KHÔNG PHẢI MA20 (user chốt 24/08/2026).** Chart của trang mã
+> nay bày tới 13 năm nến cạnh vốn hoá và chỉ số; ở tầm đó một trung bình 20 phiên chỉ là cái
+> bóng chạy sát đường giá, không nói được gì. Đổi ở `ind` của `chart.js` (một chỗ) rồi sửa
+> `class="on"` cho khớp ở **cả hai** hàng nút — lệch một chỗ là nút bảo MA200 đang bật trong
+> khi chart vẽ MA20, và không có gì báo. `bubbles.html` không có nút MA nào nên nó ăn theo
+> mặc định mới; panel đó tải 5 năm nến nên MA200 vẫn tính được.
+>
+> **MA200 ĐỔI SANG XÁM THÉP `rgba(148,163,184,.95)`, bỏ tím tía.** Nó nay LUÔN BẬT, mà tím
+> `rgb(192,38,211)` đứng cạnh hồng sen của VN-Index quy đổi `rgb(219,39,119)` thì lệch nhau
+> đúng một kênh (ΔG=1, ΔR=27) — nhìn ra hai đường thì được, nhưng cùng đọc là "hồng tím" nên
+> mắt phải dừng lại phân biệt, đúng chỗ không nên phải dừng. Xám cũng ĐÚNG VAI: MA200 là cái
+> NỀN để so, hai nhân vật của đồ thị là vốn hoá (xanh lá) và chỉ số (hồng sen). **MA20 giữ
+> hổ phách, MA50 giữ xanh trời** — hai nút đó chỉ còn ở cửa sổ PTKT, đổi màu chúng là đổi
+> thứ người dùng PTKT đã quen.
 
 **BỐN THỨ ĐÃ DỌN KHỎI HÀNG NÚT CỦA CHART NHỎ — ĐỪNG THÊM LẠI:**
 · **EMA50/EMA200 và Sức mạnh** → chỉ còn ở cửa sổ Phân tích kỹ thuật. Chart nhỏ là thứ NHÌN
