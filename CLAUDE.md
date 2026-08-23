@@ -66,6 +66,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/dactrung/{MÃ}.json` | **Kho đặc trưng** (~41MB): vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, đỉnh 52 tuần, và chỉ tiêu cơ bản **gắn theo NGÀY CÔNG BỐ BCTC**. `kho_dactrung.py` |
 | `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang`+`f` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt`+`dtf` lát cắt ngang cho bộ lọc. **FILE NHIỀU CHỦ — MỌI LƯỢT GHI PHẢI TRỘN.** Đã trả giá 21/08/2026, xem mục *Phân tích dữ liệu* |
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
+| `data/chiso.json` | 5 chỉ số theo phiên (`d,c,v,pc`) — **VNINDEX từ 28/07/2000**, phiên đầu tiên của chỉ số. Kho CHÍNH, `build_phantich.py` đọc. `kho_giaodich.py --chiso` |
+| `data/chiso/{CHỈ SỐ}.json` | **Bản GẦY của file trên** — chỉ `d`+`c`, cho chart nến trang mã (VNINDEX 34 KB đã nén thay vì 254 KB). Cùng một hàm ghi ra, không thể trôi khỏi nhau |
 | `data/chungquyen.json` | **328 chứng quyền đang lưu hành** trên 20 cổ phiếu cơ sở, kèm tổ chức phát hành. MỘT lượt gọi. Dùng để đọc con số tự doanh cho đúng — xem mục *Phân tích dữ liệu* |
 | `data/rolichsu.json` | **Rổ mã lịch sử: 1.968 mã, trong đó 443 ĐÃ RỜI SÀN** kèm ngày niêm yết / huỷ niêm yết. Chống sống sót sai lệch |
 | `data/noibo.json` | **Giao dịch của người nội bộ** đọc từ tiêu đề CBTT trong `data/news`. KHO GOM DỒN — `data/news` chỉ giữ 30 ngày |
@@ -168,6 +170,11 @@ nhánh cứu hộ và cho pipeline, không còn là thứ tự client gọi:
 | 1 | `dchart-api.vndirect.com.vn` ACAO `*` | **13,5 năm** (02/01/2013) | **đủ** — đo 206/213 sự kiện |
 | 2 | `histdatafeed.vps.com.vn` ACAO `*` | 15 năm (2011) | chỉ từ giữa 2021 trở lại |
 | 3 | kho `data/hist` | 2020 | **đủ** — từ 07/08/2026 kho cũng cào VNDirect |
+
+> **CHỈ SỐ THÌ NGƯỢC LẠI — VPS SÂU HƠN HẲN, VÀ ĐƯỢC PHÉP DÙNG.** Bảng trên nói về nến CỔ
+> PHIẾU. Với VNINDEX/HNX/UPCOM/VN30/HNX30 thì `dchart` chặn ở 24/08/2017 còn VPS có VNINDEX
+> **từ 28/07/2000**; chỉ số không chia tách nên chỗ VPS yếu (hồi tố quyền) không đụng tới.
+> Xem mục *CHỈ SỐ ĐÃ SÂU TỚI 2000* — `kho_chiso()` trong `tools/kho_giaodich.py`.
 
 7 sự kiện còn "chưa hồi tố" ở nguồn 1 đều là **cổ tức TIỀN 2–4%** — đúng thông lệ thế
 giới (chart giá không trừ cổ tức tiền, chỉ chart tổng lợi nhuận mới trừ). Toàn bộ sự kiện
@@ -1737,6 +1744,10 @@ Hai chi tiết nhỏ mà bỏ là hỏng: **nối vào CUỐI `phai.series`** (p
 VN-Index), và **màu hồng sen đặc** vì bốn màu kia của đồ thị đã bị chiếm (xanh trời cột
 khớp lệnh · tím cột thoả thuận · hổ phách giá TB · xanh lá vốn hoá). *(Kiểu nét đã đổi
 23/08/2026 — xem mục **Ba kiểu nét…** bên dưới: vốn hoá nay LIỀN NÉT DÀY, giá TB nét đứt.)*
+
+> **ĐỘ SÂU ĐÃ LÙI VỀ 01/12/2015 (23/08/2026).** Trước đó cột chỉ số của `phantich.json` trống
+> 433 phiên đầu vì kho chỉ có từ 24/08/2017; nay `data/chiso.json` sâu tới 2000 nên trục 1.769
+> phiên đã đầy (trừ 23–24/01/2018, nguồn nào cũng thiếu). Xem mục *CHỈ SỐ ĐÃ SÂU TỚI 2000*.
 
 Con số đi kèm nằm ở dòng chú thích dưới đồ thị (`từ phiên X: MÃ +a% · VN-Index +b% · chênh
 c điểm %`) — nhìn hai đường chỉ biết ai hơn, không biết hơn bao nhiêu. Nó tính trên CẢ
@@ -3715,6 +3726,78 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
 
+### CHỈ SỐ ĐÃ SÂU TỚI 2000, VÀ `kho_chiso` NAY TRỘN THAY VÌ GHI ĐÈ (23/08/2026)
+
+User: *"không thể kéo đường vnindex tới tận 2013 hoặc xa hơn sao?"*. Đúng là không — nhưng
+chỗ nghẽn nằm ở **kho chỉ số**, không nằm ở chart. `data/chiso.json` cào từ
+`dchart-api.vndirect.com.vn`, mà nguồn đó **chặn cứng ở 24/08/2017** với chỉ số (đo lại
+23/08/2026: xin từ năm 2000 vẫn trả đúng 2.242 phiên từ 24/08/2017), trong khi nến của trang
+mã có từ **02/01/2013**. Nên đường VN-Index cụt mất 4 năm rưỡi đầu của mọi chart.
+
+**`histdatafeed.vps.com.vn` sâu gấp ba** — và đây là chỗ được phép dùng VPS:
+
+| chỉ số | VNDirect | VPS | tổng sau khi gộp |
+|---|---|---|---|
+| VNINDEX | 2.242 · từ 24/08/2017 | **6.369 · từ 28/07/2000** | **6.346** |
+| HNX | 2.244 | 5.112 · từ 04/01/2006 | 5.108 |
+| UPCOM | 2.244 | 4.282 · từ 24/06/2009 | 4.285 |
+| VN30 | 2.242 | 3.651 · từ 06/02/2012 | 3.628 |
+| HNX30 | 2.244 | 3.543 · từ 09/07/2012 | 3.520 |
+
+28/07/2000 đúng là **phiên giao dịch đầu tiên** của VN-Index (100,00 điểm) — tức đã kịch đáy
+lịch sử, không còn gì sâu hơn để lấy.
+
+> **VÌ SAO ĐƯỢC DÙNG VPS Ở ĐÂY, trong khi luật kho nến là "VNDirect trước, VPS dự phòng".**
+> Luật đó sinh ra vì **VPS thiếu hồi tố quyền** (371/1.525 mã sai nền giá) — mà **chỉ số thì
+> không chia tách, không thưởng, không cổ tức**, nên đúng chỗ VPS yếu lại không đụng tới đây.
+> Đo trên 2.242 phiên trùng với VNDirect: lệch **trung vị 0,0000% · p99 0,0000% · đúng 1
+> phiên quá 0,1%** (09/06/2020). Bốn chỉ số kia 3–5 phiên quá 0,1% trên hơn 2.240 phiên.
+>
+> **Entrade đã cân nhắc và LOẠI**: VNINDEX cũng sâu tới 2000, nhưng bốn chỉ số kia chỉ có từ
+> 11/05/2020 và lệch lớn hơn hẳn (UPCOM **209/1.335 phiên** quá 0,1%, max 1,50%).
+
+**`kho_chiso()` NAY TRỘN BA TẦNG, KHÔNG DUMP THẲNG NỮA** — quyền giảm dần:
+① VNDirect (có phiên mới nhất; VPS thường trễ 2–3 phiên) → ② file cũ `data/chiso.json` →
+③ VPS, **chỉ gọi khi kho chưa có phần sâu** (`min(ngày) > CHISO_SAU = 2015-01-01`) và chỉ lấp
+phiên còn trống. Sau lượt đầu là không bao giờ gọi lại, nên lượt EOD hằng ngày **không tốn
+thêm lượt mạng nào**.
+
+> **PHẢI TRỘN, VÌ BẢN CŨ CÓ HAI CÁI BẪY.** Nó `json.dump` đè cả file bằng đúng thứ VNDirect
+> vừa trả, nên ① mọi phần sâu hơn 2017 sẽ bị **xoá sạch ở lượt EOD kế tiếp** — lấp xong hôm
+> nay, mai mất; và ② một chỉ số mà nguồn lỗi đúng lượt đó thì `continue` → chỉ số ấy **biến
+> mất khỏi kho**, không lỗi, không dấu hiệu gì.
+
+> **`pc` PHẢI TÍNH SAU KHI GỘP.** Tính trước rồi ghép là phiên nối giữa hai nguồn mang % của
+> một khoảng hở. Chỉ số không chia tách nên `c[i]/c[i-1] − 1` là định nghĩa duy nhất.
+
+**BẢN GẦY CHO KHÁCH — `data/chiso/{CHỈ SỐ}.json`, chỉ `d` + `c`.** Chart nến của trang mã chỉ
+cần ngày và điểm đóng cửa của ĐÚNG MỘT chỉ số; bắt nó tải cả file gộp là **254 KB đã nén** cho
+một đường kẻ, trong khi riêng VNINDEX chỉ **34 KB** (mà vẫn sâu gấp ba bản 129 KB trước đây).
+**Hai shape, MỘT người viết, cùng một `ra` trong bộ nhớ → không thể trôi khỏi nhau.** Đừng
+dựng bản gầy ở một công cụ khác hay một lượt chạy khác — lúc đó nó thành hai kho và sẽ có ngày
+hai bên nói hai con số.
+
+**HAI THỨ ĐƯỢC LỢI THEO, không phải chờ làm thêm:**
+- **/phantich**: trục phân tích dài 1.769 phiên (từ 01/12/2015) nhưng cột chỉ số **trống 433
+  phiên đầu** vì kho chỉ có từ 2017. Nay đầy — đường *VN-Index quy đổi* và ô đọc số thị trường
+  lùi từ 24/08/2017 về **01/12/2015**.
+- **Trang mã**: đường chỉ số phủ trọn mọi khung của mọi mã, kể cả khung Năm 14 cây từ 2013.
+
+> **CÒN ĐÚNG HAI PHIÊN TRỐNG: 23 và 24/01/2018** — VNINDEX và VN30 không có, HNX/UPCOM thì có.
+> **Cả VNDirect lẫn VPS đều thiếu**, tức là lỗ của nguồn chứ không phải của phép gộp. Cứ để
+> `None`, đúng luật đã ghi: *chỉ số đứng im ba phiên liền là một câu nói về thị trường, không
+> phải một chỗ trống được lấp*.
+
+**CÒN "XA HƠN 2013" THÌ VƯỚNG NẾN, KHÔNG VƯỚNG CHỈ SỐ NỮA.** `dchart` chặn nến cổ phiếu ở
+02/01/2013 (đo REE/VNM: xin từ 1996 vẫn đúng 3.397 phiên từ 02/01/2013), còn kho `data/hist`
+có 672/1.529 mã bắt đầu đúng ngày đó. VPS thì có REE **từ 28/07/2000**, SAM 2000, GMD 2002 —
+và **không thấy vách chia tách nào** trong vùng cũ (0 phiên rơi quá 12% trước 2013 trên
+REE/VNM/HPG/SAM/GMD/FPT), tức vùng đó VPS ĐÃ hồi tố. Nhưng **nền của hai nguồn lệch nhau một
+hằng số** trên vùng chồng nhau 3.397 phiên: REE/SAM/GMD/VCB lệch ~0,00% nhưng **HPG lệch
+35,99%, FPT 16,18%, VNM 1,30%** — trung vị ≈ p95 ≈ max, tức lệch MỨC chứ không phải nhiễu.
+Nối được, nhưng phải đo tỉ lệ tại phiên chung rồi quy nền (luật đã ghi ở mục `data/hist`), và
+phải soi lại 1.529 mã. **Đó là một việc riêng của kho nến, đừng làm lẫn vào việc chỉ số.**
+
 ### HAI ĐƯỜNG PHỦ TRÊN CHART NẾN CỦA TRANG MÃ — VỐN HOÁ VÀ CHỈ SỐ SÀN (23/08/2026)
 
 User: *"ở trang cổ phiếu tôi muốn tìm cách để bật được đường vốn hoá của cổ phiếu và đường
@@ -3750,11 +3833,17 @@ trưng dựng ở **bước cuối** lượt EOD (`run_refresh.ps1` bước sau 
 còn là bản hôm trước — đo 23/08/2026: `dactrung` còn 95 phiên đầu `mcap=null` trong khi
 `giaodich` đã lấp xong. Hai trang đọc hai kho là hai con số vốn hoá lệch nhau mà không ai ngờ.
 
-**CHỈ SỐ THEO ĐÚNG SÀN CỦA MÃ**, không ép mọi mã về VN-Index: `data/chiso.json` có sẵn cả
-`HNX` lẫn `UPCOM`, mà đem mã UPCOM so với VN-Index thì phép so hỏng từ đầu — chính lý do user
-nêu khi bỏ đường vốn hoá thị trường bên /phantich. `IDX_SAN` ánh xạ HOSE→`VNINDEX`/`VN-Index`,
+**CHỈ SỐ THEO ĐÚNG SÀN CỦA MÃ**, không ép mọi mã về VN-Index: kho có sẵn cả `HNX` lẫn
+`UPCOM`, mà đem mã UPCOM so với VN-Index thì phép so hỏng từ đầu — chính lý do user nêu khi
+bỏ đường vốn hoá thị trường bên /phantich. `IDX_SAN` ánh xạ HOSE→`VNINDEX`/`VN-Index`,
 HNX→`HNX`/`HNX-Index`, UPCOM→`UPCOM`/`UPCOM-Index`; nhãn nút viết sẵn "VN-Index" trong HTML
 (đa số mã) và được sửa lại trong `init` cho hai sàn kia.
+
+> **ĐỌC BẢN GẦY `data/chiso/{CHỈ SỐ}.json`, ĐỪNG ĐỌC `data/chiso.json`.** File gộp giữ cả 5
+> chỉ số kèm `v` và `pc` — **254 KB đã nén cho một đường kẻ**, trong khi riêng VNINDEX chỉ
+> tốn **34 KB**. Hai shape do CÙNG `kho_chiso()` ghi ra từ CÙNG một dict nên không thể trôi
+> khỏi nhau; file gộp vẫn là kho chính (`build_phantich.py` đọc nó). Xem mục *CHỈ SỐ ĐÃ SÂU
+> TỚI 2000* bên dưới.
 
 **NEO THEO TRUNG BÌNH CỦA KHUNG ĐANG NHÌN** — cùng phép neo với `neoTrungBinh` bên congcu.js
 (xem mục *ĐỒ THỊ CHÍNH CÒN BA ĐƯỜNG* để biết vì sao chắc chắn có điểm cắt và vì sao không
@@ -3777,8 +3866,9 @@ và nến mới là chủ thể của trang.
 2. **`gopPhu()` phải chạy lại sau MỌI lượt nạp nến.** Bấm Tháng/Năm là `loadChart` xin thêm
    10 năm và **thay hẳn** `dailyRows` bằng mảng khác — mảng mới không có hai trường đó.
 3. **Ngắt nét ở phiên thiếu số** (`st=false`), đừng nối thẳng. Ba nguồn ba độ sâu: vốn hoá
-   1.000 phiên (từ 18/08/2022) · chỉ số từ 24/08/2017 · nến tới 13 năm. Nối thẳng qua chỗ
-   trống là tự tay bịa một đoạn không có dữ liệu.
+   1.000 phiên (từ 18/08/2022) · chỉ số **từ 28/07/2000** · nến tới 13 năm (02/01/2013).
+   Nối thẳng qua chỗ trống là tự tay bịa một đoạn không có dữ liệu. Nay chỉ số **sâu hơn cả
+   nến**, nên đường chỉ số phủ trọn mọi khung của mọi mã; cái cụt còn lại là đường vốn hoá.
 
 **Màu và bề dày ĐỒNG BỘ với /phantich**: vốn hoá xanh lá `#34d399`/`#16a34a` dày 2,4px, chỉ số
 hồng sen `#f472b6`/`#db2777` dày 1,8px. Xanh lá trùng màu nến TĂNG là biết trước và chấp nhận

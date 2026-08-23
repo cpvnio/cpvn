@@ -831,37 +831,104 @@ def td_nap(sym, sid, day_du=False, trang_toi=None, sau_toi=None):
 
 # ── tầng 4: CHỈ SỐ THEO PHIÊN ────────────────────────────────────────────────
 CHISO = os.path.join(BASE, "data", "chiso.json")
+CHISO_MOT = os.path.join(BASE, "data", "chiso")     # bản GẦY cho khách — xem kho_chiso
 IDX = ("VNINDEX", "VN30", "HNX", "HNX30", "UPCOM")
+
+
+# Đã có phần sâu hơn mốc này thì thôi hỏi VPS — xem `kho_chiso`.
+CHISO_SAU = "2015-01-01"
+
+
+def _chiso_vps(m):
+    """Chỉ số theo phiên từ `histdatafeed.vps.com.vn`, dùng để LẤP PHẦN CŨ.
+
+    VPS sâu hơn hẳn VNDirect: VNINDEX **6.369 phiên từ 28/07/2000** (đúng phiên đầu tiên
+    của chỉ số) so với 2.242 phiên từ 24/08/2017; HNX từ 04/01/2006, UPCOM từ 24/06/2009,
+    VN30 từ 06/02/2012, HNX30 từ 09/07/2012.
+
+    VÌ SAO ĐƯỢC PHÉP DÙNG VPS Ở ĐÂY, trong khi luật của kho nến là "VNDirect trước, VPS
+    dự phòng": luật đó sinh ra vì VPS **thiếu hồi tố quyền trước giữa 2021** — mà CHỈ SỐ
+    thì không chia tách, không thưởng, không cổ tức, nên chỗ VPS yếu không đụng tới đây.
+    Đo lại trên 2.242 phiên trùng với VNDirect (đo 23/08/2026): lệch **trung vị 0,0000% ·
+    p99 0,0000% · đúng 1 phiên quá 0,1%** (09/06/2020). HNX/UPCOM/VN30/HNX30 cũng 3-5
+    phiên lệch trên 0,1% trong hơn 2.240 phiên.
+
+    Entrade đã cân nhắc và LOẠI: VNINDEX cũng sâu tới 2000 nhưng bốn chỉ số kia chỉ có từ
+    11/05/2020, và độ lệch so với VNDirect lớn hơn hẳn (UPCOM 209/1.335 phiên quá 0,1%).
+    """
+    j = json.loads(nhipmang.get("https://histdatafeed.vps.com.vn/tradingview/history"
+                                f"?symbol={m}&resolution=1D&from=946684800&to="
+                                f"{int(datetime.datetime.now(TZ).timestamp()) + 86400}"))
+    if j.get("s") != "ok" or not j.get("t"):
+        return {}
+    ra = {}
+    for i, t in enumerate(j["t"]):
+        c = j["c"][i]
+        if not c:
+            continue
+        ra[datetime.datetime.fromtimestamp(t, TZ).strftime("%Y-%m-%d")] = (
+            round(c, 2), int((j.get("v") or [0] * len(j["t"]))[i] or 0))
+    return ra
 
 
 def kho_chiso():
     """Điểm đóng cửa + KHỐI LƯỢNG của từng chỉ số theo phiên -> `data/chiso.json`.
 
-    Nguồn: `dchart-api.vndirect.com.vn` — sâu tới **2017-08** (2.244 phiên cho VNINDEX),
-    trong khi `data/idx.json` của pipeline chỉ giữ ~15 phiên và không có % thay đổi.
-    Endpoint chỉ số của Entrade cũng chạy nhưng chỉ lùi ~300 phiên, nên để làm nguồn đối
-    chiếu chứ không làm nguồn chính. Hai bên khớp nhau ở phiên cuối (1.734,24).
+    BA TẦNG GỘP LẠI, thứ tự quyền giảm dần — TRỘN chứ không ghi đè cả file:
+      ① `dchart-api.vndirect.com.vn` (từ 2017-08) — nguồn CHÍNH, quyền cao nhất vì nó có
+         phiên mới nhất; VPS thường trễ 2-3 phiên.
+      ② file cũ `data/chiso.json` — giữ mọi phiên nguồn không trả nữa.
+      ③ `histdatafeed.vps.com.vn` (VNINDEX từ 28/07/2000) — chỉ gọi khi kho CHƯA có phần
+         sâu, và chỉ lấp phiên còn TRỐNG. Sau lượt đầu là không bao giờ gọi lại.
+
+    VÌ SAO PHẢI TRỘN chứ không dump thẳng như bản cũ: bản cũ ghi đè cả file bằng đúng thứ
+    VNDirect vừa trả, nên ① mọi phần sâu hơn 2017 sẽ bị xoá sạch ở lượt EOD kế tiếp, và
+    ② một chỉ số mà nguồn lỗi đúng lượt đó thì `continue` -> chỉ số ấy BIẾN MẤT khỏi kho
+    (không lỗi, không dấu hiệu).
 
     % THAY ĐỔI TÍNH TẠI CHỖ chứ không lấy của nguồn: chỉ số không chia tách nên
     `c[i]/c[i-1] - 1` là định nghĩa duy nhất, và tự tính thì phiên nào cũng có, kể cả
-    phiên đầu chuỗi của một lượt cào bù.
+    phiên đầu chuỗi của một lượt cào bù. Phải tính SAU khi gộp, bằng không phiên nối giữa
+    hai nguồn mang % của một khoảng hở.
     """
+    try:
+        cu = json.load(open(CHISO, encoding="utf-8"))
+    except Exception:
+        cu = {}
     ra = {}
     for m in IDX:
+        gop = {}
+        o = cu.get(m) or {}
+        for i, d in enumerate(o.get("d") or []):
+            if o["c"][i] is not None:
+                gop[d] = (o["c"][i], (o.get("v") or [0] * len(o["d"]))[i] or 0)
         try:
-            b = nhipmang.get("https://dchart-api.vndirect.com.vn/dchart/history"
-                             f"?symbol={m}&resolution=D&from=1400000000&to="
-                             f"{int(datetime.datetime.now(TZ).timestamp()) + 86400}")
-            j = json.loads(b)
+            j = json.loads(nhipmang.get(
+                "https://dchart-api.vndirect.com.vn/dchart/history"
+                f"?symbol={m}&resolution=D&from=1400000000&to="
+                f"{int(datetime.datetime.now(TZ).timestamp()) + 86400}"))
+            if j.get("s") == "ok" and j.get("t"):
+                for i, t in enumerate(j["t"]):
+                    gop[datetime.datetime.fromtimestamp(t, TZ).strftime("%Y-%m-%d")] = (
+                        round(j["c"][i], 2),
+                        int((j.get("v") or [0] * len(j["t"]))[i] or 0))
         except Exception:
+            pass
+        if gop and min(gop) > CHISO_SAU:
+            try:
+                sau = _chiso_vps(m)
+                them = sum(1 for d in sau if d not in gop)
+                for d, cv in sau.items():
+                    gop.setdefault(d, cv)
+                if them:
+                    print(f"    {m}: lấp {them:,} phiên cũ từ VPS", flush=True)
+            except Exception as e:
+                print(f"    {m}: VPS lỗi ({e}) — giữ nguyên phần đang có", flush=True)
+        if not gop:
             continue
-        if j.get("s") != "ok" or not j.get("t"):
-            continue
-        d, c, v = [], [], []
-        for i, t in enumerate(j["t"]):
-            d.append(datetime.datetime.fromtimestamp(t, TZ).strftime("%Y-%m-%d"))
-            c.append(round(j["c"][i], 2))
-            v.append(int((j.get("v") or [0] * len(j["t"]))[i] or 0))
+        d = sorted(gop)
+        c = [gop[x][0] for x in d]
+        v = [gop[x][1] for x in d]
         ra[m] = {"d": d, "c": c, "v": v,
                  "pc": [None] + [round((c[i] / c[i - 1] - 1) * 100, 2) if c[i - 1] else None
                                  for i in range(1, len(c))]}
@@ -871,6 +938,22 @@ def kho_chiso():
     tmp = CHISO + ".tmp"
     json.dump(ra, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     os.replace(tmp, CHISO)
+    # ---- BẢN GẦY CHO KHÁCH: `data/chiso/{MÃ}.json` chỉ có `d` + `c` -----------------
+    # Chart nến của trang mã (`cophieu.html`) chỉ cần NGÀY và ĐIỂM ĐÓNG CỬA của ĐÚNG MỘT
+    # chỉ số. Bắt nó tải cả `chiso.json` là 254 KB đã nén cho một đường kẻ — trong khi
+    # riêng VNINDEX chỉ tốn 45 KB. Sau khi lấp sâu tới 2000 thì file gộp phình gấp đôi
+    # (129 -> 254 KB), nên chỗ này không còn là tối ưu vặt nữa.
+    #
+    # HAI SHAPE, MỘT NGƯỜI VIẾT, CÙNG MỘT `ra` TRONG BỘ NHỚ -> KHÔNG THỂ TRÔI KHỎI NHAU.
+    # Đừng dựng bản gầy ở một công cụ khác hay một lượt chạy khác: lúc đó nó thành hai kho
+    # và sẽ có ngày hai bên nói hai con số. `chiso.json` vẫn là kho CHÍNH (build_phantich
+    # đọc nó, và nó giữ cả `v` lẫn `pc`).
+    os.makedirs(CHISO_MOT, exist_ok=True)
+    for m, o in ra.items():
+        f = os.path.join(CHISO_MOT, m + ".json")
+        json.dump({"d": o["d"], "c": o["c"]}, open(f + ".tmp", "w", encoding="utf-8"),
+                  ensure_ascii=False, separators=(",", ":"))
+        os.replace(f + ".tmp", f)
     return len(ra)
 
 
