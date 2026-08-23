@@ -760,6 +760,12 @@ const PT_HIEN={
   maPhu:    false,   // 6 đồ thị nhỏ dưới nó (khối ngoại · tự doanh · % · thoả thuận · vùng giá)
 };
 
+/* CHỈ SỐ THEO ĐÚNG SÀN CỦA MÃ — user chốt 23/08/2026, và bảng này phải giống hệt
+   `IDX_SAN` của `cophieu.html`. Đem một mã UPCOM so với VN-Index thì phép so hỏng từ đầu;
+   đó cũng chính là lý do user nêu khi bỏ đường vốn hoá thị trường khỏi đồ thị này.
+   Khoá là mã chỉ số trong `data/phantich.json` (`chiso`), giá trị thứ hai là tên hiển thị
+   dùng cho CẢ nút, ô chú thích lẫn nhãn ô đọc số — khai một chỗ để ba chỗ không trôi. */
+const PT_IDX_SAN={HOSE:['VNINDEX','VN-Index'],HNX:['HNX','HNX-Index'],UPCOM:['UPCOM','UPCOM-Index']};
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
@@ -1622,15 +1628,25 @@ function ptVe1(cv, cfg){
      Nhãn của nó vẽ Ở CỘT NGOÀI CÙNG và TÔ ĐÚNG MÀU ĐƯỜNG — hai cột số cùng màu xám nằm
      cạnh nhau thì không biết cột nào của đường nào, mà đó là lỗi tệ hơn không có nhãn. */
   const P3=cfg.phai2&&cfg.phai2.series?cfg.phai2.series.filter(x=>x&&x.v):null;
+  /* THANG LOGA CHO TRỤC NGOÀI CÙNG (`cfg.phai2.loga`) — cùng luật với chart nến của trang
+     mã. Câu hỏi ở cặp vốn hoá ↔ chỉ số là "mạnh hơn bao nhiêu", tức một TỈ LỆ: trên thang
+     loga khoảng cách dọc giữa hai đường đúng bằng `log(vốn hoá ÷ k×chỉ số)`, nên hơn 20%
+     ở đầu khung trông đúng bằng hơn 20% ở cuối khung. Thang thường thì cùng một mức hơn
+     kém lại to nhỏ khác nhau tuỳ chỗ trên đồ thị.
+     `lo3`/`hi3` giữ trong KHÔNG GIAN LOGA, còn nhãn thì `Math.exp` ngược ra — nhờ vậy nhãn
+     không cách đều nhau về giá trị, và đó cũng là dấu hiệu duy nhất báo đây là thang loga. */
+  const loga3=!!(cfg.phai2&&cfg.phai2.loga);
+  const q3=v=>loga3?((v>0)?Math.log(v):null):v;
   let lo3=Infinity, hi3=-Infinity;
   if(P3&&P3.length){
-    for(const s3 of P3) for(let i=0;i<n;i++){ const v=s3.v[i];
+    for(const s3 of P3) for(let i=0;i<n;i++){ const v=q3(s3.v[i]);
       if(v!=null&&!isNaN(v)){ lo3=Math.min(lo3,v); hi3=Math.max(hi3,v); } }
     if(hi3>lo3){ const b3=(hi3-lo3)*0.10; lo3-=b3; hi3+=b3; }
-    else if(hi3>-Infinity){ lo3=hi3*0.98; hi3=hi3*1.02; }
+    else if(hi3>-Infinity){ lo3=hi3-0.02; hi3=hi3+0.02; }
   }
   const coP3=P3&&P3.length&&hi3>lo3;
   const nhanP3=v=>cfg.phai2&&cfg.phai2.nhan?cfg.phai2.nhan(v):num(v);
+  const soP3=v=>nhanP3(loga3?Math.exp(v):v);
   const padL=Math.ceil(g.measureText(cfg.nhan?cfg.nhan(hi):num(hi)).width)+8, padB=14;
   /* CHỪA THÊM CHỖ TRÊN ĐỈNH KHI CÓ MỐC SỰ KIỆN — nhưng chỉ 14px, đủ để cái chấm bám trên
      đường giá ở vùng đỉnh không bị cắt mất nửa. Bản đầu chừa 22px và cho mốc nằm THÀNH
@@ -1646,7 +1662,7 @@ function ptVe1(cv, cfg){
      nhìn, còn con số chính xác của phiên đang chọn thì ô "Vốn hoá" ở thanh đọc số luôn in
      sẵn — thậm chí chính xác hơn bốn cái mốc lưới. */
   const hep=W<520;
-  const wP3=(coP3&&!hep)?Math.ceil(g.measureText(nhanP3(hi3)).width)+10:0;
+  const wP3=(coP3&&!hep)?Math.ceil(g.measureText(soP3(hi3)).width)+10:0;
   const padR=wP2+wP3;
   const plotH=H-padB-padT, plotW=W-padL-padR;
   const y=v=>padT+plotH-(v-lo)/(hi-lo)*plotH;
@@ -1666,7 +1682,7 @@ function ptVe1(cv, cfg){
   if(coP3&&!hep){
     g.textAlign='left'; g.fillStyle=P3[0].mau;
     for(let k=0;k<=3;k++){ const v=lo3+(hi3-lo3)*k/3;
-      g.fillText(nhanP3(v), W-wP3+4, padT+plotH-(v-lo3)/(hi3-lo3)*plotH); }
+      g.fillText(soP3(v), W-wP3+4, padT+plotH-(v-lo3)/(hi3-lo3)*plotH); }
     g.fillStyle=ct; g.textAlign='right';
   }
   const gap=plotW/n, bw=Math.max(1,gap*0.7);
@@ -1694,8 +1710,8 @@ function ptVe1(cv, cfg){
         g.fillRect(padL+i*gap+(gap-bw)/2, Math.min(a,b), bw, Math.max(1,Math.abs(b-a)));
         if(cfg.chong) day+=v; } }
   }
-  const veDuong=(ds,l3,h3)=>{
-    const yy=v=>padT+plotH-(v-l3)/(h3-l3)*plotH;
+  const veDuong=(ds,l3,h3,lg)=>{
+    const yy=v=>padT+plotH-((lg?Math.log(v):v)-l3)/(h3-l3)*plotH;
     for(const s2 of ds){
       /* KIỂU NÉT DO NƠI GỌI ĐẶT, hàm này không tự quyết. Ở đồ thị chính thứ bậc là: vốn
          hoá LIỀN NÉT DÀY (đường chủ) · vốn hoá thị trường nét đứt thưa · giá TB nét đứt
@@ -1705,14 +1721,14 @@ function ptVe1(cv, cfg){
       if(s2.net) g.setLineDash(s2.net); else g.setLineDash([]);
       g.strokeStyle=s2.mau; g.lineWidth=s2.day||1.8; g.beginPath(); let dau=true;
       for(let i=0;i<n;i++){ const v=s2.v[i];
-        if(v==null||isNaN(v)){ dau=true; continue; }
+        if(v==null||isNaN(v)||(lg&&!(v>0))){ dau=true; continue; }
         const x=padL+i*gap+gap/2;
         if(dau){ g.moveTo(x,yy(v)); dau=false; } else g.lineTo(x,yy(v)); }
       g.stroke(); g.setLineDash([]);
     }
   };
   if(coP2) veDuong(P2,lo2,hi2);
-  if(coP3) veDuong(P3,lo3,hi3);
+  if(coP3) veDuong(P3,lo3,hi3,loga3);
   /* MỐC SỰ KIỆN DOANH NGHIỆP — vẽ SAU dữ liệu (để không bị cột nào đè lên) nhưng TRƯỚC
      mốc phiên đang chọn (mốc phiên là thứ phải nổi nhất trên đồ thị).
      Hai lớp: một VẠCH DỌC rất mờ chạy suốt vùng vẽ để dóng xuống đúng phiên, và một CHẤM
@@ -2126,6 +2142,35 @@ function ptVeMa(){
     const tis=tbNg/tbMa;
     return {tis:tis, a:a, b:b, n:dem, v:ng.map(x=>x==null?null:x/tis)};
   };
+  /* ---- NEO CỨNG THEO TRUNG BÌNH LOGA — CÙNG MỘT LUẬT VỚI CHART NẾN CỦA TRANG MÃ ------
+     User chốt 23/08/2026: *"bên data phân tích cũng hiện chỉ số vnindex - vốn hoá theo quy
+     tắc này (mã sàn nào thì chỉ số sàn đó)"*.
+
+         k        = exp( TB(log vốn hoá) − TB(log chỉ số) )   trên GIAO các phiên có cả hai
+         đường vẽ = k × chỉ số(i)
+
+     KHÁC `neoTrungBinh` (trung bình CỘNG) ở chỗ nào, và vì sao phải đổi: chỗ hai đường cắt
+     nhau chỉ phụ thuộc `k`, nên hai trang dùng hai phép neo khác nhau là **cùng một mã,
+     cùng một câu hỏi, hai chỗ cắt khác nhau** — đúng cái bệnh "hai trang nói hai số" mà cả
+     dự án này tránh. Trung bình loga còn hợp với thang loga của trục: nó đặt cho TB của
+     `log(vốn hoá) − log(k×chỉ số)` bằng 0, tức hai đường cân nhau NGAY TRÊN THANG ĐANG VẼ.
+
+     BẢO ĐẢM CÓ ĐIỂM CẮT vẫn còn: nằm trên ở mọi phiên thì trung bình hiệu phải dương —
+     mâu thuẫn. `neoTrungBinh` giữ nguyên ở trên, chưa chỗ nào gọi nhưng đừng xoá: nó là
+     phép neo của bản cũ và là thứ để đối chiếu khi nghi ngờ. */
+  const neoLoga=(ng)=>{
+    if(!ng) return null;
+    let sMa=0, sNg=0, dem=0, a=-1, b=-1;
+    for(let z=0;z<d.length;z++){
+      if(!(ng[z]>0)||!(mcap[z]>0)) continue;
+      sMa+=Math.log(mcap[z]); sNg+=Math.log(ng[z]); dem++;
+      if(a<0) a=z;
+      b=z;
+    }
+    if(dem<2) return null;
+    const k=Math.exp(sMa/dem-sNg/dem);
+    return {tis:1/k, a:a, b:b, n:dem, v:ng.map(x=>(x>0)?k*x:null)};
+  };
   /* ---- VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) --------------------------
      *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
 
@@ -2149,8 +2194,9 @@ function ptVeMa(){
      kiện quyền; đúng luật đã ghi ở `tools/kho_dactrung.py`. VN-Index thì không chia tách,
      lấy điểm chia điểm là đủ. */
   let vniL=null, vniTom=null;
+  const [idxMa, idxTen]=PT_IDX_SAN[((ST.map.get(PT.ma)||{}).ex)||'']||PT_IDX_SAN.HOSE;
   if(PT.vni){
-    const cs=(PT.tt&&PT.tt.chiso&&PT.tt.chiso.VNINDEX)||null,
+    const cs=(PT.tt&&PT.tt.chiso&&PT.tt.chiso[idxMa])||null,
           td=(PT.tt&&PT.tt.tt&&PT.tt.tt.d)||null;
     if(cs&&cs.c&&td){
       const mp={}; for(let z=0;z<td.length;z++) if(cs.c[z]!=null) mp[td[z]]=cs.c[z];
@@ -2165,7 +2211,7 @@ function ptVeMa(){
          đôi) nên hai đường so được bằng mắt. ĐIỀU KIỆN: `sh` phải nhảy bậc ĐÚNG NGÀY GDKHQ
          — xem `tools/va_slcp_gdkhq.py`. Không có nó thì chính đường vốn hoá mới là đường bị
          sụt, và cả phép so hỏng. */
-      const r=neoTrungBinh(vn);
+      const r=neoLoga(vn);
       if(r){
         vniL=r.v;
         /* CON SỐ HƠN KÉM vẫn tính theo lối cũ — neo MỘT phiên. Nó trả lời câu khác với đồ
@@ -2353,7 +2399,7 @@ function ptVeMa(){
               mà "÷ 343" là bốn ký tự nằm ngay cạnh cái ô màu — rẻ hơn mọi cách khác. */
            +((PT.vh||vniL)?'  <span class="ptlgs" id="ptLeg4">'
               +(PT.vh?ptSw('vh2','pkV','vốn hoá'):'')
-              +(vniL?ptSw('vni2','pkI','VN-Index quy đổi'):'')+'</span>'
+              +(vniL?ptSw('vni2','pkI',idxTen+' quy đổi'):'')+'</span>'
               +'<span class="ptkr"> — trục ngoài cùng, cùng đơn vị tiền</span>':'')
            /* BA DÒNG CHỮ ĐÃ BỎ 22/08/2026 — user chốt: *"tao không cần quá nhiều câu giải
               thích rườm rà gây loãng"*. Cụ thể: dải chú giải MỐC SỰ KIỆN (D/C/P/B), DÒNG SỐ
@@ -2365,7 +2411,7 @@ function ptVeMa(){
               `vni`/`ma`) vẫn còn nguyên ở trên, chỉ cần in ra. */, 1,
            '<span class="ptsw" id="ptSK">'
              +'<button data-k="vh"'+(PT.vh?' class="on"':'')+'>Vốn hoá</button>'
-             +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>VN-Index</button>'
+             +'<button data-k="vni"'+(PT.vni?' class="on"':'')+'>'+idxTen+'</button>'
              +'<button data-k="sk"'+(PT.skH.sk?' class="on"':'')+'>Cổ tức &amp; quyền</button>'
              +'<button data-k="bctc"'+(PT.skH.bctc?' class="on"':'')+'>Báo cáo tài chính</button>'
            +'</span>')
@@ -2505,7 +2551,7 @@ function ptVeMa(){
        phải dày nhất khung (3px) và liền nét — nét đứt đã chuyển sang cho giá TB và cho
        đường thị trường. */
     phai2:((PT.vh&&!PT.an.vh2)||(vniL&&!PT.an.vni2))
-      ?{nhan:v=>ptTien(v),series:[
+      ?{nhan:v=>ptTien(v),loga:true,series:[
       (PT.vh&&!PT.an.vh2)?{v:mcap,mau:XANH,day:3}:null,
       /* THỊ TRƯỜNG LẤY MÀU XÁM THÉP, không lấy một màu nữa trong bảng: tám ký hiệu của đồ
          thị này đã chiếm hết các sắc phân biệt được (lam, cam, lam nhạt, tím, đen/trắng,
@@ -2571,10 +2617,13 @@ function ptVeMa(){
   }
   /* SỐ CỦA THỊ TRƯỜNG CHO ĐÚNG PHIÊN ĐANG XEM. Trục ngày của `data/phantich.json` dài hơn
      và bắt đầu sớm hơn trục ngày của một mã, nên phải dò THEO NGÀY chứ tuyệt đối không
-     dùng chung chỉ số — lệch một ô là hiện số của phiên khác mà nhìn không ra. */
+     dùng chung chỉ số — lệch một ô là hiện số của phiên khác mà nhìn không ra.
+     CHỈ SỐ PHẢI ĐÚNG SÀN CỦA MÃ (`idxMa`), bằng không ô đọc số in điểm VN-Index cho một mã
+     HNX trong khi đường vẽ trên đồ thị là HNX-Index — hai con số của hai thị trường khác
+     nhau đứng cạnh nhau mà không có gì báo. */
   let ttP=null;
   if(PT.vni&&PT.tt&&PT.tt.tt&&PT.tt.tt.d){
-    const T=PT.tt.tt, cs=(PT.tt.chiso||{}).VNINDEX||null, z=T.d.indexOf(d[k]);
+    const T=PT.tt.tt, cs=(PT.tt.chiso||{})[idxMa]||null, z=T.d.indexOf(d[k]);
     if(z>=0) ttP={c:cs?cs.c[z]:null, pc:cs?cs.pc[z]:null,
                   gt:(T.mval[z]||0)+((T.pval&&T.pval[z])||0)};
   }
@@ -2691,7 +2740,7 @@ function ptVeMa(){
        của MỘT MÃ, ai không bật đường VN-Index thì nó chỉ là một ô lạc.
        `PT.tt.tt.mval`/`pval` tính bằng TỶ (xem `build_phantich`), khác `mval` của kho mã
        vốn tính bằng ĐỒNG — đừng đưa qua `ptTien`. */
-    +(ttP?oo('VN-Index', ttP.c!=null?num2(ttP.c):oNul,
+    +(ttP?oo(idxTen, ttP.c!=null?num2(ttP.c):oNul,
         /* "cả thị trường" bọc `.ptdq` để KHỔ HẸP BỎ ĐI — ở 375px ô chỉ còn ~155px và
            chuỗi đầy đủ bị cắt đuôi đúng vào CON SỐ, mà cắt số thì đọc ra một số sai. Bỏ
            một chữ định tính an toàn hơn hẳn; nhãn ô đã là "VN-Index" nên con số tỷ đứng

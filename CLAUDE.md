@@ -3733,6 +3733,61 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
 
+### /PHANTICH DÙNG CHUNG LUẬT CHỈ SỐ VỚI TRANG MÃ (23/08/2026)
+
+User: *"bên data phân tích cũng hiện chỉ số vnindex - vốn hoá theo quy tắc này (mã sàn nào
+thì chỉ số sàn đó), chỉ khác là show khối lượng của từng nhóm theo từng phiên trong 1.000
+phiên thôi"*. Ba thứ đổi, đúng ba thứ:
+
+**① CHỈ SỐ THEO SÀN CỦA MÃ.** `PT_IDX_SAN` — **bảng này phải giống hệt `IDX_SAN` của
+`cophieu.html`**. Một tên hiển thị dùng cho CẢ nút, ô chú thích lẫn nhãn ô đọc số, khai một
+chỗ để ba chỗ không trôi khỏi nhau. Kiểm trên KSF (HNX): nút `HNX-Index` · chú thích
+`HNX-Index quy đổi` · ô đọc số `HNX-Index = 319,44`.
+> Ô đọc số PHẢI đổi theo, không chỉ đường vẽ — bằng không nó in điểm VN-Index cho một mã HNX
+> trong khi đường trên đồ thị là HNX-Index: hai con số của hai thị trường khác nhau đứng cạnh
+> nhau mà không có gì báo.
+
+**② NEO CỨNG THEO TRUNG BÌNH LOGA** (`neoLoga`), thay `neoTrungBinh` (trung bình CỘNG):
+
+```
+k        = exp( TB(log vốn hoá) − TB(log chỉ số) )   trên GIAO các phiên có cả hai
+đường vẽ = k × chỉ số(i)
+```
+
+Vì sao phải đổi: chỗ hai đường cắt nhau **chỉ phụ thuộc `k`**, nên hai trang dùng hai phép
+neo khác nhau là *cùng một mã, cùng một câu hỏi, hai chỗ cắt khác nhau*. Trung bình loga còn
+hợp với thang loga của trục — nó đặt cho TB của `log(vốn hoá) − log(k×chỉ số)` bằng 0, tức
+hai đường cân nhau NGAY TRÊN THANG ĐANG VẼ. Bảo đảm có điểm cắt vẫn còn nguyên.
+> `neoTrungBinh` GIỮ LẠI dù không chỗ nào gọi: nó là phép neo của bản cũ và là thứ để đối
+> chiếu khi nghi ngờ. Đừng "dọn rác".
+
+**③ TRỤC NGOÀI CÙNG CHUYỂN SANG THANG LOGA** (`cfg.phai2.loga`). `lo3`/`hi3` giữ trong không
+gian loga, nhãn `Math.exp` ngược ra nên **không cách đều nhau về giá trị** — đó cũng là dấu
+hiệu duy nhất báo cho người đọc biết đây là thang loga.
+
+> **KIỂM THANG LOGA BẰNG TỈ LỆ BA ĐIỂM, đừng đo bằng hồi quy trên toàn đường.** Tỉ lệ
+> `(y_đáy − y_cuối) ÷ (y_đáy − y_đỉnh)` tự triệt tiêu `padT`, `plotH` và cả `lo3/hi3`, nên
+> chỉ còn phụ thuộc phép biến đổi. GVR 1.000 phiên: đo được **0,7744**, loga dự đoán
+> **0,7670**, thang thường dự đoán 0,6182 — loga sai lệch nhỏ hơn **21 lần**.
+
+> **HAI CÁI BẪY ĐÃ ĂN TRỌN MỘT VÒNG ĐO SAI, ghi lại để khỏi mất công lần nữa:**
+> ① **Nhãn trục phải thứ hai được TÔ ĐÚNG MÀU ĐƯỜNG** (luật cũ, cố ý) — nên quét pixel tìm
+> đường xanh mà không chặn ở mép vùng vẽ là bắt luôn chữ của nhãn trục, ra một "điểm cuối"
+> nằm tận x=2620 trong khi vùng vẽ kết thúc ở **x=2410**. Tìm mép bằng khoảng trống ≥30 cột.
+> ② **Đổi `assets/*.js` mà KHÔNG đổi `?v=` thì trình duyệt trả bản CŨ** — phép thử A/B
+> "bật/tắt loga" cho ra hai kết quả giống hệt nhau và suýt kết luận là cờ không chạy. Đúng
+> cái bẫy đã ghi ở mục *Quy ước toàn site*, chỉ khác là lần này nó cắn vào phép ĐO.
+
+**`k` CỦA HAI TRANG KHÔNG BẰNG NHAU, VÀ ĐÓ LÀ ĐÚNG.** Cùng công thức nhưng khác MIỀN: trang
+mã neo trên toàn bộ `data/vonhoa` (tới 3.412 phiên), /phantich neo trên đúng khung đang chọn
+(100/300/600/1.000 phiên của `data/giaodich`). Phép đọc vì thế cũng khác một nhịp — *"đắt/rẻ
+so với mức trung bình của CHÍNH KHUNG đang xem"* — đúng như đã ghi cho `neoTrungBinh`. Muốn
+hai trang trùng chỗ cắt thì phải xem cùng một khoảng thời gian.
+
+**CÁI KHÁC BIỆT CỦA /PHANTICH GIỮ NGUYÊN**: cột giá trị giao dịch tách theo KHỐI (khối ngoại
+· tự doanh · còn lại · thoả thuận) từng phiên. Đó là thứ trang mã không có và là lý do trang
+này tồn tại.
+
 ### GHIM MỘT PHIÊN ĐỂ ĐỌC SỐ, VÀ TẮT ĐƯỢC THÂN NẾN (23/08/2026)
 
 User chốt hai việc: *"hiện thêm toạ độ tam giác khi tôi bật chỉ báo vnindex lên, bấm vào sẽ
