@@ -219,9 +219,17 @@ let veBut=false;                                   // bút đang được giữ 
      thân nến, và đây là đường người dùng vừa tự tay bật lên nên không bất ngờ. */
   const VHCOL=()=>light()?'#16a34a':'#34d399';
   const IXCOL=()=>light()?'#db2777':'#f472b6';
+  /* SỨC MẠNH TƯƠNG ĐỐI đứng ở DẢI RIÊNG nên được màu riêng — xanh mòng két, không mượn
+     hồng sen của đường chỉ số trên chart giá: bật cả hai mà cùng màu thì hai thứ KHÁC
+     NHAU (một đường quy đổi neo theo khung · một tỉ số cố định) trông như một. */
+  const RSCOL=()=>light()?'#0d9488':'#2dd4bf';
+  /* Tỉ số giá÷điểm nhảy bậc rất rộng giữa các mã: VNZ ~300, mã nghìn đồng ~0,002. Số chữ
+     số thập phân phải theo độ lớn, cố định 2 chữ số là mã nhỏ hiện toàn "0,00". */
+  const fmtRS=v=>{const k=v>=100?1:v>=10?2:v>=1?3:v>=0.1?4:5;
+    return v.toLocaleString('vi-VN',{minimumFractionDigits:k,maximumFractionDigits:k});};
   let ixTen='VN-Index';                    // đổi theo sàn của mã — xem self.setChiSoTen
   const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false,
-             vh:false, idx:false};
+             vh:false, idx:false, rs:false};
   /* ---- MỐC SỰ KIỆN DOANH NGHIỆP (data/sukien) --------------------------------
      Mỗi mốc: {t, k, gc} — t là giây UNIX ở 00:00 UTC của NGÀY sự kiện, đúng quy ước
      mốc nến của kho. `xOfT` lo phần chiếu sang pixel nên khung Tuần/Tháng/Năm tự đúng,
@@ -278,7 +286,8 @@ let veBut=false;                                   // bút đang được giữ 
     const volH=ind.vol?Math.round(h*0.17):0;
     const rsiH=ind.rsi?Math.round(h*0.18):0;
     const macH=ind.macd?Math.round(h*0.18):0;
-    const subH=rsiH+macH;                    // tổng chiều cao các dải phụ dưới đáy
+    const rsH=ind.rs?Math.round(h*0.18):0;   // SỨC MẠNH TƯƠNG ĐỐI — dải dưới cùng
+    const subH=rsiH+macH+rsH;                // tổng chiều cao các dải phụ dưới đáy
     const padB=volH+subH+22, padR=geo.padR, padT=geo.padT;
     const volBase=h-22-subH;                 // đáy cột khối lượng (chừa chỗ cho dải phụ)
     /* Hình học dải RSI phải biết TỪ ĐÂY, không đợi tới đoạn vẽ đường RSI ở cuối draw():
@@ -513,7 +522,7 @@ let veBut=false;                                   // bút đang được giữ 
     }
     // MACD 12/26/9 (dải riêng dưới cùng): cột chênh lệch + 2 đường
     if(ind.macd&&rows.length>35){
-      const top=h-22-macH+4, bh=macH-10;
+      const top=h-22-macH-rsH+4, bh=macH-10;   // rsH: dải sức mạnh nằm DƯỚI MACD
       const ema=(arr,per)=>{ const k=2/(per+1), o=[]; let e=arr[0];
         for(let i=0;i<arr.length;i++){ e=i?arr[i]*k+e*(1-k):arr[i]; o.push(e); } return o; };
       const cl=rows.map(r=>r.c), e12=ema(cl,12), e26=ema(cl,26);
@@ -536,6 +545,74 @@ let veBut=false;                                   // bút đang được giữ 
       }
       x.fillStyle=MUT(); x.font='700 10px system-ui'; x.textAlign='left';
       x.fillText('MACD 12/26/9',8,top+11);
+    }
+    /* ---- SỨC MẠNH TƯƠNG ĐỐI: giá ÷ điểm chỉ số (user chốt 23/08/2026) --------------
+       User: *"chỉ báo vnindex đang không cố định theo chart, khi tôi kéo về phía sau thì
+       nó cũng di chuyển … tôi muốn biến nó thành 1 chỉ báo thực sự và cố định"*.
+
+       VÌ SAO PHẢI RỜI KHỎI TRỤC GIÁ, KHÔNG PHẢI VÌ LƯỜI: trục giá TỰ KHÍT theo nến đang
+       hiện, nên MỌI đường neo cứng đều phải trôi ra ngoài khung. Đo 216 mã HOSE × 30.073
+       cửa sổ 120 phiên, neo VN-Index một lần cho cả chuỗi: **47,5% số cửa sổ đường nằm HẲN
+       ngoài khung nến**; nới trục để ôm nó thì khung phình trung vị ×1,50 · p90 ×4,15 ·
+       max ×62, tức nến bẹp còn 67% / 24% / 1,6% chiều cao. Không có cách thứ ba.
+
+       CÔNG THỨC — TỈ SỐ THÔ, KHÔNG CHUẨN HOÁ (user chọn):
+             RS(i) = giá đóng cửa(i) ÷ điểm chỉ số(i)
+       Mỗi phiên MỘT giá trị, phụ thuộc đúng hai con số của chính phiên đó — không cửa sổ,
+       không trung bình trượt, không phiên neo. Kéo/phóng bao nhiêu cũng KHÔNG đổi được nó,
+       và RS đi lên nghĩa là mã chạy hơn thị trường ở mọi khung, mọi mức phóng.
+       (Đã cân nhắc rồi bỏ: Mansfield 250 `(RS/TB250−1)×100` — 7,8 lần cắt mốc 0 mỗi năm,
+       biên độ p90 33 điểm %; Alpha 60 phiên — 15,3 lần/năm, quá nhiễu; Alpha 250 — biên độ
+       p90 70 điểm % nên thang nhảy mạnh khi đổi mã. User chọn tỉ số thô.)
+
+       THANG DẢI KHÍT THEO KHUNG NHÌN, KHÔNG KHÍT CẢ CHUỖI — và đây là chỗ dễ hiểu ngược.
+       "Cố định" đã nằm ở CHỖ KHÁC rồi: giá trị từng phiên là bất biến, nên phép đọc không
+       bao giờ lật (không còn cảnh cùng một ngày mà chỗ này đọc ra hơn, chỗ kia đọc ra kém).
+       Khít cả chuỗi thì đúng là đường đứng im tuyệt đối, nhưng đo được: một cửa sổ 120 phiên
+       chỉ chiếm **trung vị 16% chiều cao dải** (p10 6%; thang loga cũng chỉ 17%/9%) — trên
+       dải ~60px là một vệt 10px, phóng to để rồi không đọc được gì.
+       Bù lại phải LUÔN IN SỐ THẬT: hai nhãn mép phải + thẻ giá trị phiên cuối + ô trong
+       dòng đọc số. Có số thì mức phóng đổi bao nhiêu cũng không gây hiểu nhầm.
+
+       VẠCH ĐỨT = MỨC CỦA PHIÊN MỚI NHẤT TOÀN CHUỖI (không phải phiên cuối khung nhìn):
+       nó cho biết đoạn đang xem mạnh hay yếu hơn HÔM NAY, và vì neo vào phiên cuối chuỗi
+       nên kéo đi đâu nó vẫn nói đúng một điều. */
+    if(ind.rs&&rsH){
+      const top=h-22-rsH+4, bh=rsH-10;
+      const rsAt=r=>(r&&r.ix>0&&r.c>0)?r.c/r.ix:null;
+      let mnR=Infinity,mxR=-Infinity,co=0;
+      for(let i=0;i<n;i++){ const q=rsAt(vis[i]); if(q==null) continue;
+        if(q<mnR)mnR=q; if(q>mxR)mxR=q; co++; }
+      const nhan='Sức mạnh — '+((wm&&wm.sym)?wm.sym+' ÷ ':'÷ ')+ixTen;
+      x.textAlign='left'; x.textBaseline='middle';
+      if(co<2){
+        x.fillStyle=MUT(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
+        x.font='11px system-ui';
+        x.fillText(co?'khoảng này chưa có dữ liệu chỉ số':'đang tải dữ liệu chỉ số…',8,top+bh/2);
+      }else{
+        if(mxR-mnR<1e-12){ const e=Math.abs(mnR)*1e-3||1e-9; mnR-=e; mxR+=e; }
+        const pd=(mxR-mnR)*0.10, lo=mnR-pd, hi=mxR+pd;
+        const ry=v=>top+(hi-v)/(hi-lo)*bh;
+        // MỨC HÔM NAY: phiên cuối của CẢ CHUỖI, không phải phiên cuối khung nhìn
+        let nay=null;
+        for(let z=rows.length-1;z>=0;z--){ const q=rsAt(rows[z]); if(q!=null){ nay=q; break; } }
+        if(nay!=null&&nay>=lo&&nay<=hi){
+          x.setLineDash([3,3]); x.strokeStyle=RSCOL()+'66'; x.lineWidth=1;
+          x.beginPath(); x.moveTo(0,ry(nay)); x.lineTo(plotW,ry(nay)); x.stroke(); x.setLineDash([]);
+        }
+        x.strokeStyle=RSCOL(); x.lineWidth=1.5; x.beginPath(); let st=false;
+        for(let i=0;i<n;i++){ const q=rsAt(vis[i]);
+          if(q==null){ st=false; continue; }
+          const yy=ry(q); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true; }
+        x.stroke(); x.lineWidth=1;
+        x.fillStyle=MUT(); x.font='9.5px system-ui';
+        x.fillText(fmtRS(mxR),plotW+6,ry(mxR)); x.fillText(fmtRS(mnR),plotW+6,ry(mnR));
+        if(nay!=null&&nay>=lo&&nay<=hi){
+          x.fillStyle=RSCOL(); x.fillRect(plotW,ry(nay)-7,padR,14);
+          x.fillStyle='#fff'; x.font='700 9.5px system-ui'; x.fillText(fmtRS(nay),plotW+6,ry(nay));
+        }
+        x.fillStyle=RSCOL(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
+      }
     }
     /* ---- MỐC SỰ KIỆN — GẮN NGAY TRÊN ĐỈNH NẾN (user chốt 19/08/2026) -----------
        Bản đầu đặt tất cả ở một hàng cố định sát đáy vùng giá. User báo "nó đang ở dưới
@@ -676,7 +753,8 @@ let veBut=false;                                   // bút đang được giữ 
       /* SỐ THẬT, không phải số đã quy đổi để vẽ. Tỉ số neo đổi theo khung nhìn nên in nó ra
          là mỗi lần kéo chart một con số khác — vốn hoá thì phải là vốn hoá, chỉ số là điểm. */
       (ind.vh&&r.vh!=null?it('Vốn hoá',fmtTy(r.vh),VHCOL()):'')+
-      (ind.idx&&r.ix!=null?it(ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()):'');
+      (ind.idx&&r.ix!=null?it(ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()):'')+
+      (ind.rs&&r.ix>0&&r.c>0?it('Sức mạnh',fmtRS(r.c/r.ix),RSCOL()):'');
     host.classList.add('on');
   }
 

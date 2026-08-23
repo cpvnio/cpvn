@@ -520,12 +520,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260823w"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260823x"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823w"></script>
+<script defer src="assets/mobi.js?v=20260823x"></script>
 </head>
 <body>
 <header>
@@ -614,6 +614,7 @@ document.addEventListener(MO,function(e){
       <button data-k="ema50">EMA50</button><button data-k="ema200">EMA200</button>
       <button data-k="rsi">RSI</button><button data-k="vol" class="on">Khối lượng</button>
       <button data-k="vh">Vốn hoá</button><button data-k="idx">VN-Index</button>
+      <button data-k="rs">Sức mạnh</button>
       <button data-k="sk" class="on">Cổ tức</button><button data-k="bctc">BCTC</button>
     </div>
     <div class="clg" id="cvLegend"></div>
@@ -732,6 +733,7 @@ document.addEventListener(MO,function(e){
       <button data-k="vol" class="on">Khối lượng</button>
       <button data-k="rsi">RSI</button><button data-k="macd">MACD</button>
       <button data-k="vh">Vốn hoá</button><button data-k="idx">VN-Index</button>
+      <button data-k="rs">Sức mạnh</button>
       <button data-k="sk" class="on">Cổ tức</button><button data-k="bctc">BCTC</button>
     </span>
   </div>
@@ -749,8 +751,8 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260823w"></script>
-<script src="assets/chart.js?v=20260823w"></script>
+<script src="assets/core.js?v=20260823x"></script>
+<script src="assets/chart.js?v=20260823x"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1171,11 +1173,13 @@ function taiChiSo(){
 /* KHUNG "TRONG NGÀY" LÀ NẾN 5 PHÚT, hai kho này chỉ có số THEO PHIÊN -> khoá mờ hai nút
    thay vì để chúng bật lên rồi không vẽ gì. Bấm mà màn hình không đổi là người ta bấm lại
    mấy lần rồi kết luận tính năng hỏng. */
+const PHU_K=['vh','idx','rs'];
 function khoaPhuTheoKhung(){
-  document.querySelectorAll('#cvInd button[data-k="vh"],#cvInd button[data-k="idx"]')
-    .forEach(b=>b.disabled=(tf==='i'));
-  document.querySelectorAll('#ptInd button[data-k="vh"],#ptInd button[data-k="idx"]')
-    .forEach(b=>b.disabled=(ptTf==='i'));
+  for(const [hang,khung] of [['cvInd',tf],['ptInd',ptTf]])
+    for(const k of PHU_K){
+      const b=document.querySelector('#'+hang+' button[data-k="'+k+'"]');
+      if(b) b.disabled=(khung==='i');
+    }
 }
 function gopPhu(){
   if(!dailyRows||(!phuVH&&!phuIX)) return;
@@ -1306,8 +1310,10 @@ function batChiBao(c,k,on){
   /* HAI ĐƯỜNG PHỦ tự đi nạp kho lần đầu được bật. Bật cờ TRƯỚC rồi mới chờ mạng: nút phải
      sáng ngay lúc bấm, còn đường thì hiện khi dữ liệu về (nút sáng mà chưa thấy gì trong
      nửa giây là người ta bấm lại lần nữa). Tắt thì khỏi tải — cờ tắt là chart bỏ qua. */
-  if(k==='vh'||k==='idx'){
+  if(k==='vh'||k==='idx'||k==='rs'){
     c.setInd({[k]:on});
+    /* `rs` (dải Sức mạnh) ăn CÙNG kho với `idx` — `taiChiSo` gói trong một lời hứa nên bật
+       cả hai cũng chỉ một lượt mạng, và bật cái này rồi cái kia thì cái sau có ngay. */
     if(on) (k==='vh'?taiVonHoa():taiChiSo()).then(veLaiPhu);
     return;
   }
