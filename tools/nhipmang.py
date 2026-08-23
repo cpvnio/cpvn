@@ -47,6 +47,7 @@ TRAN = {
     "bgapidatafeed.vps.com.vn":    0.200,   #  5 lượt/giây
     "histdatafeed.vps.com.vn":     0.200,
     "api-finance-t19.24hmoney.vn": 0.125,
+    "24hmoney.vn":                 0.300,   # TRANG WEB (không phải API): mỗi lượt ~27 KB nén, xin thưa tay
     "iboard-query.ssi.com.vn":     0.500,   #  2 lượt/giây
     # datafeed UDF của stockchart.vietstock.vn — nguồn DUY NHẤT có lịch sử chia cổ tức đủ
     # sâu (tới 2007). Giãn 8 lượt/giây: đây là API phục vụ chart của họ, đừng ép.

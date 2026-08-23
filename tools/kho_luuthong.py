@@ -53,9 +53,14 @@ import argparse
 import collections
 import json
 import os
+import re
+import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROF = os.path.join(BASE, "data", "profile")
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nhipmang
 
 NGUONG = 5.0          # mốc "cổ đông lớn" của Luật Chứng khoán
 TRAN_TONG = 100.5     # tổng vượt mức này = sổ cổ đông hỏng, không tính
@@ -88,10 +93,36 @@ def tinh(p):
     return round(max(0.0, min(100.0, 100.0 - tong)), 2), len(lon), None
 
 
+RE_FF = re.compile(r"free_float:(\d+)")
+RE_FR = re.compile(r"free_float_rate:([\d\.]+)")
+
+
+def lay_24h(sym):
+    """Tỉ lệ free-float 24hMoney đăng trên trang mã — trả (số cổ phiếu, tỉ lệ %).
+
+    KHÔNG CÓ API: đã dò 18 đường của `api-finance-t19.24hmoney.vn` (stock-filter, screener,
+    financial-indicator, company-info, overview…) đều 404, và trang là Nuxt server-render
+    nên không có `_payload.json` để lấy riêng dữ liệu. Số nằm trong khối `__NUXT__` nhúng
+    thẳng vào HTML. Mỗi lượt ~27 KB đã nén.
+
+    ĐÂY LÀ TỈ LỆ ĐÃ LÀM TRÒN THEO DẢI, không phải tỉ số thô — xem chú thích ở đầu file.
+    """
+    h = nhipmang.get("https://24hmoney.vn/stock/" + sym)
+    if isinstance(h, bytes):
+        h = h.decode("utf-8", "ignore")
+    ff = RE_FF.search(h)
+    fr = RE_FR.search(h)
+    if not fr:
+        return None, None
+    return (int(ff.group(1)) if ff else None), round(float(fr.group(1)) * 100, 4)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ma", nargs="*")
     ap.add_argument("--thu", action="store_true", help="chạy thử, không ghi")
+    ap.add_argument("--24h", dest="h24", action="store_true",
+                    help="lấy thêm tỉ lệ free-float của 24hMoney (1 lượt mạng/mã)")
     a = ap.parse_args()
 
     fs = sorted(os.listdir(PROF))
@@ -101,6 +132,7 @@ def main():
     ok = trong = 0
     ly = collections.Counter()
     doi = []
+    d24 = [0, 0]
     for f in fs:
         if not f.endswith(".json"):
             continue
@@ -111,6 +143,16 @@ def main():
             continue
         ff, n, ldo = tinh(p)
         cu = p.get("freeFloat")
+        if a.h24:
+            try:
+                cp24, tl24 = lay_24h(p.get("sym"))
+                if tl24 is not None:
+                    p["ff24"] = tl24
+                    if cp24:
+                        p["ff24cp"] = cp24
+                    d24[0] += 1
+            except Exception:
+                d24[1] += 1
         if ldo:
             ly[ldo] += 1
             trong += 1
@@ -133,6 +175,8 @@ def main():
             print("  %-5s cũ=%-6s mới=%-6s (trừ %d cổ đông lớn) %s"
                   % (p.get("sym"), cu, ff, n, ldo or ""))
     print("TỈ LỆ LƯU THÔNG%s" % (" (chạy thử)" if a.thu else ""))
+    if a.h24:
+        print("  24hMoney  : lấy được %d · hỏng %d" % (d24[0], d24[1]))
     print("  tính được : %d mã" % ok)
     print("  để trống  : %d mã · %s" % (trong, dict(ly)))
     if doi:
