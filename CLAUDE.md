@@ -4257,10 +4257,12 @@ tỷ so với đường chỉ số 4.712 tỷ, đúng **−17,8%**.
 > chỉ mang được MỘT hằng số nên không thể khớp nền trượt ở mọi thời điểm — đó là giới hạn của
 > việc vẽ nền bằng một đường thẳng quy đổi, không phải lỗi.
 
-**ĐƯỜNG NỀN TRƯỢT ĐƯỢC VẼ HẲN LÊN CHART** (nét đứt màu mòng két, hiện cùng đường vốn hoá).
-User: *"ở mã VNM hình như cách nền bị sai, 14/03/2022 khoảng cách nền sao lớn hơn 02/07/2026
-được?"*. Số không sai, nhưng mâu thuẫn user thấy là THẬT — và lỗi là ở chỗ **không vẽ ra cái
-mốc đang so**. VNM:
+**CHỈ CÒN MỘT MỐC: NỀN TRƯỢT 1.250 PHIÊN. ĐƯỜNG "VN-INDEX QUY ĐỔI" BẰNG HẰNG SỐ ĐÃ BỎ.**
+User chốt 25/08/2026: *"chỉ có thể dùng 1.250 phiên chứ không thể áp ngược 13 năm được"*.
+
+Đường cũ lấy MỘT hằng số `k` (trung bình tương quan 1.250 phiên gần nhất) rồi áp ngược cho cả
+13 năm nến — tức năm 2013 bị đo bằng thước của năm 2026, thước lúc ấy chưa tồn tại. User bắt
+được qua VNM:
 
 | phiên | vốn hoá | đường nền | cách nền |
 |---|---|---|---|
@@ -4268,15 +4270,36 @@ mốc đang so**. VNM:
 | 02/07/2026 | 115.993 tỷ | **207.239 tỷ** | −44,0% |
 | 21/08/2026 | 133.339 tỷ | 192.555 tỷ | −30,8% |
 
-Nền tụt từ 312 nghìn tỷ xuống 193 nghìn tỷ vì nó là trung bình TRƯỢT của chính mã — VNM yếu
-dần nhiều năm nên tới 2026 nó chỉ còn dưới một cái nền đã hạ sẵn. Trong khi đó hai đường phủ
-neo bằng MỘT hằng số `k`, nên khoảng hở giữa chúng cứ toác rộng mãi. Hai câu trả lời khác nhau,
-đều đúng, mà trên màn hình trước đó không có gì nói ra điều đó.
+Nền tụt từ 312 xuống 193 nghìn tỷ vì VNM yếu dần nhiều năm. Đo bằng thước TỪNG THỜI ĐIỂM thì
+2022 tệ hơn 2026; đo cả hai bằng thước HÔM NAY thì ngược lại — và mắt nhìn chart thấy cái thứ
+hai. Hai câu trả lời khác nhau trên cùng màn hình.
 
-`nền(i) = vốn hoá(i) ÷ exp(g(i))` — suy thẳng từ `g` nên **không lưu thêm mảng nào và không có
-đường nào để hai chỗ tính lệch nhau**. Chỗ đường vốn hoá chạm nét đứt CHÍNH LÀ chỗ dải cắt vạch
-0, và cũng chính là điều kiện `nen < 0` của bộ lọc bảng giá. Chú giải ghi rõ số nến (`-- nền
-1.250 phiên`) để không ai tưởng nó cùng loại với đường chỉ số quy đổi.
+**KHÔNG GIỮ ĐƯỢC CẢ HAI — ĐÃ ĐO.** 278 mã đủ 2.500 phiên, chênh lệch lớn nhất giữa hai mốc
+**ngay trong 1.250 nến cuối**: trung vị **37,8%** · p75 58,7% · p90 **84,2%** · VNM **117,8%** ·
+max 171,3% (NNC). Không phải sai số làm tròn.
+
+```
+nền(i) = vốn hoá(i) ÷ exp(g(i)) = chỉ số(i) × exp(TB trượt 1.250 phiên của log(vốn hoá÷chỉ số))
+```
+
+Vẫn mang HÌNH của chỉ số, chỉ khác là quy đổi lại ở TỪNG phiên thay vì bằng một hằng số.
+Được ba thứ:
+- **nhân quả ở mọi điểm** — phiên nào cũng chỉ dùng dữ liệu trước nó;
+- **vốn hoá cắt lên đường này ⟺ dải cắt vạch 0 ⟺ `nen ≥ 0` của bộ lọc** — ba chỗ khớp nhau
+  đúng từng phiên, không chỉ khớp ở mép phải;
+- ở phiên cuối nó **trùng khít** đường quy đổi cũ (đo VNM/DHC/GAS: lệch **0,000000%**, đúng về
+  toán vì `k` chính là trung bình 1.250 phiên gần nhất), nên câu *"vốn hoá cắt lên VN-Index"*
+  hôm nay vẫn đọc y như trước.
+
+> **BẬT MÌNH `VN-Index` thì vẫn vẽ CHỈ SỐ THÔ theo điểm.** Không có vốn hoá thì không có tử số,
+> nền vô nghĩa; chỉ số thô tự nó vẫn đọc được. Chú giải đổi theo: bật cùng vốn hoá ghi
+> `— nền 1.250 phiên · VN-Index`, bật một mình ghi `— VN-Index`.
+
+> **THANG TRỤC PHẢI PHẢI KHÍT THEO NỀN, KHÔNG THEO `k×chỉ số`** — hai thứ lệch tới p90 84%, lấy
+> nhầm là đường nền chạy ra ngoài khung.
+
+> **ĐỪNG DÙNG `rows.indexOf` TRONG VÒNG VẼ.** `veP` nay truyền sẵn chỉ số toàn cục `gi`; tra
+> ngược bằng `indexOf` biến vòng vẽ thành O(n²) mà chart vẽ lại mỗi lần rê chuột.
 
 **CỬA SỔ NỀN QUY THEO KHUNG** (`NEN_MA_KHUNG`): Ngày 1.250 · Tuần 250 · Tháng 60 · Năm 5 — đều
 là ~5 năm. Nhãn dải in kèm đơn vị đúng khung (`NEN_DV`), vì user bắt được ảnh PVP ghi *"Cách

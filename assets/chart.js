@@ -564,10 +564,19 @@ let veBut=false;                                   // bút đang được giữ 
           for(const z of duoi){ sa+=Math.log(rows[z].vh); sb+=Math.log(rows[z].ix); }
           k=Math.exp(sa/duoi.length-sb/duoi.length);
         }
+        /* THANG PHẢI KHÍT THEO ĐÚNG THỨ SẼ VẼ. Từ 25/08 đường thứ hai là NỀN TRƯỢT chứ
+           không còn là `k×chỉ số`, mà hai thứ lệch nhau tới p90 84% — lấy thang theo cái
+           cũ là đường nền chạy ra ngoài khung. */
+        const NAt=nenArr(), coNent=(NAt.co>=2&&NAt.vh);
         let lo=Infinity,hi=-Infinity;
         for(const z of mien){
           if(cVH){ const v=Math.log(rows[z].vh); if(v<lo)lo=v; if(v>hi)hi=v; }
-          if(cIX){ const v=Math.log(k*rows[z].ix); if(v<lo)lo=v; if(v>hi)hi=v; }
+          if(cIX){
+            let u=null;
+            if(cVH&&coNent){ const q=NAt.g[z]; if(q!=null&&rows[z].vh>0) u=rows[z].vh/Math.exp(q); }
+            else u=k*rows[z].ix;
+            if(u>0){ const v=Math.log(u); if(v<lo)lo=v; if(v>hi)hi=v; }
+          }
         }
         if(!(hi>lo)){ lo-=0.05; hi+=0.05; }
         const pd=(hi-lo)*0.07; lo-=pd; hi+=pd;
@@ -690,43 +699,46 @@ let veBut=false;                                   // bút đang được giữ 
         x.beginPath(); let st=false;
         for(let i=0;i<n;i++){ const gi=i0+i;
           if(gi<P2.a||gi>P2.b){ st=false; continue; }
-          const v=lay(vis[i]);
+          const v=lay(vis[i],gi);      // gi = chỉ số TOÀN CỤC; đừng dùng rows.indexOf ở đây,
+                                       // nó biến vòng vẽ thành O(n²) và chart vẽ lại mỗi lần rê chuột
           if(!(v>0)){ st=false; continue; }
           const X=cx(i), yy=P2.y(v); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
         x.stroke(); x.lineWidth=1; x.lineJoin='miter';
       };
-      /* ---- ĐƯỜNG NỀN TRƯỢT (thêm 25/08/2026) ---------------------------------------
-         User: *"ở mã VNM hình như cách nền bị sai, 14/03/2022 khoảng cách nền sao lớn hơn
-         02/07/2026 được?"*. Số không sai — VNM ra −48,3% và −44,0% — nhưng cái user thấy
-         mâu thuẫn là THẬT, và lỗi là ở chỗ không vẽ ra cái mốc đang so.
+      /* ---- MỘT MỐC DUY NHẤT: NỀN TRƯỢT 1.250 PHIÊN (user chốt 25/08/2026) -----------
+         *"chỉ có thể dùng 1.250 phiên chứ không thể áp ngược 13 năm được"* — đúng, và đây
+         là chỗ sửa.
 
-         Hai đường phủ neo bằng MỘT hằng số `k`, nên khoảng hở giữa chúng là độ lệch so với
-         một mốc CỐ ĐỊNH — VNM yếu dần nhiều năm thì khoảng hở đó cứ toác rộng mãi. Còn dải
-         "Cách nền" so với trung bình TRƯỢT 1.250 phiên, mà cái nền ấy tụt theo chính mã;
-         tới 2026 VNM chỉ còn dưới một cái nền đã hạ sẵn. Hai câu trả lời khác nhau, đều
-         đúng, mà trên màn hình không có gì nói ra điều đó.
+         BẢN CŨ VẼ "VN-INDEX QUY ĐỔI" BẰNG MỘT HẰNG SỐ `k`, rồi áp ngược cho cả 13 năm nến.
+         `k` là trung bình tương quan của 1.250 phiên GẦN NHẤT, tức năm 2013 người ta đang
+         bị đo bằng cái thước của năm 2026 — thước đó lúc ấy chưa tồn tại. Hệ quả thấy ngay
+         ở VNM: đo bằng thước từng thời điểm thì 2022 lệch −48,3% còn 2026 lệch −44,0%,
+         nhưng đo cả hai bằng thước hôm nay thì 2026 toác rộng hơn hẳn — user đọc ra là
+         "cách nền bị sai".
 
-         Vẽ thẳng nền trượt ra là hết mâu thuẫn: chỗ đường vốn hoá chạm đường này CHÍNH LÀ
-         chỗ dải cắt vạch 0, và cũng chính là dấu mà bộ lọc bảng giá dùng.
-         `nền(i) = vốn hoá(i) ÷ exp(g(i))` — suy thẳng từ `g` nên khỏi lưu thêm mảng nào,
-         và khỏi lo hai chỗ tính lệch nhau. Chỉ vẽ khi đang bật vốn hoá (không có tử số thì
-         nền vô nghĩa) và khi dải có số. */
+         KHÔNG THỂ GIỮ CẢ HAI. Đo trên 278 mã đủ 2.500 phiên: ngay trong 1.250 nến cuối,
+         chênh lệch lớn nhất giữa hai mốc đã là **trung vị 37,8% · p90 84,2% · VNM 117,8%**.
+         Hai mốc thật sự khác nhau, không phải sai số làm tròn.
+
+         NÊN CHỈ CÒN MỘT: `nền(i) = vốn hoá(i) ÷ exp(g(i))` = `chỉ số(i) × exp(TB trượt)`.
+         Nó vẫn mang HÌNH của chỉ số, chỉ khác là quy đổi lại ở TỪNG phiên bằng tương quan
+         trung bình 1.250 phiên trước đó thay vì bằng một hằng số của hôm nay.
+           · nhân quả ở mọi điểm — phiên nào cũng chỉ dùng dữ liệu trước nó;
+           · vốn hoá cắt lên đường này ⟺ dải cắt vạch 0 ⟺ `nen ≥ 0` của bộ lọc bảng giá,
+             ba chỗ khớp nhau ĐÚNG TỪNG PHIÊN chứ không chỉ khớp ở mép phải;
+           · ở phiên cuối nó trùng khít đường quy đổi cũ (đo được lệch 0,000000%), nên câu
+             "vốn hoá cắt lên VN-Index" hôm nay vẫn đọc y như trước.
+
+         BẬT MÌNH `VN-Index` (không bật vốn hoá) thì vẫn vẽ CHỈ SỐ THÔ theo điểm — lúc đó
+         không có tử số nên nền vô nghĩa, mà chỉ số thô tự nó vẫn đọc được. */
+      const NA=nenArr();
+      const coNen=(NA.co>=2&&NA.vh);
+      const layNen=(r,gi)=>{ const q=NA.g[gi];
+        return (q==null||!(r.vh>0))?null:r.vh/Math.exp(q); };
       if(P2.cVH) veP(r=>r.vh,VHCOL(),2.4);
-      if(P2.cIX) veP(r=>P2.k*r.ix,IXCOL(),1.8);
-      if(P2.cVH){
-        const NA=nenArr();
-        if(NA.co>=2&&NA.vh){
-          x.save(); x.setLineDash([5,4]); x.strokeStyle=RSCOL(); x.globalAlpha=.85;
-          x.lineWidth=1.4; x.beginPath(); let st=false;
-          for(let i=0;i<n;i++){
-            const gi=i0+i, q=NA.g[gi], r=vis[i];
-            if(q==null||!(r&&r.vh>0)){ st=false; continue; }
-            if(gi<P2.a||gi>P2.b){ st=false; continue; }
-            const X=cx(i), yy=P2.y(r.vh/Math.exp(q));
-            st?x.lineTo(X,yy):x.moveTo(X,yy); st=true;
-          }
-          x.stroke(); x.restore();
-        }
+      if(P2.cIX){
+        if(P2.cVH&&coNen) veP(layNen,IXCOL(),1.8);
+        else veP(r=>P2.k*r.ix,IXCOL(),1.8);
       }
       /* TRỤC PHẢI THỨ HAI — 4 nhãn. Thang loga nên nhãn KHÔNG cách đều nhau về giá trị; đó
          là đúng, và cũng là dấu hiệu duy nhất cho biết đây là thang loga. Đơn vị in một lần
@@ -801,13 +813,14 @@ let veBut=false;                                   // bút đang được giữ 
     if(P2&&P2.cIX){ x.fillStyle=IXCOL();
       /* Nói rõ đây là đường ĐÃ QUY ĐỔI về thang vốn hoá, đừng để trần chữ "VN-Index" —
          số trên trục là tỷ đồng chứ không phải điểm, mà ô đọc số thì in điểm thật. */
-      const t='— '+ixTen+(P2.cVH?' quy đổi':''); x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
-    if(P2&&P2.cVH){ const NA=nenArr();
-      if(NA.co>=2&&NA.vh){ x.fillStyle=RSCOL();
-        /* Ghi rõ số nến: đây là mốc TRƯỢT, khác hẳn đường chỉ số quy đổi neo bằng một hằng
-           số — không nói ra thì người xem lại tưởng hai đường cùng trả lời một câu. */
-        const t='-- nền '+(NA.Wma||NEN_MA)+' '+(NEN_DV[iv]||'phiên');
-        x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; } }
+      /* TÊN PHẢI NÓI ĐÚNG THỨ ĐANG VẼ. Bật cùng vốn hoá thì đây là NỀN (chỉ số quy đổi lại
+         ở từng phiên theo tương quan trung bình 1.250 phiên trước đó), không phải chỉ số
+         nhân một hằng số — gọi trần "VN-Index quy đổi" là mời người xem hiểu sai. Bật một
+         mình thì nó đúng là chỉ số thô, giữ nguyên tên. */
+      const NAl=nenArr(), coNenl=(P2.cVH&&NAl.co>=2&&NAl.vh);
+      const t=coNenl ? ('— nền '+(NAl.Wma||NEN_MA)+' '+(NEN_DV[iv]||'phiên')+' · '+ixTen)
+                     : ('— '+ixTen+(P2.cVH?' quy đổi':''));
+      x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     /* HAI Ô CÔNG TẮC — hàng thứ ba của góc trái trên, dưới tên mã và dòng chú thích.
        VỊ TRÍ CỐ ĐỊNH, không nối đuôi dòng chú thích: dòng đó dài ngắn theo số chỉ báo đang
        bật, nối vào đó là hai cái ô nhảy chỗ mỗi lần bật/tắt một đường — thứ bấm được thì
