@@ -68,6 +68,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
 | `data/chiso.json` | 5 chỉ số theo phiên (`d,c,v,pc`) — **VNINDEX từ 28/07/2000**, phiên đầu tiên của chỉ số. Kho CHÍNH, `build_phantich.py` đọc. `kho_giaodich.py --chiso` |
 | `data/chiso/{CHỈ SỐ}.json` | **Bản GẦY của file trên** — chỉ `d`+`c`, cho chart nến trang mã (VNINDEX 34 KB đã nén thay vì 254 KB). Cùng một hàm ghi ra, không thể trôi khỏi nhau |
+| `data/vonhoa/{MÃ}.json` | **Vốn hoá theo phiên, lùi tới 02/01/2013** — 405 mã HOSE, `d`+`v` (đơn vị TỶ). Ba tầng ghép: kho đã soi -> MARKETCAP -> giá thô × vốn góp. 21 KB đã nén/mã, thay cho lượt tải `data/giaodich` 81 KB. `tools/kho_vonhoa.py` |
 | `data/chungquyen.json` | **328 chứng quyền đang lưu hành** trên 20 cổ phiếu cơ sở, kèm tổ chức phát hành. MỘT lượt gọi. Dùng để đọc con số tự doanh cho đúng — xem mục *Phân tích dữ liệu* |
 | `data/rolichsu.json` | **Rổ mã lịch sử: 1.968 mã, trong đó 443 ĐÃ RỜI SÀN** kèm ngày niêm yết / huỷ niêm yết. Chống sống sót sai lệch |
 | `data/noibo.json` | **Giao dịch của người nội bộ** đọc từ tiêu đề CBTT trong `data/news`. KHO GOM DỒN — `data/news` chỉ giữ 30 ngày |
@@ -170,6 +171,12 @@ nhánh cứu hộ và cho pipeline, không còn là thứ tự client gọi:
 | 1 | `dchart-api.vndirect.com.vn` ACAO `*` | **13,5 năm** (02/01/2013) | **đủ** — đo 206/213 sự kiện |
 | 2 | `histdatafeed.vps.com.vn` ACAO `*` | 15 năm (2011) | chỉ từ giữa 2021 trở lại |
 | 3 | kho `data/hist` | 2020 | **đủ** — từ 07/08/2026 kho cũng cào VNDirect |
+
+> **`api-finfo.vndirect.com.vn/v4/stock_prices` CÓ CẢ GIÁ THÔ LẪN GIÁ ĐÃ HẠ NỀN — 3.400
+> phiên từ 02/01/2013.** `close` là giá THÔ như đã khớp, `adClose` là giá đã hạ nền và
+> **khớp `data/hist` tới từng đồng**. Đây là nguồn giá thô lịch sử DUY NHẤT trong các nguồn
+> đang dùng (dchart chỉ trả giá đã hạ nền), và là thứ làm được kho vốn hoá sâu — vốn hoá
+> phải nhân giá THÔ với số cổ phiếu của chính phiên đó. Xem mục *KHO VỐN HOÁ SÂU*.
 
 > **CHỈ SỐ THÌ NGƯỢC LẠI — VPS SÂU HƠN HẲN, VÀ ĐƯỢC PHÉP DÙNG.** Bảng trên nói về nến CỔ
 > PHIẾU. Với VNINDEX/HNX/UPCOM/VN30/HNX30 thì `dchart` chặn ở 24/08/2017 còn VPS có VNINDEX
@@ -3725,6 +3732,87 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `draw()` — để nguyên chỗ cũ thì lúc lớp vẽ chạy `geo.rsiTop` còn rỗng, hình lặng lẽ biến mất.
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
+
+### KHO VỐN HOÁ SÂU — `data/vonhoa`, HOSE lùi tới 02/01/2013 (23/08/2026)
+
+User: *"các mã trên sàn HOSE tôi cần lấy data vốn hoá xa hơn … hiện tại chỉ tới được 8/2022
+là hết rồi"*. Đúng: đường vốn hoá đọc `data/giaodich` mà kho đó **cố định 1.000 phiên**, nên
+trên đồ thị nó là đường cụt nhất — nến có từ 2013, chỉ số có từ 2000, riêng vốn hoá dừng ở
+18/08/2022. `tools/kho_vonhoa.py` -> **405/405 mã HOSE, 241 mã lùi tới 02/01/2013**, số còn
+lại bắt đầu từ chính ngày lên sàn. Trung vị **3.412 phiên/mã** (trước: 1.000).
+
+**BA TẦNG, QUYỀN GIẢM DẦN — tầng trên luôn thắng ở phần chồng nhau:**
+
+| tầng | khoảng | nguồn | đo lại |
+|---|---|---|---|
+| ① | 18/08/2022 → nay | `c × sh` của `data/giaodich` | kho đã soi (`va_slcp_gdkhq` + `lap_slcp_cu --soi`) |
+| ② | ~15/12/2017 → 18/08/2022 | `ratioCode:MARKETCAP` của VNDirect | so tầng ①: **trung vị 0,000% ở 21/22 mã** |
+| ③ | 02/01/2013 → 12/2017 | `close THÔ × vốn góp ÷ 10.000` | so tầng ②: **trung vị 0,000% · p90 0,02%** |
+
+> **VÌ SAO TẦNG ① PHẢI ĐỨNG TRÊN, dù tầng ② khớp nó tới 0,000%:** đó là cách file này KHÔNG
+> đẻ ra "con số vốn hoá thứ hai". Vùng mà /phantich đang đọc thì hai bên lấy CÙNG một phép
+> tính từ CÙNG một kho, nên không có ngày nào hai trang nói hai số. Luật *một số, một kho*.
+
+> **MARKETCAP CHẶN CỨNG 2.171 BẢN GHI — không phải mình chọn.** Xin từ năm 2000 vẫn trả đúng
+> 2.171 phiên. Trần này **TRÔI DẦN** (mỗi phiên mới đẩy một phiên cũ ra) nên mốc tầng ② tự
+> lùi theo — **đừng viết cứng ngày 15/12/2017 vào đâu cả**, code lấy `min()` của thứ trả về.
+
+> **`v4/stock_prices` LÀ CHÌA KHOÁ CỦA TẦNG ③** — nó trả `close` (giá THÔ) bên cạnh `adClose`
+> (đã hạ nền, khớp `data/hist` tới từng đồng), 3.400 phiên từ 02/01/2013. Vốn hoá phải nhân
+> giá THÔ với số cổ phiếu của chính phiên đó; `dchart` chỉ có giá đã hạ nền nên không làm
+> được việc này. Số cổ phiếu lấy từ dòng `x_von_gop` của `data/finx` (vốn điều lệ theo quý,
+> có từ Q1/07) — mệnh giá 10.000đ theo luật nên `vốn góp ÷ 10.000` = cổ phiếu NIÊM YẾT.
+
+> **VỐN GÓP CHO MỨC, `data/sukien` CHO NGÀY.** Vốn điều lệ đăng ký TRỄ hơn ngày GDKHQ, và trễ
+> tới hơn một quý — lấy thẳng "vốn góp quý liền trước" thì bậc thang đặt sai chỗ hàng tháng
+> trời (đo: HPG p90 lệch 16,67%, PLP 33,33%). Mỗi lần vốn góp đổi mức thì đi tìm trong cửa sổ
+> [đầu quý trước, hết quý này] một ngày GDKHQ mà tỉ lệ cộng dồn khớp `mức mới ÷ mức cũ` (sai
+> số 3%), khớp thì dời bậc về đúng ngày đó.
+
+> **QUY VỀ NỀN CỦA TẦNG ② TRƯỚC KHI GHÉP.** Vốn góp là cổ phiếu NIÊM YẾT còn MARKETCAP dùng
+> cổ phiếu LƯU HÀNH — lệch nhau đúng phần cổ phiếu quỹ (SZL lệch 9,1%). Đo tỉ lệ ở **20 phiên
+> chung xa nhất** rồi lấy trung vị, đúng luật "ghép quá khứ phải quy về cùng nền" ở mục
+> `data/hist`. Đo TRƯỚC khi ghép, đừng đo sau.
+
+**BA BỘ LỌC, MỖI BỘ MỘT HỌ LỖI — và mỗi bộ có phạm vi riêng, đừng cho bộ nào lấn sân:**
+
+| bộ lọc | bắt cái gì | phạm vi | đã sửa |
+|---|---|---|---|
+| `loc_gai` | ô lạc 1-2 phiên trong chuỗi số cổ phiếu (VND ×0,047 rồi ×20,6) | trước tầng ① | 704 ô |
+| `dinh_bac` | nguồn cập nhật số cổ phiếu **trễ 1-2 phiên** so với lúc hạ nền giá | trước tầng ① | 58 bậc |
+| `bo_dao` | một MỨC chỉ sống dưới 90 phiên rồi trả về đúng mức cũ | **chỉ tầng ③** | 1.408 đoạn |
+
+> **`dinh_bac` LÀ BỘ QUAN TRỌNG NHẤT, và lọc trung vị KHÔNG thay được nó.** DBC 05/04/2022:
+> vốn hoá 8.620 → **4.494** → 8.862 tỷ trong ba phiên liền, đúng ngày GDKHQ thưởng 100%. Giá
+> đã chia đôi từ phiên GDKHQ còn số cổ phiếu hôm sau mới nhân đôi. Chuỗi số cổ phiếu suy ra
+> là một **bậc thang SẠCH** (cũ, cũ, mới) nên lọc trung vị không thấy gì bất thường — phải
+> hỏi `data/sukien` ngày GDKHQ thật rồi kéo bậc về đó. Cùng họ: CSM (80%, trễ 2 phiên), KHG,
+> PDR, PTB.
+
+> **`bo_dao` CHỈ ĐƯỢC CHẠY Ở TẦNG ③ — đã trả giá.** Bản đầu cho nó chạy cả vùng MARKETCAP:
+> CTR lệch **1,23%** và MIG 0,19% so với chính MARKETCAP, tức bộ lọc làm SAI ĐI ở đúng chỗ
+> nguồn kia mới là bên có thẩm quyền. Cùng lượt: ngưỡng `loc_gai` phải là **8% chứ không phải
+> 2%** — để 2% thì nó đụng 113 ô của CTR chỉ vì nhiễu làm tròn. Sau khi siết: vùng MARKETCAP
+> quay lại **trung vị 0,000%** trên toàn bộ mã đo.
+
+**CÒN 3/405 MÃ (0,74%) có một bậc đảo chiều trong vùng dựng lại: CSM (06/2016) · PVP
+(08/2017) · TCI (12/2018).** Ghi tên ra đây chứ đừng nói "kho sạch": mỗi mã một chỗ vốn hoá
+nhảy rồi trả về trong vòng vài tuần. Ba mã này nguồn và vốn góp lệch pha nhau theo kiểu ba
+luật trên không với tới.
+
+**CLIENT NAY NHẸ HƠN mà lại sâu hơn**: `data/vonhoa/{MÃ}.json` **21 KB đã nén** so với
+`data/giaodich` **81 KB** — nó chỉ có ngày + một con số chứ không gánh 43 cột. Cổng
+`VH_SAN` trong `cophieu.html` quyết định sàn nào đã có kho sâu; sàn chưa có thì đi thẳng
+`data/giaodich`, **đừng thử rồi ăn 404** (1.124 mã HNX/UPCOM × mỗi lượt mở trang).
+
+**LƯỢT EOD KHÔNG TỐN LƯỢT MẠNG NÀO.** Bước `[1d]`, chạy **không** `--sau`: phần sâu đã nằm
+trong file, bước này chỉ làm mới tầng ① từ `data/giaodich` vừa cào xong — **1,2 giây cho cả
+405 mã**, và **idempotent** (chạy lại không đổi một byte). Mã MỚI lên sàn chưa có file thì tự
+cào 2 lượt cho riêng nó. Phải đứng SAU `lap_slcp_cu` vì tầng ① chính là `c × sh` của kho đã soi.
+
+**MỞ RỘNG SANG HNX/UPCOM**: chạy `--san HNX UPCOM --sau` rồi thêm tên sàn vào `VH_SAN`. Cả
+hai nguồn (`MARKETCAP`, `stock_prices`, `finx`) đều có sẵn cho hai sàn đó; chưa làm vì user
+chỉ hỏi HOSE, và thêm ~1.124 file × 21 KB vào kho là một quyết định riêng.
 
 ### DẢI "SỨC MẠNH" — CHỈ BÁO CỐ ĐỊNH THẬT SỰ, `giá ÷ điểm chỉ số` (23/08/2026)
 

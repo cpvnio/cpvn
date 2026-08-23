@@ -85,6 +85,13 @@ if ($LASTEXITCODE -ne 0) { "va_slcp_gdkhq EXIT $LASTEXITCODE - bo qua, chay tiep
 & $py tools\lap_slcp_cu.py --soi 2>&1
 if ($LASTEXITCODE -ne 0) { "lap_slcp_cu EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# [1d] KHO VON HOA SAU cho HOSE -> data/vonhoa. KHONG co `--sau` nen KHONG goi mang:
+# phan sau (2013-2022) da nam trong file, buoc nay chi lam moi tang tren cung tu
+# data/giaodich vua cao xong. Ma MOI len san chua co file thi no tu cao 2 luot cho rieng
+# ma do. PHAI DUNG SAU lap_slcp_cu: tang tren cung chinh la `c x sh` cua kho da soi.
+& $py tools\kho_vonhoa.py --san HOSE 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_vonhoa EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # [2] THOẢ THUẬN — riêng `pv`/`pval` vẫn phải hỏi Vietstock. Đối chiếu phiên 21/08: khớp
 # lệnh hai nguồn khớp tuyệt đối (16.939 vs 16.940 tỷ) nhưng thoả thuận thì VNDirect BỎ SÓT
 # 394/3.001 tỷ, dồn vào 7 mã (VHM 298,9 tỷ ghi thành 0). Không phải trễ mà là sót — VHM

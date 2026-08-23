@@ -520,12 +520,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260823y"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260823z"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260823y"></script>
+<script defer src="assets/mobi.js?v=20260823z"></script>
 </head>
 <body>
 <header>
@@ -751,8 +751,8 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260823y"></script>
-<script src="assets/chart.js?v=20260823y"></script>
+<script src="assets/core.js?v=20260823z"></script>
+<script src="assets/chart.js?v=20260823z"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1123,11 +1123,11 @@ function gopGiaSongVaoNen(){
      · cổ tức TIỀN -> nguồn VN hạ nền cả cổ tức tiền (xem CLAUDE.md mục Nến) nên giá quá
        khứ bị kéo xuống, còn vốn hoá rơi đúng bằng số tiền đã trả ra khỏi doanh nghiệp.
 
-   NGUỒN VỐN HOÁ: `data/giaodich/{MÃ}.json`, `mcap = c × sh` — ĐÚNG MỘT công thức với đồ
-   thị /phantich (`assets/congcu.js`). Đừng đổi sang `data/dactrung/{MÃ}.json` dù ở đó có
-   sẵn cột `mcap` và file nhẹ hơn 15 KB: kho đặc trưng dựng ở BƯỚC CUỐI lượt EOD nên có
-   lúc còn là bản hôm trước, và hai trang đọc hai kho là hai con số vốn hoá lệch nhau mà
-   không ai ngờ tới. Một số, một nguồn.
+   NGUỒN VỐN HOÁ: `data/vonhoa/{MÃ}.json` (kho sâu, HOSE) -> lui về `data/giaodich` với mã
+   chưa có. Kho sâu dựng bằng `tools/kho_vonhoa.py` và **tầng trên cùng của nó CHÍNH LÀ
+   `c × sh` của `data/giaodich`**, nên ở vùng chồng nhau nó với đồ thị /phantich không thể
+   nói hai con số. Đừng đổi sang `data/dactrung/{MÃ}.json` dù ở đó có sẵn cột `mcap`: kho
+   đặc trưng dựng ở BƯỚC CUỐI lượt EOD nên có lúc còn là bản hôm trước.
 
    CHỈ SỐ THEO ĐÚNG SÀN CỦA MÃ, không ép mọi mã về VN-Index: kho có sẵn cả HNX và UPCOM,
    mà đem một mã UPCOM so với VN-Index thì phép so đã hỏng từ đầu (chính lý do user nêu
@@ -1141,22 +1141,44 @@ function gopGiaSongVaoNen(){
    CẢ HAI CHỈ TẢI KHI NGƯỜI DÙNG BẤM: mỗi thứ thêm một lượt mạng (~80 KB và ~34 KB đã
    nén), không đáng bắt 1.527 trang mã × mọi lượt crawler trả giá cho thứ chưa ai bật.
 
-   ĐỘ SÂU BA NGUỒN LỆCH NHAU, VÀ PHẢI ĐỂ NÓ LỘ RA: vốn hoá chỉ có 1.000 phiên gần nhất (từ
-   18/08/2022); chỉ số thì sâu hơn cả nến — VNINDEX từ 28/07/2000 (phiên đầu tiên của chỉ
-   số), HNX từ 04/01/2006, UPCOM từ 24/06/2009 — còn nến tới 13 năm (2013). `chart.js`
-   NGẮT NÉT ở phiên thiếu số chứ không nối thẳng: nối thẳng là tự tay bịa một đoạn không
-   có dữ liệu. */
+   ĐỘ SÂU BA NGUỒN, VÀ PHẢI ĐỂ NÓ LỘ RA: vốn hoá HOSE nay **từ 02/01/2013** (bằng đúng nến,
+   241/405 mã; số còn lại bắt đầu từ ngày lên sàn của chính mã) — HNX/UPCOM vẫn 1.000 phiên
+   từ 18/08/2022. Chỉ số thì sâu hơn cả nến: VNINDEX từ 28/07/2000, HNX từ 04/01/2006,
+   UPCOM từ 24/06/2009. `chart.js` NGẮT NÉT ở phiên thiếu số chứ không nối thẳng: nối thẳng
+   là tự tay bịa một đoạn không có dữ liệu. */
 const IDX_SAN={HOSE:['VNINDEX','VN-Index'],HNX:['HNX','HNX-Index'],UPCOM:['UPCOM','UPCOM-Index']};
 const idxSan=()=>IDX_SAN[(C&&C.ex)||'']||IDX_SAN.HOSE;
 let phuVH=null, phuIX=null;        // Map 'YYYY-MM-DD' -> số; null = chưa nạp
 let pVH=null, pIX=null;            // lời hứa đang bay: bấm tắt/bật liên tục vẫn chỉ 1 lượt mạng
+/* KHO SÂU TRƯỚC, `data/giaodich` chỉ là đường lui — user chốt 23/08/2026: *"cần lấy data
+   vốn hoá xa hơn, hiện tại chỉ tới được 8/2022 là hết"*. `data/vonhoa/{MÃ}.json` (HOSE) có
+   **3.412 phiên từ 02/01/2013** thay vì 1.000 phiên từ 18/08/2022, mà lại NHẸ HƠN: 21 KB
+   đã nén so với 81 KB, vì nó chỉ có ngày + một con số chứ không gánh 43 cột của kho giao
+   dịch. Mã chưa có kho sâu (HNX/UPCOM) thì rơi về đường cũ, cùng công thức `c × sh`.
+   Đơn vị trong file là TỶ (làm tròn 3 số lẻ) — nhân 1e9 về ĐỒNG cho khớp mọi chỗ đọc. */
+/* SÀN NÀO ĐÃ CÓ KHO SÂU — hỏi theo danh sách chứ đừng cứ thử rồi ăn 404. 1.124 mã
+   HNX/UPCOM mỗi lượt mở trang tốn một lượt mạng hỏng và một dòng đỏ trong console, để rồi
+   vẫn phải đi hỏi `data/giaodich`. Mở rộng kho sang sàn khác thì thêm tên vào đây. */
+const VH_SAN=new Set(['HOSE']);
 function taiVonHoa(){
-  return pVH||(pVH=fetch('data/giaodich/'+SYM+'.json').then(r=>r.ok?r.json():null).then(j=>{
-    if(!j||!j.d||!j.c||!j.sh) return null;
-    const m=new Map();
-    for(let i=0;i<j.d.length;i++) if(j.c[i]&&j.sh[i]) m.set(j.d[i],j.c[i]*j.sh[i]);
-    phuVH=m; return m;
+  if(!VH_SAN.has((C&&C.ex)||'')) return pVH||(pVH=taiVonHoaKho());
+  return pVH||(pVH=fetch('data/vonhoa/'+SYM+'.json').then(r=>r.ok?r.json():null).then(j=>{
+    if(j&&j.d&&j.v){
+      const m=new Map();
+      for(let i=0;i<j.d.length;i++) if(j.v[i]) m.set(j.d[i],j.v[i]*1e9);
+      phuVH=m; return m;
+    }
+    return taiVonHoaKho();
   }).catch(()=>null));
+}
+/* Đường lui: `c × sh` của kho giao dịch — 1.000 phiên, đúng công thức /phantich đang dùng. */
+function taiVonHoaKho(){
+  return fetch('data/giaodich/'+SYM+'.json').then(r=>r.ok?r.json():null).then(g=>{
+    if(!g||!g.d||!g.c||!g.sh) return null;
+    const m=new Map();
+    for(let i=0;i<g.d.length;i++) if(g.c[i]&&g.sh[i]) m.set(g.d[i],g.c[i]*g.sh[i]);
+    phuVH=m; return m;
+  }).catch(()=>null);
 }
 function taiChiSo(){
   return pIX||(pIX=fetch('data/chiso/'+idxSan()[0]+'.json').then(r=>r.ok?r.json():null).then(o=>{
