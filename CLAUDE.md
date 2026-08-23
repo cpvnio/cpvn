@@ -3733,6 +3733,54 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
 
+### HÀNG NÚT CHART NHỎ CÒN SÁU Ô, HAI CÔNG TẮC MỐC VÀO TRONG KHUNG (24/08/2026)
+
+User: *"h đang bị sắp xếp khá nhiều ô chọn, tôi muốn trên giao diện điện thoại cần gọn hơn.
+bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong khung đồ thị luôn. EMA cũng bỏ luôn
+— chỉ có trong phân tích kỹ thuật thôi, RSI vẫn giữ lại"*.
+
+| | trước | sau |
+|---|---|---|
+| `#cvInd` (chart nhỏ) | 11 nút | **6**: MA20 · RSI · Nến · Khối lượng · Vốn hoá · VN-Index |
+| `#ptInd` (toàn màn hình) | 15 nút | **13** (bỏ Cổ tức/BCTC, giữ EMA và Sức mạnh) |
+| khổ 375px | 3 hàng · ~85px | **2 hàng đều nhau · 56px** |
+| khổ máy bàn | 2 hàng | **1 hàng · 27px** |
+
+**BỐN THỨ ĐÃ DỌN KHỎI HÀNG NÚT CỦA CHART NHỎ — ĐỪNG THÊM LẠI:**
+· **EMA50/EMA200 và Sức mạnh** → chỉ còn ở cửa sổ Phân tích kỹ thuật. Chart nhỏ là thứ NHÌN
+  ĐẦU TIÊN khi mở trang mã, không phải bàn làm việc PTKT; ai cần EMA thì mở hẳn cửa sổ kia.
+· **Cổ tức/BCTC** → vào TRONG khung đồ thị, vì chúng điều khiển thứ vẽ trên chính khung đó.
+
+**HAI Ô CÔNG TẮC TRONG KHUNG (`mocHit` trong `chart.js`)** — hàng thứ ba của góc trái trên,
+dưới tên mã và dòng chú thích. Ô đang bật thì nền đặc chữ nghịch, tắt thì nền mờ chữ xám.
+
+> **VỊ TRÍ CỐ ĐỊNH, ĐỪNG NỐI ĐUÔI DÒNG CHÚ THÍCH.** Dòng chú thích dài ngắn theo số chỉ báo
+> đang bật (`— MA20 — Vốn hoá — VN-Index quy đổi`), nối vào đó là hai cái ô **nhảy chỗ mỗi
+> lần bật/tắt một đường**. Thứ bấm được thì phải đứng yên một chỗ.
+
+> **HAI CỔNG, THIẾU CỔNG NÀO CŨNG HỎNG MỘT CHỖ KHÁC.** `plotH>=150` (cùng ngưỡng với dấu
+> CPVN.IO): panel bong bóng cao 110px, đặt ô ở hàng thứ ba là nó nằm giữa vùng vẽ. Và
+> `sukien.length`: `bubbles.html` không bao giờ gọi `setSuKien` nên hai ô đó ở đó là hai cái
+> nút không điều khiển gì.
+
+> **THỨ TỰ NHẬN CÚ BẤM: ô công tắc TRƯỚC, rồi mới tới hình vẽ / ghim phiên.** `bamMoc` chạy
+> đầu `mousedown` và `touchstart`, trúng thì **nuốt luôn** cú bấm (không đặt `drag`) nên
+> `mouseup` không thấy `drag` và không ghim. Chỉ chạy khi KHÔNG có công cụ vẽ nào đang chọn —
+> đang cầm bút mà bấm vào góc đó thì vẫn phải là vẽ.
+
+**KHỔ HẸP: `#cvInd` LÀ LƯỚI 3 CỘT** (`repeat(3,1fr)`), cho hai hàng ĐỀU NHAU, mép trái và
+mép phải hai hàng thẳng nhau — đúng cách đã dùng cho `#finP`/`#finB`. Sáu nút chảy tự do ở
+375px cần **362px** mà chỗ chỉ có **309px**, nên nó rớt thành **5+1**: "VN-Index" đứng lẻ loi
+một hàng, trông như lỗi chứ không như thiết kế. Lưới còn làm nút rộng ra **100px**, ngón tay
+bấm dễ hơn hẳn.
+
+> **ĐÃ ĐO RỒI BỎ: ép một hàng bằng cách hạ cỡ chữ.** Phải xuống `padding 5px · font 11px ·
+> gap 2px` mới vừa (301px/309px) — lúc đó nút "RSI" teo còn 30px, vừa khó đọc vừa khó bấm,
+> và ở khổ 360px thì lại rớt hàng. Tiết kiệm được 30px trên màn 812px, không đáng.
+
+> Neo luật vào `#cvInd` chứ đừng để `.ptseg` trần — cùng bài học với `#ptHead .ptseg` ngay
+> trên nó: `.ptseg` còn dùng cho thanh nút của cửa sổ toàn màn hình.
+
 ### /PHANTICH DÙNG CHUNG LUẬT CHỈ SỐ VỚI TRANG MÃ (23/08/2026)
 
 User: *"bên data phân tích cũng hiện chỉ số vnindex - vốn hoá theo quy tắc này (mã sàn nào

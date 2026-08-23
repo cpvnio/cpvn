@@ -245,6 +245,11 @@ let veBut=false;                                   // bút đang được giữ 
   let sukien=[];            // [{t,k,gc}] đã xếp theo thời gian
   let skHit=[];             // [{x,y,r,ev}] ô bấm trúng của lượt vẽ gần nhất
   let skHover=-1;
+  /* HAI CÔNG TẮC MỐC NẰM NGAY TRONG KHUNG ĐỒ THỊ (user chốt 24/08/2026: *"ô hiện hoặc ẩn
+     cổ tức và bctc nằm trong khung đồ thị luôn"*). Chúng điều khiển thứ VẼ TRÊN CHÍNH
+     KHUNG NÀY nên đứng trong khung là đúng chỗ — và trả lại hai ô cho hàng nút phía trên,
+     thứ đang chật nhất ở khổ điện thoại. `mocHit` là ô bấm của lượt vẽ gần nhất. */
+  let mocHit=[];
   /* ---- GHIM MỘT PHIÊN ĐỂ ĐỌC SỐ (user chốt 23/08/2026) ------------------------
      *"hiện thêm toạ độ tam giác khi tôi bật chỉ báo vnindex lên, bấm vào sẽ hiện ra điểm
      vnindex - vốn hoá - giá cổ phiếu tại vị trí tôi bấm, để đọc nhanh tình hình tại thời
@@ -591,6 +596,28 @@ let veBut=false;                                   // bút đang được giữ 
       /* Nói rõ đây là đường ĐÃ QUY ĐỔI về thang vốn hoá, đừng để trần chữ "VN-Index" —
          số trên trục là tỷ đồng chứ không phải điểm, mà ô đọc số thì in điểm thật. */
       const t='— '+ixTen+(P2.cVH?' quy đổi':''); x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
+    /* HAI Ô CÔNG TẮC — hàng thứ ba của góc trái trên, dưới tên mã và dòng chú thích.
+       VỊ TRÍ CỐ ĐỊNH, không nối đuôi dòng chú thích: dòng đó dài ngắn theo số chỉ báo đang
+       bật, nối vào đó là hai cái ô nhảy chỗ mỗi lần bật/tắt một đường — thứ bấm được thì
+       phải đứng yên một chỗ.
+       CHART LÙN THÌ BỎ (`plotH<150`, cùng ngưỡng với dấu CPVN.IO): panel bong bóng cao
+       110px, đặt ô ở hàng thứ ba là nó nằm giữa vùng vẽ. */
+    mocHit.length=0;
+    if(plotH>=150&&sukien.length){
+      x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
+      let mx0=8;
+      for(const [mk,ten] of [['sk','Cổ tức'],['bctc','BCTC']]){
+        const bat=!!ind[mk], bw=x.measureText(ten).width+16, bh=17, by=padT+33;
+        x.fillStyle=bat?(light()?'rgba(15,23,42,.86)':'rgba(233,233,239,.90)')
+                       :(light()?'rgba(15,23,42,.07)':'rgba(255,255,255,.10)');
+        if(x.roundRect){ x.beginPath(); x.roundRect(mx0,by,bw,bh,9); x.fill(); }
+        else x.fillRect(mx0,by,bw,bh);
+        x.fillStyle=bat?(light()?'#ffffff':'#0a0a0c'):MUT();
+        x.fillText(ten,mx0+8,by+bh/2+0.5);
+        mocHit.push({x:mx0,y:by,w:bw,h:bh,k:mk});
+        mx0+=bw+6;
+      }
+    }
     // RSI 14 phiên (dải riêng dưới cùng)
     if(ind.rsi&&rows.length>15){
       const top=geo.rsiTop, bh=geo.rsiH;
@@ -1189,6 +1216,16 @@ let veBut=false;                                   // bút đang được giữ 
   self.chotMo=chotMo;
 
   /* ---- tương tác ---- */
+  /* Bấm trúng một trong hai ô công tắc trong khung -> bật/tắt, và NUỐT luôn cú bấm để nó
+     không đi tiếp thành ghim phiên hay thành cú kéo. */
+  function bamMoc(px,py){
+    for(const m of mocHit){
+      if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
+        ind[m.k]=!ind[m.k]; self.draw(); return true;
+      }
+    }
+    return false;
+  }
   /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó. */
   function bamGhim(px){
     if(!(ind.vh||ind.idx)) return false;
@@ -1220,6 +1257,7 @@ let veBut=false;                                   // bút đang được giữ 
   },{passive:false});
   cvs.addEventListener('mousedown',e=>{
     const r=cvs.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+    if(!tool&&bamMoc(px,py)) return;              // hai ô công tắc trong khung
     if(tool){                                     // đang chọn công cụ vẽ
       addPoint(px,py);
       if(tool==='pen'&&pending){ veBut=true; return; }   // bút: rê tới đâu ghi tới đó
@@ -1295,6 +1333,9 @@ let veBut=false;                                   // bút đang được giữ 
       if(h2!==skHover){ skHover=h2; self.draw(); }
       if(h2>=0){ cvs.style.cursor='pointer'; return; }
     }
+    for(const m of mocHit){
+      if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){ cvs.style.cursor='pointer'; return; }
+    }
     if(px>geo.plotW){ if(hover!==-1){hover=-1; hoverY=-1; self.draw();} return; }
     if(!tool&&draws.length) cvs.style.cursor=hitTest(px,py)?'move':'';   // rê trúng hình -> báo kéo được
     const i=idxAt(px);
@@ -1345,6 +1386,7 @@ let veBut=false;                                   // bút đang được giữ 
     }else if(e.touches.length===1){
       const r=cvs.getBoundingClientRect();
       const p0=e.touches[0], px=p0.clientX-r.left, py=p0.clientY-r.top;
+      if(!tool&&bamMoc(px,py)){ drag=null; return; }
       if(tool){ addPoint(px,py); if(pending) dpen={x:px,y:py,n:pending.p.length}; return; }
       if(px<=geo.plotW){                       // chạm trúng hình vẽ -> chọn và kéo được bằng ngón
         const hit=hitTest(px,py);
