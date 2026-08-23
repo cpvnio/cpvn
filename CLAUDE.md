@@ -3733,6 +3733,63 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
 
+### GHIM MỘT PHIÊN ĐỂ ĐỌC SỐ, VÀ TẮT ĐƯỢC THÂN NẾN (23/08/2026)
+
+User chốt hai việc: *"hiện thêm toạ độ tam giác khi tôi bật chỉ báo vnindex lên, bấm vào sẽ
+hiện ra điểm vnindex - vốn hoá - giá cổ phiếu tại vị trí tôi bấm, để đọc nhanh tình hình tại
+thời điểm đó"* và *"có thể chọn ẩn biểu đồ giá đi để dễ xem vốn hoá và vnindex hơn"*.
+
+**GHIM: bấm một cái là hai tam giác kẹp lấy cột đó + hộp bốn dòng.**
+
+```
+15/05/2026
+Giá        37.750 đ
+Vốn hoá   151.000 tỷ     (xanh lá)
+VN-Index    1.821,60     (hồng sen)
+```
+
+> **NEO THEO MỐC THỜI GIAN, KHÔNG NEO THEO CHỈ SỐ NẾN.** Chỉ số đổi mỗi lần kéo khung (`i0`
+> chạy) và đổi hẳn khi bấm Tuần/Tháng/Năm (số nến co còn một phần mười). Neo bằng `t` thì
+> ghim ở đâu vẫn đứng đúng chỗ đó — đo: ghim 22/06/2026 rồi đi hết D→W→M→Y→D và phóng 5 nấc,
+> cả sáu lượt vẫn trả về đúng 22/06/2026. Khung gộp thì mốc rơi vào GIỮA một cây nến tuần —
+> lấy cây CHỨA nó, đừng đòi khớp tuyệt đối rồi trả về "không có".
+
+> **PHÂN BIỆT BẤM VỚI KÉO BẰNG QUÃNG ĐƯỜNG (4px).** Chuột ai cũng nhích một chút lúc nhả;
+> không có ngưỡng thì mỗi lần kéo chart xong lại ghim nhầm một phiên. Đo: kéo 108px thì mốc
+> ghim giữ nguyên. Bấm lại ĐÚNG cột đang ghim = bỏ ghim.
+
+> **CHỈ BẬT KHI CÓ ĐƯỜNG PHỦ (`ind.vh || ind.idx`).** Chart này có sẵn bộ công cụ vẽ PTKT nên
+> đổi hành vi của cú bấm là chuyện phải có lý do; không bật đường nào thì hộp chỉ lặp lại
+> đúng thứ dòng chú giải trên đầu đã in khi rê chuột. Đo: tắt cả hai đường rồi bấm — không
+> ghim gì.
+
+> **TAM GIÁC + NÉT LIỀN, KHÁC HẲN THANH NGẮM.** Thanh ngắm là nét ĐỨT và chạy theo chuột; mốc
+> ghim là nét LIỀN và đứng yên. Không phân biệt được hai cái thì bấm xong không biết mình đã
+> ghim hay chưa — cùng bài học đã ghi ở mục *GHIM PHIÊN* của /phantich. Và tam giác nằm ngoài
+> rìa vùng vẽ nên không cắt ngang chính dữ liệu đang xem.
+
+> **HỘP IN SỐ ĐẦY ĐỦ, KHÔNG RÚT GỌN.** Dòng chú giải trên đầu phải nhét O/H/L/C/%/KL vào một
+> hàng nên `35.3K` là đúng ở đó; hộp này người ta BẤM RA để đọc một con số cụ thể, mà `35.3K`
+> thì không biết 35.300 hay 35.349.
+
+> **CẢM ỨNG: chạm một lần = ghim, chạm hai lần vẫn = về khung mặc định.** Nhánh `chamTron` đã
+> có sẵn từ lượt làm cử chỉ cảm ứng nên chỉ cắm thêm một dòng.
+
+**ẨN NẾN (`ind.nen`, nút `Nến`, mặc định BẬT).**
+
+> **TẮT NẾN KHÔNG ĐỤNG TỚI THANG GIÁ.** Trục vẫn khít theo đỉnh/đáy của chính mấy cây nến
+> đang ẩn, nhờ vậy MA/Bollinger và **mọi hình vẽ PTKT vẫn đứng nguyên chỗ cũ**. Bật/tắt nến
+> là đổi thứ NHÌN THẤY, không đổi hệ toạ độ — cho thang co lại theo mấy đường còn hiện thì ẩn
+> nến một cái là hình vẽ trôi đi mất, mà hình vẽ neo theo (thời gian, giá) chính là thứ cả
+> lớp vẽ dựa vào.
+
+> **VẠCH GIÁ MỚI NHẤT ĐI THEO NẾN**, không đi theo khung chart. Giữ lại khi đã ẩn nến thì còn
+> đúng một vạch xanh/đỏ và một thẻ giá lơ lửng giữa khung, đọc ra như đường giá vẫn còn ở đâu
+> đó mà không thấy.
+
+> **MA/EMA/Bollinger/khối lượng KHÔNG tắt theo** — mỗi thứ đã có nút riêng. Ẩn nến mà MA20 vẫn
+> chạy là đúng ý người bấm: họ tắt THÂN NẾN cho đỡ rối, không tắt mọi thứ liên quan tới giá.
+
 ### KHO VỐN HOÁ SÂU — `data/vonhoa`, HOSE lùi tới 02/01/2013 (23/08/2026)
 
 User: *"các mã trên sàn HOSE tôi cần lấy data vốn hoá xa hơn … hiện tại chỉ tới được 8/2022

@@ -228,8 +228,13 @@ let veBut=false;                                   // bút đang được giữ 
   const fmtRS=v=>{const k=v>=100?1:v>=10?2:v>=1?3:v>=0.1?4:5;
     return v.toLocaleString('vi-VN',{minimumFractionDigits:k,maximumFractionDigits:k});};
   let ixTen='VN-Index';                    // đổi theo sàn của mã — xem self.setChiSoTen
+  /* `nen` — TẮT ĐƯỢC THÂN NẾN (user chốt 23/08/2026: *"có thể chọn ẩn biểu đồ giá đi để
+     dễ xem vốn hoá và vnindex hơn"*). Tắt nến KHÔNG đụng tới THANG GIÁ: trục vẫn khít theo
+     đỉnh/đáy của chính mấy cây nến đang ẩn, nhờ vậy MA/Bollinger và mọi hình vẽ PTKT vẫn
+     đứng nguyên chỗ cũ. Bật/tắt nến là đổi thứ NHÌN THẤY, không đổi hệ toạ độ — bằng không
+     ẩn nến một cái là hình vẽ trôi đi mất. */
   const ind={ma:[20], ema:[], vol:true, rsi:false, bb:false, macd:false, sk:true, bctc:false,
-             vh:false, idx:false, rs:false};
+             vh:false, idx:false, rs:false, nen:true};
   /* ---- MỐC SỰ KIỆN DOANH NGHIỆP (data/sukien) --------------------------------
      Mỗi mốc: {t, k, gc} — t là giây UNIX ở 00:00 UTC của NGÀY sự kiện, đúng quy ước
      mốc nến của kho. `xOfT` lo phần chiếu sang pixel nên khung Tuần/Tháng/Năm tự đúng,
@@ -240,6 +245,19 @@ let veBut=false;                                   // bút đang được giữ 
   let sukien=[];            // [{t,k,gc}] đã xếp theo thời gian
   let skHit=[];             // [{x,y,r,ev}] ô bấm trúng của lượt vẽ gần nhất
   let skHover=-1;
+  /* ---- GHIM MỘT PHIÊN ĐỂ ĐỌC SỐ (user chốt 23/08/2026) ------------------------
+     *"hiện thêm toạ độ tam giác khi tôi bật chỉ báo vnindex lên, bấm vào sẽ hiện ra điểm
+     vnindex - vốn hoá - giá cổ phiếu tại vị trí tôi bấm, để đọc nhanh tình hình tại thời
+     điểm đó"*.
+
+     NEO THEO MỐC THỜI GIAN, KHÔNG NEO THEO CHỈ SỐ NẾN. Chỉ số đổi mỗi lần kéo khung (i0
+     chạy) và đổi hẳn khi bấm Tuần/Tháng/Năm (số nến co lại còn một phần mười); neo bằng
+     `t` thì ghim ở đâu vẫn nằm đúng chỗ đó qua mọi khung, mọi mức phóng.
+
+     CHỈ BẬT KHI CÓ ĐƯỜNG PHỦ (`ind.vh || ind.idx`). Không có hai đường ấy thì hộp chỉ lặp
+     lại đúng thứ dòng chú giải trên đầu đã in sẵn khi rê chuột — mà đổi hành vi của cú bấm
+     trên một chart có sẵn bộ công cụ vẽ là chuyện phải có lý do. */
+  let ghimT=null;
   self.setSuKien=function(list){
     sukien=(list||[]).filter(e=>e&&e.t).sort((a,b)=>a.t-b.t);
     self.draw(); return self;
@@ -264,6 +282,17 @@ let veBut=false;                                   // bút đang được giữ 
     emaCache.set(per,{k:khoa,v:out});
     return out;
   }
+  /* Nến đang ghim. Khung gộp thì mốc rơi vào GIỮA một cây nến tuần/tháng — lấy cây CHỨA
+     nó (cây cuối cùng có `t <= ghimT`), đừng đòi khớp tuyệt đối rồi trả về "không có". */
+  function ghimIdx(){
+    if(ghimT==null||!rows.length) return -1;
+    if(ghimT<rows[0].t||ghimT>rows[rows.length-1].t+barStep()) return -1;
+    let k=-1;
+    for(let z=0;z<rows.length;z++){ if(rows[z].t<=ghimT) k=z; else break; }
+    return k;
+  }
+  self.ghim=()=>ghimT;
+  self.setGhim=function(t){ ghimT=t; self.draw(); return self; };
   self.ind=()=>ind;
   self.setInd=function(o){ Object.assign(ind,o||{}); self.draw(); };
   /* Tên chỉ số hiện ở chú thích và ở dòng đọc số. Mã HOSE thì "VN-Index", HNX thì
@@ -463,7 +492,7 @@ let veBut=false;                                   // bút đang được giữ 
       if(st) x.stroke();
     }
     // nến
-    for(let i=0;i<n;i++){
+    if(ind.nen) for(let i=0;i<n;i++){
       const r=vis[i], up=r.c>=r.o, col=up?UP:DOWN, X=cx(i);
       x.strokeStyle=col; x.lineWidth=Math.min(1.6,Math.max(1,bw*0.14));
       x.beginPath(); x.moveTo(X,y(r.h)); x.lineTo(X,y(r.l)); x.stroke();
@@ -504,13 +533,17 @@ let veBut=false;                                   // bút đang được giữ 
       x.fillText(dv,plotW+padR+4,padT-6);
     }
     paintDraws(x,y,'main');       // khung giá: sơn ngay sau nến
-    // vạch giá mới nhất
-    const lastC=vis[n-1].c, yl=y(lastC), lcol=lastC>=vis[0].o?UP:DOWN;
-    x.setLineDash([3,3]); x.strokeStyle=lcol+'99';
-    x.beginPath(); x.moveTo(0,yl); x.lineTo(plotW,yl); x.stroke(); x.setLineDash([]);
-    x.fillStyle=lcol; x.fillRect(plotW,yl-8,padR,16);
-    x.fillStyle='#fff'; x.font='700 10.5px system-ui'; x.textAlign='left'; x.textBaseline='middle';
-    x.fillText(fmtP(lastC),plotW+6,yl);
+    /* Vạch giá mới nhất đi THEO nến — nó là một mẩu của biểu đồ giá chứ không phải khung
+       chart. Giữ lại khi đã ẩn nến thì còn đúng một vạch đỏ/xanh và một thẻ giá lơ lửng
+       giữa khung, đọc ra như đường giá vẫn còn ở đâu đó mà không thấy. */
+    if(ind.nen){
+      const lastC=vis[n-1].c, yl=y(lastC), lcol=lastC>=vis[0].o?UP:DOWN;
+      x.setLineDash([3,3]); x.strokeStyle=lcol+'99';
+      x.beginPath(); x.moveTo(0,yl); x.lineTo(plotW,yl); x.stroke(); x.setLineDash([]);
+      x.fillStyle=lcol; x.fillRect(plotW,yl-8,padR,16);
+      x.fillStyle='#fff'; x.font='700 10.5px system-ui'; x.textAlign='left'; x.textBaseline='middle';
+      x.fillText(fmtP(lastC),plotW+6,yl);
+    }
     // nhãn trục dưới: chỉ vẽ tại mốc đổi đơn vị, cách nhau tối thiểu 46px
     const unit=tickUnit(iv,span);
     x.fillStyle=MUT(); x.font='10px system-ui'; x.textAlign='center'; x.textBaseline='alphabetic';
@@ -743,6 +776,30 @@ let veBut=false;                                   // bút đang được giữ 
       // hộp chú giải của mốc đang rê — vẽ SAU tất cả để không bị chấm nào đè lên
       if(skHover>=0&&skHover<skHit.length) veHopSK(x,skHit[skHover],w,h);
     }
+    /* ---- PHIÊN ĐANG GHIM: hai tam giác kẹp trên/dưới + hộp đọc số ------------------
+       Ký hiệu lấy đúng của đồ thị /phantich (mục *MỐC PHIÊN LÀ TAM GIÁC*): một vạch dọc
+       cao suốt vùng vẽ sẽ CẮT NGANG chính dữ liệu đang xem, còn tam giác thì nằm ngoài
+       rìa và vẫn chỉ đúng cột. Khác thanh ngắm ở NÉT: thanh ngắm là nét đứt và chạy theo
+       chuột, mốc ghim là nét LIỀN và đứng yên — không phân biệt được hai cái thì bấm xong
+       không biết mình đã ghim hay chưa. */
+    const gI=ghimIdx();
+    if(gI>=0&&gI>=i0&&gI<i1){
+      const X=cx(gI-i0), y0=padT, y1=padT+plotH;
+      x.strokeStyle=light()?'rgba(0,0,0,.45)':'rgba(255,255,255,.45)'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(X,y0); x.lineTo(X,y1); x.stroke();
+      x.fillStyle=light()?'#0f172a':'#e9e9ef';
+      const tam=(yy,xuong)=>{ x.beginPath(); x.moveTo(X,yy);
+        x.lineTo(X-5,yy+(xuong?-7:7)); x.lineTo(X+5,yy+(xuong?-7:7)); x.closePath(); x.fill(); };
+      tam(y0+1,true); tam(y1-1,false);
+      const r=rows[gI];
+      /* Hộp đọc số in SỐ ĐẦY ĐỦ, không rút gọn kiểu `35.3K` như dòng chú giải trên đầu.
+         Dòng kia phải nhét O/H/L/C/%/KL vào một hàng nên rút gọn là đúng; hộp này người ta
+         bấm ra để ĐỌC một con số cụ thể, mà `35.3K` thì không biết là 35.300 hay 35.349. */
+      const dong=[['Giá',Math.round(r.c).toLocaleString('vi-VN')+' đ',null]];
+      if(r.vh>0) dong.push(['Vốn hoá',fmtTy(r.vh),VHCOL()]);
+      if(r.ix>0) dong.push([ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()]);
+      veHopGhim(x,X,y0,w,fullLabel(iv,r.t),dong);
+    }
     // thanh ngắm
     if(hover>=0&&hover<span){
       const future=hover>=n;                       // đang rê vào vùng trống phía trước
@@ -774,6 +831,33 @@ let veBut=false;                                   // bút đang được giữ 
       paintTip(vis[n-1],0,vis[n-2]); opt.legend.classList.remove('on');
     }
   };
+
+  /* Hộp đọc số của phiên ĐANG GHIM. Hai cột: nhãn trái, số phải — số phải thẳng cột thì
+     mới liếc một cái là so được, dồn thành một dòng chảy là phải đọc từng chữ.
+     Vẽ thẳng lên canvas cùng lý do với `veHopSK`: toạ độ đổi theo mọi lượt kéo/phóng. */
+  function veHopGhim(x,X,yTop,w,tieu,dong){
+    x.font='700 11px system-ui'; x.textBaseline='middle';
+    const wN=Math.max(x.measureText(tieu).width,
+      ...dong.map(d=>x.measureText(d[0]).width+14+x.measureText(d[1]).width));
+    const bw=Math.min(240,wN+20), bh=18+dong.length*16+8;
+    let bx=X+12, by=yTop+10;
+    if(bx+bw>w-4) bx=X-bw-12;                 // sát mép phải -> lật sang trái
+    if(bx<4) bx=4;
+    x.fillStyle=light()?'rgba(255,255,255,.98)':'rgba(24,26,34,.98)';
+    x.strokeStyle=light()?'rgba(0,0,0,.16)':'rgba(255,255,255,.18)'; x.lineWidth=1;
+    if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,bw,bh,8); x.fill(); x.stroke(); }
+    else { x.fillRect(bx,by,bw,bh); x.strokeRect(bx,by,bw,bh); }
+    x.textAlign='left'; x.fillStyle=TXT(); x.font='700 11px system-ui';
+    x.fillText(tieu,bx+10,by+13);
+    dong.forEach((d,i)=>{
+      const yy=by+29+i*16;
+      x.textAlign='left'; x.fillStyle=MUT(); x.font='10.5px system-ui';
+      x.fillText(d[0],bx+10,yy);
+      x.textAlign='right'; x.fillStyle=d[2]||TXT(); x.font='700 11px system-ui';
+      x.fillText(d[1],bx+bw-10,yy);
+    });
+    x.textAlign='left';
+  }
 
   /* Hộp chú giải của mốc sự kiện. Vẽ THẲNG LÊN CANVAS chứ không dùng thẻ HTML như bảng
      KQKD: chart này kéo/phóng/vẽ hình được nên toạ độ đổi liên tục, gắn thẻ HTML là phải
@@ -1105,6 +1189,16 @@ let veBut=false;                                   // bút đang được giữ 
   self.chotMo=chotMo;
 
   /* ---- tương tác ---- */
+  /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó. */
+  function bamGhim(px){
+    if(!(ind.vh||ind.idx)) return false;
+    if(!(px>=0&&px<=geo.plotW)||!rows.length) return false;
+    const gi=i0+idxAt(px);
+    if(gi<0||gi>=rows.length) return false;      // rê vào vùng trống tương lai
+    ghimT=(ghimT===rows[gi].t)?null:rows[gi].t;
+    self.draw();
+    return true;
+  }
   const idxAt=px=>{
     if(!geo.cw) return -1;
     const i=Math.floor(px/geo.cw);
@@ -1154,6 +1248,12 @@ let veBut=false;                                   // bút đang được giữ 
       if(Math.hypot(px-dpen.x,py-dpen.y)>5) addPoint(Math.min(px,geo.plotW-1),py);
     }
     dpen=null;
+    /* Phân biệt BẤM với KÉO bằng quãng đường, ngưỡng 4px — chuột ai cũng nhích một chút
+       lúc nhả. Không có ngưỡng thì mỗi lần kéo chart xong là ghim nhầm một phiên. */
+    if(drag&&!drag.axis&&!dmove&&!tool&&!pending&&
+       Math.abs(e.clientX-drag.x)<4&&Math.abs(e.clientY-drag.y)<4){
+      bamGhim(e.clientX-cvs.getBoundingClientRect().left);
+    }
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
     drag=null; cvs.style.cursor=tool?'crosshair':'';
   });
@@ -1331,6 +1431,7 @@ let veBut=false;                                   // bút đang được giữ 
       chamCuoi=0; chamXY=null; hover=-1; self.resetView(); return;
     }
     chamCuoi=nay; chamXY=[t.clientX,t.clientY];
+    bamGhim(t.clientX-cvs.getBoundingClientRect().left);
   });
 
   let rt=null;
