@@ -5,7 +5,7 @@
    không tốn tải trang cho người không dùng lọc.
    ========================================================================== */
 'use strict';
-const CPScreen={loaded:false,loading:null,T:{},F:{}};
+const CPScreen={loaded:false,loading:null,T:{},F:{},IX:null,NEN_TRE:5};
 (function(){
 
 /* ---------- nạp dữ liệu ---------------------------------------------------- */
@@ -21,6 +21,7 @@ CPScreen.load=function(){
     const unpack=pk=>{const M={};for(const s in pk.d){const a=pk.d[s],o={};
       pk.f.forEach((k,i)=>o[k]=a[i]);M[s]=o;}return M;};
     CPScreen.T=unpack(sc); CPScreen.F=unpack(fd);
+    CPScreen.IX=sc.ix||null;          // trạng thái VN-Index cho cổng "cách nền"
     CPScreen.loaded=true; return true;
   })();
   return CPScreen.loading;
@@ -71,6 +72,16 @@ CPScreen.chips=[
   {id:'q2up',  g:'Sức khoẻ', nm:'2 quý liền lãi tăng ≥ 25%'},
   // chip CÓ THAM SỐ: {n} là chỗ client cắm ô chọn số kỳ. def = số kỳ mặc định.
   {id:'lossQ', g:'Sức khoẻ', nm:'Lỗ {n} quý liên tiếp', opts:[1,2,3,4,5,6,7,8], def:8},
+  /* ---- CÁCH NỀN (25/08/2026) --------------------------------------------------------
+     Bốn chip THƯỜNG, mỗi cái là MỘT con số đo được của riêng một mã, ngưỡng do người dùng
+     đặt — đúng loại chip mà ghi chú "bỏ bộ lọc Pro" ở trên nói là được phép dựng. KHÔNG
+     gộp chúng thành một nút cho ra sẵn danh sách: chỗ đó mới là danh mục gợi ý.
+     `nen`/`ndN` chỉ có ở mã HOSE (cần 1.250 phiên vốn hoá liên tục) — mã khác trả false,
+     tức không lọt, chứ không phải "lọt vì thiếu dữ liệu". */
+  {id:'capmin',g:'Rổ · quy mô', nm:'Vốn hoá ≥ {n} tỷ', opts:[1000,3000,10000,30000], def:1000},
+  {id:'gtgd60',g:'Rổ · quy mô', nm:'GTGD 60 phiên ≥ {n} tỷ', opts:[1,2,5,10], def:2},
+  {id:'nenduoi',g:'Cách nền', nm:'Vốn hoá dưới nền dài hạn'},
+  {id:'nengan', g:'Cách nền', nm:'Khoảng cách tới nền hẹp nhất {n} phiên', opts:[100,200,300,400], def:100},
 ];
 CPScreen.def=id=>{const x=CPScreen.chips.find(c=>c.id===id);return x&&x.def||0;};
 /* n = số kỳ người dùng chọn, chỉ có nghĩa với chip mang opts */
@@ -116,6 +127,16 @@ CPScreen.chip=function(id,c,n){
     case 'q2up':  return (f.npQ??-9)>=25&&(f.npQ2??-9)>=25;
     // N quý gần nhất LIÊN TIẾP lỗ — kho lưu độ dài chuỗi lỗ, đứt một quý là về 0
     case 'lossQ': return (f.lossQs||0)>=n;
+    case 'capmin':return (c.mcapLive||c.mcap||0)>=n*1e9;
+    case 'gtgd60':return (t.avgval60||0)>=n*1e9;
+    /* `nen` = vốn hoá ÷ chỉ số so với trung bình 1.250 phiên của CHÍNH MÃ, tính bằng %.
+       Âm = đang yếu hơn mặt bằng chung dài hạn của chính nó. */
+    case 'nenduoi':return t.nen!=null&&t.nen<0;
+    /* `ndN` = SỐ PHIÊN kể từ lần gần nhất khoảng cách hẹp nhất trong N phiên (khi còn dưới
+       nền). 0 = chính hôm nay. Kho ghi số phiên chứ không ghi cờ đúng/sai để đổi ngưỡng
+       "trong bao lâu" không phải dựng lại kho — hiện chốt ≤5 phiên, đủ để người xem bảng
+       chiều thứ Sáu vẫn thấy tín hiệu nổ hôm thứ Ba. */
+    case 'nengan': { const v=t['nd'+n]; return v!=null&&v<=CPScreen.NEN_TRE; }
     default: return true;
   }
 };

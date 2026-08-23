@@ -3854,7 +3854,7 @@ bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong 
 | | trước | sau |
 |---|---|---|
 | `#cvInd` (chart nhỏ) | 11 nút | **6**: MA200 · RSI · Nến · Khối lượng · Vốn hoá · VN-Index |
-| `#ptInd` (toàn màn hình) | 15 nút | **13** (bỏ Cổ tức/BCTC, giữ EMA và Sức mạnh) |
+| `#ptInd` (toàn màn hình) | 15 nút | **12** (bỏ Cổ tức/BCTC và Sức mạnh, giữ EMA) |
 | khổ 375px | 3 hàng · ~85px | **2 hàng đều nhau · 56px** |
 | khổ máy bàn | 2 hàng | **1 hàng · 27px** |
 
@@ -3874,9 +3874,11 @@ bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong 
 > thứ người dùng PTKT đã quen.
 
 **BỐN THỨ ĐÃ DỌN KHỎI HÀNG NÚT CỦA CHART NHỎ — ĐỪNG THÊM LẠI:**
-· **EMA50/EMA200 và Sức mạnh** → chỉ còn ở cửa sổ Phân tích kỹ thuật. Chart nhỏ là thứ NHÌN
-  ĐẦU TIÊN khi mở trang mã, không phải bàn làm việc PTKT; ai cần EMA thì mở hẳn cửa sổ kia.
+· **EMA50/EMA200** → chỉ còn ở cửa sổ Phân tích kỹ thuật. Chart nhỏ là thứ NHÌN ĐẦU TIÊN khi
+  mở trang mã, không phải bàn làm việc PTKT; ai cần EMA thì mở hẳn cửa sổ kia.
 · **Cổ tức/BCTC** → vào TRONG khung đồ thị, vì chúng điều khiển thứ vẽ trên chính khung đó.
+· **Sức mạnh** → bỏ khỏi CẢ HAI hàng nút. Từ 25/08/2026 nó thành dải `Cách nền` và bật bằng
+  **ô công tắc trong khung**, cùng chỗ với Cổ tức/BCTC — xem mục *DẢI "CÁCH NỀN"*.
 
 **HAI Ô CÔNG TẮC TRONG KHUNG (`mocHit` trong `chart.js`)** — hàng thứ ba của góc trái trên,
 dưới tên mã và dòng chú thích. Ô đang bật thì nền đặc chữ nghịch, tắt thì nền mờ chữ xám.
@@ -4101,87 +4103,260 @@ cào 2 lượt cho riêng nó. Phải đứng SAU `lap_slcp_cu` vì tầng ① c
 hai nguồn (`MARKETCAP`, `stock_prices`, `finx`) đều có sẵn cho hai sàn đó; chưa làm vì user
 chỉ hỏi HOSE, và thêm ~1.124 file × 21 KB vào kho là một quyết định riêng.
 
-### DẢI "SỨC MẠNH" — CHỈ BÁO CỐ ĐỊNH THẬT SỰ, `giá ÷ điểm chỉ số` (23/08/2026)
+### DẢI "CÁCH NỀN" — ĐỌC SỚM HƠN CÚ CẮT, `vốn hoá ÷ chỉ số` (25/08/2026)
 
-User: *"chỉ báo vnindex trong đồ thị đang không cố định theo chart, khi tôi kéo về phía sau
-thì nó cũng di chuyển … tôi muốn biến nó thành 1 chỉ báo thực sự và cố định"*. Nút thứ ba
-`Sức mạnh` ở cả `#cvInd` lẫn `#ptInd`, cờ `ind.rs`, dải riêng dưới cùng.
+User: *"nhiều mã có vốn hoá cắt xuống dưới đường VN-Index đi một khoảng khá xa rồi đột ngột
+quay đầu cắt lên lại, ví dụ VHM–VIC … đợi đường vốn hoá cắt đường VN-Index thì cổ phiếu đã đi
+được một đoạn xa rồi và trạng thái tâm lý của tôi khi đó sẽ dè chừng hơn"*.
 
-**LỜI PHÀN NÀN ĐÚNG, VÀ ĐO ĐƯỢC.** Đường VN-Index trên chart giá neo theo TRUNG BÌNH KHUNG
-NHÌN, nên cùng một phiên đọc ra mấy giá trị khác nhau. REE phiên 03/06/2024 (giá 46.246):
+**LỜI PHÀN NÀN ĐÚNG, VÀ ĐO ĐƯỢC — ĐÂY LÀ SỐ QUAN TRỌNG NHẤT CỦA CẢ MỤC.** Quét 395 mã HOSE có
+kho vốn hoá (1.138.549 phiên), lấy mọi đoạn tụt xuống dưới nền ≥0,40 (log) rồi cắt lên lại —
+**340 đoạn**:
 
-| khung nhìn | đường VN-Index quy đổi |
+| đo tại thời điểm cắt lên | trung vị |
 |---|---|
-| 120 phiên | 45.797 — **dưới** giá |
-| 500 phiên | 46.252 — **trên** giá |
-| cả chuỗi | 42.128 |
+| vốn hoá đã tăng từ đáy | **+86%** |
+| lợi suất TƯƠNG ĐỐI 60 phiên SAU cú cắt | **−1,1%** |
+| lợi suất tương đối 120 phiên sau cú cắt | +4,5% (trung bình) · trung vị +0,5% |
 
-Không chỉ xê dịch 9,8%: **phép đọc LẬT** — cùng ngày đó, chỗ này bảo mã hơn thị trường, chỗ
-kia bảo kém. Đó mới là cái hỏng, chứ không phải chuyện đường nhúc nhích.
+Nói thẳng: **cú cắt là mốc MÔ TẢ, không phải mốc SỚM.** Gần hết đoạn tăng nằm TRƯỚC nó, và
+sau nó thì kỳ vọng tương đối bằng không. Càng quay đầu gấp càng tệ — 25 ca hồi nhanh nhất
+(vốn hoá đáy ≥1.000 tỷ) có 16/25 âm trong 250 phiên sau cắt (BFC −61% · QCG −68% · LDG −65%).
+**VIC và VHM là NGOẠI LỆ, không phải luật**: VIC +436% và VHM +112% sau cắt, nằm ở đuôi phải.
 
-**VÌ SAO KHÔNG NEO CỨNG NGAY TRÊN TRỤC GIÁ — ĐÃ THỬ TRÊN GIẤY VÀ BỎ.** Trục giá của
-`chart.js` **tự khít theo nến đang hiện**, nên mọi đường neo cứng đều phải trôi khỏi khung.
-Đo 216 mã HOSE × 30.073 cửa sổ 120 phiên, neo một lần cho cả chuỗi:
+**DẢI THAY CHO "SỨC MẠNH" CŨ.** Bản 23/08 vẽ `giá ÷ điểm chỉ số`, thang khít KHUNG NHÌN. Hai
+chỗ hỏng: ① **giá** thì hạ nền được (user đã chỉ ra: *"vốn hoá của cổ phiếu chứ không phải
+giá vì giá có thể bị hạ nền"*) — phát hành thêm làm vốn hoá tăng mà giá đứng im; ② thang theo
+khung nhìn thì kéo ngang một cái là đường đổi hình, đúng lỗi đã bắt ở đường VN-Index.
+
+```
+g(i) = log( vốn hoá(i) ÷ chỉ số(i) ) − TB TRƯỢT 1.250 nến của chính tỉ số đó
+```
+
+**NỀN LÀ TRUNG BÌNH TRƯỢT, KHÔNG PHẢI TRUNG BÌNH ĐOẠN ĐANG NẠP — đã đổi 25/08 và đừng đổi
+ngược.** Bản đầu dùng đúng `k` của `P2` (trung bình cả đoạn nạp) nên vạch 0 của dải trùng khít
+chỗ hai đường cắt nhau, nghe thì gọn. Hai chỗ hỏng khiến phải bỏ:
+
+① **Có nhìn trước.** Mọi phiên quá khứ được neo bằng một con số chứa cả tương lai của chính
+   nó → không dùng để đọc sớm được, mà đọc sớm mới là lý do dựng dải.
+② **Số nến nạp thay đổi theo mã và theo khung** (GAS về 3.400 nến, VHM về 1.246), nên CÙNG MỘT
+   MÃ ra hai con số khác nhau ở chart và ở bảng giá. Đo được trước khi sửa: GAS **−33,0%** trên
+   chart nhưng **−18,3%** ở bảng giá, cùng phiên 21/08/2026. Sau khi sửa: **−18,3% cả hai chỗ.**
+
+Đổi lại **vạch 0 KHÔNG còn trùng điểm cắt của hai đường** — chấp nhận có chủ ý, vì hai thứ trả
+lời hai câu khác nhau: hai đường nói *"đắt hay rẻ so với trung bình đoạn đang xem"*, dải nói
+*"mạnh hay yếu so với chính mình 1.250 phiên qua"*. Nhãn dải in thẳng số nến (`Cách nền 1.250
+phiên — …`) để không ai đọc nhầm thành cùng một câu hỏi.
+
+Cửa sổ co lại khi chuỗi ngắn: `Wma = min(1250, max(120, n/2))`, và cần ít nhất `min(Wma,60)`
+điểm mới cho ra giá trị. Thang lấy min/max trên `rows`, **không** trên `vis` — kéo ngang thì
+`mn/mx` giữ nguyên.
+
+**VÌ SAO PHẢI LÀ DẢI RIÊNG, KHÔNG NEO THẲNG TRÊN TRỤC GIÁ — ĐÃ ĐO 23/08, ĐỪNG ĐO LẠI.** Trục
+giá của `chart.js` **tự khít theo nến đang hiện**, nên mọi đường neo cứng đều phải trôi khỏi
+khung. Đo 216 mã HOSE × 30.073 cửa sổ 120 phiên, neo một lần cho cả chuỗi:
 
 - **47,5%** số cửa sổ đường nằm **hẳn ngoài** khung nến — kéo chart hai lần thì một lần mất hút;
 - nới trục để ôm nó: khung phình **trung vị ×1,50 · p90 ×4,15 · max ×62** → nến bẹp còn
   **67% / 24% / 1,6%** chiều cao.
 
 Không có cách thứ ba. Muốn cố định thì phải **rời trục giá xuống dải riêng**, đúng chỗ RSI và
-MACD đang đứng.
+MACD đang đứng. `subH = rsiH + macH + rsH`, và **MACD phải lùi lên** (`h−22−macH−rsH+4`) —
+quên dòng đó là MACD vẽ đè lên dải.
 
-**CÔNG THỨC — TỈ SỐ THÔ, KHÔNG CHUẨN HOÁ (user chọn):**
+**BA DẤU SỰ KIỆN — VÀ VÌ SAO CHÚNG NHÂN QUẢ CÒN VẠCH NỀN THÌ KHÔNG.** `k` lấy trung bình CẢ
+chuỗi đang nạp, tức mọi phiên quá khứ đều được neo bằng một con số có chứa tương lai của
+chính nó. Vạch nền vì thế chỉ dùng để **mô tả**. Hai dấu thì so `g` với chính `g` trong quá
+khứ, mà đổi `k` chỉ dịch toàn bộ `g` đi một hằng số — argmin/argmax trong mọi cửa sổ đứng
+nguyên. **Nhân `k` kiểu gì dấu cũng không nhúc nhích** (`test_nen.js` kiểm thẳng ca này —
+nhân thang chỉ số ×7,3, số dấu và vị trí dấu y hệt).
 
-```
-RS(i) = giá đóng cửa(i) ÷ điểm chỉ số(i)
-```
+| dấu | định nghĩa | bắt được | nổ sớm hơn cú cắt | lúc nổ, vốn hoá so với đáy | còn lại tới lúc cắt |
+|---|---|---|---|---|---|
+| **△ phân kỳ** | vốn hoá thủng đáy W1 phiên mà `g` thì không | 40% số đoạn | **262 phiên** | **−2%** | **+65%** |
+| **○ `g` đỉnh W1** | `g` cao nhất W1 phiên, khi CÒN dưới nền | 90% | 115 phiên | +32% | +36% |
+| **● `g` đỉnh W2** | `g` cao nhất W2 phiên, khi CÒN dưới nền | 65% | 92 phiên | +41% | +28% |
 
-Mỗi phiên một giá trị, phụ thuộc đúng hai con số của chính phiên đó — **không cửa sổ, không
-trung bình trượt, không phiên neo**. Kéo/phóng bao nhiêu cũng không đổi được nó. RS đi lên =
-mã chạy hơn thị trường, ở mọi khung, mọi mức phóng. Kiểm: REE 03/06/2024 ra **36,1297** trước
-khi kéo, sau khi phóng 6 nấc, và sau khi về khung mặc định — ba lần y hệt.
+`W2 ⊂ W1` nên **tầng nhỏ phải TRỪ tầng lớn ra** (`if(out.dinh[i]) out.dinhN[i]=false`), không
+thì đúng những phiên đáng chú ý nhất lại bị vẽ hai dấu chồng lên nhau.
 
-> **BA CÔNG THỨC ĐÃ ĐO RỒI BỎ** (212 mã HOSE, chuỗi ngày từ 2013) — ghi lại để khỏi đo lại:
+**W1/W2 = 100/200, PHẢI TRÙNG `opts` CỦA CHIP `nengan`** trong `assets/screener.js`. Bản đầu
+để 120/250 và hậu quả im lặng: GAS hiện `nd100 = 2 phiên` ở bảng giá trong khi dấu gần nhất
+trên chart lùi tận **144 phiên** — người dùng bấm từ bảng giá sang chart rồi không thấy gì.
+`test_nen.js` khoá con số này. Nghỉ giữa hai dấu là `W/20`; bảng giá KHÔNG có nghỉ (nó đếm
+phiên gần nhất) nên trong một chuỗi đỉnh liên tiếp chart vẽ ở phiên ĐẦU còn bảng giá đếm phiên
+CUỐI — lệch tối đa `W/20` phiên, có chủ ý, không phải hai định nghĩa khác nhau.
+
+**KIỂM TÍNH ĐỘC LẬP — MỤC QUAN TRỌNG NHẤT CỦA CẢ TÀI LIỆU NÀY, ĐỌC TRƯỚC KHI TIN BẤT KỲ CON
+SỐ NÀO Ở TRÊN.** Bản đo đầu tiên đếm từng phiên-mã là một quan sát và cho ra kết quả rất đẹp
+cho △ (n=484, trung vị +1,8% so với nền −2,8%, đuôi trái co từ 16,9% xuống 11,1%). **Sai.**
+Số lần nổ mỗi tháng trên toàn sàn:
+
+| tháng | 2025-04 | 2025-05→2026-02 | 2026-03 | 2026-07 |
+|---|---|---|---|---|
+| **△** | **101** | 0–13/tháng, phần lớn **0** | **65** | **92** |
+| **●** | 19 | 1–8 đều đặn | 8 | 3 |
+
+△ im lặng hàng tháng trời rồi nổ hàng loạt đúng lúc chỉ số sập (VN-Index 07/2026: 1.867 →
+1.668, −10,7%). 484 quan sát ấy thực chất là **~10 sự kiện thị trường**; 5 tháng đông nhất
+chiếm 31%. Gộp mỗi tháng thành MỘT quan sát:
+
+| gộp theo tháng, vùng sâu `g ≤ −0,40` | số tháng | tv 120 phiên | tv 250 phiên | % tháng dương | P(cắt lên ≤500 phiên) |
+|---|---|---|---|---|---|
+| nền | 148 | −2,5% | −4,4% | 41% | 34% |
+| **△ phân kỳ** | 54 | −1,8% | **−5,4%** | 43% | **27%** |
+| **○ `g` đỉnh 120** | 106 | **+1,2%** | +1,2% | **54%** | — |
+| **● `g` đỉnh 250** | 74 | **+1,2%** | **+5,1%** | **51%** | **50%** |
+
+**KẾT LUẬN ĐÃ ĐỔI SO VỚI BẢN ĐO ĐẦU:**
+
+- **△ KHÔNG PHẢI TÍN HIỆU CHỌN MÃ.** Sau khi bỏ tương quan, nó **tệ hơn nền** ở cả lợi suất
+  250 phiên (−5,4% so với −4,4%) lẫn xác suất cắt lên (**27% so với 34%**). Nó là **dấu hoảng
+  loạn diện rộng**: khi thấy nó sáng cùng lúc ở vài chục mã thì nó đang nói về THỊ TRƯỜNG chứ
+  không nói gì về từng mã. Vẫn vẽ vì mốc đáy hoảng loạn là thông tin thật, **nhưng đừng bao
+  giờ trình bày nó như một tín hiệu sớm.**
+- **○ và ● MỚI LÀ TÍN HIỆU CỔ PHIẾU**, và chúng sống sót qua phép kiểm: 74–106 tháng khác
+  nhau, 5 tháng đông nhất chỉ chiếm 19%, và ưu thế còn nguyên sau khi gộp (**+1,2% / +5,1%**
+  so với nền **−2,5% / −4,4%**; xác suất cắt lên **50% so với 34%**). Đây là thứ trả lời đúng
+  câu user hỏi.
+
+> **BÀI HỌC PHƯƠNG PHÁP, ĐỪNG LẶP LẠI:** mọi chỉ báo dựa trên "so với mặt bằng chung" đều nổ
+> theo CỤM, vì mẫu số là chung cho cả sàn. Đếm phiên-mã là tự nhân số quan sát lên hàng chục
+> lần rồi tưởng mình có ý nghĩa thống kê. **Luôn gộp theo tháng (hoặc theo đợt) trước khi kết
+> luận.** Con số 484 → 54 đã lật hẳn dấu của kết luận.
+
+> **CẢNH BÁO CÒN NGUYÊN GIÁ TRỊ.** Ngay cả với ○/●, ưu thế đo trên 2013–2022 rồi mới nghiệm
+> ra 2020–2025; riêng **2023–2025 cả vùng dưới nền đều âm** bất kể tín hiệu nào — đó là giai
+> đoạn chỉ số tự nó chạy mạnh nên mọi mã tụt hậu đều tụt tiếp. Bộ điểm gộp 4 điều kiện (trên
+> MA200 của chính nó · `g` đã hồi >0,10 từ đáy · độ sâu ≤−0,65 · biến động 60 phiên ≥ trung
+> vị) đơn điệu đẹp ngoài mẫu ở đuôi phải (>+50% trong 250 phiên: 10,1% → 13,0% → 16,7% →
+> 19,9% → **28,2%** cho điểm 0→4, giai đoạn 2020–2025) nhưng **lật hẳn dấu trong 2023–2025**
+> (điểm 4 ra trung vị −27,4%, 47,2% số ca thủng −30%). Đã đo, đã biết, **chưa đưa lên giao
+> diện vì đúng lý do đó**.
+
+**CỬA SỔ TÍNH THEO SỐ NẾN, không theo số ngày** — giống hệt MA/RSI trên chart này: khung Tuần
+thì W1 = 120 *tuần*. Chuỗi ngắn thì co lại (`W1 = min(120, max(20, n/6))`, `W2` tương tự với
+250/40/`n`/3) để khung Tháng không mất trắng dải. Đo được: ngày `120/250` · tuần `43/86` ·
+tháng `27/54`.
+
+**Ô CÔNG TẮC NẰM TRONG KHUNG ĐỒ THỊ**, hàng thứ ba góc trái trên, cạnh `Cổ tức` và `BCTC` —
+đúng quy ước user chốt 24/08 (*"cần gọn hơn"*): hàng nút dưới chart giữ nguyên **sáu nút 3×2**
+ở khổ hẹp. Danh sách ô phải dựng ĐỘNG (`cvNut`) vì `Cách nền` có điều kiện hiện riêng.
+
+- **Ô hiện TRƯỚC khi có dữ liệu.** Kho vốn hoá + chỉ số chỉ nạp khi có người hỏi tới; gác ô
+  theo *"đã có dữ liệu chưa"* thì nó vĩnh viễn không hiện — không ai bật được cái mà chính nó
+  phải bật mới có. Trang nào truyền `opt.onInd` là trang biết đi nạp (`napPhuCho`), và dải cần
+  **CẢ HAI** kho: vốn hoá làm tử, chỉ số làm mẫu.
+- **Khung "Trong ngày" bỏ hẳn dải** (`rsH = 0` khi `iv==='i'`), không vẽ dải rỗng: nến 5 phút
+  mà hai kho kia chỉ có số theo PHIÊN. Cờ vẫn bật, quay lại khung ngày là dải trở lại.
+- **`ind.rs` mở khoá cú ghim** cùng với `vh`/`idx` — hộp ghim nay in thêm dòng `Cách nền`.
+
+> **BẪY ĐÃ TRẢ GIÁ — ĐỆM `nenArr` PHẢI XOÁ TRONG `setRows`, ĐỪNG DỰA VÀO KHOÁ ĐỆM.**
+> `veLaiPhu` gắn vốn hoá/chỉ số vào rồi gọi lại `setRows` với mảng **cùng độ dài, cùng mốc
+> đầu, cùng mốc cuối**. Mọi khoá đệm dựng từ hình dạng chuỗi đều thấy y hệt lần trước và trả
+> về kết quả tính lúc CHƯA có phủ → dải rỗng vĩnh viễn dù dữ liệu đã về. Đã xảy ra thật; nay
+> `setRows` xoá thẳng `nenCache.k`, và `test_nen.js` giữ ca này.
+
+**KIỂM: `node tools/test_nen.js`** — 20 ca, nạp thẳng `assets/chart.js` vào VM canvas rỗng rồi
+gọi chính `chart.nenSo()`. Ba nhóm đáng giá nhất: `k` đặt cho TB(g)=0; hai dấu bất biến khi
+nhân thang chỉ số ×7,3; và ca đệm ở trên. Ngoài ra đã đối chiếu **cả dải với một bản dựng lại
+độc lập bằng Python**: VHM 5 năm ra cùng `+64,0%`, cùng 3 dấu △ (30/06/2022 · 28/07/2022 ·
+19/09/2022) và cùng 1 dấu ● (04/04/2025).
+
+> **ĐƯỜNG VN-INDEX TRÊN CHART GIÁ GIỮ NGUYÊN.** Nó trả lời câu khác và là thứ duy nhất so
+> trực tiếp được với nến trên cùng một trục. Dải là **cộng vào**, không phải thay thế.
+
+> **BA CÔNG THỨC RS ĐÃ ĐO RỒI BỎ hồi 23/08** (Mansfield 250 · Alpha 60 phiên · tỉ số thô
+> `giá ÷ điểm`) nay nằm ở `docs/muc-cu-sucmanh.md` — đừng đo lại.
+
+### BỐN CHIP "CÁCH NỀN" Ở BẢNG GIÁ — `screen.json` + `screener.js` (25/08/2026)
+
+User: *"bộ lọc tổng kết để đưa vào mục bảng giá"*. Bốn chip THƯỜNG, không phải một nút cho
+ra sẵn danh sách — xem mục *Ranh giới pháp lý* luật 2: thứ bị cấm là **danh mục do chủ trang
+chọn**, thứ được phép là **một con số đo được của riêng một mã, ngưỡng do người dùng đặt**.
+
+| chip | trường kho | tham số người dùng |
+|---|---|---|
+| Vốn hoá ≥ {n} tỷ | `mcapLive`/`mcap` (bảng giá) | 1.000 · 3.000 · 10.000 · 30.000 |
+| GTGD 60 phiên ≥ {n} tỷ | `avgval60` | 1 · 2 · 5 · 10 |
+| Vốn hoá dưới nền dài hạn | `nen` | — |
+| Khoảng cách tới nền hẹp nhất {n} phiên | `nd100/200/300/400` | 100 · 200 · 300 · 400 |
+
+**`nen` = `log(vốn hoá ÷ chỉ số)` trừ trung bình trượt 1.250 phiên CỦA CHÍNH MÃ, in ra %.**
+**ĐÚNG BẰNG con số dải *Cách nền* của chart in ra** — hai chỗ dùng chung một định nghĩa, và
+phải giữ như vậy. Kiểm: GAS phiên 21/08/2026 ra `−18,3%` ở cả hai nơi.
+
+> Trước 25/08 chart neo theo ĐOẠN ĐANG NẠP nên GAS ra `−33,0%` trên chart mà `−18,3%` ở bảng
+> giá. Cùng một cái tên, hai con số — đã sửa bằng cách cho chart dùng trung bình trượt; xem
+> mục *DẢI "CÁCH NỀN"*. **Đổi định nghĩa ở một bên thì phải đổi cả bên kia**, kèm `NEN_W1/W2`
+> của chart và `opts` của chip `nengan`.
+
+**`ndN` = SỐ PHIÊN kể từ lần gần nhất `nen` đạt đỉnh N phiên TRONG LÚC CÒN DƯỚI NỀN.** `0` là
+chính hôm nay, `null` là chưa từng / chuỗi chưa đủ dài. Ghi **số phiên** chứ không ghi cờ
+đúng-sai để đổi ngưỡng *"trong bao lâu"* mà không phải dựng lại kho; client chốt `NEN_TRE=5`,
+đủ để người mở bảng chiều thứ Sáu vẫn thấy tín hiệu nổ hôm thứ Ba.
+
+**CHỈ HOSE.** Cửa sổ nền cần 1.250 phiên vốn hoá liên tục, mà chỉ `data/vonhoa` có;
+`data/giaodich` sâu 1.000 phiên nên HNX/UPCOM để `null`. **Mã thiếu dữ liệu phải TRƯỢT, không
+được lọt** — `test_loc.js` giữ đúng ca này, vì một phép so sánh viết ẩu kiểu `!(t.nen>=0)` cho
+`undefined` đi qua và người dùng nhận về một bảng trộn hai định nghĩa mà không có dấu hiệu gì.
+
+**HÀNG ĐỢI ĐƠN ĐIỆU, KHÔNG CẮT LÁT RỒI `max()`.** Bản đầu của `nen_tuoi()` quét lùi và gọi
+`max()` trên lát W phần tử mỗi bước: 500 bước × 400 phần tử × 4 cửa sổ × 405 mã ≈ **324 triệu**
+phép so sánh, một mình nó dài hơn cả phần còn lại của `build_screen`. Hàng đợi cho cùng kết quả
+trong O(n); tổng thời gian build giữ nguyên **7,3 giây**.
+
+**DÒNG TRẠNG THÁI VN-INDEX (`#scrIx`) LÀ MÔ TẢ, KHÔNG PHẢI CỔNG.** Nó in EMA20/EMA50 và hai
+dấu ✓/✗, chỉ hiện khi có chip "Cách nền" đang bật. **Đừng biến nó thành bộ lọc cứng chặn kết
+quả** — làm vậy là bộ lọc tự trả lời *"hôm nay nên hay không nên"*, tức một lời khuyên. Người
+xem tự quyết định có tính tới bối cảnh chỉ số hay không.
+
+**THỨ TỰ PIPELINE ĐÃ ĐÚNG SẴN, không phải thêm bước**: `kho_vonhoa.py` ở `[1d]` và
+`kho_chiso` ở `[3]` đều chạy TRƯỚC `refresh_daily.py` (nơi gọi `build_screen`). Đổi thứ tự là
+`nen` rỗng toàn bảng mà không báo gì.
+
+**KIỂM**: `node tools/test_loc.js` — 27 ca. Ngoài ra `nen`/`ndN` đã đối chiếu với bản dựng lại
+độc lập: AAA `−43,0% / nd100=8`, AAM `−41,8% / nd100=6 / nd200=6`, ACB `−0,7% / null`,
+DHA·HAS·HTN `nd100=0` — khớp từng con số.
+
+> **`avgval60` THÊM MỚI, đừng dùng `avgval20` thay.** Cổng thanh khoản của bộ lọc này đo trên
+> 60 phiên; lấy 20 phiên là đổi định nghĩa cổng. Hai trường cùng tồn tại trong `screen.json`.
+
+### THỐNG KÊ ĐÃ ĐO VỀ BỘ TIÊU CHÍ NÀY — VÀ VÌ SAO KHÔNG ĐƯA LÊN GIAO DIỆN
+
+Mô phỏng 357 mã HOSE, 2018→2026, hoàn toàn nhân quả, vào lệnh ở **giá mở phiên kế tiếp**, đo
+bằng **giá điều chỉnh** (không phải vốn hoá — vốn hoá tăng cả khi phát hành thêm). Luật: cắt lỗ
+−10%, bán 1/3 tại +20%, 1/3 tại +40%, chốt đầu thì dời stop về hoà vốn, giữ tối đa 200 phiên.
+
+| | lệnh | thắng | TB/lệnh | PF |
+|---|---|---|---|---|
+| mua bất kỳ mã, bất kỳ lúc nào | 43.138 | 39,6% | +3,0% | 1,48 |
+| chỉ thêm cổng chỉ số (EMA20<EMA50 và VNI>EMA20) | 5.560 | 45,2% | +6,0% | 2,05 |
+| + đang dưới nền | 1.722 | 49,8% | +8,8% | 2,69 |
+| chỉ tín hiệu `nd100≤5`, bỏ cổng chỉ số | 500 | 41,2% | +5,5% | 1,91 |
+| **đủ bộ** | **72** | **66,7%** | **+16,9%** | **5,94** |
+
+Cổng chỉ số một mình chỉ đưa PF 1,48 → 2,05; tín hiệu một mình 1,91. **Ghép lại 5,94** — nhiều
+hơn hẳn tích của hai cái (1,79), tức chúng cần nhau chứ không cái nào thừa.
+
+Kiểm mù: chốt quy tắc trên **2018–2022** rồi thử trên **2023–2026** — thắng **67,3% → 65,0%**,
+PF 6,50 → 4,59. Không năm nào âm trong 8 năm (2022 hoà, +0,3%).
+
+**ĐÃ THỬ VÀ BỎ** (ghi lại để khỏi đo lại): dòng tiền ngoại ròng 60 phiên dương **làm xấu đi**
+(PF 1,91 → 1,14) · `VN-Index > MA200` làm xấu đi (→1,51) · `giá > MA200 của mã` làm xấu nhẹ
+(→1,80) · `VN-Index < EMA20` làm xấu đi (→1,62) · quý trước lỗ làm xấu đi (→1,40) · quý trước
+lãi giúp nhẹ nhưng **thừa** khi đã có cổng chỉ số. Ba giả thuyết ban đầu đều NGƯỢC: thứ sống
+sót là mua khi **thị trường vừa bật lên từ một nhịp giảm trung hạn**.
+
+> **VÌ SAO CỔNG CHỈ SỐ CHỈ LÀ MỘT DÒNG CHỮ, KHÔNG PHẢI MỘT CHIP.** Nó không phải đại lượng của
+> riêng một mã — bật lên là **hoặc cả bảng lọt hoặc cả bảng trượt**. Một cái công tắc như thế
+> chính là trang tự phát biểu *"hôm nay là lúc mua"*. Số liệu thì cứ in ra cho người đọc; kết
+> luận để họ tự rút.
 >
-> | công thức | cắt mốc 0 / năm | \|giá trị\| p90 |
-> |---|---|---|
-> | Mansfield 250 `(RS ÷ TB250(RS) − 1)×100` | 7,8 | 33,4 điểm % |
-> | Alpha 60 phiên (chênh lệch lợi suất luỹ kế) | **15,3 — quá nhiễu** | 29,0 |
-> | Alpha 250 phiên | 6,8 | **70,5 — thang nhảy mạnh khi đổi mã** |
->
-> Mansfield là bản chuẩn hoá tốt nhất trong ba cái (mốc 0 đọc được thành một câu, ~8 lần đảo
-> một năm) — nếu sau này cần một biến thể dao động quanh 0 thì lấy nó, đừng lấy Alpha.
-
-**THANG DẢI KHÍT THEO KHUNG NHÌN, KHÔNG KHÍT CẢ CHUỖI — chỗ dễ hiểu ngược nhất.** "Cố định"
-đã nằm ở GIÁ TRỊ rồi, không cần nằm thêm ở thang. Khít cả chuỗi thì đường đứng im tuyệt đối,
-nhưng đo được: một cửa sổ 120 phiên chỉ chiếm **trung vị 16% chiều cao dải** (p25 10% · p10
-6%; thang loga cũng chỉ 17%/12%/9%) — trên dải ~60px là một vệt 10px, tức phóng to để rồi
-không đọc được gì. Bù lại **phải luôn in số thật**: hai nhãn mép phải + thẻ giá trị + ô trong
-dòng đọc số. Có số thì mức phóng đổi bao nhiêu cũng không gây hiểu nhầm.
-
-**VẠCH ĐỨT = MỨC CỦA PHIÊN MỚI NHẤT TOÀN CHUỖI**, không phải phiên cuối khung nhìn. Nó trả
-lời "đoạn đang xem mạnh hay yếu hơn HÔM NAY", và vì neo vào phiên cuối chuỗi nên kéo đi đâu
-nó vẫn nói đúng một điều.
-
-**DẢI NẰM DƯỚI CÙNG, và MACD phải lùi lên.** `subH = rsiH + macH + rsH`; `geo.rsiTop` giữ
-nguyên công thức (vẫn là dải trên cùng) nhưng **MACD đổi từ `h−22−macH+4` sang
-`h−22−macH−rsH+4`** — quên dòng này là MACD vẽ đè lên dải mới. Bật cả ba dải trên chart toàn
-màn hình 875px: vùng giá còn 216px, vẫn đọc được; chart nhỏ 436px chỉ có RSI + Sức mạnh nên
-còn 170px.
-
-**KHÔNG CẦN TRƯỜNG MỚI TRONG `aggregate`** — RS tính tại chỗ lúc vẽ từ `r.c` và `r.ix` đã có
-sẵn, nên khung Tuần/Tháng/Năm tự đúng: RS của nến tuần = giá đóng cửa tuần ÷ điểm chỉ số cuối
-tuần. Kiểm W/M/Y đều ra cùng một số ở phiên cuối.
-
-**ĂN CHUNG KHO VỚI NÚT `VN-Index`** (`taiChiSo` gói trong một lời hứa) nên bật cả hai cũng chỉ
-một lượt mạng. Màu xanh mòng két `#0d9488`/`#2dd4bf` — **đừng mượn hồng sen của đường chỉ số**:
-hai thứ khác hẳn nhau (một đường quy đổi neo theo khung · một tỉ số cố định), cùng màu là
-trông như một.
-
-> **ĐƯỜNG VN-INDEX TRÊN CHART GIÁ GIỮ NGUYÊN** (user chốt cùng lượt). Nó trả lời câu khác —
-> *"trong khung đang nhìn, phiên nào mã đắt/rẻ so với mức trung bình của chính khung"* — và
-> là thứ duy nhất so trực tiếp được với nến trên cùng một trục. Dải Sức mạnh là **cộng vào**,
-> không phải thay thế.
+> **VÀ ĐỪNG GỘP BỐN CHIP THÀNH MỘT NÚT "BỘ LỌC 1".** Cùng một kết quả nhưng thứ người dùng
+> nhận về đổi hẳn bản chất: bốn chip là bốn tiêu chí họ nhìn thấy và chỉnh được, một nút là
+> **danh sách mã do chủ trang chọn** — đúng chỗ Điều 211 BLHS nhắm tới, và là lý do bộ lọc Pro
+> cũ đã bị gỡ hồi 16/08.
 
 ### CHỈ SỐ ĐÃ SÂU TỚI 2000, VÀ `kho_chiso` NAY TRỘN THAY VÌ GHI ĐÈ (23/08/2026)
 
@@ -4328,7 +4503,7 @@ nhiêu cũng không dời được một điểm cắt nào.
 cũng không nhúc nhích lên xuống so với nến. Nến giữ trục của nến, và **`mn`/`mx` của trục giá
 thôi phải nới ra ôm hai đường** như bản cũ, tức nến không còn bị bóp.
 
-> **VÌ SAO KHÔNG THỂ NEO CỨNG NGAY TRÊN TRỤC GIÁ** — đã đo, xem bảng ở mục *DẢI "SỨC MẠNH"*:
+> **VÌ SAO KHÔNG THỂ NEO CỨNG NGAY TRÊN TRỤC GIÁ** — đã đo, xem bảng ở mục *DẢI "CÁCH NỀN"*:
 > 47,5% số cửa sổ đường nằm hẳn ngoài khung nến, nới trục để ôm thì nến bẹp còn 24% chiều cao
 > ở p90. Trục riêng là đường duy nhất.
 
@@ -4380,8 +4555,9 @@ nên in nó ra là mỗi lần kéo chart một con số khác.
 hai kho này chỉ có số theo PHIÊN. Bấm mà màn hình không đổi gì là người ta bấm lại mấy lần rồi
 kết luận tính năng hỏng.
 
-> Nút thứ ba `Sức mạnh` thêm 23/08/2026 — xem mục *DẢI "SỨC MẠNH"* bên trên. Nó ăn chung kho
-> chỉ số với nút `VN-Index` nên cũng nằm trong `PHU_K`.
+> `rs` KHÔNG còn là nút DOM từ 25/08/2026 (thành ô công tắc trong khung — xem mục *DẢI "CÁCH
+> NỀN"*). `PHU_K` vẫn giữ `'rs'` cho tương thích: vòng khoá theo khung chỉ tra `querySelector`
+> nên không tìm thấy nút là bỏ qua lặng, mà dải tự tắt ở khung Trong ngày bằng `rsH=0`.
 
 **`bubbles.html`** — **Đừng "dọn rác" bằng cách xoá lõi giá trong file này để gọi `CP.*`.**
 Nó giữ `state.coins` riêng. Các cặp hàm trùng lặp phải sửa **đồng thời** cả hai file:

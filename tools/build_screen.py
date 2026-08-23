@@ -35,6 +35,8 @@ FIELDS = [
                                           # + tỉ lệ phiên ĐỨNG GIÁ trong 60 phiên (%)
     'rsiPM',                              # RSI cao nhất các phiên TRƯỚC ĐÓ trong tháng
                                           # (để client hỏi "lần đầu vượt N" với N bất kỳ)
+    'nen','nd100','nd200','nd300','nd400',  # KHOẢNG CÁCH TỚI NỀN — xem nen_tuoi() bên dưới
+    'avgval60',                           # GTGD bình quân 60 phiên (đồng) — cổng thanh khoản
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -218,6 +220,9 @@ def analyse(d, acc):
                 if S['ma20'][i] < S['ma50'][i] and a >= b2: cross = -1; break
     v20 = S['v20'][i]
     avgval20 = sum(c[j] * (v[j] or 0) for j in range(n - 20, n)) / 20 if n >= 20 else None
+    # 60 phiên: cổng thanh khoản của bộ lọc "cách nền" đo trên 60 phiên chứ không phải 20,
+    # nên phải có đúng con số đó ở đây — lấy 20 phiên thay thế là đổi định nghĩa cổng.
+    avgval60 = sum(c[j] * (v[j] or 0) for j in range(n - 60, n)) / 60 if n >= 60 else None
     vol60 = flat60 = None
     if n >= 61:
         rr = [c[j] / c[j - 1] - 1 for j in range(n - 60, n) if c[j - 1]]
@@ -230,6 +235,7 @@ def analyse(d, acc):
         'c': c[i], 'ma20': S['ma20'][i], 'ma50': S['ma50'][i], 'ma200': S['ma200'][i],
         'rsi': S['rsi'][i], 'atrp': (S['atr'][i] / c[i] * 100) if S['atr'][i] else None,
         'avgv20': v20, 'volr': (v[i] / v20) if (v20 and v[i]) else None, 'avgval20': avgval20,
+        'avgval60': avgval60,
         'ud': S['ud'][i],
         'hi52': S['hi52'][i], 'lo52': S['lo52'][i],
         'dhi': (c[i] / S['hi52'][i] - 1) * 100 if S['hi52'][i] else None,
@@ -541,6 +547,91 @@ def build_fund(meta):
 
 
 # ---------------------------------------------------------------------- chính
+# ---------------------------------------------------------------------------
+# KHOẢNG CÁCH TỚI NỀN — `vốn hoá ÷ chỉ số` so với trung bình 1.250 phiên của chính nó.
+# Cùng một đại lượng mà dải "Cách nền" của chart vẽ; khác đúng một chỗ và phải nhớ:
+#   · CHART neo `k` trên ĐOẠN ĐANG NẠP (5 hoặc 15 năm) để bảo đảm hai đường có điểm cắt
+#     nằm trong khung nhìn;
+#   · CHỖ NÀY neo trên CỬA SỔ TRƯỢT 1.250 phiên cố định, vì bảng giá so ngang các mã với
+#     nhau nên mọi mã phải dùng chung một định nghĩa, và định nghĩa ấy phải nhân quả.
+# Hai con số vì thế KHÔNG bằng nhau, đừng "sửa" cho khớp — chúng trả lời hai câu khác nhau.
+#
+# `ndN` = số phiên kể từ lần gần nhất `g` đạt ĐỈNH N phiên **trong lúc còn dưới nền**.
+# 0 nghĩa là chính phiên hôm nay. None nghĩa là chưa từng, hoặc chuỗi chưa đủ dài.
+# Vì sao đếm lùi thay vì cờ đúng/sai: người dùng tự đặt ngưỡng "trong bao nhiêu phiên gần
+# đây" trên giao diện, mà một cờ cứng thì khoá luôn lựa chọn đó.
+#
+# CHỈ HOSE. Cửa sổ nền cần 1.250 phiên `vốn hoá` liên tục, mà chỉ `data/vonhoa` (HOSE) có;
+# `data/giaodich` chỉ sâu 1.000 phiên nên HNX/UPCOM để None chứ không tính bằng nguồn ngắn
+# hơn — cùng một tên cột mà hai mã dùng hai độ sâu khác nhau là so sánh sai.
+NEN_W   = 1250
+NEN_CUA = (100, 200, 300, 400)
+
+def _ema(a, p):
+    k = 2.0 / (p + 1); out = [None] * len(a); e = None; s2 = 0.0
+    for i, x in enumerate(a):
+        if i < p - 1: s2 += x; continue
+        if i == p - 1: s2 += x; e = s2 / p
+        else: e = x * k + e * (1 - k)
+        out[i] = e
+    return out
+
+def nen_tuoi():
+    """Trả về (bang, ix). bang[sym] = dict các trường nen/ndN. ix = trạng thái chỉ số."""
+    import math as _m
+    bang, ix = {}, None
+    try:
+        j = json.load(open(os.path.join(ROOT, 'data', 'chiso', 'VNINDEX.json'), encoding='utf-8'))
+        IXV = {d: c for d, c in zip(j['d'], j['c']) if c}
+        e20 = _ema(j['c'], 20); e50 = _ema(j['c'], 50)
+        n = len(j['c']) - 1
+        if n >= 50 and e20[n] and e50[n]:
+            ix = dict(d=j['d'][n], c=round(j['c'][n], 2), e20=round(e20[n], 2), e50=round(e50[n], 2),
+                      cong=bool(e20[n] <= e50[n] and j['c'][n] > e20[n]))
+    except Exception:
+        return bang, None
+    vh_dir = os.path.join(ROOT, 'data', 'vonhoa')
+    if not os.path.isdir(vh_dir): return bang, ix
+    for f in sorted(os.listdir(vh_dir)):
+        if not f.endswith('.json'): continue
+        sym = f[:-5]
+        try: v = json.load(open(os.path.join(vh_dir, f), encoding='utf-8'))
+        except Exception: continue
+        D, V = v.get('d') or [], v.get('v') or []
+        L, ok = [], []
+        for d, mv in zip(D, V):
+            iv = IXV.get(d)
+            if iv and mv and mv > 0:
+                L.append(_m.log(mv) - _m.log(iv)); ok.append(d)
+        n = len(L)
+        if n < NEN_W + max(NEN_CUA): continue
+        # g = L − trung bình trượt NEN_W phiên (nhân quả)
+        g = [None] * n; run = 0.0
+        for i in range(n):
+            run += L[i]
+            if i >= NEN_W: run -= L[i - NEN_W]
+            if i >= NEN_W - 1: g[i] = L[i] - run / NEN_W
+        r = dict(nen=None, nd100=None, nd200=None, nd300=None, nd400=None)
+        if g[n - 1] is not None:
+            r['nen'] = round((_m.exp(g[n - 1]) - 1) * 100, 1)
+        # ĐỈNH CỬA SỔ TÍNH BẰNG HÀNG ĐỢI ĐƠN ĐIỆU, không cắt lát rồi max().
+        # Bản đầu quét lùi và gọi max() trên lát W phần tử mỗi bước: 500 bước × 400 phần tử
+        # × 4 cửa sổ × 405 mã ≈ 324 triệu phép so sánh, đủ để một mình nó dài hơn cả phần
+        # còn lại của build_screen. Hàng đợi cho cùng kết quả trong O(n) mỗi cửa sổ.
+        for W in NEN_CUA:
+            dq = deque(); lan = None
+            for i in range(n):
+                if g[i] is None: continue
+                while dq and g[dq[-1]] <= g[i]: dq.pop()
+                dq.append(i)
+                while dq[0] <= i - W: dq.popleft()
+                if i >= NEN_W - 1 + W - 1 and g[i] < 0 and dq[0] == i:
+                    lan = n - 1 - i            # ghi đè dần -> cuối vòng là lần GẦN NHẤT
+            r['nd%d' % W] = lan
+        bang[sym] = r
+    return bang, ix
+
+
 def main():
     t0 = time.time()
     uni = json.load(open(os.path.join(ROOT, 'universe.json'), encoding='utf-8'))
@@ -607,9 +698,20 @@ def main():
         fd = fundamental(s, is_bank)
         if fd: res[s].update(fd)
 
+    # ---- khoảng cách tới nền (HOSE) + trạng thái chỉ số
+    print('Đo khoảng cách tới nền…')
+    nen_bang, nen_ix = nen_tuoi()
+    for s in res:
+        r = nen_bang.get(s) or {}
+        for k in ('nen', 'nd100', 'nd200', 'nd300', 'nd400'):
+            res[s][k] = r.get(k)
+    print(f"   nền: {sum(1 for s in res if res[s]['nen'] is not None)} mã · "
+          f"cổng chỉ số {'MỞ' if (nen_ix or {}).get('cong') else 'ĐÓNG'}")
+
     # ---- ghi demo-screen.json
     intish = {'c','ma20','ma50','ma200','ma150','avgv20','avgval20','hi52','lo52',
-              'nn20','nn60','streak','cross','rs','ath','dath','athP','nsess','fs','fg1','fg2','fg3','fg4','fg5'}
+              'nn20','nn60','streak','cross','rs','ath','dath','athP','nsess','fs','fg1','fg2','fg3','fg4','fg5',
+              'nd100','nd200','nd300','nd400','avgval60'}
     def rd(x, k):
         if x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))): return None
         return round(x, 0 if k in intish else 2)
@@ -617,6 +719,7 @@ def main():
     try: date = json.load(open(os.path.join(ROOT, 'data', 'eod', 'latest.json'), encoding='utf-8'))['date']
     except Exception: pass
     out1 = dict(date=date, generated=time.strftime('%Y-%m-%dT%H:%M:%S'), f=FIELDS,
+                ix=nen_ix,
                 d={s: [rd(r[k], k) for k in FIELDS] for s, r in res.items()})
     json.dump(out1, open(os.path.join(OUT, 'screen.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, separators=(',', ':'))

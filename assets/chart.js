@@ -192,6 +192,11 @@ let veBut=false;                                   // bút đang được giữ 
     i0=n-span; i1=n; clampView();
   }
   self.setRows=function(r,interval,keepView){
+    /* XOÁ ĐỆM NỀN Ở ĐÂY, ĐỪNG DỰA VÀO KHOÁ ĐỆM. `veLaiPhu` gắn vốn hoá/chỉ số vào rồi gọi
+       lại setRows với mảng CÙNG độ dài, cùng mốc đầu và cùng mốc cuối — khoá đệm nào dựng
+       từ hình dạng chuỗi cũng thấy y hệt lần trước và trả về kết quả tính lúc chưa có phủ,
+       tức dải vĩnh viễn rỗng. Đây là đường duy nhất thay `rows` nên xoá ở đây là đủ. */
+    nenCache.k='';
     rows=r||[]; if(interval) iv=interval;
     if(!keepView||i1<=i0||i1>rows.length) resetView(); else clampView();
     self.draw(); return self;
@@ -238,8 +243,6 @@ let veBut=false;                                   // bút đang được giữ 
   const RSCOL=()=>light()?'#0d9488':'#2dd4bf';
   /* Tỉ số giá÷điểm nhảy bậc rất rộng giữa các mã: VNZ ~300, mã nghìn đồng ~0,002. Số chữ
      số thập phân phải theo độ lớn, cố định 2 chữ số là mã nhỏ hiện toàn "0,00". */
-  const fmtRS=v=>{const k=v>=100?1:v>=10?2:v>=1?3:v>=0.1?4:5;
-    return v.toLocaleString('vi-VN',{minimumFractionDigits:k,maximumFractionDigits:k});};
   let ixTen='VN-Index';                    // đổi theo sàn của mã — xem self.setChiSoTen
   /* `nen` — TẮT ĐƯỢC THÂN NẾN (user chốt 23/08/2026: *"có thể chọn ẩn biểu đồ giá đi để
      dễ xem vốn hoá và vnindex hơn"*). Tắt nến KHÔNG đụng tới THANG GIÁ: trục vẫn khít theo
@@ -272,7 +275,7 @@ let veBut=false;                                   // bút đang được giữ 
      chạy) và đổi hẳn khi bấm Tuần/Tháng/Năm (số nến co lại còn một phần mười); neo bằng
      `t` thì ghim ở đâu vẫn nằm đúng chỗ đó qua mọi khung, mọi mức phóng.
 
-     CHỈ BẬT KHI CÓ ĐƯỜNG PHỦ (`ind.vh || ind.idx`). Không có hai đường ấy thì hộp chỉ lặp
+     CHỈ BẬT KHI CÓ ĐƯỜNG PHỦ (`ind.vh || ind.idx || ind.rs`). Không có hai đường ấy thì hộp chỉ lặp
      lại đúng thứ dòng chú giải trên đầu đã in sẵn khi rê chuột — mà đổi hành vi của cú bấm
      trên một chart có sẵn bộ công cụ vẽ là chuyện phải có lý do. */
   let ghimT=null;
@@ -283,6 +286,137 @@ let veBut=false;                                   // bút đang được giữ 
   /* EMA phải tính DỒN từ đầu chuỗi (mỗi giá trị phụ thuộc toàn bộ quá khứ), không cắt cửa
      sổ như MA được. Nên tính một lần rồi ĐỆM lại, đừng tính trong vòng vẽ: chart vẽ lại
      mỗi lần rê chuột, tính lại 200 kỳ × 3000 nến mỗi khung hình là giật ngay. */
+  /* ---- NỀN TƯƠNG QUAN VÀ HAI SỰ KIỆN SỚM (user chốt 25/08/2026) --------------
+     *"đợi đường vốn hoá cắt đường VN-Index thì cổ phiếu đã đi được một đoạn xa rồi"* — đo
+     trên chính kho này thì đúng y như vậy: 340 lần tụt sâu rồi cắt lên lại, tới lúc cắt
+     vốn hoá đã tăng TRUNG VỊ +86% so với đáy, còn lợi suất tương đối 60 phiên SAU cú cắt
+     là −1,1%. Cú cắt là mốc mô tả, không phải mốc sớm.
+
+     `g[i]` = log(vốn hoá ÷ k·chỉ số) — ĐÚNG khoảng hở giữa hai đường trên chart, nên
+     g = 0 chính là điểm hai đường chạm nhau. Dải này chỉ là cái khoảng hở đó được phóng
+     to và cho trục riêng; không phải một phép đo thứ hai để rồi hai chỗ nói hai kiểu.
+     `k` tính lại ở đây bằng ĐÚNG công thức của P2 để dải vẫn chạy khi hai đường đang tắt.
+
+     BA DẤU THÌ KHÔNG DÍNH `k`: cả ba đều so sánh g với chính g trong quá khứ, nên nhân k
+     kiểu gì chúng cũng đứng nguyên chỗ cũ — tức là chúng nhân quả, còn `k` thì không (k lấy
+     trung bình cả chuỗi, có cả phần tương lai của mọi phiên trong quá khứ). Đó là lý do vạch
+     số 0 chỉ dùng để MÔ TẢ, còn các dấu mới dùng để ĐỌC SỚM.
+
+     △ PHÂN KỲ — vốn hoá thủng đáy W1 phiên mà g thì không. Nổ sớm hơn cú cắt 262 phiên, lúc
+       nổ vốn hoá còn −2% so với đáy. NHƯNG NÓ KHÔNG PHẢI TÍN HIỆU CHỌN MÃ: gộp mỗi tháng
+       thành MỘT quan sát thì xác suất cắt lên còn 27% — THẤP HƠN nền 34%. Nó nổ hàng loạt
+       đúng lúc chỉ số sập (07/2026: 92 lần trong một tháng, phần lớn các tháng khác bằng 0),
+       tức đang nói về THỊ TRƯỜNG chứ không nói gì về từng mã. Vẫn vẽ vì mốc đáy hoảng loạn
+       là thông tin thật — nhưng đừng trình bày nó như một tín hiệu sớm.
+     ○ G ĐỈNH W1 · ● G ĐỈNH W2, khi CÒN dưới nền — đây mới là tín hiệu cổ phiếu, và chúng
+       sống sót qua phép gộp theo tháng: trung vị 120 phiên +1,2% so với nền −2,5%, 250 phiên
+       +5,1% so với −4,4%, xác suất cắt lên 50% so với 34%, trải trên 74–106 tháng khác nhau
+       (5 tháng đông nhất chỉ chiếm 19%). ○ sớm và dày (bắt 90% số đoạn, sớm hơn cú cắt 115
+       phiên), ● thưa và chắc tay hơn (65%, sớm hơn 92 phiên). W2 ⊂ W1 nên phải TRỪ.
+
+     CẢNH BÁO ĐÃ ĐO, ĐỪNG GỠ KHỎI TÀI LIỆU: cả vùng dưới nền đều ÂM trong 2023–2025 bất kể
+     dấu nào, vì đó là giai đoạn chỉ số tự nó chạy mạnh nên mã tụt hậu tụt tiếp. Ưu thế của
+     ○/● đo trên 2013–2022 rồi nghiệm lại 2020–2025; đừng coi nó là hằng số.
+
+     CỬA SỔ TÍNH THEO SỐ NẾN, không theo số ngày — giống hệt MA/RSI trên chart này: bật
+     khung Tuần thì 120 nến là 120 tuần. Chuỗi ngắn thì co lại theo `n` để khung Tháng
+     không mất trắng dải. */
+  /* CỬA SỔ PHẢI TRÙNG VỚI BỘ LỌC BẢNG GIÁ (`screener.js`: 100/200/300/400), nếu không thì
+     một mã hiện `nd100 = 2 phiên` ở bảng giá mà trên chart lại không có dấu nào gần đây —
+     đã xảy ra thật khi chart dùng 120/250: dấu gần nhất của GAS lùi tận 144 phiên. */
+  const NEN_W1=100, NEN_W2=200, NEN_MA=1250;
+  const nenCache={k:'',v:null};
+  function nenArr(){
+    const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'');
+    if(nenCache.k===khoa) return nenCache.v;
+    const n=rows.length, g=new Array(n).fill(null), b=new Array(n).fill(null);
+    let sa=0,sb=0,co=0,dungVH=false;
+    for(let i=0;i<n;i++){ const r=rows[i]; if(r&&r.vh>0&&r.ix>0){ dungVH=true; break; } }
+    for(let i=0;i<n;i++){ const r=rows[i]; if(!r||!(r.ix>0)) continue;
+      const u=dungVH?r.vh:r.c;
+      if(!(u>0)) continue;
+      b[i]=u; sa+=Math.log(u); sb+=Math.log(r.ix); co++; }
+    const out={k:null,g:g,b:b,pk:new Array(n).fill(false),
+               dinhN:new Array(n).fill(false),dinh:new Array(n).fill(false),
+               co:co,vh:dungVH,W1:0,W2:0,Wma:0};
+    if(co>=2){
+      /* NỀN = TRUNG BÌNH TRƯỢT `Wma` NẾN CỦA CHÍNH TỈ SỐ, không phải trung bình cả chuỗi.
+         Bản đầu lấy trung bình cả đoạn đang nạp — cùng công thức với `k` của P2 nên vạch 0
+         của dải trùng đúng chỗ hai đường cắt nhau, nghe thì gọn. Hai chỗ hỏng:
+         ① nó có NHÌN TRƯỚC: mọi phiên quá khứ được neo bằng một con số chứa cả tương lai
+            của chính nó, nên không dùng để đọc sớm được;
+         ② số phiên nạp thay đổi theo mã và theo khung (GAS về 3.400 nến, VHM về 1.246),
+            nên CÙNG MỘT MÃ ra hai con số khác nhau ở chart và ở bảng giá — đo được:
+            GAS −33,0% trên chart nhưng −18,3% ở bảng giá, cùng phiên 21/08/2026.
+         Trung bình trượt chữa cả hai: nhân quả, và khớp ĐÚNG định nghĩa `nen` của
+         `build_screen.nen_tuoi()`. Đổi lại vạch 0 KHÔNG còn trùng điểm cắt của hai đường —
+         chấp nhận, vì hai đường trả lời "đắt/rẻ so với trung bình đoạn đang xem" còn dải
+         trả lời "mạnh/yếu so với chính mình 5 năm qua". Nhãn dải ghi rõ số nến để không
+         ai đọc nhầm thành cùng một câu hỏi. */
+      const k=Math.exp(sa/co-sb/co); out.k=k;
+      const Wma=Math.min(NEN_MA,Math.max(120,Math.floor(n/2))); out.Wma=Wma;
+      const L=new Array(n).fill(null);
+      for(let i=0;i<n;i++) if(b[i]!=null) L[i]=Math.log(b[i]/rows[i].ix);
+      let tong=0, dem=0;
+      const cua=[];
+      for(let i=0;i<n;i++){
+        if(L[i]!=null){ cua.push(i); tong+=L[i]; dem++; }
+        while(cua.length&&cua[0]<=i-Wma){ tong-=L[cua[0]]; dem--; cua.shift(); }
+        if(L[i]!=null&&dem>=Math.min(Wma,60)) g[i]=L[i]-tong/dem;
+      }
+      const W1=Math.min(NEN_W1,Math.max(20,Math.floor(n/6)));
+      const W2=Math.min(NEN_W2,Math.max(40,Math.floor(n/3)));
+      out.W1=W1; out.W2=W2;
+      const TRE=Math.max(3,Math.round(W1/24));      // "đáy vừa xong" = trong TRE nến gần nhất
+      const CU =Math.max(8,Math.round(W1/3));       // "đáy của g đã cũ" = quá CU nến
+      let nghi=-1e9;
+      for(let i=W1-1;i<n;i++){
+        if(b[i]==null||g[i]==null) continue;
+        let kb=-1,vb=Infinity,kg=-1,vg=Infinity,thieu=false;
+        for(let j=i-W1+1;j<=i;j++){
+          if(b[j]==null||g[j]==null){ thieu=true; break; }
+          if(b[j]<vb){ vb=b[j]; kb=j; }
+          if(g[j]<vg){ vg=g[j]; kg=j; }
+        }
+        if(thieu) continue;
+        if(i-kb<=TRE&&i-kg>CU&&i-nghi>=Math.round(W1/6)){ out.pk[i]=true; nghi=i; }
+      }
+      /* HAI TẦNG CÙNG MỘT HỌ: đỉnh W1 phiên (sớm, dày) và đỉnh W2 phiên (xác nhận, thưa).
+         Đỉnh W2 hiển nhiên cũng là đỉnh W1 nên tầng nhỏ phải TRỪ tầng lớn ra, không thì
+         hai dấu chồng lên nhau ở đúng những phiên đáng chú ý nhất. */
+      const dinhCua=(W,ra,cach)=>{
+        let nghi=-1e9;
+        for(let i=W-1;i<n;i++){
+          if(g[i]==null||g[i]>=0) continue;        // chỉ tính khi CÒN dưới nền
+          let mx=-Infinity,thieu=false;
+          for(let j=i-W+1;j<=i;j++){
+            if(g[j]==null){ thieu=true; break; }
+            if(g[j]>mx) mx=g[j];
+          }
+          if(thieu) continue;
+          if(g[i]>=mx-1e-12&&i-nghi>=cach){ ra[i]=true; nghi=i; }
+        }
+      };
+      /* NGHỈ NGẮN (W/20) chỉ để dấu khỏi dính thành vệt khi mã lập đỉnh nhiều phiên liền.
+         Bảng giá KHÔNG có nghỉ — nó đếm phiên gần nhất — nên trong một chuỗi đỉnh liên tiếp
+         chart vẽ dấu ở phiên ĐẦU còn bảng giá đếm phiên CUỐI; lệch tối đa W/20 phiên, và
+         đó là lệch có chủ ý chứ không phải hai định nghĩa khác nhau. */
+      dinhCua(W2,out.dinh,Math.round(W2/20));
+      dinhCua(W1,out.dinhN,Math.round(W1/20));
+      for(let i=0;i<n;i++) if(out.dinh[i]) out.dinhN[i]=false;
+    }
+    nenCache.k=khoa; nenCache.v=out;
+    return out;
+  }
+  /* Cửa ra để đọc số của dải — trang ngoài và bộ kiểm thử đều cần lấy ĐÚNG mảng chart
+     đang vẽ, chứ tính lại ở chỗ khác là hai nơi lệch nhau lúc nào không biết. */
+  self.nenSo=()=>nenArr();
+  /* Khung nhìn hiện hành — bộ kiểm thử cần biết ĐANG vẽ từ nến nào tới nến nào và mỗi nến
+     rộng bao nhiêu, để phân biệt "dấu tính sai" với "dấu nằm ngoài khung". */
+  self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH});
+  const fmtNen=g=>{ const p=(Math.exp(g)-1)*100;
+    return (p>=0?'+':'')+p.toLocaleString('vi-VN',{maximumFractionDigits:Math.abs(p)<10?1:0})+'%'; };
+
   const emaCache=new Map();
   function emaArr(per){
     const khoa=per+'|'+rows.length+'|'+(rows.length?rows[rows.length-1].t:0);
@@ -333,7 +467,10 @@ let veBut=false;                                   // bút đang được giữ 
     const volH=ind.vol?Math.round(h*0.17):0;
     const rsiH=ind.rsi?Math.round(h*0.18):0;
     const macH=ind.macd?Math.round(h*0.18):0;
-    const rsH=ind.rs?Math.round(h*0.18):0;   // SỨC MẠNH TƯƠNG ĐỐI — dải dưới cùng
+    /* KHUNG "TRONG NGÀY" LÀ NẾN 5 PHÚT — kho vốn hoá và kho chỉ số chỉ có số THEO PHIÊN,
+       nên dải không có gì để vẽ. Cho `rsH=0` chứ đừng vẽ dải rỗng: cờ vẫn bật, đổi về khung
+       ngày là dải trở lại nguyên trạng, mà 18% chiều cao không bị một dòng "đang tải…" chiếm. */
+    const rsH=(ind.rs&&iv!=='i')?Math.round(h*0.18):0;   // CÁCH NỀN — dải dưới cùng
     const subH=rsiH+macH+rsH;                // tổng chiều cao các dải phụ dưới đáy
     const padB=volH+subH+22, padR=geo.padR, padT=geo.padT;
     const volBase=h-22-subH;                 // đáy cột khối lượng (chừa chỗ cho dải phụ)
@@ -616,10 +753,21 @@ let veBut=false;                                   // bút đang được giữ 
        CHART LÙN THÌ BỎ (`plotH<150`, cùng ngưỡng với dấu CPVN.IO): panel bong bóng cao
        110px, đặt ô ở hàng thứ ba là nó nằm giữa vùng vẽ. */
     mocHit.length=0;
-    if(plotH>=150&&sukien.length){
+    /* Ô "Cách nền" đứng chung hàng với hai ô mốc: user đã chốt 24/08 rằng thứ bật/tắt phụ
+       thì nằm TRONG khung đồ thị, hàng nút dưới chart giữ đúng sáu nút 3×2 ở khổ hẹp. Nó
+       có điều kiện hiện riêng (cần chuỗi chỉ số) nên danh sách phải dựng động — đừng gộp
+       lại thành một mảng cố định như cũ. */
+    const cvNut=[];
+    if(sukien.length) cvNut.push(['sk','Cổ tức'],['bctc','BCTC']);
+    /* Ô hiện được TRƯỚC khi có dữ liệu: kho vốn hoá + chỉ số chỉ nạp khi người ta hỏi tới,
+       mà gác ô theo "đã có dữ liệu chưa" thì nó vĩnh viễn không hiện — không ai bật được
+       cái mà chính nó phải bật mới có. Trang nào nhận `onInd` là trang biết đi nạp.
+       Khung "Trong ngày" là nến 5 phút, hai kho kia chỉ có số theo PHIÊN nên bỏ hẳn ô. */
+    if(iv!=='i'&&(opt.onInd||rows.some(r=>r&&r.ix>0))) cvNut.push(['rs','Cách nền']);
+    if(plotH>=150&&cvNut.length){
       x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
       let mx0=8;
-      for(const [mk,ten] of [['sk','Cổ tức'],['bctc','BCTC']]){
+      for(const [mk,ten] of cvNut){
         const bat=!!ind[mk], bw=x.measureText(ten).width+16, bh=17, by=padT+33;
         x.fillStyle=bat?(light()?'rgba(15,23,42,.86)':'rgba(233,233,239,.90)')
                        :(light()?'rgba(15,23,42,.07)':'rgba(255,255,255,.10)');
@@ -715,40 +863,88 @@ let veBut=false;                                   // bút đang được giữ 
        nó cho biết đoạn đang xem mạnh hay yếu hơn HÔM NAY, và vì neo vào phiên cuối chuỗi
        nên kéo đi đâu nó vẫn nói đúng một điều. */
     if(ind.rs&&rsH){
-      const top=h-22-rsH+4, bh=rsH-10;
-      const rsAt=r=>(r&&r.ix>0&&r.c>0)?r.c/r.ix:null;
-      let mnR=Infinity,mxR=-Infinity,co=0;
-      for(let i=0;i<n;i++){ const q=rsAt(vis[i]); if(q==null) continue;
-        if(q<mnR)mnR=q; if(q>mxR)mxR=q; co++; }
-      const nhan='Sức mạnh — '+((wm&&wm.sym)?wm.sym+' ÷ ':'÷ ')+ixTen;
+      const top=h-22-rsH+4, bh=rsH-10, NA=nenArr();
+      const nhan='Cách nền '+(NA.Wma||NEN_MA)+' phiên — '+((wm&&wm.sym)?wm.sym+' ':'')
+                 +(NA.vh?'vốn hoá':'giá')+' ÷ '+ixTen;
       x.textAlign='left'; x.textBaseline='middle';
-      if(co<2){
+      if(NA.co<2){
         x.fillStyle=MUT(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
         x.font='11px system-ui';
-        x.fillText(co?'khoảng này chưa có dữ liệu chỉ số':'đang tải dữ liệu chỉ số…',8,top+bh/2);
+        x.fillText(NA.co?'khoảng này chưa có dữ liệu chỉ số':'đang tải dữ liệu chỉ số…',8,top+bh/2);
       }else{
-        if(mxR-mnR<1e-12){ const e=Math.abs(mnR)*1e-3||1e-9; mnR-=e; mxR+=e; }
-        const pd=(mxR-mnR)*0.10, lo=mnR-pd, hi=mxR+pd;
-        const ry=v=>top+(hi-v)/(hi-lo)*bh;
-        // MỨC HÔM NAY: phiên cuối của CẢ CHUỖI, không phải phiên cuối khung nhìn
-        let nay=null;
-        for(let z=rows.length-1;z>=0;z--){ const q=rsAt(rows[z]); if(q!=null){ nay=q; break; } }
-        if(nay!=null&&nay>=lo&&nay<=hi){
-          x.setLineDash([3,3]); x.strokeStyle=RSCOL()+'66'; x.lineWidth=1;
-          x.beginPath(); x.moveTo(0,ry(nay)); x.lineTo(plotW,ry(nay)); x.stroke(); x.setLineDash([]);
-        }
-        x.strokeStyle=RSCOL(); x.lineWidth=1.5; x.beginPath(); let st=false;
-        for(let i=0;i<n;i++){ const q=rsAt(vis[i]);
-          if(q==null){ st=false; continue; }
-          const yy=ry(q); st?x.lineTo(cx(i),yy):x.moveTo(cx(i),yy); st=true; }
+        /* THANG CỐ ĐỊNH THEO CẢ CHUỖI, KHÔNG THEO KHUNG NHÌN. Dải cũ lấy min/max của
+           `vis` nên kéo ngang một cái là đường đổi hình — đúng lỗi user đã bắt ở đường
+           VN-Index hồi 23/08. Lấy theo `rows` thì kéo đi đâu vạch 0 vẫn nằm đúng chỗ. */
+        let mn=Infinity,mx=-Infinity;
+        for(let i=0;i<rows.length;i++){ const q=NA.g[i]; if(q==null) continue;
+          if(q<mn)mn=q; if(q>mx)mx=q; }
+        if(mn>0)mn=0; if(mx<0)mx=0;                     // vạch nền luôn nằm trong khung
+        if(mx-mn<1e-9){ mn-=0.01; mx+=0.01; }
+        const pd=(mx-mn)*0.08, lo=mn-pd, hi=mx+pd;
+        const ry=v=>top+(hi-v)/(hi-lo)*bh, y0=ry(0);
+        // tô nhạt hai bên vạch nền: trên nền = mạnh hơn mặt bằng chung, dưới = yếu hơn
+        x.beginPath(); let st=false;
+        for(let i=0;i<n;i++){ const q=NA.g[i0+i]; if(q==null){ st=false; continue; }
+          const X=cx(i); st?x.lineTo(X,ry(q)):x.moveTo(X,ry(q)); st=true; }
+        if(st){ const xr=cx(Math.max(0,n-1)), xl=cx(0);
+          x.lineTo(xr,y0); x.lineTo(xl,y0); x.closePath();
+          x.fillStyle=RSCOL()+'1f'; x.fill(); }
+        /* VẠCH NỀN LÀ THỨ CẢ DẢI NÓI VỀ nên không để nó mờ như lưới: nét đứt, màu chữ phụ,
+           kèm chữ "nền" ở mép trái. Mờ quá thì người đọc không biết mình đang so với cái gì. */
+        x.save(); x.setLineDash([4,3]); x.strokeStyle=MUT(); x.globalAlpha=.75; x.lineWidth=1;
+        x.beginPath(); x.moveTo(0,y0); x.lineTo(plotW,y0); x.stroke(); x.restore();
+        x.strokeStyle=RSCOL(); x.lineWidth=1.5; x.beginPath(); st=false;
+        for(let i=0;i<n;i++){ const q=NA.g[i0+i]; if(q==null){ st=false; continue; }
+          const X=cx(i), yy=ry(q); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
         x.stroke(); x.lineWidth=1;
+        /* CÁC DẤU SỰ KIỆN. △ rỗng ở ĐÁY dải (nó nói về đáy) — ○/● nằm ngay trên đường (chúng
+           nói về chính đường).
+
+           NGƯỠNG ẨN TÍNH THEO KHOẢNG CÁCH THẬT GIỮA HAI DẤU, không theo bề rộng nến. Bản đầu
+           gác `geo.cw>1.5` và sai hẳn mục đích: ở mức phóng MẶC ĐỊNH (khoảng 250 nến trong
+           330px) bề rộng nến chỉ 1,3px nên dấu KHÔNG BAO GIỜ hiện — người dùng phải tự phóng
+           to mới thấy thứ đáng lẽ phải đập vào mắt. Mà mật độ dấu đâu phụ thuộc bề rộng nến:
+           `dinhCua` đã ép các dấu cách nhau W/10 nến, nên cứ nhân ra pixel mà xét. Dưới 6px
+           thì mới thật sự dính nhau. */
+        if(geo.cw*Math.max(1,Math.round(NA.W1/10))>=6){
+          for(let i=0;i<n;i++){ const gi=i0+i, q=NA.g[gi];
+            if(q==null) continue; const X=cx(i);
+            if(NA.pk[gi]){ const yy=top+bh-3;      // △ rỗng, ĐỈNH HƯỚNG LÊN: nó nói về một cái đáy
+              x.strokeStyle=RSCOL(); x.lineWidth=1.3; x.beginPath();
+              x.moveTo(X,yy-7); x.lineTo(X+4.5,yy); x.lineTo(X-4.5,yy); x.closePath(); x.stroke(); }
+            if(NA.dinhN[gi]){                       // ○ rỗng, nhỏ — tầng sớm
+              const yy=ry(q);
+              x.beginPath(); x.arc(X,yy,2.2,0,6.283);
+              x.fillStyle=light()?'#ffffff':'#14161c'; x.fill();
+              x.beginPath(); x.arc(X,yy,2.2,0,6.283);
+              x.strokeStyle=RSCOL(); x.lineWidth=1.2; x.stroke(); }
+            if(NA.dinh[gi]){                        // ● đặc — tầng xác nhận
+              const yy=ry(q);
+              x.beginPath(); x.arc(X,yy,3.4,0,6.283);
+              x.fillStyle=light()?'#ffffff':'#14161c'; x.fill();
+              x.beginPath(); x.arc(X,yy,2.4,0,6.283); x.fillStyle=RSCOL(); x.fill(); }
+          }
+          x.lineWidth=1;
+        }
         x.fillStyle=MUT(); x.font='9.5px system-ui';
-        x.fillText(fmtRS(mxR),plotW+6,ry(mxR)); x.fillText(fmtRS(mnR),plotW+6,ry(mnR));
+        x.fillText('nền',plotW+6,y0);
+        x.fillText(fmtNen(hi-pd),plotW+6,ry(hi-pd)); x.fillText(fmtNen(lo+pd),plotW+6,ry(lo+pd));
+        // MỨC HÔM NAY: phiên cuối CẢ CHUỖI, không phải phiên cuối khung nhìn
+        let nay=null;
+        for(let z=rows.length-1;z>=0;z--){ if(NA.g[z]!=null){ nay=NA.g[z]; break; } }
         if(nay!=null&&nay>=lo&&nay<=hi){
           x.fillStyle=RSCOL(); x.fillRect(plotW,ry(nay)-7,padR,14);
-          x.fillStyle='#fff'; x.font='700 9.5px system-ui'; x.fillText(fmtRS(nay),plotW+6,ry(nay));
+          x.fillStyle='#fff'; x.font='700 9.5px system-ui'; x.fillText(fmtNen(nay),plotW+6,ry(nay));
         }
-        x.fillStyle=RSCOL(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
+        /* NHÃN CÓ NỀN LÓT. Dải chỉ cao 18% chiều cao chart, ở khổ điện thoại là ~45px —
+           đường thường chạy ngay qua chỗ đặt nhãn và cắt nát chữ. Lót một mảng nền mờ sau
+           chữ rẻ hơn nhiều so với việc đẩy nhãn xuống (xuống nữa là đụng trục ngày). */
+        x.font='700 10px system-ui';
+        const nw=x.measureText(nhan).width;
+        x.fillStyle=light()?'rgba(255,255,255,.82)':'rgba(20,22,28,.82)';
+        if(x.roundRect){ x.beginPath(); x.roundRect(5,top+3,nw+6,16,4); x.fill(); }
+        else x.fillRect(5,top+3,nw+6,16);
+        x.fillStyle=RSCOL(); x.fillText(nhan,8,top+11);
       }
     }
     /* ---- MỐC SỰ KIỆN — GẮN NGAY TRÊN ĐỈNH NẾN (user chốt 19/08/2026) -----------
@@ -838,6 +1034,10 @@ let veBut=false;                                   // bút đang được giữ 
       const dong=[['Giá',Math.round(r.c).toLocaleString('vi-VN')+' đ',null]];
       if(r.vh>0) dong.push(['Vốn hoá',fmtTy(r.vh),VHCOL()]);
       if(r.ix>0) dong.push([ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()]);
+      /* Khoảng cách tới nền vào hộp ghim KỂ CẢ khi dải dưới đang tắt: người ghim một phiên
+         là đang hỏi "lúc đó mạnh hay yếu hơn mặt bằng chung", mà đó đúng là con số này. */
+      { const NA=nenArr(), q=NA.g[gI];
+        if(q!=null) dong.push(['Cách nền',fmtNen(q)+(NA.pk[gI]?' △':'')+(NA.dinhN[gI]?' ○':'')+(NA.dinh[gI]?' ●':''),RSCOL()]); }
       veHopGhim(x,X,y0,w,fullLabel(iv,r.t),dong);
     }
     // thanh ngắm
@@ -942,7 +1142,11 @@ let veBut=false;                                   // bút đang được giữ 
          là mỗi lần kéo chart một con số khác — vốn hoá thì phải là vốn hoá, chỉ số là điểm. */
       (ind.vh&&r.vh!=null?it('Vốn hoá',fmtTy(r.vh),VHCOL()):'')+
       (ind.idx&&r.ix!=null?it(ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()):'')+
-      (ind.rs&&r.ix>0&&r.c>0?it('Sức mạnh',fmtRS(r.c/r.ix),RSCOL()):'');
+      (ind.rs?(()=>{ const NA=nenArr(), gi=rows.indexOf(r), q=gi>=0?NA.g[gi]:null;
+         if(q==null) return '';
+         const dau=(gi>=0&&NA.pk[gi]?' △':'')+(gi>=0&&NA.dinhN[gi]?' ○':'')
+                  +(gi>=0&&NA.dinh[gi]?' ●':'');
+         return it('Cách nền',fmtNen(q)+dau,RSCOL()); })():'');
     host.classList.add('on');
   }
 
@@ -1234,14 +1438,18 @@ let veBut=false;                                   // bút đang được giữ 
   function bamMoc(px,py){
     for(const m of mocHit){
       if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
-        ind[m.k]=!ind[m.k]; self.draw(); return true;
+        ind[m.k]=!ind[m.k]; self.draw();
+        if(opt.onInd) opt.onInd(m.k,ind[m.k]);   // trang ngoài đi nạp kho nếu cần
+        return true;
       }
     }
     return false;
   }
   /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó. */
   function bamGhim(px){
-    if(!(ind.vh||ind.idx)) return false;
+    /* `rs` cũng mở khoá cú ghim: hộp ghim nay in cả dòng "Cách nền", nên bật dải mà bấm
+       không ra gì thì đúng là thứ người ta sẽ bấm lại mấy lần rồi cho là hỏng. */
+    if(!(ind.vh||ind.idx||ind.rs)) return false;
     if(!(px>=0&&px<=geo.plotW)||!rows.length) return false;
     const gi=i0+idxAt(px);
     if(gi<0||gi>=rows.length) return false;      // rê vào vùng trống tương lai
