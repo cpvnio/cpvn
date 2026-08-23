@@ -327,6 +327,13 @@ def main():
                 or t["nMcap"] / t["n"] < 0.80):
             t["mcap"] = None
             t["mcapFF"] = None
+        # KHÔNG MÃ NÀO CÓ TỈ LỆ LƯU THÔNG -> `None`, TUYỆT ĐỐI ĐỪNG ĐỂ 0.0. Số 0 là một
+        # con số: client in ra "giao dịch được 0 tỷ · 0,0% lưu thông", đọc như cả thị
+        # trường không có cổ phiếu nào mua bán được. Từ 24/08/2026 `freeFloat` tạm để
+        # trống (xem `tools/kho_luuthong.py`) nên nhánh này là nhánh CHẠY THẬT, không
+        # phải trường hợp hiếm.
+        if not t["nFF"]:
+            t["mcapFF"] = None
         for k in ("mv", "pv"):
             t[k] = round(t[k] / 1e3)
     # CHỈ SỐ — gióng theo đúng trục ngày của chuỗi giao dịch. Thiếu phiên nào thì để None

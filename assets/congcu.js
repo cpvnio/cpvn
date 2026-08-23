@@ -2701,7 +2701,7 @@ function ptVeMa(){
        nghìn tỷ mà lưu thông 2,6%, tức chỉ 7 nghìn tỷ trôi nổi, trong khi STB 140 nghìn tỷ
        với 95% thì gần như toàn bộ. Cùng lập luận đã ghi ở mục FREE FLOAT. */
     +oo('Lưu thông', ffM!=null?(ffM.toFixed(1)+'%'):oNul,
-        ffM==null?'kho chưa đủ sổ cổ đông để tính'
+        ffM==null?'tỉ lệ lưu thông tạm gỡ — nguồn chưa đủ tin'
           :((sh[k]?num(Math.round(sh[k]*ffM/100))+' cp':'')
             +(mcap[k]?(sh[k]?' · ':'')+'<b>'+ptTien(mcap[k]*ffM/100)+'</b>':'')))
     /* PHIÊN NÀO CÓ BẢN TÁCH (Vietstock, 249 phiên gần nhất) thì in bản tách vì nó nói

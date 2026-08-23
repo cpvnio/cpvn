@@ -62,6 +62,26 @@ PROF = os.path.join(BASE, "data", "profile")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nhipmang
 
+# ─── CÔNG BỐ HAY KHÔNG ────────────────────────────────────────────────────────
+# TẮT 24/08/2026 (user chốt: *"để trống cho tới khi có nguồn sạch"*). Số VẪN ĐƯỢC TÍNH và
+# ghi vào `ffSo`, chỉ không đổ sang `freeFloat` — trường mà `build_phantich` đọc để nướng
+# `ff` vào file phiên. Bật lại: đổi cờ này thành True rồi chạy lại `build_phantich`.
+#
+# VÌ SAO TẮT — ba con số, mỗi con đúng theo một định nghĩa, và KHÔNG CÁI NÀO đủ sạch:
+#   · 4,01% — thô từ sổ cổ đông. Hỏng vì MẪU SỐ CŨ: mọi tỉ lệ của BID trong `data/profile`
+#     quy ra tổng 5.700.279.376 cp trong khi mã đó nay có 7.778.261.912.
+#   · 9,06% — cuộn sổ cổ đông tới hôm nay qua các đợt chia/thưởng (BID ×1,2928). Đúng hơn,
+#     nhưng phải GIẢ ĐỊNH cổ đông lớn nhận đủ cổ tức cổ phiếu và không tham gia phát hành
+#     riêng lẻ — không kiểm được từng mã, mà sổ cổ đông lại KHÔNG CÓ NGÀY CHỤP.
+#   · 6,00% — dải chỉ số, thứ DNSE và 24hMoney cùng đăng. Không phải số đo: `free_float`
+#     24hMoney công bố (466.695.714 cp) đúng bằng `0,06 × 7.778.261.912`, tức suy TỪ dải.
+#     Dải của họ là bội số 5% với mã trên 20% và bội số 1% với mã nhỏ; chỉ VGI (0,972426%)
+#     và ACV (4,60416%) giữ đủ chữ số vì quá nhỏ để rơi vào dải nào.
+#
+# ĐIỀU KIỆN ĐỂ BẬT LẠI: sổ cổ đông có NGÀY CHỤP (hoặc nguồn trả thẳng số cổ phiếu tự do
+# chuyển nhượng theo phiên). Có ngày chụp là cuộn tới hôm nay được mà không phải đoán.
+CONG_BO = False
+
 NGUONG = 5.0          # mốc "cổ đông lớn" của Luật Chứng khoán
 TRAN_TONG = 100.5     # tổng vượt mức này = sổ cổ đông hỏng, không tính
 
@@ -165,8 +185,9 @@ def main():
         if not a.thu:
             if cu is not None and "ffNguon" not in p:
                 p["ffNguon"] = cu
-            p["freeFloat"] = ff
+            p["ffSo"] = ff                       # số tự tính, giữ để dành
             p["ffN"] = n
+            p["freeFloat"] = ff if CONG_BO else None
             tmp = d + ".tmp"
             json.dump(p, open(tmp, "w", encoding="utf-8"),
                       ensure_ascii=False, separators=(",", ":"))
@@ -174,7 +195,8 @@ def main():
         if a.thu and a.ma:
             print("  %-5s cũ=%-6s mới=%-6s (trừ %d cổ đông lớn) %s"
                   % (p.get("sym"), cu, ff, n, ldo or ""))
-    print("TỈ LỆ LƯU THÔNG%s" % (" (chạy thử)" if a.thu else ""))
+    print("TỈ LỆ LƯU THÔNG%s%s" % (" (chạy thử)" if a.thu else "",
+                                   "" if CONG_BO else " — ĐANG TẮT CÔNG BỐ, chỉ ghi `ffSo`"))
     if a.h24:
         print("  24hMoney  : lấy được %d · hỏng %d" % (d24[0], d24[1]))
     print("  tính được : %d mã" % ok)

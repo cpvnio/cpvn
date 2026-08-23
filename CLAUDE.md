@@ -3740,6 +3740,40 @@ Hình có **KHUNG** (`pane`): `main` = vùng giá · `rsi` = dải RSI thang 0�
 `NEED[k]===0` = số điểm KHÔNG cố định (bút, đa đoạn): chốt bằng thả chuột / bấm đúp / Enter;
 bấm đúp phải dùng CHUNG một listener với "xem lại toàn bộ" kẻo chốt xong bị reset khung ngay.
 
+### LƯU THÔNG ĐANG ĐỂ TRỐNG — BA ĐỊNH NGHĨA, KHÔNG CÁI NÀO SẠCH (24/08/2026)
+
+**User chốt: *"để trống cho tới khi có nguồn sạch"*.** Cờ `CONG_BO = False` trong
+`tools/kho_luuthong.py`. Số VẪN ĐƯỢC TÍNH mỗi lượt EOD và ghi vào `ffSo`; chỉ không đổ sang
+`freeFloat` — trường mà `build_phantich` đọc để nướng `ff` vào file phiên. **Bật lại: đổi cờ
+thành `True` rồi chạy lại `build_phantich`.**
+
+**BA CON SỐ, MỖI CON ĐÚNG THEO MỘT ĐỊNH NGHĨA — BID là ca mẫu:**
+
+| | BID | hỏng ở đâu |
+|---|---|---|
+| thô từ sổ cổ đông | **4,01%** | **MẪU SỐ CŨ** — mọi tỉ lệ trong `data/profile` quy ra tổng **5.700.279.376 cp** trong khi mã đó nay có **7.778.261.912** |
+| cuộn tới hôm nay | **9,06%** | phải GIẢ ĐỊNH cổ đông lớn nhận đủ cổ tức cổ phiếu và không tham gia phát hành riêng lẻ — mà sổ cổ đông **không có ngày chụp** nên không kiểm được |
+| dải chỉ số (DNSE · 24hMoney) | **6,00%** | không phải số đo — xem ngay dưới |
+
+> **6% CỦA 24hMONEY VÀ DNSE LÀ DẢI LÀM TRÒN, KHÔNG PHẢI SỐ ĐO.** Số cổ phiếu 24hMoney công
+> bố (`free_float: 466695714`) đúng bằng `0,06 × 7.778.261.912`, tức **suy TỪ tỉ lệ** chứ
+> không phải đo rồi chia. Và tỉ lệ của họ rơi vào dải: **bội số 5%** với mã trên 20% (0,40 ·
+> 0,60 · 0,70 · 0,75 · 0,85 · 0,95) và **bội số 1%** với mã nhỏ (0,15 · 0,11 · 0,06 · 0,04).
+> Chỉ **VGI 0,972426%** và **ACV 4,60416%** giữ đủ chữ số — đúng nhóm quá nhỏ để rơi vào dải
+> nào. Đây là quy ước làm tròn free-float mà HOSE dùng để tính trọng số chỉ số.
+
+> **ĐIỀU KIỆN ĐỂ BẬT LẠI:** sổ cổ đông có **NGÀY CHỤP**, hoặc một nguồn trả thẳng số cổ phiếu
+> tự do chuyển nhượng THEO PHIÊN. Có ngày chụp là cuộn tới hôm nay được mà không phải đoán.
+
+> **`build_phantich` PHẢI TRẢ `mcapFF = None` KHI `nFF = 0`, TUYỆT ĐỐI ĐỪNG ĐỂ 0.0.** Số 0 là
+> một con số: client in ra *"giao dịch được 0 tỷ · 0,0% lưu thông"*, đọc như cả thị trường
+> không có cổ phiếu nào mua bán được. Từ khi tắt công bố thì đây là nhánh CHẠY THẬT, không
+> phải trường hợp hiếm. Đo lại sau khi vá: ô toàn thị trường bỏ hẳn dòng lưu thông, bảng mã
+> hiện `—` ở cả `Lưu thông` lẫn `Vốn hoá LT`.
+
+**PHẦN TÍNH TOÁN GIỮ NGUYÊN, ĐỪNG XOÁ** — nó là thứ để bật lại, và là thứ đã chứng minh nguồn
+cũ sai. Chi tiết ở mục dưới.
+
 ### LƯU THÔNG TỰ TÍNH TỪ SỔ CỔ ĐÔNG — `tools/kho_luuthong.py` (24/08/2026)
 
 User: *"lưu thông của nhiều mã cần xác định lại. ví dụ DNSE ghi nhận BIDV có lưu thông 6%
