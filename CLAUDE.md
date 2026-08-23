@@ -3927,18 +3927,57 @@ HNX→`HNX`/`HNX-Index`, UPCOM→`UPCOM`/`UPCOM-Index`; nhãn nút viết sẵn 
 > khỏi nhau; file gộp vẫn là kho chính (`build_phantich.py` đọc nó). Xem mục *CHỈ SỐ ĐÃ SÂU
 > TỚI 2000* bên dưới.
 
-**NEO THEO TRUNG BÌNH CỦA KHUNG ĐANG NHÌN** — cùng phép neo với `neoTrungBinh` bên congcu.js
-(xem mục *ĐỒ THỊ CHÍNH CÒN BA ĐƯỜNG* để biết vì sao chắc chắn có điểm cắt và vì sao không
-dùng neo hai đầu). Khác **đúng một chỗ**: ở đây neo vào **giá đóng cửa**, không neo vào vốn
-hoá. Bên kia phải tránh giá vì `data/giaodich` giữ giá thô nên đường giá tụt ở mọi ngày
-GDKHQ; chart này thì nến đã hạ nền sẵn nên liền mạch qua ngày chốt quyền đúng như vốn hoá —
-và nến mới là chủ thể của trang.
+**NEO CỨNG MỘT LẦN CHO CẢ CHUỖI, TRÊN TRỤC PHẢI THỨ HAI (sửa 23/08/2026).**
 
-> **NEO LẠI THEO TỪNG KHUNG NHÌN, đừng neo một lần cho cả chuỗi.** Trục giá của `chart.js` tự
-> khít theo **nến đang hiện**, nên neo cố định là kéo/phóng một cái hai đường bay khỏi màn
-> hình. Đổi lại phải **nới `mn`/`mx` ôm luôn hai đường** — bằng không đường vừa bật lên lại
-> nằm ngoài khung, trông y như nó không được vẽ. Hệ quả chấp nhận được: kéo chart thì hai
-> đường phủ dịch lên xuống theo, còn nến thì không.
+> **BẢN ĐẦU NEO THEO KHUNG NHÌN VÀ ĐÓ LÀ MỘT LỖI THẬT, KHÔNG PHẢI CHUYỆN THẨM MỸ.** User:
+> *"khi tôi kéo chart về bên trái hoặc phải thì chart vnindex di chuyển lên xuống … cái cần
+> là vnindex phải thực sự cố định"*. Bản đầu neo MỖI ĐƯỜNG RIÊNG vào giá đóng cửa theo trung
+> bình khung nhìn — mà chỗ hai đường cắt nhau chỉ phụ thuộc **TỈ SỐ giữa hai phép neo**. Đo
+> 251 mã HOSE, so tỉ số đó giữa các khung trên CÙNG một mã: trôi **trung vị ×1,95 · p90
+> ×2,88 · max ×10,6**. Tức chỗ cắt biến mất hoặc mọc ra chỗ khác mỗi lần kéo chart — đúng
+> thứ người ta nhìn vào để kết luận mạnh/yếu.
+
+Hai việc TÁCH BẠCH, đừng gộp:
+
+**① `k` CỐ ĐỊNH — cái này mới là bản sửa.** Tính MỘT LẦN trên MIỀN NEO, không theo khung nhìn:
+
+```
+k        = exp( TB(log vốn hoá) − TB(log chỉ số) )     trên miền neo
+hai đường = vốn hoá(i)   và   k × chỉ số(i)
+```
+
+Chỗ cắt = chỗ `vốn hoá ÷ chỉ số = k`, mà `k` bất biến nên **chỗ cắt bất biến**. Kéo/phóng bao
+nhiêu cũng không dời được một điểm cắt nào.
+
+**② TRỤC RIÊNG (`padR2` = 62px), thang khít MIỀN NEO** chứ không khít khung nhìn — nên cặp này
+cũng không nhúc nhích lên xuống so với nến. Nến giữ trục của nến, và **`mn`/`mx` của trục giá
+thôi phải nới ra ôm hai đường** như bản cũ, tức nến không còn bị bóp.
+
+> **VÌ SAO KHÔNG THỂ NEO CỨNG NGAY TRÊN TRỤC GIÁ** — đã đo, xem bảng ở mục *DẢI "SỨC MẠNH"*:
+> 47,5% số cửa sổ đường nằm hẳn ngoài khung nến, nới trục để ôm thì nến bẹp còn 24% chiều cao
+> ở p90. Trục riêng là đường duy nhất.
+
+> **THANG LOGA.** Câu hỏi là "mạnh hơn bao nhiêu", tức một TỈ LỆ — trên thang loga khoảng cách
+> dọc giữa hai đường đúng bằng `log(vốn hoá ÷ k×chỉ số)`, nên hơn 20% ở 2022 trông đúng bằng
+> hơn 20% ở 2026. Độ nén đo ra gần như nhau (cửa sổ 120 phiên chiếm 41% chiều cao trục với
+> loga, 40% với thang thường) nên chọn loga là chọn không mất gì.
+
+> **VẪN CHẮC CHẮN CÓ ĐIỂM CẮT:** `k` đặt cho `TB(log vốn hoá − log k×chỉ số) = 0`; nằm trên ở
+> mọi phiên thì trung bình phải dương — mâu thuẫn. Đo 251 mã: trung vị **22 lần cắt** trong
+> 1.000 phiên (p10 5 · p90 41).
+> **NHƯNG MỘT KHUNG NHÌN HẸP CÓ THỂ KHÔNG CÓ LẦN CẮT NÀO — và đó là sự thật, không phải lỗi.**
+> Bảo đảm cắt là trên CẢ MIỀN NEO. Bản cũ luôn đẻ ra điểm cắt trong mọi khung chính vì nó neo
+> lại theo khung; đó là điểm cắt bịa.
+
+> **MIỀN NEO = GIAO CỦA CÁC ĐƯỜNG ĐANG BẬT — chi tiết dễ bỏ sót nhất.** Bật cả hai thì miền =
+> phần có vốn hoá (1.000 phiên gần nhất), và **đuôi chỉ số 2013–2022 không được tính vào thang
+> lẫn không vẽ** — ở đó không có gì để so. Cho nó vào thì thang phải ôm cả cú leo 3,7 lần của
+> thị trường và cửa sổ 120 phiên tụt từ **39% xuống 13%** chiều cao trục, nén tới mức không đọc
+> được đúng cặp đường mình đang muốn đọc. **Tắt vốn hoá đi thì miền = toàn bộ chỉ số** và
+> đường chỉ số dài lại như cũ — đã kiểm: 1.246/1.246 nến.
+
+> Chú thích đổi thành **"VN-Index quy đổi"** khi bật cả hai: số trên trục lúc đó là tỷ đồng
+> chứ không phải điểm, mà ô đọc số vẫn in điểm thật. Cùng lý do đã đặt tên đường bên /phantich.
 
 **BA THỨ NHỎ MÀ BỎ LÀ HỎNG:**
 
