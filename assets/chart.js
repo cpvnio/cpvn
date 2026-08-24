@@ -135,6 +135,12 @@ function tickLabel(unit,t,prevT){
   }
 }
 /* nhãn ngày đầy đủ cho bảng giá khi rê chuột */
+/* Ngày ngắn cho nhãn mốc neo — chỉ dd/mm/yyyy, không mang tiền tố khung như `fullLabel`
+   (nhãn neo phải đọc được y hệt ở mọi khung, chứ "Tuần 02/01/2013" thì rối). */
+function ngayNgan(t){
+  const d=vn(t);
+  return `${p2(d.getUTCDate())}/${p2(d.getUTCMonth()+1)}/${d.getUTCFullYear()}`;
+}
 function fullLabel(iv,t){
   const d=vn(t), dd=p2(d.getUTCDate()), mm=p2(d.getUTCMonth()+1), y=d.getUTCFullYear();
   if(iv==='i') return `${dd}/${mm} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
@@ -192,11 +198,14 @@ let veBut=false;                                   // bút đang được giữ 
     i0=n-span; i1=n; clampView();
   }
   self.setRows=function(r,interval,keepView){
-    /* XOÁ ĐỆM NỀN Ở ĐÂY, ĐỪNG DỰA VÀO KHOÁ ĐỆM. `veLaiPhu` gắn vốn hoá/chỉ số vào rồi gọi
-       lại setRows với mảng CÙNG độ dài, cùng mốc đầu và cùng mốc cuối — khoá đệm nào dựng
-       từ hình dạng chuỗi cũng thấy y hệt lần trước và trả về kết quả tính lúc chưa có phủ,
-       tức dải vĩnh viễn rỗng. Đây là đường duy nhất thay `rows` nên xoá ở đây là đủ. */
-    nenCache.k='';
+    /* XOÁ ĐỆM Ở ĐÂY, ĐỪNG DỰA VÀO KHOÁ ĐỆM. `veLaiPhu` gắn chỉ số/vốn hoá vào rồi gọi lại
+       setRows với mảng CÙNG độ dài, cùng mốc đầu và cùng mốc cuối — khoá đệm nào dựng từ
+       hình dạng chuỗi cũng thấy y hệt lần trước và trả về kết quả tính lúc chưa có phủ, tức
+       dải vĩnh viễn rỗng. Đây là đường duy nhất thay `rows` nên xoá ở đây là đủ.
+       KHÔNG xoá `neoT`: nó là một MỐC THỜI GIAN nên đổi khung Ngày↔Tuần↔Tháng vẫn trỏ đúng
+       phiên đó. Đổi mã thì cả trang tải lại (`location.href='/cophieu/MÃ'`) nên chart mới
+       hoàn toàn — không có đường nào mang mốc neo của mã cũ sang mã mới. */
+    smCache.k='';
     rows=r||[]; if(interval) iv=interval;
     /* ĐIỀU KIỆN RESET KHÔNG ĐƯỢC BẮT VÀO `i1 > rows.length` (sửa 25/08/2026).
        User: *"khi bấm vào vốn hoá / VN-Index / cách nền, chart không bị reset — hiện tại cứ
@@ -303,166 +312,81 @@ let veBut=false;                                   // bút đang được giữ 
   /* EMA phải tính DỒN từ đầu chuỗi (mỗi giá trị phụ thuộc toàn bộ quá khứ), không cắt cửa
      sổ như MA được. Nên tính một lần rồi ĐỆM lại, đừng tính trong vòng vẽ: chart vẽ lại
      mỗi lần rê chuột, tính lại 200 kỳ × 3000 nến mỗi khung hình là giật ngay. */
-  /* ---- NỀN TƯƠNG QUAN VÀ HAI SỰ KIỆN SỚM (user chốt 25/08/2026) --------------
-     *"đợi đường vốn hoá cắt đường VN-Index thì cổ phiếu đã đi được một đoạn xa rồi"* — đo
-     trên chính kho này thì đúng y như vậy: 340 lần tụt sâu rồi cắt lên lại, tới lúc cắt
-     vốn hoá đã tăng TRUNG VỊ +86% so với đáy, còn lợi suất tương đối 60 phiên SAU cú cắt
-     là −1,1%. Cú cắt là mốc mô tả, không phải mốc sớm.
+  /* ---- SỨC MẠNH SO VỚI CHỈ SỐ, NEO Ở MỘT PHIÊN (user chốt 25/08/2026) ------------
+     Thay hẳn bộ "cách nền" cũ. Lý do đổi, đo được hết, ghi lại để đừng ai dựng lại bản cũ:
 
-     `g[i]` = log(vốn hoá ÷ k·chỉ số) — ĐÚNG khoảng hở giữa hai đường trên chart, nên
-     g = 0 chính là điểm hai đường chạm nhau. Dải này chỉ là cái khoảng hở đó được phóng
-     to và cho trục riêng; không phải một phép đo thứ hai để rồi hai chỗ nói hai kiểu.
-     `k` tính lại ở đây bằng ĐÚNG công thức của P2 để dải vẫn chạy khi hai đường đang tắt.
+     ① BẢN CŨ ĐO BẰNG VỐN HOÁ — SAI THƯỚC. Vốn hoá tăng cả khi phát hành thêm mà cổ đông cũ
+        không được gì. Đo 367 mã từ 2013: tỉ lệ (vốn hoá tăng)/(giá điều chỉnh tăng) có trung
+        vị 0,88 nhưng p90 **2,83** và max **61,5**. ORS vốn hoá ×157,6 mà người cầm cổ phiếu
+        chỉ ×11,84 (vốn điều lệ 240 → 6.239 tỷ, tức số cổ phiếu ×26, trong đó chỉ ×1,95 là
+        phần được hạ nền). HHV còn ngược dấu: vốn hoá ×112,5 mà giá ×1,83 trong khi chỉ số
+        ×3,11 — tức THUA thị trường trong khi thước cũ chấm nó mạnh nhất sàn.
+        Lý do gốc: giá chỉ hạ nền khi có giá trị RA KHỎI cổ đông hiện hữu (cổ tức, cổ phiếu
+        thưởng, quyền mua giá ưu đãi). Chào bán riêng lẻ bằng giá thị trường thì không hạ nền
+        — không ai mất gì — nhưng vốn hoá tăng đúng tỉ lệ cổ phiếu mới.
 
-     BA DẤU THÌ KHÔNG DÍNH `k`: cả ba đều so sánh g với chính g trong quá khứ, nên nhân k
-     kiểu gì chúng cũng đứng nguyên chỗ cũ — tức là chúng nhân quả, còn `k` thì không (k lấy
-     trung bình cả chuỗi, có cả phần tương lai của mọi phiên trong quá khứ). Đó là lý do vạch
-     số 0 chỉ dùng để MÔ TẢ, còn các dấu mới dùng để ĐỌC SỚM.
+     ② BẢN CŨ NEO BẰNG TRUNG BÌNH TRƯỢT — CÒN CÕNG THÊM ƯỚC SỐ CHỈ SỐ. `log(vốn hoá ÷ chỉ
+        số) = log(tỉ trọng) + log(ước số)`, mà ước số bị điều chỉnh mỗi lần có mã lên/rời sàn
+        hay phát hành thêm. Đo: tổng vốn hoá ÷ VN-Index trôi **×3,01** trong 13 năm, khiến MỌI
+        con số "cách nền" bị cộng thêm một sai số CHUNG — trung vị **+17,2%**, max **+68,1%**
+        (2020), 12,7% ở phiên 21/08/2026.
 
-     △ PHÂN KỲ — vốn hoá thủng đáy W1 phiên mà g thì không. Nổ sớm hơn cú cắt 262 phiên, lúc
-       nổ vốn hoá còn −2% so với đáy. NHƯNG NÓ KHÔNG PHẢI TÍN HIỆU CHỌN MÃ: gộp mỗi tháng
-       thành MỘT quan sát thì xác suất cắt lên còn 27% — THẤP HƠN nền 34%. Nó nổ hàng loạt
-       đúng lúc chỉ số sập (07/2026: 92 lần trong một tháng, phần lớn các tháng khác bằng 0),
-       tức đang nói về THỊ TRƯỜNG chứ không nói gì về từng mã. Vẫn vẽ vì mốc đáy hoảng loạn
-       là thông tin thật — nhưng đừng trình bày nó như một tín hiệu sớm.
-     ○ G ĐỈNH W1 · ● G ĐỈNH W2, khi CÒN dưới nền — đây mới là tín hiệu cổ phiếu, và chúng
-       sống sót qua phép gộp theo tháng: trung vị 120 phiên +1,2% so với nền −2,5%, 250 phiên
-       +5,1% so với −4,4%, xác suất cắt lên 50% so với 34%, trải trên 74–106 tháng khác nhau
-       (5 tháng đông nhất chỉ chiếm 19%). ○ sớm và dày (bắt 90% số đoạn, sớm hơn cú cắt 115
-       phiên), ● thưa và chắc tay hơn (65%, sớm hơn 92 phiên). W2 ⊂ W1 nên phải TRỪ.
+     ③ CÔNG THỨC NAY: hai bên đều là thước GIÁ thuần, neo cùng một phiên.
+            đường chỉ số(i) = giá(a) × chỉ số(i) ÷ chỉ số(a)
+            khoảng hở(i)    = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1
+        `a` = phiên neo. Hai đường GẶP NHAU tại `a`; sau đó mỗi đường đi theo % của chính nó.
+        Tương đương với "nhân dồn % từng phiên" — kiểm sai số tích luỹ qua 3.400 phiên chỉ
+        1,4e-14 nên dùng tỉ số hai đầu là an toàn.
 
-     CẢNH BÁO ĐÃ ĐO, ĐỪNG GỠ KHỎI TÀI LIỆU: cả vùng dưới nền đều ÂM trong 2023–2025 bất kể
-     dấu nào, vì đó là giai đoạn chỉ số tự nó chạy mạnh nên mã tụt hậu tụt tiếp. Ưu thế của
-     ○/● đo trên 2013–2022 rồi nghiệm lại 2020–2025; đừng coi nó là hằng số.
+     ĐƯỢC GÌ: nhân quả tuyệt đối (mọi phiên chỉ dùng dữ liệu trước nó) · KHÔNG cửa sổ, KHÔNG
+     khởi động nên mã mới niêm yết đọc được từ phiên đầu · KHÔNG cần tổng vốn hoá sàn nên
+     chuyện huỷ niêm yết thành vô nghĩa · sai số ước số +17,2% biến mất theo cấu trúc.
 
-     CỬA SỔ TÍNH THEO SỐ NẾN, không theo số ngày — giống hệt MA/RSI trên chart này: bật
-     khung Tuần thì 120 nến là 120 tuần. Chuỗi ngắn thì co lại theo `n` để khung Tháng
-     không mất trắng dải. */
-  /* CỬA SỔ PHẢI TRÙNG VỚI BỘ LỌC BẢNG GIÁ (`screener.js`: 100/200/300/400), nếu không thì
-     một mã hiện `nd100 = 2 phiên` ở bảng giá mà trên chart lại không có dấu nào gần đây —
-     đã xảy ra thật khi chart dùng 120/250: dấu gần nhất của GAS lùi tận 144 phiên. */
-  const NEN_W1=100, NEN_W2=200, NEN_MA=1250;
-  /* CỬA SỔ NỀN QUY THEO KHUNG để mọi khung nói về CÙNG MỘT quãng thời gian (~5 năm), và
-     để khung Ngày trùng đúng 1.250 phiên của `build_screen.nen_tuoi()`. Không quy đổi thì
-     bật Tuần một cái là nền tụt còn 2,5 năm mà nhãn vẫn ghi "phiên" — user bắt đúng lỗi
-     này trên ảnh PVP: "Cách nền 128 phiên" trong khi đang ở khung Tuần. */
-  const NEN_MA_KHUNG={d:NEN_MA, W:Math.round(NEN_MA/5), M:Math.round(NEN_MA/21), Y:5};
-  /* SỐ NẾN TỐI THIỂU để còn gọi là "nền", quy theo khung (20% cửa sổ đích): Ngày 250 ·
-     Tuần 50 · Tháng 12 · Năm 5. Dưới mức đó thì mã quá mới, không có dải và không có đường
-     nền — đúng như `build_screen` không ghi `nen` cho mã chưa đủ dữ liệu. */
-  const nenToiThieu=iv2=>Math.max(5,Math.round((NEN_MA_KHUNG[iv2]||NEN_MA)*0.2));
-  const NEN_DV={W:'tuần', M:'tháng', Y:'năm'};
-  const nenCache={k:'',v:null};
-  function nenArr(){
-    const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'');
-    if(nenCache.k===khoa) return nenCache.v;
-    const n=rows.length, g=new Array(n).fill(null), b=new Array(n).fill(null);
-    let sa=0,sb=0,co=0,dungVH=false;
-    for(let i=0;i<n;i++){ const r=rows[i]; if(r&&r.vh>0&&r.ix>0){ dungVH=true; break; } }
-    for(let i=0;i<n;i++){ const r=rows[i]; if(!r||!(r.ix>0)) continue;
-      const u=dungVH?r.vh:r.c;
-      if(!(u>0)) continue;
-      b[i]=u; sa+=Math.log(u); sb+=Math.log(r.ix); co++; }
-    const out={k:null,g:g,b:b,pk:new Array(n).fill(false),
-               dinhN:new Array(n).fill(false),dinh:new Array(n).fill(false),
-               co:co,vh:dungVH,W1:0,W2:0,Wma:0};
-    if(co>=2){
-      /* NỀN = TRUNG BÌNH TRƯỢT `Wma` NẾN CỦA CHÍNH TỈ SỐ, không phải trung bình cả chuỗi.
-         Bản đầu lấy trung bình cả đoạn đang nạp — cùng công thức với `k` của P2 nên vạch 0
-         của dải trùng đúng chỗ hai đường cắt nhau, nghe thì gọn. Hai chỗ hỏng:
-         ① nó có NHÌN TRƯỚC: mọi phiên quá khứ được neo bằng một con số chứa cả tương lai
-            của chính nó, nên không dùng để đọc sớm được;
-         ② số phiên nạp thay đổi theo mã và theo khung (GAS về 3.400 nến, VHM về 1.246),
-            nên CÙNG MỘT MÃ ra hai con số khác nhau ở chart và ở bảng giá — đo được:
-            GAS −33,0% trên chart nhưng −18,3% ở bảng giá, cùng phiên 21/08/2026.
-         Trung bình trượt chữa cả hai: nhân quả, và khớp ĐÚNG định nghĩa `nen` của
-         `build_screen.nen_tuoi()`. Đổi lại vạch 0 KHÔNG còn trùng điểm cắt của hai đường —
-         chấp nhận, vì hai đường trả lời "đắt/rẻ so với trung bình đoạn đang xem" còn dải
-         trả lời "mạnh/yếu so với chính mình 5 năm qua". Nhãn dải ghi rõ số nến để không
-         ai đọc nhầm thành cùng một câu hỏi. */
-      const k=Math.exp(sa/co-sb/co); out.k=k;
-      /* CỬA SỔ PHẢI ĐẦY MỚI CHO RA SỐ, và chuỗi quá ngắn thì KHÔNG CÓ NỀN.
-         User 25/08: *"ở VCK đường VN-Index bị mất một khoảng hơn 10 phiên trong khi vốn hoá
-         thể hiện đúng"*. VCK niêm yết 16/12/2025, cả kho chỉ có **169 phiên**. Bản trước cho
-         trung bình chạy trên số nến ĐANG CÓ (nở dần) và chỉ cần gom đủ 60 điểm là in ra —
-         nên VCK vẫn hiện một cái "nền", nhãn vẫn ghi 1.250 phiên, mà thực chất là trung
-         bình 8 tháng. Vừa hụt đầu chuỗi (chỗ user thấy mất), vừa nói dối ở nhãn, vừa lệch
-         hẳn `build_screen` — bên đó đòi đủ `1250 + 400` phiên mới tính, nên VCK KHÔNG có
-         `nen` trong bảng giá. Chart hiện thứ bảng giá bảo là không có.
+     CÒN LẠI, GHI RÕ CHỨ ĐỪNG IM: VN-Index là chỉ số GIÁ, không tính cổ tức, còn giá điều
+     chỉnh thì CÓ — nên phép so thiên về cổ phiếu cỡ 2–3%/năm. Quy ước tiêu chuẩn của mọi
+     biểu đồ sức mạnh tương đối, không vá được bằng dữ liệu đang có.
 
-         Nay: `Wma` là cửa sổ THẬT SỰ dùng, `g` chỉ có từ nến thứ `Wma` trở đi (cửa sổ đầy,
-         đúng cách `nen_tuoi()` tính), và dưới `NEN_MIN` nến thì bỏ hẳn nền — chuỗi 8 tháng
-         không có "trung bình 5 năm" nào để mà so. */
-      const dich=NEN_MA_KHUNG[iv]||NEN_MA, toiThieu=nenToiThieu(iv);
-      if(n<toiThieu){ nenCache.k=khoa; nenCache.v=out; return out; }
-      /* ĐỦ DÀI thì lấy ĐÚNG cửa sổ đích — đây là ca thường gặp và là ca duy nhất khớp
-         tuyệt đối với bảng giá. CHƯA ĐỦ thì lấy 60% chuỗi (vẫn chừa 40% để dải có chỗ mà
-         vẽ), sàn ở `toiThieu`. Đừng viết thành một biểu thức `min` gộp cả ba: bản đầu làm
-         vậy và `n*0.6` biến thành cái TRẦN, chuỗi 1.500 nến ra cửa sổ 900 thay vì 1.250. */
-      const Wma=(n>=dich)?dich:Math.min(n,Math.max(toiThieu,Math.floor(n*0.6)));
-      out.Wma=Wma;
-      const L=new Array(n).fill(null);
-      for(let i=0;i<n;i++) if(b[i]!=null) L[i]=Math.log(b[i]/rows[i].ix);
-      let tong=0, dem=0;
-      const cua=[];
-      for(let i=0;i<n;i++){
-        if(L[i]!=null){ cua.push(i); tong+=L[i]; dem++; }
-        while(cua.length&&cua[0]<=i-Wma){ tong-=L[cua[0]]; dem--; cua.shift(); }
-        if(L[i]!=null&&dem>=Wma) g[i]=L[i]-tong/dem;   // ĐỦ cửa sổ mới in, không nở dần
-      }
-      const W1=Math.min(NEN_W1,Math.max(20,Math.floor(n/6)));
-      const W2=Math.min(NEN_W2,Math.max(40,Math.floor(n/3)));
-      out.W1=W1; out.W2=W2;
-      const TRE=Math.max(3,Math.round(W1/24));      // "đáy vừa xong" = trong TRE nến gần nhất
-      const CU =Math.max(8,Math.round(W1/3));       // "đáy của g đã cũ" = quá CU nến
-      let nghi=-1e9;
-      for(let i=W1-1;i<n;i++){
-        if(b[i]==null||g[i]==null) continue;
-        let kb=-1,vb=Infinity,kg=-1,vg=Infinity,thieu=false;
-        for(let j=i-W1+1;j<=i;j++){
-          if(b[j]==null||g[j]==null){ thieu=true; break; }
-          if(b[j]<vb){ vb=b[j]; kb=j; }
-          if(g[j]<vg){ vg=g[j]; kg=j; }
-        }
-        if(thieu) continue;
-        if(i-kb<=TRE&&i-kg>CU&&i-nghi>=Math.round(W1/6)){ out.pk[i]=true; nghi=i; }
-      }
-      /* HAI TẦNG CÙNG MỘT HỌ: đỉnh W1 phiên (sớm, dày) và đỉnh W2 phiên (xác nhận, thưa).
-         Đỉnh W2 hiển nhiên cũng là đỉnh W1 nên tầng nhỏ phải TRỪ tầng lớn ra, không thì
-         hai dấu chồng lên nhau ở đúng những phiên đáng chú ý nhất. */
-      const dinhCua=(W,ra,cach)=>{
-        let nghi=-1e9;
-        for(let i=W-1;i<n;i++){
-          if(g[i]==null||g[i]>=0) continue;        // chỉ tính khi CÒN dưới nền
-          let mx=-Infinity,thieu=false;
-          for(let j=i-W+1;j<=i;j++){
-            if(g[j]==null){ thieu=true; break; }
-            if(g[j]>mx) mx=g[j];
-          }
-          if(thieu) continue;
-          if(g[i]>=mx-1e-12&&i-nghi>=cach){ ra[i]=true; nghi=i; }
-        }
-      };
-      /* NGHỈ NGẮN (W/20) chỉ để dấu khỏi dính thành vệt khi mã lập đỉnh nhiều phiên liền.
-         Bảng giá KHÔNG có nghỉ — nó đếm phiên gần nhất — nên trong một chuỗi đỉnh liên tiếp
-         chart vẽ dấu ở phiên ĐẦU còn bảng giá đếm phiên CUỐI; lệch tối đa W/20 phiên, và
-         đó là lệch có chủ ý chứ không phải hai định nghĩa khác nhau. */
-      dinhCua(W2,out.dinh,Math.round(W2/20));
-      dinhCua(W1,out.dinhN,Math.round(W1/20));
-      for(let i=0;i<n;i++) if(out.dinh[i]) out.dinhN[i]=false;
+     PHIÊN NEO MẶC ĐỊNH = phiên ĐẦU TIÊN có cả giá và chỉ số. Với 190/405 mã HOSE lên sàn từ
+     2013 thì đó đúng là phiên chào sàn; 215 mã còn lại lên sàn trước 02/01/2013 (mốc kho nến
+     bắt đầu) nên neo ở 02/01/2013 — nhãn PHẢI in ngày neo thật, đừng ghi "chào sàn" cho tất.
+     Bấm vào một phiên rồi bấm ô "Neo" thì dời mốc về đó. */
+  let neoT=null;                       // mốc thời gian của phiên neo; null = phiên đầu chuỗi
+  const smCache={k:'',v:null};
+  function smArr(){
+    const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'')+'|'+(neoT||0);
+    if(smCache.k===khoa) return smCache.v;
+    const n=rows.length, q=new Array(n).fill(null), ln=new Array(n).fill(null);
+    const out={q:q,ln:ln,a:-1,co:0};
+    let dau=-1, co=0;
+    for(let i=0;i<n;i++){ const r=rows[i];
+      if(r&&r.c>0&&r.ix>0){ if(dau<0) dau=i; co++; } }
+    out.co=co;
+    if(dau<0){ smCache.k=khoa; smCache.v=out; return out; }
+    /* PHIÊN NEO PHẢI CÓ ĐỦ HAI SỐ. Bấm neo vào một phiên thiếu chỉ số thì lùi về phiên hợp
+       lệ gần nhất TRƯỚC đó, chứ đừng bỏ neo im lặng — người dùng vừa bấm thì phải thấy đổi. */
+    let a=dau;
+    if(neoT!=null){
+      for(let i=0;i<n;i++){ const r=rows[i];
+        if(r&&r.t<=neoT&&r.c>0&&r.ix>0) a=i; else if(r&&r.t>neoT) break; }
     }
-    nenCache.k=khoa; nenCache.v=out;
+    out.a=a;
+    const c0=rows[a].c, x0=rows[a].ix;
+    for(let i=a;i<n;i++){ const r=rows[i];
+      if(!r||!(r.c>0)||!(r.ix>0)) continue;
+      ln[i]=c0*r.ix/x0;                       // đường chỉ số quy về đơn vị GIÁ
+      q[i]=(r.c/c0)/(r.ix/x0)-1;              // khoảng hở, đọc thẳng ra %
+    }
+    smCache.k=khoa; smCache.v=out;
     return out;
   }
-  /* Cửa ra để đọc số của dải — trang ngoài và bộ kiểm thử đều cần lấy ĐÚNG mảng chart
-     đang vẽ, chứ tính lại ở chỗ khác là hai nơi lệch nhau lúc nào không biết. */
-  self.nenSo=()=>nenArr();
-  /* Khung nhìn hiện hành — bộ kiểm thử cần biết ĐANG vẽ từ nến nào tới nến nào và mỗi nến
-     rộng bao nhiêu, để phân biệt "dấu tính sai" với "dấu nằm ngoài khung". */
-  self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH,
-                       oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w))});
-  const fmtNen=g=>{ const p=(Math.exp(g)-1)*100;
+  /* Cửa ra để đọc số — trang ngoài và bộ kiểm thử đều cần lấy ĐÚNG mảng chart đang vẽ, chứ
+     tính lại ở chỗ khác là hai nơi lệch nhau lúc nào không biết. */
+  self.smSo=()=>smArr();
+  self.neoTai=function(t){ neoT=(t==null?null:t); smCache.k=''; self.draw(); return self; };
+  self.neoDang=()=>{ const S=smArr(); return S.a>=0&&rows[S.a]?rows[S.a].t:null; };
+  const fmtSM=v=>{ const p=v*100;
     return (p>=0?'+':'')+p.toLocaleString('vi-VN',{maximumFractionDigits:Math.abs(p)<10?1:0})+'%'; };
+
 
   const emaCache=new Map();
   function emaArr(per){
@@ -528,97 +452,49 @@ let veBut=false;                                   // bút đang được giữ 
        trục giá tự khít theo nến đang hiện, dính vào đó là mọi phép neo cứng đều trôi khỏi
        khung (đo được 47,5% số cửa sổ). Có trục riêng thì nến giữ nguyên thang của nến, cặp
        kia giữ nguyên thang của nó — cùng một cơ chế `cfg.phai2` của đồ thị /phantich. */
-    const coPhu=(ind.vh||ind.idx), padR2=coPhu?62:0;
+    /* Trục phải thứ hai chỉ dựng khi có VỐN HOÁ. Đường chỉ số nay dùng trục giá nên bật
+       một mình nó thì không cần chừa chỗ. */
+    const padR2=ind.vh?62:0;
     const plotW=w-padR-padR2, plotH=h-padT-padB;
     geo.plotW=plotW; geo.plotH=plotH; geo.volTop=h-padB+6;
     let mn=Infinity,mx=-Infinity,vmax=0;
     for(const r of vis){ if(r.l<mn)mn=r.l; if(r.h>mx)mx=r.h; if((r.v||0)>vmax)vmax=r.v||0; }
     if(mx-mn<1e-9) mx=mn+1;
-    /* ---- CẶP VỐN HOÁ ↔ CHỈ SỐ: TRỤC RIÊNG, NEO CỨNG MỘT LẦN CHO CẢ CHUỖI -------------
-       User 23/08/2026: *"vnindex phải thực sự cố định trên chart khi tao kéo qua trái hoặc
-       phải … vốn hoá cổ phiếu cắt lên vnindex => cổ phiếu mạnh hơn mặt bằng chung"*.
+    /* Khối chú thích dài về `k` cố định và "miền neo" của bản 23/08 đã xoá 25/08/2026 cùng
+       với chính cơ chế đó. Muốn đọc lại vì sao nó từng tồn tại và vì sao bỏ thì xem mục
+       *SỨC MẠNH SO VỚI CHỈ SỐ* trong CLAUDE.md — ở đó có cả số đo của ba lần sai. */
 
-       BẢN CŨ SAI Ở ĐÂU (đo được, không phải chuyện thẩm mỹ): mỗi đường tự neo RIÊNG vào giá
-       đóng cửa theo TRUNG BÌNH KHUNG NHÌN. Chỗ hai đường cắt nhau chỉ phụ thuộc TỈ SỐ giữa
-       hai phép neo — mà tỉ số đó trôi **trung vị ×1,95 · p90 ×2,88 · max ×10,6** giữa các
-       khung trên CÙNG một mã (251 mã HOSE). Tức chỗ cắt biến mất hoặc mọc ra chỗ khác mỗi
-       lần kéo chart: đúng thứ người ta nhìn vào để kết luận mạnh/yếu.
+    /* ---- TRỤC PHẢI THỨ HAI — NAY CHỈ CÒN CHO VỐN HOÁ (25/08/2026) --------------------
+       Trước đây trục này cõng CẶP vốn hoá ↔ chỉ số, và mọi rắc rối đều từ đó: phải nghĩ ra
+       một hằng số `k` để quy chỉ số về đơn vị tỷ đồng, mà `k` thì hoặc nhìn trước, hoặc
+       trôi theo số nến đang nạp, hoặc cõng thêm ước số chỉ số (xem khối `smArr`).
 
-       CÁCH LÀM ĐÚNG — hai việc tách bạch:
-       ① `k` CỐ ĐỊNH, tính MỘT LẦN trên MIỀN NEO (các phiên có đủ những đường đang bật), không
-          tính theo khung nhìn:
-                k = exp( TB(log vốn hoá) − TB(log chỉ số) )
-          Hai đường vẽ ra là `vốn hoá(i)` và `k × chỉ số(i)`. Chỗ cắt = chỗ
-          `vốn hoá/chỉ số = k`, mà `k` bất biến nên **chỗ cắt bất biến**. Kéo/phóng bao nhiêu
-          cũng không dời được một điểm cắt nào.
-       ② TRỤC RIÊNG (`padR2`), thang khít MIỀN NEO chứ không khít khung nhìn — nên cặp này
-          cũng không nhúc nhích lên xuống so với nến. Nến giữ trục của nến.
+       NAY ĐƯỜNG CHỈ SỐ VỀ TRỤC GIÁ, vì `giá(a) × chỉ số(i)/chỉ số(a)` có ĐƠN VỊ ĐỒNG —
+       cùng đơn vị với nến, không cần quy đổi gì. Trục phải thứ hai chỉ còn để vẽ VỐN HOÁ,
+       và vốn hoá nay là một đường THÔNG TIN đứng riêng, không so với ai, nên thang cứ khít
+       chính nó là xong. Không còn `k`, không còn miền neo giao nhau.
 
-       VÌ SAO LOGA: câu hỏi là "mạnh hơn bao nhiêu", tức một TỈ LỆ. Trên thang loga, khoảng
-       cách dọc giữa hai đường đúng bằng `log(vốn hoá ÷ k×chỉ số)` — hơn 20% ở 2022 trông
-       đúng bằng hơn 20% ở 2026. Thang thường thì cùng một mức hơn kém lại to nhỏ khác nhau
-       tuỳ chỗ. Đo ra gần như nhau về độ nén (41% so với 40% chiều cao trục cho cửa sổ 120
-       phiên) nên chọn loga là chọn không mất gì.
-
-       VÌ SAO VẪN CHẮC CHẮN CÓ ĐIỂM CẮT: `k` đặt cho TB(log vốn hoá − log k×chỉ số) = 0. Nằm
-       trên ở mọi phiên thì trung bình phải dương — mâu thuẫn. Đo trên 251 mã: trung vị **22
-       lần cắt** trong 1.000 phiên (p10 5 · p90 41).
-
-       MIỀN NEO = GIAO của các đường ĐANG BẬT, và đây là chi tiết dễ bỏ sót nhất. Bật cả hai
-       thì miền = phần có vốn hoá (1.000 phiên gần nhất) — đuôi chỉ số 2013–2022 KHÔNG được
-       tính vào thang và không vẽ, vì ở đó không có gì để so. Cho nó vào thì thang phải ôm cả
-       cú leo 3,7 lần của thị trường và cửa sổ 120 phiên tụt từ **39% xuống 13%** chiều cao
-       trục — nén tới mức không đọc được cặp đường mà mình đang muốn đọc. Tắt vốn hoá đi thì
-       miền = toàn bộ chỉ số và đường chỉ số dài lại như cũ. */
+       ĐƯỜNG CHỈ SỐ KHÔNG ĐƯỢC NỚI TRỤC GIÁ. Trục giá khít theo nến đang hiện; cho đường chỉ
+       số tham gia vào min/max thì mã nào lệch xa (HHV giá ×1,83 khi chỉ số ×3,11) là nến bị
+       nén bẹp. Nên nó CHỈ được vẽ, bị cắt ở mép, và số thật thì đọc ở dải dưới — dải là chỗ
+       không bao giờ tràn khung. */
     let P2=null;
-    if(coPhu){
-      const cVH=!!ind.vh, cIX=!!ind.idx, mien=[];
+    if(ind.vh){
+      let lo=Infinity,hi=-Infinity,dau=-1,cuoi=-1;
       for(let z=0;z<rows.length;z++){
-        const a=rows[z].vh>0, b=rows[z].ix>0;
-        if(cVH&&cIX){ if(a&&b) mien.push(z); }
-        else if(cVH){ if(a) mien.push(z); }
-        else if(b) mien.push(z);
+        const v=rows[z].vh;
+        if(!(v>0)) continue;
+        if(dau<0) dau=z; cuoi=z;
+        const g=Math.log(v); if(g<lo)lo=g; if(g>hi)hi=g;
       }
-      if(mien.length>=2){
-        let k=1;
-        if(cVH&&cIX){
-          /* `k` NEO TRÊN ĐÚNG SỐ NẾN CỦA NỀN (1.250 phiên quy theo khung), KHÔNG phải trên
-             toàn bộ chuỗi đang nạp — sửa 25/08/2026 sau khi user báo:
-             *"DHC rõ ràng đã cắt và trên nền rồi tại sao vẫn báo dưới nền ở bộ lọc?"*.
-             Đúng, và lỗi ở đây. Số nến nạp đổi theo mã (DHC về 3.400, VHM về 1.246) nên
-             mốc của hai đường trôi theo từng mã, trong khi dải và bộ lọc neo cố định
-             1.250 phiên. Đo DHC phiên 21/08/2026: neo cả 3.400 nến ra **+46,7%** (vốn hoá
-             nằm TRÊN đường chỉ số) còn neo 1.250 phiên ra **−17,8%** (dưới nền) — hai câu
-             trả lời ngược nhau trên cùng một màn hình.
-             Neo theo đuôi thì dấu của "đang trên hay dưới" ở MÉP PHẢI luôn khớp bộ lọc.
-             Các lần cắt trong quá khứ vẫn đọc theo `k` cố định này chứ không theo nền
-             trượt — hai đường chỉ mang được MỘT hằng số, không thể khớp mọi thời điểm. */
-          const nNeo=Math.min(mien.length, NEN_MA_KHUNG[iv]||NEN_MA);
-          const duoi=mien.slice(mien.length-nNeo);
-          let sa=0,sb=0;
-          for(const z of duoi){ sa+=Math.log(rows[z].vh); sb+=Math.log(rows[z].ix); }
-          k=Math.exp(sa/duoi.length-sb/duoi.length);
-        }
-        /* THANG PHẢI KHÍT THEO ĐÚNG THỨ SẼ VẼ. Từ 25/08 đường thứ hai là NỀN TRƯỢT chứ
-           không còn là `k×chỉ số`, mà hai thứ lệch nhau tới p90 84% — lấy thang theo cái
-           cũ là đường nền chạy ra ngoài khung. */
-        const NAt=nenArr(), coNent=(NAt.co>=2&&NAt.vh);
-        let lo=Infinity,hi=-Infinity;
-        for(const z of mien){
-          if(cVH){ const v=Math.log(rows[z].vh); if(v<lo)lo=v; if(v>hi)hi=v; }
-          if(cIX){
-            let u=null;
-            if(cVH&&coNent){ const q=NAt.g[z]; if(q!=null&&rows[z].vh>0) u=rows[z].vh/Math.exp(q); }
-            else u=k*rows[z].ix;
-            if(u>0){ const v=Math.log(u); if(v<lo)lo=v; if(v>hi)hi=v; }
-          }
-        }
+      if(dau>=0){
         if(!(hi>lo)){ lo-=0.05; hi+=0.05; }
         const pd=(hi-lo)*0.07; lo-=pd; hi+=pd;
-        P2={k:k,lo:lo,hi:hi,cVH:cVH,cIX:cIX,a:mien[0],b:mien[mien.length-1],
+        P2={lo:lo,hi:hi,a:dau,b:cuoi,
             y:v=>padT+(hi-Math.log(v))/(hi-lo)*plotH};
       }
     }
+
     const pad=(mx-mn)*0.06; mn-=pad; mx+=pad;
     if(yZoom!==1||yPan!==0){                    // người dùng đã kéo/giãn trục giá bằng tay
       const c=(mn+mx)/2, hf=(mx-mn)/2*yZoom, sh=yPan*(mx-mn);
@@ -724,72 +600,62 @@ let veBut=false;                                   // bút đang được giữ 
       const a=y(Math.max(r.o,r.c)), b=y(Math.min(r.o,r.c));
       x.fillRect(X-bw/2,a,bw,Math.max(1,b-a));
     }
-    /* CẶP VỐN HOÁ ↔ CHỈ SỐ vẽ SAU nến để nến không che — đây là đường người dùng vừa tự bật.
-       Ngắt nét ở phiên thiếu số (`st=false`) chứ đừng nối thẳng qua: vốn hoá chỉ có 1.000
-       phiên gần nhất còn nến có tới 13 năm, nối thẳng là bịa ra một đoạn không có dữ liệu.
-       Chỉ vẽ TRONG MIỀN NEO — ngoài đó không có gì để so, mà vẽ ra thì thang phải nới theo. */
-    if(P2){
-      const veP=(lay,mau,day)=>{
-        x.strokeStyle=mau; x.lineWidth=day; x.lineJoin='round';
+    /* ---- ĐƯỜNG CHỈ SỐ QUY VỀ MỐC NEO — vẽ trên TRỤC GIÁ (25/08/2026) ----------------
+       `giá(a) × chỉ số(i)/chỉ số(a)` có đơn vị ĐỒNG, nên nó dùng thẳng `y()` của nến. Hai
+       đường gặp nhau tại phiên neo; sau đó mỗi đường đi theo % của chính nó.
+       CẮT Ở MÉP, KHÔNG NỚI TRỤC — xem chú thích ở khối P2. Số thật đọc ở dải dưới. */
+    if(ind.idx){
+      const S=smArr();
+      if(S.a>=0){
+        x.save();
+        x.beginPath(); x.rect(0,padT,plotW,plotH); x.clip();
+        x.strokeStyle=IXCOL(); x.lineWidth=1.8; x.lineJoin='round';
         x.beginPath(); let st=false;
-        for(let i=0;i<n;i++){ const gi=i0+i;
-          if(gi<P2.a||gi>P2.b){ st=false; continue; }
-          const v=lay(vis[i],gi);      // gi = chỉ số TOÀN CỤC; đừng dùng rows.indexOf ở đây,
-                                       // nó biến vòng vẽ thành O(n²) và chart vẽ lại mỗi lần rê chuột
-          if(!(v>0)){ st=false; continue; }
-          const X=cx(i), yy=P2.y(v); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
-        x.stroke(); x.lineWidth=1; x.lineJoin='miter';
-      };
-      /* ---- MỘT MỐC DUY NHẤT: NỀN TRƯỢT 1.250 PHIÊN (user chốt 25/08/2026) -----------
-         *"chỉ có thể dùng 1.250 phiên chứ không thể áp ngược 13 năm được"* — đúng, và đây
-         là chỗ sửa.
-
-         BẢN CŨ VẼ "VN-INDEX QUY ĐỔI" BẰNG MỘT HẰNG SỐ `k`, rồi áp ngược cho cả 13 năm nến.
-         `k` là trung bình tương quan của 1.250 phiên GẦN NHẤT, tức năm 2013 người ta đang
-         bị đo bằng cái thước của năm 2026 — thước đó lúc ấy chưa tồn tại. Hệ quả thấy ngay
-         ở VNM: đo bằng thước từng thời điểm thì 2022 lệch −48,3% còn 2026 lệch −44,0%,
-         nhưng đo cả hai bằng thước hôm nay thì 2026 toác rộng hơn hẳn — user đọc ra là
-         "cách nền bị sai".
-
-         KHÔNG THỂ GIỮ CẢ HAI. Đo trên 278 mã đủ 2.500 phiên: ngay trong 1.250 nến cuối,
-         chênh lệch lớn nhất giữa hai mốc đã là **trung vị 37,8% · p90 84,2% · VNM 117,8%**.
-         Hai mốc thật sự khác nhau, không phải sai số làm tròn.
-
-         NÊN CHỈ CÒN MỘT: `nền(i) = vốn hoá(i) ÷ exp(g(i))` = `chỉ số(i) × exp(TB trượt)`.
-         Nó vẫn mang HÌNH của chỉ số, chỉ khác là quy đổi lại ở TỪNG phiên bằng tương quan
-         trung bình 1.250 phiên trước đó thay vì bằng một hằng số của hôm nay.
-           · nhân quả ở mọi điểm — phiên nào cũng chỉ dùng dữ liệu trước nó;
-           · vốn hoá cắt lên đường này ⟺ dải cắt vạch 0 ⟺ `nen ≥ 0` của bộ lọc bảng giá,
-             ba chỗ khớp nhau ĐÚNG TỪNG PHIÊN chứ không chỉ khớp ở mép phải;
-           · ở phiên cuối nó trùng khít đường quy đổi cũ (đo được lệch 0,000000%), nên câu
-             "vốn hoá cắt lên VN-Index" hôm nay vẫn đọc y như trước.
-
-         BẬT MÌNH `VN-Index` (không bật vốn hoá) thì vẫn vẽ CHỈ SỐ THÔ theo điểm — lúc đó
-         không có tử số nên nền vô nghĩa, mà chỉ số thô tự nó vẫn đọc được. */
-      const NA=nenArr();
-      const coNen=(NA.co>=2&&NA.vh&&NA.Wma>0);
-      const layNen=(r,gi)=>{ const q=NA.g[gi];
-        return (q==null||!(r.vh>0))?null:r.vh/Math.exp(q); };
-      if(P2.cVH) veP(r=>r.vh,VHCOL(),2.4);
-      if(P2.cIX){
-        if(P2.cVH&&coNen) veP(layNen,IXCOL(),1.8);
-        else veP(r=>P2.k*r.ix,IXCOL(),1.8);
+        for(let i=0;i<n;i++){ const v=S.ln[i0+i];
+          if(v==null){ st=false; continue; }
+          const X=cx(i), yy=y(v); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
+        x.stroke(); x.restore(); x.lineWidth=1; x.lineJoin='miter';
+        /* MỐC NEO: vạch dọc mảnh + chấm, để thấy ngay hai đường bắt đầu từ đâu. */
+        const gi=S.a;
+        if(gi>=i0&&gi<i1){
+          const X=cx(gi-i0);
+          x.save(); x.setLineDash([2,3]); x.strokeStyle=IXCOL()+'88'; x.lineWidth=1;
+          x.beginPath(); x.moveTo(X,padT); x.lineTo(X,padT+plotH); x.stroke(); x.restore();
+          const yy=y(rows[gi].c);
+          if(yy>=padT&&yy<=padT+plotH){
+            x.beginPath(); x.arc(X,yy,3.6,0,6.283);
+            x.fillStyle=light()?'#ffffff':'#14161c'; x.fill();
+            x.beginPath(); x.arc(X,yy,2.4,0,6.283); x.fillStyle=IXCOL(); x.fill();
+          }
+        }
       }
+    }
+    /* ---- VỐN HOÁ — đường THÔNG TIN trên trục phải riêng, không so với ai ---------------
+       Ngắt nét ở phiên thiếu số chứ đừng nối thẳng qua: vốn hoá chỉ có ở phần kho có, còn
+       nến thì tới 13 năm — nối thẳng là bịa ra một đoạn không có dữ liệu. */
+    if(P2){
+      x.strokeStyle=VHCOL(); x.lineWidth=2.4; x.lineJoin='round';
+      x.beginPath(); let st=false;
+      for(let i=0;i<n;i++){ const gi=i0+i;
+        if(gi<P2.a||gi>P2.b){ st=false; continue; }
+        const v=vis[i].vh;
+        if(!(v>0)){ st=false; continue; }
+        const X=cx(i), yy=P2.y(v); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
+      x.stroke(); x.lineWidth=1; x.lineJoin='miter';
       /* TRỤC PHẢI THỨ HAI — 4 nhãn. Thang loga nên nhãn KHÔNG cách đều nhau về giá trị; đó
          là đúng, và cũng là dấu hiệu duy nhất cho biết đây là thang loga. Đơn vị in một lần
          ở đỉnh cột chứ đừng dán vào từng số: cột chỉ rộng 62px. */
-      const dv=P2.cVH?'tỷ':'điểm';
-      const soP2=v=>P2.cVH?Math.round(v/1e9).toLocaleString('vi-VN')
-                          :v.toLocaleString('vi-VN',{maximumFractionDigits:0});
       x.font='10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
       x.fillStyle=MUT();
       for(let t=0;t<=3;t++){
         const lv=P2.lo+(P2.hi-P2.lo)*(3-t)/3;
-        x.fillText(soP2(Math.exp(lv)),plotW+padR+4,padT+(P2.hi-lv)/(P2.hi-P2.lo)*plotH);
+        x.fillText(Math.round(Math.exp(lv)/1e9).toLocaleString('vi-VN'),
+                   plotW+padR+4,padT+(P2.hi-lv)/(P2.hi-P2.lo)*plotH);
       }
-      x.fillStyle=P2.cVH?VHCOL():IXCOL(); x.font='700 9.5px system-ui';
-      x.fillText(dv,plotW+padR+4,padT-6);
+      x.fillStyle=VHCOL(); x.font='700 9.5px system-ui';
+      x.fillText('tỷ',plotW+padR+4,padT-6);
     }
+
     paintDraws(x,y,'main');       // khung giá: sơn ngay sau nến
     /* Vạch giá mới nhất đi THEO nến — nó là một mẩu của biểu đồ giá chứ không phải khung
        chart. Giữ lại khi đã ẩn nến thì còn đúng một vạch đỏ/xanh và một thẻ giá lơ lửng
@@ -843,18 +709,14 @@ let veBut=false;                                   // bút đang được giữ 
       const t='— MA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     for(const per of ind.ema){ x.fillStyle=EMACOL[per]||'rgba(148,163,184,.9)';
       const t='— EMA'+per; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
-    if(P2&&P2.cVH){ x.fillStyle=VHCOL();
+    if(P2){ x.fillStyle=VHCOL();
       const t='— Vốn hoá'; x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
-    if(P2&&P2.cIX){ x.fillStyle=IXCOL();
-      /* Nói rõ đây là đường ĐÃ QUY ĐỔI về thang vốn hoá, đừng để trần chữ "VN-Index" —
-         số trên trục là tỷ đồng chứ không phải điểm, mà ô đọc số thì in điểm thật. */
-      /* TÊN PHẢI NÓI ĐÚNG THỨ ĐANG VẼ. Bật cùng vốn hoá thì đây là NỀN (chỉ số quy đổi lại
-         ở từng phiên theo tương quan trung bình 1.250 phiên trước đó), không phải chỉ số
-         nhân một hằng số — gọi trần "VN-Index quy đổi" là mời người xem hiểu sai. Bật một
-         mình thì nó đúng là chỉ số thô, giữ nguyên tên. */
-      const NAl=nenArr(), coNenl=(P2.cVH&&NAl.co>=2&&NAl.vh);
-      const t=coNenl ? ('— nền '+NAl.Wma+' '+(NEN_DV[iv]||'phiên')+' · '+ixTen)
-                     : ('— '+ixTen+(P2.cVH?' quy đổi':''));
+    if(ind.idx){ const S=smArr();
+      /* TÊN PHẢI IN NGÀY NEO THẬT. 215/405 mã HOSE lên sàn trước 02/01/2013 nên mốc neo của
+         chúng là ngày kho nến bắt đầu, KHÔNG phải ngày chào sàn — ghi "chào sàn" cho tất là
+         nói sai với hơn một nửa bảng. */
+      x.fillStyle=IXCOL();
+      const t='— '+ixTen+(S.a>=0&&rows[S.a]?(' · neo '+ngayNgan(rows[S.a].t)):'');
       x.fillText(t,lx,padT+24); lx+=x.measureText(t).width+10; }
     /* HAI Ô CÔNG TẮC — hàng thứ ba của góc trái trên, dưới tên mã và dòng chú thích.
        VỊ TRÍ CỐ ĐỊNH, không nối đuôi dòng chú thích: dòng đó dài ngắn theo số chỉ báo đang
@@ -873,12 +735,21 @@ let veBut=false;                                   // bút đang được giữ 
        mà gác ô theo "đã có dữ liệu chưa" thì nó vĩnh viễn không hiện — không ai bật được
        cái mà chính nó phải bật mới có. Trang nào nhận `onInd` là trang biết đi nạp.
        Khung "Trong ngày" là nến 5 phút, hai kho kia chỉ có số theo PHIÊN nên bỏ hẳn ô. */
-    if(iv!=='i'&&(opt.onInd||rows.some(r=>r&&r.ix>0))) cvNut.push(['rs','Cách nền']);
+    if(iv!=='i'&&(opt.onInd||rows.some(r=>r&&r.ix>0))) cvNut.push(['rs','So với chỉ số']);
+    /* Ô DỜI MỐC NEO — chỉ hiện khi ĐANG có phiên ghim và đang bật đường/dải so sánh.
+       Bấm lần nữa khi mốc đã ở đúng phiên ghim thì TRẢ VỀ mặc định (phiên đầu chuỗi), để
+       không cần thêm một cái nút thứ hai chỉ để hoàn tác. */
+    const gGhim=ghimIdx();
+    if(gGhim>=0&&(ind.idx||ind.rs)&&rows[gGhim]){
+      const S0=smArr(), dangNeo=(S0.a===gGhim);
+      cvNut.push(['__neo',dangNeo?'↺ Bỏ neo':('⚓ Neo '+ngayNgan(rows[gGhim].t))]);
+    }
     if(plotH>=150&&cvNut.length){
       x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
       let mx0=8;
       for(const [mk,ten] of cvNut){
-        const bat=!!ind[mk], bw=x.measureText(ten).width+16, bh=17, by=padT+33;
+        const bat=(mk==='__neo')?false:!!ind[mk];
+        const bw=x.measureText(ten).width+16, bh=17, by=padT+33;
         x.fillStyle=bat?(light()?'rgba(15,23,42,.86)':'rgba(233,233,239,.90)')
                        :(light()?'rgba(15,23,42,.07)':'rgba(255,255,255,.10)');
         if(x.roundRect){ x.beginPath(); x.roundRect(mx0,by,bw,bh,9); x.fill(); }
@@ -941,119 +812,57 @@ let veBut=false;                                   // bút đang được giữ 
       x.fillStyle=MUT(); x.font='700 10px system-ui'; x.textAlign='left';
       x.fillText('MACD 12/26/9',8,top+11);
     }
-    /* ---- SỨC MẠNH TƯƠNG ĐỐI: giá ÷ điểm chỉ số (user chốt 23/08/2026) --------------
-       User: *"chỉ báo vnindex đang không cố định theo chart, khi tôi kéo về phía sau thì
-       nó cũng di chuyển … tôi muốn biến nó thành 1 chỉ báo thực sự và cố định"*.
+    /* ---- DẢI "SO VỚI CHỈ SỐ" (user chốt 25/08/2026) ---------------------------------
+       Đúng khoảng hở giữa đường giá và đường chỉ số quy về mốc neo, in ra %. Vạch 0 = phiên
+       neo, và cũng chính là chỗ hai đường trên vùng giá gặp nhau — một khái niệm, một con
+       số, ba chỗ (dải · hai đường · bộ lọc bảng giá) nói cùng một câu.
 
-       VÌ SAO PHẢI RỜI KHỎI TRỤC GIÁ, KHÔNG PHẢI VÌ LƯỜI: trục giá TỰ KHÍT theo nến đang
-       hiện, nên MỌI đường neo cứng đều phải trôi ra ngoài khung. Đo 216 mã HOSE × 30.073
-       cửa sổ 120 phiên, neo VN-Index một lần cho cả chuỗi: **47,5% số cửa sổ đường nằm HẲN
-       ngoài khung nến**; nới trục để ôm nó thì khung phình trung vị ×1,50 · p90 ×4,15 ·
-       max ×62, tức nến bẹp còn 67% / 24% / 1,6% chiều cao. Không có cách thứ ba.
+       VÌ SAO PHẢI CÓ DẢI RIÊNG dù đã vẽ đường chỉ số trên trục giá: trục giá khít theo nến,
+       nên khi mã lệch xa chỉ số thì đường chỉ số chạy ra ngoài khung và bị cắt. Dải thì
+       thang khít theo CHÍNH khoảng hở nên không bao giờ tràn — số luôn đọc được.
 
-       CÔNG THỨC — TỈ SỐ THÔ, KHÔNG CHUẨN HOÁ (user chọn):
-             RS(i) = giá đóng cửa(i) ÷ điểm chỉ số(i)
-       Mỗi phiên MỘT giá trị, phụ thuộc đúng hai con số của chính phiên đó — không cửa sổ,
-       không trung bình trượt, không phiên neo. Kéo/phóng bao nhiêu cũng KHÔNG đổi được nó,
-       và RS đi lên nghĩa là mã chạy hơn thị trường ở mọi khung, mọi mức phóng.
-       (Đã cân nhắc rồi bỏ: Mansfield 250 `(RS/TB250−1)×100` — 7,8 lần cắt mốc 0 mỗi năm,
-       biên độ p90 33 điểm %; Alpha 60 phiên — 15,3 lần/năm, quá nhiễu; Alpha 250 — biên độ
-       p90 70 điểm % nên thang nhảy mạnh khi đổi mã. User chọn tỉ số thô.)
-
-       THANG DẢI KHÍT THEO KHUNG NHÌN, KHÔNG KHÍT CẢ CHUỖI — và đây là chỗ dễ hiểu ngược.
-       "Cố định" đã nằm ở CHỖ KHÁC rồi: giá trị từng phiên là bất biến, nên phép đọc không
-       bao giờ lật (không còn cảnh cùng một ngày mà chỗ này đọc ra hơn, chỗ kia đọc ra kém).
-       Khít cả chuỗi thì đúng là đường đứng im tuyệt đối, nhưng đo được: một cửa sổ 120 phiên
-       chỉ chiếm **trung vị 16% chiều cao dải** (p10 6%; thang loga cũng chỉ 17%/9%) — trên
-       dải ~60px là một vệt 10px, phóng to để rồi không đọc được gì.
-       Bù lại phải LUÔN IN SỐ THẬT: hai nhãn mép phải + thẻ giá trị phiên cuối + ô trong
-       dòng đọc số. Có số thì mức phóng đổi bao nhiêu cũng không gây hiểu nhầm.
-
-       VẠCH ĐỨT = MỨC CỦA PHIÊN MỚI NHẤT TOÀN CHUỖI (không phải phiên cuối khung nhìn):
-       nó cho biết đoạn đang xem mạnh hay yếu hơn HÔM NAY, và vì neo vào phiên cuối chuỗi
-       nên kéo đi đâu nó vẫn nói đúng một điều. */
+       THANG CỐ ĐỊNH THEO CẢ CHUỖI, không theo khung nhìn (bài học 23/08: lấy min/max của
+       `vis` thì kéo ngang một cái là đường đổi hình). */
     if(ind.rs&&rsH){
-      const top=h-22-rsH+4, bh=rsH-10, NA=nenArr();
-      const nhan='Cách nền'+(NA.Wma?(' '+NA.Wma+' '+(NEN_DV[iv]||'phiên')):'')+' — '
-                 +((wm&&wm.sym)?wm.sym+' ':'')+(NA.vh?'vốn hoá':'giá')+' ÷ '+ixTen;
+      const top=h-22-rsH+4, bh=rsH-10, S=smArr();
+      const nhan='So với '+ixTen+(S.a>=0&&rows[S.a]?(' — neo '+ngayNgan(rows[S.a].t)):'');
       x.textAlign='left'; x.textBaseline='middle';
-      if(NA.co<2||!NA.Wma){
+      if(S.a<0||S.co<2){
         x.fillStyle=MUT(); x.font='700 10px system-ui'; x.fillText(nhan,8,top+11);
         x.font='11px system-ui';
-        /* Nói rõ THIẾU BAO NHIÊU. "Chưa đủ dữ liệu" trơn thì người ta chờ mãi không hiểu
-           chờ cái gì; mã mới niêm yết thì phải chờ hàng năm chứ không phải chờ tải xong. */
-        const ttt=nenToiThieu(iv), dv=NEN_DV[iv]||'phiên';
-        x.fillText(!NA.co ? 'đang tải dữ liệu chỉ số…'
-                 : !NA.Wma ? ('mã mới — cần ít nhất '+ttt+' '+dv+', hiện có '+NA.co)
-                 : 'khoảng này chưa có dữ liệu chỉ số',8,top+bh/2);
+        x.fillText(S.co?'khoảng này chưa có dữ liệu chỉ số':'đang tải dữ liệu chỉ số…',8,top+bh/2);
       }else{
-        /* THANG CỐ ĐỊNH THEO CẢ CHUỖI, KHÔNG THEO KHUNG NHÌN. Dải cũ lấy min/max của
-           `vis` nên kéo ngang một cái là đường đổi hình — đúng lỗi user đã bắt ở đường
-           VN-Index hồi 23/08. Lấy theo `rows` thì kéo đi đâu vạch 0 vẫn nằm đúng chỗ. */
         let mn=Infinity,mx=-Infinity;
-        for(let i=0;i<rows.length;i++){ const q=NA.g[i]; if(q==null) continue;
+        for(let i=0;i<rows.length;i++){ const q=S.q[i]; if(q==null) continue;
           if(q<mn)mn=q; if(q>mx)mx=q; }
-        if(mn>0)mn=0; if(mx<0)mx=0;                     // vạch nền luôn nằm trong khung
+        if(mn>0)mn=0; if(mx<0)mx=0;                     // vạch neo luôn nằm trong khung
         if(mx-mn<1e-9){ mn-=0.01; mx+=0.01; }
         const pd=(mx-mn)*0.08, lo=mn-pd, hi=mx+pd;
         const ry=v=>top+(hi-v)/(hi-lo)*bh, y0=ry(0);
-        // tô nhạt hai bên vạch nền: trên nền = mạnh hơn mặt bằng chung, dưới = yếu hơn
         x.beginPath(); let st=false;
-        for(let i=0;i<n;i++){ const q=NA.g[i0+i]; if(q==null){ st=false; continue; }
+        for(let i=0;i<n;i++){ const q=S.q[i0+i]; if(q==null){ st=false; continue; }
           const X=cx(i); st?x.lineTo(X,ry(q)):x.moveTo(X,ry(q)); st=true; }
         if(st){ const xr=cx(Math.max(0,n-1)), xl=cx(0);
           x.lineTo(xr,y0); x.lineTo(xl,y0); x.closePath();
           x.fillStyle=RSCOL()+'1f'; x.fill(); }
-        /* VẠCH NỀN LÀ THỨ CẢ DẢI NÓI VỀ nên không để nó mờ như lưới: nét đứt, màu chữ phụ,
-           kèm chữ "nền" ở mép trái. Mờ quá thì người đọc không biết mình đang so với cái gì. */
         x.save(); x.setLineDash([4,3]); x.strokeStyle=MUT(); x.globalAlpha=.75; x.lineWidth=1;
         x.beginPath(); x.moveTo(0,y0); x.lineTo(plotW,y0); x.stroke(); x.restore();
         x.strokeStyle=RSCOL(); x.lineWidth=1.5; x.beginPath(); st=false;
-        for(let i=0;i<n;i++){ const q=NA.g[i0+i]; if(q==null){ st=false; continue; }
+        for(let i=0;i<n;i++){ const q=S.q[i0+i]; if(q==null){ st=false; continue; }
           const X=cx(i), yy=ry(q); st?x.lineTo(X,yy):x.moveTo(X,yy); st=true; }
         x.stroke(); x.lineWidth=1;
-        /* CÁC DẤU SỰ KIỆN. △ rỗng ở ĐÁY dải (nó nói về đáy) — ○/● nằm ngay trên đường (chúng
-           nói về chính đường).
-
-           NGƯỠNG ẨN TÍNH THEO KHOẢNG CÁCH THẬT GIỮA HAI DẤU, không theo bề rộng nến. Bản đầu
-           gác `geo.cw>1.5` và sai hẳn mục đích: ở mức phóng MẶC ĐỊNH (khoảng 250 nến trong
-           330px) bề rộng nến chỉ 1,3px nên dấu KHÔNG BAO GIỜ hiện — người dùng phải tự phóng
-           to mới thấy thứ đáng lẽ phải đập vào mắt. Mà mật độ dấu đâu phụ thuộc bề rộng nến:
-           `dinhCua` đã ép các dấu cách nhau W/10 nến, nên cứ nhân ra pixel mà xét. Dưới 6px
-           thì mới thật sự dính nhau. */
-        if(geo.cw*Math.max(1,Math.round(NA.W1/10))>=6){
-          for(let i=0;i<n;i++){ const gi=i0+i, q=NA.g[gi];
-            if(q==null) continue; const X=cx(i);
-            if(NA.pk[gi]){ const yy=top+bh-3;      // △ rỗng, ĐỈNH HƯỚNG LÊN: nó nói về một cái đáy
-              x.strokeStyle=RSCOL(); x.lineWidth=1.3; x.beginPath();
-              x.moveTo(X,yy-7); x.lineTo(X+4.5,yy); x.lineTo(X-4.5,yy); x.closePath(); x.stroke(); }
-            if(NA.dinhN[gi]){                       // ○ rỗng, nhỏ — tầng sớm
-              const yy=ry(q);
-              x.beginPath(); x.arc(X,yy,2.2,0,6.283);
-              x.fillStyle=light()?'#ffffff':'#14161c'; x.fill();
-              x.beginPath(); x.arc(X,yy,2.2,0,6.283);
-              x.strokeStyle=RSCOL(); x.lineWidth=1.2; x.stroke(); }
-            if(NA.dinh[gi]){                        // ● đặc — tầng xác nhận
-              const yy=ry(q);
-              x.beginPath(); x.arc(X,yy,3.4,0,6.283);
-              x.fillStyle=light()?'#ffffff':'#14161c'; x.fill();
-              x.beginPath(); x.arc(X,yy,2.4,0,6.283); x.fillStyle=RSCOL(); x.fill(); }
-          }
-          x.lineWidth=1;
-        }
         x.fillStyle=MUT(); x.font='9.5px system-ui';
-        x.fillText('nền',plotW+6,y0);
-        x.fillText(fmtNen(hi-pd),plotW+6,ry(hi-pd)); x.fillText(fmtNen(lo+pd),plotW+6,ry(lo+pd));
+        x.fillText('neo',plotW+6,y0);
+        x.fillText(fmtSM(hi-pd),plotW+6,ry(hi-pd)); x.fillText(fmtSM(lo+pd),plotW+6,ry(lo+pd));
         // MỨC HÔM NAY: phiên cuối CẢ CHUỖI, không phải phiên cuối khung nhìn
         let nay=null;
-        for(let z=rows.length-1;z>=0;z--){ if(NA.g[z]!=null){ nay=NA.g[z]; break; } }
+        for(let z=rows.length-1;z>=0;z--){ if(S.q[z]!=null){ nay=S.q[z]; break; } }
         if(nay!=null&&nay>=lo&&nay<=hi){
           x.fillStyle=RSCOL(); x.fillRect(plotW,ry(nay)-7,padR,14);
-          x.fillStyle='#fff'; x.font='700 9.5px system-ui'; x.fillText(fmtNen(nay),plotW+6,ry(nay));
+          x.fillStyle='#fff'; x.font='700 9.5px system-ui'; x.fillText(fmtSM(nay),plotW+6,ry(nay));
         }
-        /* NHÃN CÓ NỀN LÓT. Dải chỉ cao 18% chiều cao chart, ở khổ điện thoại là ~45px —
-           đường thường chạy ngay qua chỗ đặt nhãn và cắt nát chữ. Lót một mảng nền mờ sau
-           chữ rẻ hơn nhiều so với việc đẩy nhãn xuống (xuống nữa là đụng trục ngày). */
+        /* NHÃN CÓ NỀN LÓT — dải chỉ cao 18% chiều cao chart, ở khổ điện thoại là ~45px nên
+           đường thường chạy ngay qua chỗ đặt nhãn. */
         x.font='700 10px system-ui';
         const nw=x.measureText(nhan).width;
         x.fillStyle=light()?'rgba(255,255,255,.82)':'rgba(20,22,28,.82)';
@@ -1062,6 +871,7 @@ let veBut=false;                                   // bút đang được giữ 
         x.fillStyle=RSCOL(); x.fillText(nhan,8,top+11);
       }
     }
+
     /* ---- MỐC SỰ KIỆN — GẮN NGAY TRÊN ĐỈNH NẾN (user chốt 19/08/2026) -----------
        Bản đầu đặt tất cả ở một hàng cố định sát đáy vùng giá. User báo "nó đang ở dưới
        chart nên hơi không quen" — đúng, vì mốc nằm rời khỏi cây nến thì mắt phải tự dóng
@@ -1151,8 +961,8 @@ let veBut=false;                                   // bút đang được giữ 
       if(r.ix>0) dong.push([ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()]);
       /* Khoảng cách tới nền vào hộp ghim KỂ CẢ khi dải dưới đang tắt: người ghim một phiên
          là đang hỏi "lúc đó mạnh hay yếu hơn mặt bằng chung", mà đó đúng là con số này. */
-      { const NA=nenArr(), q=NA.g[gI];
-        if(q!=null) dong.push(['Cách nền',fmtNen(q)+(NA.pk[gI]?' △':'')+(NA.dinhN[gI]?' ○':'')+(NA.dinh[gI]?' ●':''),RSCOL()]); }
+      { const S=smArr(), q=S.q[gI];
+        if(q!=null) dong.push(['So với '+ixTen,fmtSM(q),RSCOL()]); }
       /* ĐẾM XEM MỘT Ô CHỮ NHẬT CÓ ĐÈ LÊN DỮ LIỆU KHÔNG — dùng để chọn chỗ đặt hộp đọc số.
          Đếm trên DỮ LIỆU chứ không dò pixel: pixel thì phải đọc ngược canvas (chậm, và
          lúc này hộp chưa vẽ nên vẫn phải đoán), còn dữ liệu thì có sẵn ngay đây và cho
@@ -1166,8 +976,7 @@ let veBut=false;                                   // bút đang được giữ 
           const rr=vis[i];
           if(!(y(rr.l)<by||y(rr.h)>by+bh)) dem++;          // thân+bóng nến cắt ô
           if(P2){
-            if(P2.cVH&&rr.vh>0){ const y2=P2.y(rr.vh); if(y2>=by&&y2<=by+bh) dem++; }
-            if(P2.cIX&&rr.ix>0){ const y2=P2.y(P2.k*rr.ix); if(y2>=by&&y2<=by+bh) dem++; }
+            if(rr.vh>0){ const y2=P2.y(rr.vh); if(y2>=by&&y2<=by+bh) dem++; }
           }
         }
         return dem;
@@ -1290,11 +1099,8 @@ let veBut=false;                                   // bút đang được giữ 
          là mỗi lần kéo chart một con số khác — vốn hoá thì phải là vốn hoá, chỉ số là điểm. */
       (ind.vh&&r.vh!=null?it('Vốn hoá',fmtTy(r.vh),VHCOL()):'')+
       (ind.idx&&r.ix!=null?it(ixTen,r.ix.toLocaleString('vi-VN',{maximumFractionDigits:2}),IXCOL()):'')+
-      (ind.rs?(()=>{ const NA=nenArr(), gi=rows.indexOf(r), q=gi>=0?NA.g[gi]:null;
-         if(q==null) return '';
-         const dau=(gi>=0&&NA.pk[gi]?' △':'')+(gi>=0&&NA.dinhN[gi]?' ○':'')
-                  +(gi>=0&&NA.dinh[gi]?' ●':'');
-         return it('Cách nền',fmtNen(q)+dau,RSCOL()); })():'');
+      ((ind.rs||ind.idx)?(()=>{ const S=smArr(), gi=rows.indexOf(r), q=gi>=0?S.q[gi]:null;
+         return q==null?'':it('So với '+ixTen,fmtSM(q),RSCOL()); })():'');
     host.classList.add('on');
   }
 
@@ -1586,6 +1392,11 @@ let veBut=false;                                   // bút đang được giữ 
   function bamMoc(px,py){
     for(const m of mocHit){
       if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
+        if(m.k==='__neo'){
+          const g=ghimIdx();
+          if(g>=0&&rows[g]){ const S=smArr(); neoT=(S.a===g)?null:rows[g].t; smCache.k=''; }
+          self.draw(); return true;
+        }
         ind[m.k]=!ind[m.k]; self.draw();
         if(opt.onInd) opt.onInd(m.k,ind[m.k]);   // trang ngoài đi nạp kho nếu cần
         return true;
@@ -1762,7 +1573,7 @@ let veBut=false;                                   // bút đang được giữ 
 
      CHẶN BẰNG `preventDefault`, KHÔNG BẰNG MỐC THỜI GIAN. Bản đầu tao chặn theo thời gian
      (bỏ qua chuột trong 700ms sau khi chạm) và nó SAI ở đúng chỗ dễ bỏ sót: cú chạm kích
-     hoạt vẽ lại (`nenArr` chạy O(n·W) trên 3.400 nến), máy chậm thì lượt vẽ nuốt trọn cửa
+     hoạt vẽ lại (lúc đó là `nenArr` chạy O(n·W) trên 3.400 nến), máy chậm thì lượt vẽ nuốt trọn cửa
      sổ 700ms rồi chuột giả mới tới — đo được **1.124ms** ngay trên máy đang thử. Hàng rào
      nào dựa vào "đủ nhanh" thì hỏng đúng lúc máy chậm, tức đúng lúc cần nó nhất.
      `preventDefault` trên `touchstart` thì theo chuẩn là huỷ hẳn cặp chuột giả, không phụ

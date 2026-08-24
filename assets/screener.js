@@ -5,7 +5,7 @@
    không tốn tải trang cho người không dùng lọc.
    ========================================================================== */
 'use strict';
-const CPScreen={loaded:false,loading:null,T:{},F:{},IX:null,NEN_TRE:5};
+const CPScreen={loaded:false,loading:null,T:{},F:{},IX:null};
 (function(){
 
 /* ---------- nạp dữ liệu ---------------------------------------------------- */
@@ -72,16 +72,18 @@ CPScreen.chips=[
   {id:'q2up',  g:'Sức khoẻ', nm:'2 quý liền lãi tăng ≥ 25%'},
   // chip CÓ THAM SỐ: {n} là chỗ client cắm ô chọn số kỳ. def = số kỳ mặc định.
   {id:'lossQ', g:'Sức khoẻ', nm:'Lỗ {n} quý liên tiếp', opts:[1,2,3,4,5,6,7,8], def:8},
-  /* ---- CÁCH NỀN (25/08/2026) --------------------------------------------------------
-     Bốn chip THƯỜNG, mỗi cái là MỘT con số đo được của riêng một mã, ngưỡng do người dùng
+  /* ---- SO VỚI CHỈ SỐ SÀN (25/08/2026, thay bộ "cách nền") ---------------------------
+     Năm chip THƯỜNG, mỗi cái là MỘT con số đo được của riêng một mã, ngưỡng do người dùng
      đặt — đúng loại chip mà ghi chú "bỏ bộ lọc Pro" ở trên nói là được phép dựng. KHÔNG
      gộp chúng thành một nút cho ra sẵn danh sách: chỗ đó mới là danh mục gợi ý.
-     `nen`/`ndN` chỉ có ở mã HOSE (cần 1.250 phiên vốn hoá liên tục) — mã khác trả false,
-     tức không lọt, chứ không phải "lọt vì thiếu dữ liệu". */
+     KHÁC BẢN CŨ: `sm*` có cho CẢ BA SÀN và cho cả mã mới niêm yết (chỉ cần đủ N phiên),
+     vì tử số là giá điều chỉnh — không còn cần kho vốn hoá 1.250 phiên của riêng HOSE.
+     Đo được: 1.521/1.521 mã có `smNeo`, 1.516 mã có `sm120`, so với 362 mã của bản cũ. */
   {id:'capmin',g:'Rổ · quy mô', nm:'Vốn hoá ≥ {n} tỷ', opts:[1000,3000,10000,30000], def:1000},
   {id:'gtgd60',g:'Rổ · quy mô', nm:'GTGD 60 phiên ≥ {n} tỷ', opts:[1,2,5,10], def:2},
-  {id:'nenduoi',g:'Cách nền', nm:'Vốn hoá dưới nền dài hạn'},
-  {id:'nengan', g:'Cách nền', nm:'Khoảng cách tới nền hẹp nhất {n} phiên', opts:[100,200,300,400], def:100},
+  {id:'smHon', g:'So với chỉ số', nm:'Hơn chỉ số sàn, {n} phiên qua', opts:[20,60,120,250], def:120},
+  {id:'smKem', g:'So với chỉ số', nm:'Kém chỉ số sàn, {n} phiên qua', opts:[20,60,120,250], def:120},
+  {id:'smManh',g:'So với chỉ số', nm:'Hơn chỉ số ≥ {n}% trong 120 phiên', opts:[5,10,20,50], def:20},
 ];
 CPScreen.def=id=>{const x=CPScreen.chips.find(c=>c.id===id);return x&&x.def||0;};
 /* n = số kỳ người dùng chọn, chỉ có nghĩa với chip mang opts */
@@ -129,14 +131,16 @@ CPScreen.chip=function(id,c,n){
     case 'lossQ': return (f.lossQs||0)>=n;
     case 'capmin':return (c.mcapLive||c.mcap||0)>=n*1e9;
     case 'gtgd60':return (t.avgval60||0)>=n*1e9;
-    /* `nen` = vốn hoá ÷ chỉ số so với trung bình 1.250 phiên của CHÍNH MÃ, tính bằng %.
-       Âm = đang yếu hơn mặt bằng chung dài hạn của chính nó. */
-    case 'nenduoi':return t.nen!=null&&t.nen<0;
-    /* `ndN` = SỐ PHIÊN kể từ lần gần nhất khoảng cách hẹp nhất trong N phiên (khi còn dưới
-       nền). 0 = chính hôm nay. Kho ghi số phiên chứ không ghi cờ đúng/sai để đổi ngưỡng
-       "trong bao lâu" không phải dựng lại kho — hiện chốt ≤5 phiên, đủ để người xem bảng
-       chiều thứ Sáu vẫn thấy tín hiệu nổ hôm thứ Ba. */
-    case 'nengan': { const v=t['nd'+n]; return v!=null&&v<=CPScreen.NEN_TRE; }
+    /* `sm{N}` = [giá ĐC(t)/giá ĐC(t−N)] ÷ [chỉ số(t)/chỉ số(t−N)] − 1, tính bằng %, so với
+       chỉ số SÀN CỦA CHÍNH MÃ. Dương = ăn hơn chỉ số trong N phiên đó.
+       Tử số là GIÁ ĐIỀU CHỈNH chứ không phải vốn hoá — vốn hoá tăng cả khi phát hành thêm
+       mà cổ đông cũ không được gì (ORS vốn hoá ×157,6 nhưng giá chỉ ×11,84; HHV vốn hoá
+       ×112,5 mà giá ×1,83 trong khi chỉ số ×3,11, tức THUA). Xem CLAUDE.md.
+       Thiếu dữ liệu thì TRƯỢT, không lọt — mã chưa đủ N phiên phải rơi ra khỏi kết quả chứ
+       không được đi qua vì `undefined`. */
+    case 'smHon':  { const v=t['sm'+n]; return v!=null&&v>0; }
+    case 'smKem':  { const v=t['sm'+n]; return v!=null&&v<0; }
+    case 'smManh': return t.sm120!=null&&t.sm120>=n;
     default: return true;
   }
 };
