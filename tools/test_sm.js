@@ -61,7 +61,11 @@ function chuoi(n,f,tuI=0){
     out.push({t:T0+(tuI+i)*NGAY, o:g, h:g, l:g, c:g, v:1000, ix:x}); }
   return out;
 }
-const lam=()=>CPChart(cvs,{});
+/* MẶC ĐỊNH nay là "1 năm gần nhất" (250 nến khung Ngày). Phần lớn ca dưới đây kiểm CÔNG
+   THỨC nên cần mốc đứng yên ở phiên 0 — gọi `neoMacDinh(2)` = "Từ đầu". Ca riêng cho mốc
+   mặc định thì ở khối ⑪. */
+const lam=()=>{ const c=CPChart(cvs,{}); c.neoMacDinh(2); return c; };
+const lamMac=()=>CPChart(cvs,{});
 
 /* ── ① CÔNG THỨC: khoảng hở = tỉ lệ giá ÷ tỉ lệ chỉ số, tính từ phiên neo ────── */
 {
@@ -120,7 +124,7 @@ const lam=()=>CPChart(cvs,{});
   const n=500, f=i=>[10000*(1+0.3*Math.sin(i/40)), 500*(1+0.1*Math.cos(i/25))];
   const R=chuoi(n,f);
   const ch=lam(); ch.setRows(R,'d');
-  kiem('mặc định neo phiên 0', ch.smSo().a, 0);
+  kiem('đặt "Từ đầu" -> neo phiên 0', ch.smSo().a, 0);
   ch.neoTai(R[200].t);
   const S=ch.smSo();
   kiem('dời neo về phiên 200', S.a, 200);
@@ -129,7 +133,7 @@ const lam=()=>CPChart(cvs,{});
   gan('khoảng hở cuối tính lại theo mốc mới', S.q[n-1], (gz/g0)/(xz/x0)-1, 1e-12);
   kiem('phiên TRƯỚC mốc neo không có số', S.q[199], null);
   ch.neoTai(null);
-  kiem('trả về mặc định', ch.smSo().a, 0);
+  kiem('bỏ ghim -> về lại mốc mặc định đang đặt', ch.smSo().a, 0);
 }
 
 /* ── ⑥ NEO VÀO PHIÊN THIẾU CHỈ SỐ -> LÙI VỀ PHIÊN HỢP LỆ TRƯỚC ĐÓ ───────────
@@ -182,6 +186,43 @@ const lam=()=>CPChart(cvs,{});
   ch.setRows(R,'W',true);                        // cùng dữ liệu, khai là khung Tuần
   kiem('đổi khung -> mốc neo giữ nguyên', ch.neoDang(), neo1);
   gan('đổi khung -> số cuối giữ nguyên', ch.smSo().q[n-1], q1, 1e-12);
+}
+
+/* ── ⑪ MỐC MẶC ĐỊNH: MỘT NĂM GẦN NHẤT, ĐẾM LÙI TỪ PHIÊN CUỐI ────────────────
+   User 26/08: *"nhiều mã có VN-Index cách cổ phiếu quá xa, xa đến nỗi không bao giờ còn
+   có thể cắt nhau được nữa"*. Đo 1.471 mã: neo chào sàn cho trung vị 0 lần cắt trong 250
+   phiên (chỉ 19% số mã có cắt), neo 250 phiên trước cho trung vị 10 lần (100% số mã).
+   ĐẾM LÙI TỪ PHIÊN CUỐI CHUỖI, không phải từ mép khung nhìn — kéo chart không được dời mốc. */
+{
+  const n=1000, f=i=>[10000*(1+0.3*Math.sin(i/60)), 500*(1+0.1*Math.cos(i/45))];
+  const ch=lamMac(); ch.setRows(chuoi(n,f),'d');
+  kiem('mặc định = 1 năm -> neo lùi đúng 250 nến', ch.smSo().a, n-1-250);
+  kiem('tên mốc mặc định', ch.neoMacDinh().ten, '1 năm');
+  ch.neoMacDinh(1); kiem('xoay sang 3 năm -> lùi 750 nến', ch.smSo().a, n-1-750);
+  ch.neoMacDinh(2); kiem('xoay sang Từ đầu -> phiên 0', ch.smSo().a, 0);
+  ch.neoMacDinh(3); kiem('xoay tiếp thì vòng lại 1 năm', ch.neoMacDinh().ten, '1 năm');
+  /* Chuỗi NGẮN hơn cửa sổ thì lùi hết cỡ chứ đừng để âm */
+  const ng=lamMac(); ng.setRows(chuoi(80,f),'d');
+  kiem('chuỗi 80 nến < 250 -> neo phiên 0', ng.smSo().a, 0);
+  /* Quy theo khung: khung Tuần thì "1 năm" là 52 nến, không phải 250 */
+  const tu=lamMac(); tu.setRows(chuoi(400,f),'W');
+  kiem('khung Tuần: 1 năm = 52 nến', tu.smSo().a, 400-1-52);
+}
+
+/* ── ⑫ MỐC MẶC ĐỊNH KHÔNG TRÔI KHI KÉO CHART ───────────────────────────────
+   Đây đúng là điều user bắt lỗi hồi 23/08 với bản cũ. Mốc đếm từ phiên CUỐI CHUỖI nên
+   kéo/phóng bao nhiêu cũng không dời; chỉ khi có phiên MỚI nó mới lùi một nến. */
+{
+  const n=800, f=i=>[10000*(1+0.3*Math.sin(i/50)), 500*(1+0.1*Math.cos(i/40))];
+  const ch=lamMac(); ch.setRows(chuoi(n,f),'d');
+  const a1=ch.smSo().a, q1=ch.smSo().q[n-1];
+  ch.draw();                                   // vẽ lại nhiều lần không đổi gì
+  kiem('vẽ lại -> mốc giữ nguyên', ch.smSo().a, a1);
+  gan('vẽ lại -> số giữ nguyên', ch.smSo().q[n-1], q1, 1e-12);
+  /* thêm một phiên mới -> mốc lùi ĐÚNG một nến */
+  const R2=chuoi(n+1,f);
+  ch.setRows(R2,'d',true);
+  kiem('thêm 1 phiên -> mốc lùi đúng 1 nến', ch.smSo().a, a1+1);
 }
 
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);

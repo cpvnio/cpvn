@@ -350,10 +350,35 @@ let veBut=false;                                   // bút đang được giữ 
      2013 thì đó đúng là phiên chào sàn; 215 mã còn lại lên sàn trước 02/01/2013 (mốc kho nến
      bắt đầu) nên neo ở 02/01/2013 — nhãn PHẢI in ngày neo thật, đừng ghi "chào sàn" cho tất.
      Bấm vào một phiên rồi bấm ô "Neo" thì dời mốc về đó. */
-  let neoT=null;                       // mốc thời gian của phiên neo; null = phiên đầu chuỗi
+  /* ---- MỐC NEO MẶC ĐỊNH: MỘT NĂM GẦN NHẤT, không phải phiên chào sàn (26/08/2026) ----
+     User: *"nhiều mã có VN-Index cách cổ phiếu quá xa, xa đến nỗi không bao giờ còn có thể
+     cắt nhau được nữa"*. Đo trên 1.471 mã ≥600 phiên, đếm số lần đường giá cắt đường chỉ số
+     trong 250 phiên gần nhất:
+
+       neo phiên chào sàn   -> trung vị  0 lần · chỉ  19% số mã có cắt
+       neo 250 phiên trước  -> trung vị 10 lần ·     100% số mã có cắt
+
+     Neo chào sàn cho khoảng hở tích luỹ cả chục năm: trung vị 63%, p90 200%, max 21.402%.
+     Ở mức đó hai đường không còn gặp nhau nữa, và một đường không bao giờ cắt thì không nói
+     được gì về hiện tại — nó chỉ là một dữ kiện lịch sử đứng yên.
+
+     MỐC MẶC ĐỊNH KHÔNG TRÔI KHI KÉO CHART. Nó đếm lùi từ phiên CUỐI CHUỖI, không phải từ mép
+     khung nhìn — kéo/phóng bao nhiêu cũng không dời được nó. Chỉ khi có phiên mới thì nó lùi
+     đúng một nến, đó là bản chất của "một năm gần nhất". Đây là chỗ khác hẳn cái neo trung
+     bình trượt đã bỏ: cái đó đổi mốc theo dữ liệu, cái này đổi theo thời gian và nói rõ ra.
+
+     Quy theo khung để mọi khung đều nói về CÙNG một quãng thời gian. `0` = từ đầu chuỗi. */
+  const NEO_MAC=[
+    {ten:'1 năm',  n:{d:250, W:52,  M:12, Y:1}},
+    {ten:'3 năm',  n:{d:750, W:156, M:36, Y:3}},
+    {ten:'Từ đầu', n:null},
+  ];
+  let neoMac=0;                        // chỉ số trong NEO_MAC
+  let neoT=null;                       // mốc thời gian do người dùng ghim; null = dùng mặc định
   const smCache={k:'',v:null};
   function smArr(){
-    const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'')+'|'+(neoT||0);
+    const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'')
+              +'|'+(neoT||0)+'|'+neoMac+'|'+iv;
     if(smCache.k===khoa) return smCache.v;
     const n=rows.length, q=new Array(n).fill(null), ln=new Array(n).fill(null);
     const out={q:q,ln:ln,a:-1,co:0};
@@ -362,12 +387,26 @@ let veBut=false;                                   // bút đang được giữ 
       if(r&&r.c>0&&r.ix>0){ if(dau<0) dau=i; co++; } }
     out.co=co;
     if(dau<0){ smCache.k=khoa; smCache.v=out; return out; }
-    /* PHIÊN NEO PHẢI CÓ ĐỦ HAI SỐ. Bấm neo vào một phiên thiếu chỉ số thì lùi về phiên hợp
-       lệ gần nhất TRƯỚC đó, chứ đừng bỏ neo im lặng — người dùng vừa bấm thì phải thấy đổi. */
+    /* PHIÊN NEO PHẢI CÓ ĐỦ HAI SỐ. Neo vào một phiên thiếu chỉ số thì lùi về phiên hợp lệ
+       gần nhất TRƯỚC đó, chứ đừng bỏ neo im lặng — người dùng vừa bấm thì phải thấy đổi. */
     let a=dau;
     if(neoT!=null){
       for(let i=0;i<n;i++){ const r=rows[i];
         if(r&&r.t<=neoT&&r.c>0&&r.ix>0) a=i; else if(r&&r.t>neoT) break; }
+    }else{
+      const so=(NEO_MAC[neoMac]||{}).n;
+      const lui=so?(so[iv]||so.d):0;
+      if(lui>0){
+        /* Đếm lùi `lui` NẾN HỢP LỆ từ phiên cuối, chứ không phải `n-1-lui`: chuỗi có phiên
+           thiếu chỉ số thì đếm theo chỉ số mảng là ra một mốc ngắn hơn ý định. */
+        let dem=0;
+        for(let i=n-1;i>=dau;i--){ const r=rows[i];
+          if(!r||!(r.c>0)||!(r.ix>0)) continue;
+          if(dem>=lui){ a=i; break; }
+          dem++;
+        }
+        if(dem<lui) a=dau;                 // chuỗi ngắn hơn cửa sổ -> lùi hết cỡ
+      }
     }
     out.a=a;
     const c0=rows[a].c, x0=rows[a].ix;
@@ -382,8 +421,14 @@ let veBut=false;                                   // bút đang được giữ 
   /* Cửa ra để đọc số — trang ngoài và bộ kiểm thử đều cần lấy ĐÚNG mảng chart đang vẽ, chứ
      tính lại ở chỗ khác là hai nơi lệch nhau lúc nào không biết. */
   self.smSo=()=>smArr();
+  /* Khung nhìn hiện hành + các ô bấm trong khung — bộ kiểm thử cần biết ĐANG vẽ từ nến nào
+     tới nến nào và ô nằm ở đâu, để phân biệt "tính sai" với "nằm ngoài khung". */
+  self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH,
+                       oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w))});
   self.neoTai=function(t){ neoT=(t==null?null:t); smCache.k=''; self.draw(); return self; };
   self.neoDang=()=>{ const S=smArr(); return S.a>=0&&rows[S.a]?rows[S.a].t:null; };
+  self.neoMacDinh=function(i){ if(i!=null){ neoMac=((i%NEO_MAC.length)+NEO_MAC.length)%NEO_MAC.length;
+    neoT=null; smCache.k=''; self.draw(); } return {i:neoMac,ten:NEO_MAC[neoMac].ten}; };
   const fmtSM=v=>{ const p=v*100;
     return (p>=0?'+':'')+p.toLocaleString('vi-VN',{maximumFractionDigits:Math.abs(p)<10?1:0})+'%'; };
 
@@ -736,13 +781,19 @@ let veBut=false;                                   // bút đang được giữ 
        cái mà chính nó phải bật mới có. Trang nào nhận `onInd` là trang biết đi nạp.
        Khung "Trong ngày" là nến 5 phút, hai kho kia chỉ có số theo PHIÊN nên bỏ hẳn ô. */
     if(iv!=='i'&&(opt.onInd||rows.some(r=>r&&r.ix>0))) cvNut.push(['rs','So với chỉ số']);
-    /* Ô DỜI MỐC NEO — chỉ hiện khi ĐANG có phiên ghim và đang bật đường/dải so sánh.
-       Bấm lần nữa khi mốc đã ở đúng phiên ghim thì TRẢ VỀ mặc định (phiên đầu chuỗi), để
-       không cần thêm một cái nút thứ hai chỉ để hoàn tác. */
-    const gGhim=ghimIdx();
-    if(gGhim>=0&&(ind.idx||ind.rs)&&rows[gGhim]){
-      const S0=smArr(), dangNeo=(S0.a===gGhim);
-      cvNut.push(['__neo',dangNeo?'↺ Bỏ neo':('⚓ Neo '+ngayNgan(rows[gGhim].t))]);
+    /* Ô MỐC NEO — hiện bất cứ khi nào đang bật đường/dải so sánh. Hai vai trong một ô:
+         · ĐANG GHIM một phiên -> bấm để neo về phiên đó, bấm lần nữa để trả về mặc định;
+         · KHÔNG ghim -> bấm để xoay vòng mốc mặc định 1 năm → 3 năm → Từ đầu.
+       Gộp làm một vì cả hai đều trả lời đúng câu "so từ lúc nào", và hàng ô này chỉ đủ chỗ
+       cho ba cái ở khổ điện thoại. Nhãn luôn in mốc THẬT nên không bao giờ mơ hồ. */
+    if(ind.idx||ind.rs){
+      const gGhim=ghimIdx();
+      if(gGhim>=0&&rows[gGhim]){
+        const S0=smArr(), dangNeo=(S0.a===gGhim);
+        cvNut.push(['__neo',dangNeo?'↺ Bỏ neo':('⚓ Neo '+ngayNgan(rows[gGhim].t))]);
+      }else{
+        cvNut.push(['__neo','⚓ '+NEO_MAC[neoMac].ten]);
+      }
     }
     if(plotH>=150&&cvNut.length){
       x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
@@ -1394,8 +1445,9 @@ let veBut=false;                                   // bút đang được giữ 
       if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
         if(m.k==='__neo'){
           const g=ghimIdx();
-          if(g>=0&&rows[g]){ const S=smArr(); neoT=(S.a===g)?null:rows[g].t; smCache.k=''; }
-          self.draw(); return true;
+          if(g>=0&&rows[g]){ const S=smArr(); neoT=(S.a===g)?null:rows[g].t; }
+          else { neoMac=(neoMac+1)%NEO_MAC.length; neoT=null; }
+          smCache.k=''; self.draw(); return true;
         }
         ind[m.k]=!ind[m.k]; self.draw();
         if(opt.onInd) opt.onInd(m.k,ind[m.k]);   // trang ngoài đi nạp kho nếu cần

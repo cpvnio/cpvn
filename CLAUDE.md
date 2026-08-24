@@ -4190,10 +4190,39 @@ phiên, chênh lệch giữa hai mốc **ngay trong 1.250 nến cuối** đã l�
 > chỉnh thì **có** — nên phép so thiên về cổ phiếu cỡ **2–3%/năm**. Quy ước tiêu chuẩn của mọi
 > biểu đồ sức mạnh tương đối, không vá được bằng dữ liệu đang có.
 
-**PHIÊN NEO** mặc định = phiên **đầu tiên có cả giá và chỉ số**. Với 190/405 mã HOSE lên sàn từ
-2013 thì đó đúng là phiên chào sàn; **215 mã lên sàn trước 02/01/2013** (mốc kho nến bắt đầu)
-nên neo ở 02/01/2013 — **nhãn PHẢI in ngày neo thật**, ghi "chào sàn" cho tất là nói sai với
-hơn một nửa bảng. Ghim một phiên rồi bấm ô `⚓ Neo` thì dời mốc; bấm lại thì về mặc định.
+**PHIÊN NEO MẶC ĐỊNH = MỘT NĂM GẦN NHẤT, KHÔNG PHẢI PHIÊN CHÀO SÀN (sửa 26/08/2026).**
+User: *"nhiều mã có VN-Index cách cổ phiếu quá xa, xa đến nỗi không bao giờ còn có thể cắt
+nhau được nữa"*. Đúng, và đo được trên 1.471 mã ≥600 phiên — đếm số lần đường giá cắt đường
+chỉ số trong 250 phiên gần nhất:
+
+| cách neo | số lần cắt (trung vị) | % mã có cắt |
+|---|---|---|
+| **neo phiên chào sàn** | **0** | **19%** |
+| neo 250 phiên trước | **10** | **100%** |
+| trượt 120 phiên | 8 | 90% |
+| trượt 250 phiên | 3 | 66% |
+
+Neo chào sàn tích luỹ cả chục năm nên khoảng hở hiện tại có trung vị **63%**, p90 **200%**,
+max **21.402%** — 17% số mã lệch quá 100%. Ở mức đó hai đường không gặp nhau nữa, mà một đường
+không bao giờ cắt thì **không nói được gì về hiện tại**; nó chỉ là một dữ kiện lịch sử đứng yên.
+
+`NEO_MAC` ba nấc, bấm ô `⚓` để xoay vòng: **1 năm** (mặc định) → **3 năm** → **Từ đầu**. Quy
+theo khung để mọi khung nói cùng một quãng (1 năm = 250 nến Ngày · 52 Tuần · 12 Tháng · 1 Năm).
+Ghim một phiên rồi bấm `⚓ Neo` thì neo vào đúng phiên đó; bấm lại thì trả về mặc định.
+
+> **MỐC MẶC ĐỊNH KHÔNG TRÔI KHI KÉO CHART** — nó đếm lùi từ phiên **CUỐI CHUỖI**, không phải từ
+> mép khung nhìn. Kéo/phóng bao nhiêu cũng không dời được; chỉ khi có phiên mới thì nó lùi đúng
+> một nến, và đó là bản chất của "một năm gần nhất". Đây là chỗ khác hẳn cái neo trung bình
+> trượt đã bỏ: cái đó đổi mốc theo dữ liệu, cái này đổi theo thời gian và **nói rõ ngày ra
+> nhãn**. `test_sm.js` khoá cả hai tính chất (vẽ lại không đổi · thêm 1 phiên lùi đúng 1 nến).
+>
+> **ĐẾM LÙI THEO NẾN HỢP LỆ**, không phải `n-1-lui`: chuỗi có phiên thiếu chỉ số thì đếm theo
+> chỉ số mảng ra một mốc ngắn hơn ý định.
+
+Nhãn **luôn in ngày neo thật** (`— neo 21/08/2025`), nên dù ở nấc nào cũng không mơ hồ. Với
+`Từ đầu`: 190/405 mã HOSE lên sàn từ 2013 nên đó đúng là phiên chào sàn, còn **215 mã lên sàn
+trước 02/01/2013** thì neo ở mốc kho nến bắt đầu — ghi "chào sàn" cho tất là nói sai với hơn
+một nửa bảng.
 
 > **`canNam = 20` TRONG `cophieu.html`, MỘT MỨC CHO MỌI KHUNG.** Từ khi mốc là phiên neo thì
 > số nến nạp không còn là chuyện hiệu năng mà là ĐÚNG/SAI: nạp 6 năm thì mốc neo của ORS rơi
