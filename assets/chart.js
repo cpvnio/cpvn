@@ -883,13 +883,34 @@ let veBut=false;                                   // bút đang được giữ 
         x.font='11px system-ui';
         x.fillText(S.co?'khoảng này chưa có dữ liệu chỉ số':'đang tải dữ liệu chỉ số…',8,top+bh/2);
       }else{
+        /* THANG BẬC THANG THEO KHUNG NHÌN, KHÔNG khít cả chuỗi và cũng KHÔNG khít liên tục.
+           User 26/08: *"mỗi lần bấm vào mốc 1 năm - 3 năm - từ đầu là chart bị reset rất khó
+           chịu, cần cố định để dễ quan sát nhất"*. Khung nhìn ngang thì KHÔNG hề reset (đo:
+           `[2688,3320]` giữ nguyên qua cả ba lần bấm) — thứ nhảy là thang dọc của dải.
+
+           Vì sao thang cả chuỗi hỏng ở đây: `q` chỉ có từ phiên neo trở đi, nên đổi mốc là
+           đổi luôn miền giá trị. Chọn "Từ đầu" thì thang phải ôm 13 năm biến động và đoạn
+           250 phiên đang xem bị nén thành một vệt — đúng cảm giác "bị reset".
+
+           Vì sao KHÔNG khít liên tục theo khung nhìn (dù MACD của chính chart này làm vậy):
+           kéo ngang một chút là thang nhích một chút, đường cứ trườn — user đã bắt lỗi đó
+           hồi 23/08 với bản cũ.
+
+           Cách dùng: lấy min/max của ĐOẠN ĐANG XEM rồi NẮN LÊN BẬC THANG gần nhất. Thang chỉ
+           đổi khi vượt hẳn một bậc, nên kéo/phóng bình thường thì nó đứng yên; còn đổi mốc
+           neo thì nó nhảy đúng một lần sang bậc hợp lý và đoạn đang xem vẫn lấp đầy dải. */
         let mn=Infinity,mx=-Infinity;
-        for(let i=0;i<rows.length;i++){ const q=S.q[i]; if(q==null) continue;
+        for(let i=0;i<n;i++){ const q=S.q[i0+i]; if(q==null) continue;
           if(q<mn)mn=q; if(q>mx)mx=q; }
+        if(!(mx>=mn)){ mn=-0.05; mx=0.05; }
         if(mn>0)mn=0; if(mx<0)mx=0;                     // vạch neo luôn nằm trong khung
-        if(mx-mn<1e-9){ mn-=0.01; mx+=0.01; }
-        const pd=(mx-mn)*0.08, lo=mn-pd, hi=mx+pd;
-        const ry=v=>top+(hi-v)/(hi-lo)*bh, y0=ry(0);
+        /* Bậc dày một chút ở vùng hay gặp (dưới 100%) để đỡ phí chỗ: đoạn nằm gọn ở
+           −43,5%..−29,1% mà bậc gần nhất là 60% thì đường chỉ chiếm một phần tư dải. */
+        const BAC=[.05,.075,.10,.15,.20,.30,.40,.50,.75,1,1.5,2,3,5,8,12,20,40,100,250,1000];
+        const nan=v=>{ for(const b of BAC) if(v<=b+1e-12) return b; return Math.ceil(v); };
+        const lo=mn<0?-nan(-mn):0, hi=mx>0?nan(mx):0;
+        if(hi-lo<1e-9){ /* cả đoạn phẳng ở 0 */ }
+        const ry=v=>top+(hi-v)/((hi-lo)||1)*bh, y0=ry(0);
         x.beginPath(); let st=false;
         for(let i=0;i<n;i++){ const q=S.q[i0+i]; if(q==null){ st=false; continue; }
           const X=cx(i); st?x.lineTo(X,ry(q)):x.moveTo(X,ry(q)); st=true; }
@@ -904,7 +925,8 @@ let veBut=false;                                   // bút đang được giữ 
         x.stroke(); x.lineWidth=1;
         x.fillStyle=MUT(); x.font='9.5px system-ui';
         x.fillText('neo',plotW+6,y0);
-        x.fillText(fmtSM(hi-pd),plotW+6,ry(hi-pd)); x.fillText(fmtSM(lo+pd),plotW+6,ry(lo+pd));
+        if(hi>0) x.fillText(fmtSM(hi),plotW+6,ry(hi)+5);
+        if(lo<0) x.fillText(fmtSM(lo),plotW+6,ry(lo)-5);
         // MỨC HÔM NAY: phiên cuối CẢ CHUỖI, không phải phiên cuối khung nhìn
         let nay=null;
         for(let z=rows.length-1;z>=0;z--){ if(S.q[z]!=null){ nay=S.q[z]; break; } }

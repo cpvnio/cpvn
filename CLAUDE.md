@@ -4230,6 +4230,24 @@ một nửa bảng.
 > quá mốc sâu nhất của kho nên thực tế là "lấy hết"; `dayCache` giữ theo `sym|nam` nên cả trang
 > chỉ tốn MỘT lượt nạp thay vì hai lượt 5 rồi 15 năm.
 
+**THANG DỌC CỦA DẢI: BẬC THANG THEO KHUNG NHÌN** (26/08/2026). User: *"mỗi lần bấm vào mốc
+1 năm - 3 năm - từ đầu là chart bị reset rất khó chịu, cần cố định để dễ quan sát nhất"*.
+Khung nhìn NGANG không hề reset (đo: `[2688,3320]` giữ nguyên qua cả ba lần bấm) — thứ nhảy là
+thang dọc của dải.
+
+- **Thang cả chuỗi hỏng** ở đây vì `q` chỉ có từ phiên neo trở đi, nên đổi mốc là đổi luôn
+  miền giá trị. Chọn `Từ đầu` thì thang phải ôm 13 năm và đoạn 250 phiên đang xem bị nén thành
+  một vệt — đúng cảm giác "bị reset".
+- **Khít liên tục theo khung nhìn cũng hỏng** (dù MACD của chính chart này làm vậy): kéo ngang
+  một chút là thang nhích một chút, đường cứ trườn — lỗi user đã bắt hồi 23/08.
+- **Cách dùng**: lấy min/max của ĐOẠN ĐANG XEM rồi **nắn lên bậc thang** `BAC` (5% · 7,5% ·
+  10% · 15% · 20% · 30% … 1000%). Thang chỉ đổi khi vượt hẳn một bậc. Đo: kéo ngang năm lượt
+  liên tiếp thì bậc **giữ nguyên** `−15%/+15%`; đổi mốc thì nhảy đúng một lần sang bậc hợp lý
+  (1 năm `±15%` · 3 năm `−50%..0` · Từ đầu `−40%..0`).
+- Bậc dày ở vùng dưới 100% để đỡ phí chỗ: đoạn nằm gọn ở −43,5%..−29,1% mà bậc gần nhất là 60%
+  thì đường chỉ chiếm một phần tư dải. **Vạch 0 luôn nằm trong khung** — nó là mốc neo, mất nó
+  thì không đọc được đang trên hay dưới.
+
 **TRÊN CHART:**
 - Đường chỉ số quy đổi vẽ trên **TRỤC GIÁ** (đơn vị đồng, cùng đơn vị với nến) — **không được
   nới trục giá theo nó**: mã lệch xa như HHV thì nến bị nén bẹp. Nó bị **cắt ở mép**, và số
