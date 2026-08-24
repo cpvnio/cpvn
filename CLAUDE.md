@@ -3873,6 +3873,16 @@ bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong 
 > hổ phách, MA50 giữ xanh trời** — hai nút đó chỉ còn ở cửa sổ PTKT, đổi màu chúng là đổi
 > thứ người dùng PTKT đã quen.
 
+**HÀNG KHUNG THỜI GIAN: `1D · 1W · 1M · 1Y`, VÀ CHART NHỎ BỎ "TRONG NGÀY"** (25/08/2026,
+user: *"mục này cũng hơi rườm rà, nên bỏ trong ngày đi, còn lại thì đổi thành 1D 1W 1M 1Y"*).
+Nến 5 phút **vẫn còn nguyên ở cửa sổ PTKT** — đó mới là chỗ người ta soi trong phiên; chart nhỏ
+là thứ nhìn đầu tiên khi mở trang.
+
+> **ĐỪNG DỌN NHÁNH `tf==='i'` TRONG JS.** Không còn nút nào trên `#tf` sinh ra giá trị đó, nhưng
+> `#ptTf` vẫn có, và `khoaPhuTheoKhung` · `rsH=0` khi `iv==='i'` · nhánh nến 5 phút của
+> `loadChart`/`ptLoad` đều còn phải xử đúng. `tf` mặc định `'D'` và KHÔNG lưu localStorage nên
+> không có người dùng nào đang kẹt ở khung `i` sau khi bỏ nút.
+
 **HÀNG MA20/50/200 ĐÃ BỎ KHỎI PTKT (25/08/2026)** — user: *"trong PTKT cũng bỏ ô chọn
 ma20-50-200 đi"*. Đường xu hướng mặc định của CẢ HAI chart nay là **EMA200**, nên `ind` mặc
 định trong `chart.js` đổi từ `ma:[200], ema:[]` sang `ma:[], ema:[200]`.
