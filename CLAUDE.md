@@ -3853,8 +3853,8 @@ bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong 
 
 | | trước | sau |
 |---|---|---|
-| `#cvInd` (chart nhỏ) | 11 nút | **6**: MA200 · RSI · Nến · Khối lượng · Vốn hoá · VN-Index |
-| `#ptInd` (toàn màn hình) | 15 nút | **12** (bỏ Cổ tức/BCTC và Sức mạnh, giữ EMA) |
+| `#cvInd` (chart nhỏ) | 11 nút | **6**: EMA200 · RSI · Nến · Khối lượng · Vốn hoá · VN-Index |
+| `#ptInd` (toàn màn hình) | 15 nút | **9** (bỏ Cổ tức/BCTC · Sức mạnh · cả hàng MA20/50/200) |
 | khổ 375px | 3 hàng · ~85px | **2 hàng đều nhau · 56px** |
 | khổ máy bàn | 2 hàng | **1 hàng · 27px** |
 
@@ -3873,9 +3873,25 @@ bỏ ô sức mạnh đi. ô hiện hoặc ẩn cổ tức và bctc nằm trong 
 > hổ phách, MA50 giữ xanh trời** — hai nút đó chỉ còn ở cửa sổ PTKT, đổi màu chúng là đổi
 > thứ người dùng PTKT đã quen.
 
+**HÀNG MA20/50/200 ĐÃ BỎ KHỎI PTKT (25/08/2026)** — user: *"trong PTKT cũng bỏ ô chọn
+ma20-50-200 đi"*. Đường xu hướng mặc định của CẢ HAI chart nay là **EMA200**, nên `ind` mặc
+định trong `chart.js` đổi từ `ma:[200], ema:[]` sang `ma:[], ema:[200]`.
+
+- **`bubbles.html` ăn theo**: trang đó dùng chung `ind` mặc định và không có nút chỉ báo nào,
+  nên chart chi tiết ở đó cũng chuyển sang EMA200. Đổi mặc định là đổi cả hai trang.
+- **`EMACOL[200]` đổi sang xám thép** `rgb(148,163,184)` (màu MA200 cũ để lại). Fuchsia
+  `rgb(232,121,249)` đứng cạnh đường nền hồng sen `rgb(219,39,119)` là lặp lại đúng cái bẫy đã
+  ghi ở `MACOL` — hai màu lệch quá ít, chạy sát nhau thành một vệt.
+- **Nhánh `ma` trong `batChiBao` giữ nguyên** dù không còn nút nào gọi tới: nó vẫn đúng nếu sau
+  này thêm lại một nút MA, và xoá đi chẳng tiết kiệm được gì.
+- **Nút `rs` "Sức mạnh" cũng bỏ khỏi `#ptInd`** cùng lượt. Nó điều khiển đúng cái cờ mà ô công
+  tắc "Cách nền" trong khung đồ thị đang điều khiển, mà hai chỗ không đồng bộ được trạng thái
+  sáng/tối — bấm trong khung xong thì nút ngoài vẫn sáng, đọc ra là nút hỏng.
+
 **BỐN THỨ ĐÃ DỌN KHỎI HÀNG NÚT CỦA CHART NHỎ — ĐỪNG THÊM LẠI:**
-· **EMA50/EMA200** → chỉ còn ở cửa sổ Phân tích kỹ thuật. Chart nhỏ là thứ NHÌN ĐẦU TIÊN khi
-  mở trang mã, không phải bàn làm việc PTKT; ai cần EMA thì mở hẳn cửa sổ kia.
+· **EMA50** → chỉ còn ở cửa sổ Phân tích kỹ thuật. Chart nhỏ là thứ NHÌN ĐẦU TIÊN khi mở
+  trang mã, không phải bàn làm việc PTKT. **EMA200 thì Ở LẠI** — từ 25/08/2026 nó là đường xu
+  hướng mặc định, thay chỗ MA200 (user: *"đổi MA200 thành EMA200"*).
 · **Cổ tức/BCTC** → vào TRONG khung đồ thị, vì chúng điều khiển thứ vẽ trên chính khung đó.
 · **Sức mạnh** → bỏ khỏi CẢ HAI hàng nút. Từ 25/08/2026 nó thành dải `Cách nền` và bật bằng
   **ô công tắc trong khung**, cùng chỗ với Cổ tức/BCTC — xem mục *DẢI "CÁCH NỀN"*.

@@ -530,12 +530,12 @@ var t=localStorage.getItem('cpvn_theme');document.documentElement.dataset.theme=
 </style>
 <!-- tải sẵn trang công cụ khi rảnh -> bấm tab Radar/Đường đua là mở tức thì -->
 <link rel="prefetch" href="congcu.html"/>
-<link rel="prefetch" href="assets/congcu.js?v=20260825n"/>
+<link rel="prefetch" href="assets/congcu.js?v=20260825p"/>
 <link rel="prefetch" href="data/screen.json" as="fetch"/>
 <link rel="prefetch" href="data/market.json" as="fetch"/>
 
 <link rel="stylesheet" href="assets/mobi.css?v=20260811c"/>
-<script defer src="assets/mobi.js?v=20260825n"></script>
+<script defer src="assets/mobi.js?v=20260825p"></script>
 </head>
 <body>
 <header>
@@ -621,13 +621,14 @@ document.addEventListener(MO,function(e){
          cửa sổ toàn màn hình, trong khi đây mới là chart người ta nhìn đầu tiên. -->
     <!-- HÀNG NÚT CỦA CHART NHỎ — SÁU Ô, KHÔNG HƠN (user chốt 24/08/2026: *"trên giao diện
          điện thoại cần gọn hơn"*). Bốn thứ đã dọn đi và ĐỪNG THÊM LẠI vào hàng này:
-         · EMA50/EMA200 và Sức mạnh -> chỉ còn ở cửa sổ Phân tích kỹ thuật. Đây là chart
-           NHÌN ĐẦU TIÊN khi mở trang, không phải bàn làm việc PTKT.
-         · Cổ tức/BCTC -> đã vào TRONG khung đồ thị (`mocHit` của chart.js), vì chúng điều
-           khiển thứ vẽ trên chính khung đó.
+         · EMA50 -> chỉ còn ở cửa sổ Phân tích kỹ thuật. Đây là chart NHÌN ĐẦU TIÊN khi mở
+           trang, không phải bàn làm việc PTKT. (EMA200 thì Ở LẠI: từ 25/08/2026 nó là
+           đường xu hướng mặc định, thay chỗ MA200.)
+         · Cổ tức/BCTC và Cách nền -> đã vào TRONG khung đồ thị (`mocHit` của chart.js), vì
+           chúng điều khiển thứ vẽ trên chính khung đó.
          RSI giữ lại theo yêu cầu. Sáu ô này vừa đúng một hàng ở khổ 375px. -->
     <div class="ptseg" id="cvInd" style="margin:6px 0 2px">
-      <button data-k="ma200" class="on">MA200</button>
+      <button data-k="ema200" class="on">EMA200</button>
       <button data-k="rsi">RSI</button>
       <button data-k="nen" class="on">Nến</button><button data-k="vol" class="on">Khối lượng</button>
       <button data-k="vh">Vốn hoá</button><button data-k="idx">VN-Index</button>
@@ -741,15 +742,18 @@ document.addEventListener(MO,function(e){
     </span>
     <span class="ptsep"></span>
     <span class="ptseg" id="ptInd">
-      <button data-k="ma20">MA20</button><button data-k="ma50">MA50</button>
-      <button data-k="ma200" class="on">MA200</button>
-      <button data-k="ema50">EMA50</button><button data-k="ema200">EMA200</button>
+      <!-- MA20/50/200 đã bỏ 25/08/2026 (user: *"trong PTKT cũng bỏ ô chọn ma20-50-200 đi"*).
+           Đường xu hướng mặc định nay là EMA200, chung một mặc định với biểu đồ nhỏ. -->
+      <button data-k="ema50">EMA50</button><button data-k="ema200" class="on">EMA200</button>
       <button data-k="bb">Bollinger</button>
       <button data-k="vol" class="on">Khối lượng</button>
       <button data-k="rsi">RSI</button><button data-k="macd">MACD</button>
       <button data-k="nen" class="on">Nến</button>
       <button data-k="vh">Vốn hoá</button><button data-k="idx">VN-Index</button>
-      <button data-k="rs">Sức mạnh</button>
+      <!-- `rs` KHÔNG còn là nút ở đây: nó đã thành ô công tắc "Cách nền" TRONG khung đồ thị
+           (xem `mocHit` trong chart.js). Để cả hai là hai thứ điều khiển cùng một cờ mà
+           không đồng bộ được trạng thái sáng/tối — bấm trong khung xong thì nút ngoài này
+           vẫn sáng, đọc ra là nút hỏng. -->
       <!-- Cổ tức/BCTC nằm TRONG khung đồ thị ở cả hai chart, xem `mocHit` trong chart.js -->
     </span>
   </div>
@@ -767,8 +771,8 @@ document.addEventListener(MO,function(e){
     có thể nắm giữ cổ phiếu xuất hiện trên trang. Người dùng tự chịu trách nhiệm với quyết
     định của mình.</div></footer>
 
-<script src="assets/core.js?v=20260825n"></script>
-<script src="assets/chart.js?v=20260825n"></script>
+<script src="assets/core.js?v=20260825p"></script>
+<script src="assets/chart.js?v=20260825p"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1363,8 +1367,9 @@ function batChiBao(c,k,on){
      nửa giây là người ta bấm lại lần nữa). Tắt thì khỏi tải — cờ tắt là chart bỏ qua. */
   if(k==='vh'||k==='idx'||k==='rs'){
     c.setInd({[k]:on});
-    /* `rs` (dải Sức mạnh) ăn CÙNG kho với `idx` — `taiChiSo` gói trong một lời hứa nên bật
-       cả hai cũng chỉ một lượt mạng, và bật cái này rồi cái kia thì cái sau có ngay. */
+    /* `rs` (dải Cách nền) cần CẢ HAI kho — vốn hoá làm tử, chỉ số làm mẫu. Nhánh này giữ
+       lại cho tương thích: `rs` nay bật bằng ô công tắc trong khung đồ thị (`napPhuCho`),
+       không còn nút DOM nào mang `data-k="rs"`. */
     if(on) (k==='vh'?taiVonHoa():k==='rs'?Promise.all([taiVonHoa(),taiChiSo()]):taiChiSo())
              .then(veLaiPhu);
     return;
