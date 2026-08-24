@@ -72,19 +72,17 @@ CPScreen.chips=[
   {id:'q2up',  g:'Sức khoẻ', nm:'2 quý liền lãi tăng ≥ 25%'},
   // chip CÓ THAM SỐ: {n} là chỗ client cắm ô chọn số kỳ. def = số kỳ mặc định.
   {id:'lossQ', g:'Sức khoẻ', nm:'Lỗ {n} quý liên tiếp', opts:[1,2,3,4,5,6,7,8], def:8},
-  /* ---- SO VỚI CHỈ SỐ SÀN (25/08/2026, thay bộ "cách nền") ---------------------------
-     Năm chip THƯỜNG, mỗi cái là MỘT con số đo được của riêng một mã, ngưỡng do người dùng
-     đặt — đúng loại chip mà ghi chú "bỏ bộ lọc Pro" ở trên nói là được phép dựng. KHÔNG
-     gộp chúng thành một nút cho ra sẵn danh sách: chỗ đó mới là danh mục gợi ý.
-     KHÁC BẢN CŨ: `sm*` có cho CẢ BA SÀN và cho cả mã mới niêm yết (chỉ cần đủ N phiên),
-     vì tử số là giá điều chỉnh — không còn cần kho vốn hoá 1.250 phiên của riêng HOSE.
-     Đo được: 1.521/1.521 mã có `smNeo`, 1.516 mã có `sm120`, so với 362 mã của bản cũ. */
-  {id:'capmin',g:'Rổ · quy mô', nm:'Vốn hoá ≥ {n} tỷ', opts:[1000,3000,10000,30000], def:1000},
-  {id:'gtgd60',g:'Rổ · quy mô', nm:'GTGD 60 phiên ≥ {n} tỷ', opts:[1,2,5,10], def:2},
-  {id:'smHon', g:'So với chỉ số', nm:'Hơn chỉ số sàn, {n} phiên qua', opts:[20,60,120,250], def:120},
-  {id:'smKem', g:'So với chỉ số', nm:'Kém chỉ số sàn, {n} phiên qua', opts:[20,60,120,250], def:120},
-  {id:'smManh',g:'So với chỉ số', nm:'Hơn chỉ số ≥ {n}% trong 120 phiên', opts:[5,10,20,50], def:20},
-];
+  /* ---- NĂM CHIP ĐÃ GỠ 26/08/2026 — ĐỌC TRƯỚC KHI DỰNG LẠI --------------------------
+     `capmin` · `gtgd60` · `smHon` · `smKem` · `smManh` đã bỏ khỏi giao diện theo yêu cầu
+     user: bộ này dựng trên giả thuyết *"mã tụt hậu rồi bùng nổ"*, mà thống kê chạy lại trên
+     thước đúng đã BÁC nó — `sm60 < 0` cho PF **1,29**, THẤP HƠN nền 1,45; còn `sm60 > 0` chỉ
+     lên 1,61, và cửa sổ 250 phiên thì không có tín hiệu gì (mọi ô 1,42–1,46). Xem mục
+     *THỐNG KÊ CHẠY LẠI TRÊN THƯỚC ĐÚNG* trong CLAUDE.md.
+
+     DỮ LIỆU THÌ GIỮ NGUYÊN: `screen.json` vẫn có `smNeo`/`sm20`/`sm60`/`sm120`/`sm250`,
+     `avgval60` và khối `ix`. Chúng tính trong cùng vòng lặp của `build_screen` nên gần như
+     miễn phí, và đợt research bộ lọc mới sẽ cần đúng mấy trường đó. Dựng lại chip chỉ là
+     thêm vài dòng vào mảng này cộng mấy nhánh `case` bên dưới. */];
 CPScreen.def=id=>{const x=CPScreen.chips.find(c=>c.id===id);return x&&x.def||0;};
 /* n = số kỳ người dùng chọn, chỉ có nghĩa với chip mang opts */
 CPScreen.chip=function(id,c,n){
@@ -129,18 +127,8 @@ CPScreen.chip=function(id,c,n){
     case 'q2up':  return (f.npQ??-9)>=25&&(f.npQ2??-9)>=25;
     // N quý gần nhất LIÊN TIẾP lỗ — kho lưu độ dài chuỗi lỗ, đứt một quý là về 0
     case 'lossQ': return (f.lossQs||0)>=n;
-    case 'capmin':return (c.mcapLive||c.mcap||0)>=n*1e9;
-    case 'gtgd60':return (t.avgval60||0)>=n*1e9;
-    /* `sm{N}` = [giá ĐC(t)/giá ĐC(t−N)] ÷ [chỉ số(t)/chỉ số(t−N)] − 1, tính bằng %, so với
-       chỉ số SÀN CỦA CHÍNH MÃ. Dương = ăn hơn chỉ số trong N phiên đó.
-       Tử số là GIÁ ĐIỀU CHỈNH chứ không phải vốn hoá — vốn hoá tăng cả khi phát hành thêm
-       mà cổ đông cũ không được gì (ORS vốn hoá ×157,6 nhưng giá chỉ ×11,84; HHV vốn hoá
-       ×112,5 mà giá ×1,83 trong khi chỉ số ×3,11, tức THUA). Xem CLAUDE.md.
-       Thiếu dữ liệu thì TRƯỢT, không lọt — mã chưa đủ N phiên phải rơi ra khỏi kết quả chứ
-       không được đi qua vì `undefined`. */
-    case 'smHon':  { const v=t['sm'+n]; return v!=null&&v>0; }
-    case 'smKem':  { const v=t['sm'+n]; return v!=null&&v<0; }
-    case 'smManh': return t.sm120!=null&&t.sm120>=n;
+    /* Nhánh của năm chip đã gỡ (`capmin`/`gtgd60`/`smHon`/`smKem`/`smManh`) xoá cùng lượt
+       26/08/2026 — xem ghi chú ở mảng `chips`. */
     default: return true;
   }
 };

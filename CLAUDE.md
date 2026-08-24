@@ -4224,17 +4224,32 @@ ngừng giao dịch, ghép theo vị trí là lệch cả chuỗi mà không bá
 chính** vì `d` đã nằm trong tay; quét lại thư mục lần hai như `nen_tuoi()` cũ là đọc 1.529 file
 thêm một lượt cho không. Thêm `smNeo` = so với phiên đầu chuỗi, cùng định nghĩa với chart.
 
-Ba chip: `smHon` / `smKem` (cửa sổ 20·60·120·250) · `smManh` (ngưỡng 5·10·20·50% trong 120
-phiên). **`opts` của chip PHẢI trùng `SM_CUA` của `build_screen.py`** — `test_loc.js` khoá con
-số này, vì lệch một bên là chip hỏi `sm300` trong khi kho ghi 20/60/120/250 và **mọi mã đều
-trượt trong im lặng**.
+**CHIP Ở BẢNG GIÁ: KHÔNG CÓ, VÀ ĐÓ LÀ CHỦ Ý (26/08/2026).** Năm chip `capmin` · `gtgd60` ·
+`smHon` · `smKem` · `smManh` đã dựng rồi **gỡ ngay trong ngày** theo yêu cầu user — bộ đó
+dựng trên giả thuyết *"mã tụt hậu rồi bùng nổ"*, mà thống kê chạy lại trên thước đúng đã bác
+nó (xem mục dưới). Bỏ chip đi để research lại từ đầu, không để một bộ lọc đã biết là yếu nằm
+trên giao diện.
 
-> **THIẾU DỮ LIỆU PHẢI TRƯỢT, KHÔNG ĐƯỢC LỌT.** Mã chưa đủ N phiên có `sm{N} = null`; một phép
-> so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
-> `test_loc.js` giữ đúng ca này cho cả `smHon`, `smKem`, `smManh`.
+> **DỮ LIỆU THÌ GIỮ NGUYÊN**: `screen.json` vẫn có `smNeo`/`sm20`/`sm60`/`sm120`/`sm250`,
+> `avgval60` và khối `ix`. Chúng tính trong CÙNG vòng lặp của `build_screen` nên gần như miễn
+> phí (build 7,3 → 9,2 giây), và đợt research bộ lọc mới cần đúng mấy trường đó. Dựng lại chip
+> chỉ là thêm vài dòng vào mảng `chips` cộng mấy nhánh `case` — ghi chú trong `screener.js` chỉ
+> sẵn chỗ.
+>
+> **NẾU DỰNG LẠI: `opts` của chip PHẢI trùng `SM_CUA` của `build_screen.py`.** Lệch một bên là
+> chip hỏi `sm300` trong khi kho ghi 20/60/120/250 và **mọi mã đều trượt trong im lặng**. Và
+> **thiếu dữ liệu phải TRƯỢT chứ không được LỌT** — mã chưa đủ N phiên có `sm{N} = null`, một
+> phép so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
 
-**KIỂM:** `node tools/test_sm.js` (29 ca) + `node tools/test_loc.js` (29 ca). Ngoài ra đối
-chiếu với **bản dựng lại độc lập bằng Node đọc thẳng kho** — khớp tới hai chữ số thập phân:
+**KIỂM:** `node tools/test_sm.js` (29 ca, lõi trong `chart.js`) + `node tools/test_smkho.js`
+(11 ca, KHO `screen.json`). File thứ hai **dựng lại toàn bộ `sm*` bằng Node** từ `data/hist` +
+`data/chiso` + `universe.json` rồi so với những gì `build_screen.py` đã ghi — **7.577 con số
+trên 1.521 mã, không con nào lệch quá 0,01**. Nó cũng khoá hai bất biến dễ hỏng im lặng: mã HNX
+phải khớp bản dùng HNX-Index và **không** khớp bản dùng nhầm VNINDEX; mã mới niêm yết có
+`smNeo` nhưng `sm250` phải là `null`. Nó thay `test_loc.js` (đã xoá cùng lượt gỡ chip) và mạnh
+hơn hẳn: kiểm dữ liệu thật thay vì kiểm mấy nhánh `case` của giao diện.
+
+Đối chiếu tay lúc dựng, khớp tới hai chữ số thập phân:
 `smNeo` ORS +180,12 · HHV −41,26 · VCK −9,07 · VNM −21,41 · GAS +18,52 · DHC +902,83; `sm120`
 VIC +35,19 · VHM +63,32 · THD +316,05 (HNX) · SHS −20,47 (HNX) · ORS +9,71.
 
