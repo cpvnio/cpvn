@@ -292,6 +292,7 @@ let veBut=false;                                   // bút đang được giữ 
      KHUNG NÀY nên đứng trong khung là đúng chỗ — và trả lại hai ô cho hàng nút phía trên,
      thứ đang chật nhất ở khổ điện thoại. `mocHit` là ô bấm của lượt vẽ gần nhất. */
   let mocHit=[];
+  let mocMenu=[];           // ô bấm của bảng chọn số năm, chỉ có khi bảng đang mở
   /* ---- GHIM MỘT PHIÊN ĐỂ ĐỌC SỐ (user chốt 23/08/2026) ------------------------
      *"hiện thêm toạ độ tam giác khi tôi bật chỉ báo vnindex lên, bấm vào sẽ hiện ra điểm
      vnindex - vốn hoá - giá cổ phiếu tại vị trí tôi bấm, để đọc nhanh tình hình tại thời
@@ -367,18 +368,29 @@ let veBut=false;                                   // bút đang được giữ 
      đúng một nến, đó là bản chất của "một năm gần nhất". Đây là chỗ khác hẳn cái neo trung
      bình trượt đã bỏ: cái đó đổi mốc theo dữ liệu, cái này đổi theo thời gian và nói rõ ra.
 
-     Quy theo khung để mọi khung đều nói về CÙNG một quãng thời gian. `0` = từ đầu chuỗi. */
-  const NEO_MAC=[
-    {ten:'1 năm',  n:{d:250, W:52,  M:12, Y:1}},
-    {ten:'3 năm',  n:{d:750, W:156, M:36, Y:3}},
-    {ten:'Từ đầu', n:null},
-  ];
-  let neoMac=0;                        // chỉ số trong NEO_MAC
-  let neoT=null;                       // mốc thời gian do người dùng ghim; null = dùng mặc định
+     Quy theo khung để mọi khung đều nói về CÙNG một quãng thời gian. `0` = từ đầu chuỗi.
+
+     SỐ NĂM CHỌN TỰ DO 1..10 HOẶC "TẤT CẢ" (user chốt 27/08/2026: *"mục chọn 1-3-từ đầu nên
+     để dạng tuỳ chọn, tôi có thể chọn 1-2-3-4-5-6-7-8-9-10-all"*). Bản trước có ba nấc và
+     bấm một ô là xoay vòng qua chúng. Hai chỗ hỏng: ba nấc bỏ trống hẳn quãng 4..9 năm —
+     đúng quãng chứa trọn một chu kỳ thị trường — và xoay vòng thì muốn quay lại nấc vừa
+     lướt qua phải bấm hết một vòng. Nay ô "Mốc" MỞ BẢNG CHỌN, bấm thẳng vào số năm muốn.
+     Một năm quy ra nến theo khung, để mọi khung nói về cùng một quãng thời gian. */
+  const NAM_NEN={d:250, W:52, M:12, Y:1};      // số nến của MỘT năm ở từng khung
+  const NEO_CHON=[1,2,3,4,5,6,7,8,9,10,0];     // 0 = "Tất cả", neo ở phiên đầu chuỗi
+  const tenNam=v=>v?(v+' năm'):'Tất cả';
+  let neoNam=1;                        // số năm đang chọn; 0 = từ đầu chuỗi
+  let neoT=null;                       // mốc người dùng TỰ neo; null = đi theo số năm
+  /* NEO TAY LÀ MỘT NÚT RIÊNG, HAI NHỊP (user chốt 27/08/2026: *"neo nên là 1 mục riêng,
+     bấm vào nút neo xong mới bấm vào vị trí cần neo"*). Bản trước neo tay đi kèm việc ghim
+     một phiên: phải ghim trước thì ô neo mới hiện ra — tức là muốn neo tay phải đoán trúng
+     một thao tác không ghi ở đâu cả. Nay: bấm "Neo" -> chart chờ -> bấm vào phiên cần neo. */
+  let mocMo=false;                     // bảng chọn số năm đang mở
+  let neoArm=false;                    // đã bấm nút Neo, đang chờ bấm vào một phiên
   const smCache={k:'',v:null};
   function smArr(){
     const khoa=rows.length+'|'+(rows.length?rows[0].t+'|'+rows[rows.length-1].t:'')
-              +'|'+(neoT||0)+'|'+neoMac+'|'+iv;
+              +'|'+(neoT||0)+'|'+neoNam+'|'+iv;
     if(smCache.k===khoa) return smCache.v;
     const n=rows.length, q=new Array(n).fill(null), ln=new Array(n).fill(null);
     const out={q:q,ln:ln,a:-1,co:0};
@@ -394,8 +406,7 @@ let veBut=false;                                   // bút đang được giữ 
       for(let i=0;i<n;i++){ const r=rows[i];
         if(r&&r.t<=neoT&&r.c>0&&r.ix>0) a=i; else if(r&&r.t>neoT) break; }
     }else{
-      const so=(NEO_MAC[neoMac]||{}).n;
-      const lui=so?(so[iv]||so.d):0;
+      const lui=neoNam>0?neoNam*(NAM_NEN[iv]||NAM_NEN.d):0;
       if(lui>0){
         /* Đếm lùi `lui` NẾN HỢP LỆ từ phiên cuối, chứ không phải `n-1-lui`: chuỗi có phiên
            thiếu chỉ số thì đếm theo chỉ số mảng là ra một mốc ngắn hơn ý định. */
@@ -424,11 +435,20 @@ let veBut=false;                                   // bút đang được giữ 
   /* Khung nhìn hiện hành + các ô bấm trong khung — bộ kiểm thử cần biết ĐANG vẽ từ nến nào
      tới nến nào và ô nằm ở đâu, để phân biệt "tính sai" với "nằm ngoài khung". */
   self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH,
-                       oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w))});
+                       oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w)),
+                       oNut:mocHit.map(m=>({k:m.k,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)})),
+                       oNam:mocMenu.map(m=>({v:m.v,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)}))});
   self.neoTai=function(t){ neoT=(t==null?null:t); smCache.k=''; self.draw(); return self; };
   self.neoDang=()=>{ const S=smArr(); return S.a>=0&&rows[S.a]?rows[S.a].t:null; };
-  self.neoMacDinh=function(i){ if(i!=null){ neoMac=((i%NEO_MAC.length)+NEO_MAC.length)%NEO_MAC.length;
-    neoT=null; smCache.k=''; self.draw(); } return {i:neoMac,ten:NEO_MAC[neoMac].ten}; };
+  /* Đặt mốc mặc định theo SỐ NĂM (0 = tất cả). Nhận thẳng số năm chứ không nhận chỉ số
+     trong một mảng: chỉ số thì mỗi lần thêm/bớt một nấc là mọi chỗ gọi lệch đi một bậc mà
+     không ai báo. Đặt số năm thì bỏ luôn mốc neo tay — chọn mốc mới là thay mốc cũ. */
+  self.neoSoNam=function(v){ if(v!=null){
+      v=Math.round(Number(v)||0);
+      neoNam=Math.max(0,Math.min(10,v)); neoT=null; smCache.k=''; self.draw(); }
+    return {nam:neoNam,ten:tenNam(neoNam)}; };
+  /* Trạng thái bộ mốc, cho trang ngoài và bộ kiểm thử đọc. */
+  self.mocTrangThai=()=>({nam:neoNam, tay:neoT, mo:mocMo, cho:neoArm});
   const fmtSM=v=>{ const p=v*100;
     return (p>=0?'+':'')+p.toLocaleString('vi-VN',{maximumFractionDigits:Math.abs(p)<10?1:0})+'%'; };
 
@@ -781,26 +801,31 @@ let veBut=false;                                   // bút đang được giữ 
        cái mà chính nó phải bật mới có. Trang nào nhận `onInd` là trang biết đi nạp.
        Khung "Trong ngày" là nến 5 phút, hai kho kia chỉ có số theo PHIÊN nên bỏ hẳn ô. */
     if(iv!=='i'&&(opt.onInd||rows.some(r=>r&&r.ix>0))) cvNut.push(['rs','So với chỉ số']);
-    /* Ô MỐC NEO — hiện bất cứ khi nào đang bật đường/dải so sánh. Hai vai trong một ô:
-         · ĐANG GHIM một phiên -> bấm để neo về phiên đó, bấm lần nữa để trả về mặc định;
-         · KHÔNG ghim -> bấm để xoay vòng mốc mặc định 1 năm → 3 năm → Từ đầu.
-       Gộp làm một vì cả hai đều trả lời đúng câu "so từ lúc nào", và hàng ô này chỉ đủ chỗ
-       cho ba cái ở khổ điện thoại. Nhãn luôn in mốc THẬT nên không bao giờ mơ hồ. */
+    /* HAI Ô MỐC — hiện bất cứ khi nào đang bật đường/dải so sánh. Tách hẳn hai việc từng
+       chung một ô:
+         · "Mốc N năm" mở BẢNG CHỌN số năm (1..10 hoặc Tất cả);
+         · "⚓ Neo"    bật chế độ chờ, bấm tiếp vào phiên nào thì neo vào phiên đó; đang neo
+           tay thì ô sáng và in NGÀY neo, bấm lần nữa là bỏ neo tay, trả về mốc số năm.
+       Gộp chúng lại như bản cũ thì một ô phải mang hai nghĩa tuỳ trạng thái ẩn (có đang
+       ghim phiên hay không) — bấm vào không đoán được sẽ ra gì. */
     if(ind.idx||ind.rs){
-      const gGhim=ghimIdx();
-      if(gGhim>=0&&rows[gGhim]){
-        const S0=smArr(), dangNeo=(S0.a===gGhim);
-        cvNut.push(['__neo',dangNeo?'↺ Bỏ neo':('⚓ Neo '+ngayNgan(rows[gGhim].t))]);
-      }else{
-        cvNut.push(['__neo','⚓ '+NEO_MAC[neoMac].ten]);
-      }
+      cvNut.push(['__moc','Mốc '+tenNam(neoNam),mocMo]);
+      const S0=smArr();
+      const nhanNeo=neoArm?'⚓ Bấm chọn phiên'
+                   :(neoT!=null&&S0.a>=0&&rows[S0.a]?'⚓ '+ngayNgan(rows[S0.a].t):'⚓ Neo');
+      cvNut.push(['__neo',nhanNeo,neoArm||neoT!=null]);
     }
     if(plotH>=150&&cvNut.length){
       x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
-      let mx0=8;
-      for(const [mk,ten] of cvNut){
-        const bat=(mk==='__neo')?false:!!ind[mk];
-        const bw=x.measureText(ten).width+16, bh=17, by=padT+33;
+      /* XUỐNG HÀNG KHI HẾT CHỖ. Từ khi tách ô neo ra riêng, hàng này có tới năm ô và ở khổ
+         điện thoại (vùng vẽ ~310px) thì ô cuối bị cắt cụt hoặc chạy ra ngoài canvas — bấm
+         không trúng mà cũng không thấy nó đâu. Thà tốn thêm 22px chiều cao. */
+      const bh=17;
+      let mx0=8, by=padT+33;
+      for(const [mk,ten,batTay] of cvNut){
+        const bat=(batTay!=null)?!!batTay:!!ind[mk];
+        const bw=x.measureText(ten).width+16;
+        if(mx0>8&&mx0+bw>plotW-4){ mx0=8; by+=bh+5; }
         x.fillStyle=bat?(light()?'rgba(15,23,42,.86)':'rgba(233,233,239,.90)')
                        :(light()?'rgba(15,23,42,.07)':'rgba(255,255,255,.10)');
         if(x.roundRect){ x.beginPath(); x.roundRect(mx0,by,bw,bh,9); x.fill(); }
@@ -1011,16 +1036,16 @@ let veBut=false;                                   // bút đang được giữ 
       if(skHover>=0&&skHover<skHit.length) veHopSK(x,skHit[skHover],w,h);
     }
     /* ---- PHIÊN ĐANG GHIM: hai tam giác kẹp trên/dưới + hộp đọc số ------------------
-       Ký hiệu lấy đúng của đồ thị /phantich (mục *MỐC PHIÊN LÀ TAM GIÁC*): một vạch dọc
-       cao suốt vùng vẽ sẽ CẮT NGANG chính dữ liệu đang xem, còn tam giác thì nằm ngoài
-       rìa và vẫn chỉ đúng cột. Khác thanh ngắm ở NÉT: thanh ngắm là nét đứt và chạy theo
-       chuột, mốc ghim là nét LIỀN và đứng yên — không phân biệt được hai cái thì bấm xong
-       không biết mình đã ghim hay chưa. */
+       CHỈ TAM GIÁC, KHÔNG CÒN THANH DỌC (user chốt 27/08/2026: *"nên bỏ thanh dọc khi nhấn
+       chuột trên biểu đồ đi"*). Đây là quay về đúng ký hiệu của đồ thị /phantich (mục *MỐC
+       PHIÊN LÀ TAM GIÁC*), và đúng lý do đã ghi ngay từ đầu ở chỗ này: một vạch chạy suốt
+       chiều cao vùng vẽ thì CẮT NGANG chính dữ liệu đang xem, trong khi hai tam giác nằm
+       ngoài rìa vẫn chỉ đúng cột. Bản trước vẽ cả hai — vừa nói vạch dọc là sai vừa vẽ nó.
+       Phân biệt với thanh ngắm nay là ở CHỖ ĐỨNG: thanh ngắm là nét đứt chạy theo chuột,
+       tam giác thì bám mép trên/mép dưới và đứng yên. */
     const gI=choGhim()?ghimIdx():-1;   // tắt đường phủ thì mốc ghim cũ cũng thôi hiện
     if(gI>=0&&gI>=i0&&gI<i1){
       const X=cx(gI-i0), y0=padT, y1=padT+plotH;
-      x.strokeStyle=light()?'rgba(0,0,0,.45)':'rgba(255,255,255,.45)'; x.lineWidth=1;
-      x.beginPath(); x.moveTo(X,y0); x.lineTo(X,y1); x.stroke();
       x.fillStyle=light()?'#0f172a':'#e9e9ef';
       const tam=(yy,xuong)=>{ x.beginPath(); x.moveTo(X,yy);
         x.lineTo(X-5,yy+(xuong?-7:7)); x.lineTo(X+5,yy+(xuong?-7:7)); x.closePath(); x.fill(); };
@@ -1051,6 +1076,13 @@ let veBut=false;                                   // bút đang được giữ 
           if(P2){
             if(rr.vh>0){ const y2=P2.y(rr.vh); if(y2>=by&&y2<=by+bh) dem++; }
           }
+        }
+        /* Ô CÔNG TẮC CŨNG LÀ VẬT CẢN, và NẶNG HƠN NẾN. Nến bị che thì mất một mẩu thông
+           tin đọc được ở chỗ khác; ô bị che thì mất một thứ BẤM ĐƯỢC — người ta không
+           thấy nó thì coi như nó không tồn tại. Từ 27/08 hàng ô xuống tới hai dòng nên
+           góc trái trên gần như luôn có ô nằm đó. Cân 40 ≈ che mất 40 nến. */
+        for(const m of mocHit){
+          if(bx<m.x+m.w&&bx+bw>m.x&&by<m.y+m.h&&by+bh>m.y) dem+=40;
         }
         return dem;
       };
@@ -1085,6 +1117,41 @@ let veBut=false;                                   // bút đang được giữ 
       else paintTip(r,X,vis[hover-1]);
     } else if(opt.legend){          // chưa rê chuột: vẫn hiện nến MỚI NHẤT, chỉ để mờ
       paintTip(vis[n-1],0,vis[n-2]); opt.legend.classList.remove('on');
+    }
+    /* ---- BẢNG CHỌN SỐ NĂM (mở bằng ô "Mốc") --------------------------------------
+       VẼ THẲNG LÊN CANVAS, không dựng thẻ DOM: ô mở nó nằm trong khung đồ thị, mà một lớp
+       DOM đặt chồng lên canvas thì phải tự đồng bộ toạ độ với mọi lượt kéo/phóng/đổi khổ
+       và với cả chế độ toàn màn hình — đúng thứ `veHopGhim`/`veHopSK` đã chọn tránh.
+       VẼ SAU CÙNG: hộp đọc số của phiên đang ghim tự chọn một trong bốn góc, có lúc chọn
+       đúng góc trái trên — vẽ bảng trước nó thì bảng bị đè mất một nửa.
+       XẾP 5+5+1: một hàng mười ô là ~280px, tràn khổ điện thoại. */
+    mocMenu.length=0;
+    const oMoc=mocMo?mocHit.find(m=>m.k==='__moc'):null;
+    if(oMoc&&plotH>=150){
+      const CW=26, CH=19, GAP=4, PAD=6, COT=5;
+      const pw=PAD*2+COT*CW+(COT-1)*GAP, ph=PAD*2+CH*3+GAP*2;
+      const bx=Math.max(2,Math.min(plotW-pw-2,oMoc.x)), by=oMoc.y+oMoc.h+5;
+      x.fillStyle=light()?'rgba(255,255,255,.97)':'rgba(18,18,22,.97)';
+      x.strokeStyle=light()?'rgba(15,23,42,.18)':'rgba(255,255,255,.20)'; x.lineWidth=1;
+      if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,pw,ph,8); x.fill(); x.stroke(); }
+      else { x.fillRect(bx,by,pw,ph); x.strokeRect(bx,by,pw,ph); }
+      x.font='700 10px system-ui'; x.textAlign='center'; x.textBaseline='middle';
+      NEO_CHON.forEach((v,i)=>{
+        const cot=v?i%COT:0, hang=v?Math.floor(i/COT):2;      // ô "Tất cả" chiếm trọn hàng ba
+        const ow=v?CW:(COT*CW+(COT-1)*GAP);
+        const ox=bx+PAD+cot*(CW+GAP), oy=by+PAD+hang*(CH+GAP);
+        /* Chỉ sáng khi số năm ĐANG THẬT SỰ có hiệu lực. Neo tay đè lên số năm, nên lúc đó
+           không ô nào sáng — bằng không bảng nói dối là đang so từ mốc N năm. */
+        const chon=(neoT==null&&neoNam===v);
+        x.fillStyle=chon?(light()?'rgba(15,23,42,.86)':'rgba(233,233,239,.90)')
+                        :(light()?'rgba(15,23,42,.07)':'rgba(255,255,255,.10)');
+        if(x.roundRect){ x.beginPath(); x.roundRect(ox,oy,ow,CH,6); x.fill(); }
+        else x.fillRect(ox,oy,ow,CH);
+        x.fillStyle=chon?(light()?'#ffffff':'#0a0a0c'):MUT();
+        x.fillText(v?String(v):'Tất cả',ox+ow/2,oy+CH/2+0.5);
+        mocMenu.push({x:ox,y:oy,w:ow,h:CH,v:v});
+      });
+      x.textAlign='left';
     }
   };
 
@@ -1463,13 +1530,28 @@ let veBut=false;                                   // bút đang được giữ 
   /* Bấm trúng một trong hai ô công tắc trong khung -> bật/tắt, và NUỐT luôn cú bấm để nó
      không đi tiếp thành ghim phiên hay thành cú kéo. */
   function bamMoc(px,py){
+    /* BẢNG CHỌN XÉT TRƯỚC vì nó nằm ĐÈ lên vùng vẽ và có thể phủ cả hàng ô. Bấm ra ngoài
+       bảng thì đóng bảng và NUỐT luôn cú bấm đó — bằng không một cú bấm vừa đóng bảng vừa
+       ghim nhầm một phiên ở ngay dưới. */
+    if(mocMo){
+      for(const m of mocMenu){
+        if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
+          mocMo=false; self.neoSoNam(m.v); return true;
+        }
+      }
+      mocMo=false; self.draw(); return true;
+    }
     for(const m of mocHit){
       if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
+        if(m.k==='__moc'){ mocMo=true; neoArm=false; self.draw(); return true; }
+        /* BA TRẠNG THÁI, một chiều: chờ -> huỷ chờ | đang neo tay -> bỏ neo | còn lại ->
+           vào chế độ chờ. Ô sáng ở cả hai trạng thái đầu, nên luật "ô đang sáng thì bấm là
+           tắt" vẫn đúng như mọi ô công tắc khác trên hàng này. */
         if(m.k==='__neo'){
-          const g=ghimIdx();
-          if(g>=0&&rows[g]){ const S=smArr(); neoT=(S.a===g)?null:rows[g].t; }
-          else { neoMac=(neoMac+1)%NEO_MAC.length; neoT=null; }
-          smCache.k=''; self.draw(); return true;
+          if(neoArm) neoArm=false;
+          else if(neoT!=null){ neoT=null; smCache.k=''; }
+          else neoArm=true;
+          mocMo=false; self.draw(); return true;
         }
         ind[m.k]=!ind[m.k]; self.draw();
         if(opt.onInd) opt.onInd(m.k,ind[m.k]);   // trang ngoài đi nạp kho nếu cần
@@ -1477,6 +1559,19 @@ let veBut=false;                                   // bút đang được giữ 
       }
     }
     return false;
+  }
+  /* ĐANG CHỜ NEO: cú bấm kế tiếp trong vùng vẽ đặt mốc neo rồi thoát chế độ chờ. Nuốt cú
+     bấm dù rơi ra ngoài vùng vẽ — người ta bấm để thoát chờ thì phải thoát được, đừng để
+     kẹt trong một chế độ không có đường ra. Không đi qua `choGhim()`: bật riêng dải "So với
+     chỉ số" (vốn hoá lẫn đường chỉ số đều tắt) thì ô Neo vẫn hiện, nên phải neo được. */
+  function bamNeo(px){
+    if(!neoArm) return false;
+    neoArm=false;
+    if(px>=0&&px<=geo.plotW&&rows.length){
+      const gi=i0+idxAt(px);
+      if(gi>=0&&gi<rows.length){ neoT=rows[gi].t; smCache.k=''; }
+    }
+    self.draw(); return true;
   }
   /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó. */
   const choGhim=()=>!!(ind.vh||ind.idx);
@@ -1495,6 +1590,16 @@ let veBut=false;                                   // bút đang được giữ 
     self.draw();
     return true;
   }
+  /* Cú bấm (không kéo) trong vùng vẽ: đang chờ neo thì ĐẶT MỐC NEO, còn lại thì ghim
+     phiên để đọc số. Một cửa vào duy nhất cho cả chuột lẫn ngón tay. */
+  function bamTrongKhung(px){ return bamNeo(px)||bamGhim(px); }
+  /* Cửa vào cho bộ kiểm thử: môi trường giả không phát được sự kiện chuột thật, mà luồng
+     neo hai nhịp thì đúng là thứ hỏng im lặng được. Trả về nơi cú bấm rơi vào. */
+  self.bamThu=function(px,py){
+    if(bamMoc(px,py)) return 'o';
+    if(bamTrongKhung(px)) return 'khung';
+    return '';
+  };
   const idxAt=px=>{
     if(!geo.cw) return -1;
     const i=Math.floor(px/geo.cw);
@@ -1551,7 +1656,7 @@ let veBut=false;                                   // bút đang được giữ 
        lúc nhả. Không có ngưỡng thì mỗi lần kéo chart xong là ghim nhầm một phiên. */
     if(drag&&!drag.axis&&!dmove&&!tool&&!pending&&
        Math.abs(e.clientX-drag.x)<4&&Math.abs(e.clientY-drag.y)<4){
-      bamGhim(e.clientX-cvs.getBoundingClientRect().left);
+      bamTrongKhung(e.clientX-cvs.getBoundingClientRect().left);
     }
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
     drag=null; cvs.style.cursor=tool?'crosshair':'';
@@ -1594,10 +1699,11 @@ let veBut=false;                                   // bút đang được giữ 
       if(h2!==skHover){ skHover=h2; self.draw(); }
       if(h2>=0){ cvs.style.cursor='pointer'; return; }
     }
-    for(const m of mocHit){
+    for(const m of mocMenu.concat(mocHit)){
       if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){ cvs.style.cursor='pointer'; return; }
     }
     if(px>geo.plotW){ if(hover!==-1){hover=-1; hoverY=-1; self.draw();} return; }
+    if(neoArm){ cvs.style.cursor='crosshair'; }   // đang chờ chọn phiên để neo
     if(!tool&&draws.length) cvs.style.cursor=hitTest(px,py)?'move':'';   // rê trúng hình -> báo kéo được
     const i=idxAt(px);
     /* Đường ngang phải BÁM ĐÚNG CHUỘT, không hít vào giá đóng cửa của nến. Nên vẽ lại
@@ -1607,7 +1713,11 @@ let veBut=false;                                   // bút đang được giữ 
   cvs.addEventListener('mouseleave',()=>{ if(hover!==-1||skHover!==-1){ hover=-1; hoverY=-1; skHover=-1; self.draw(); } });
   /* Trang gọi khi bấm Esc: đang vẽ dở thì huỷ nét vẽ và trả TRUE, để Esc đó
      không đóng luôn cửa sổ toàn màn hình. */
-  self.cancelTool=function(){ if(!pending&&!tool) return false; cancelDraw(); return true; };
+  self.cancelTool=function(){
+    /* Esc cũng phải thoát được chế độ chờ neo và đóng bảng chọn — cả hai đều là "đang dở
+       một thao tác", đúng nghĩa của phím này, và phải xét TRƯỚC nét vẽ đang dở. */
+    if(neoArm||mocMo){ neoArm=false; mocMo=false; self.draw(); return true; }
+    if(!pending&&!tool) return false; cancelDraw(); return true; };
   // phím Delete xoá hình đang chọn
   window.addEventListener('keydown',e=>{
     if(!cvs.isConnected) return;
@@ -1757,7 +1867,7 @@ let veBut=false;                                   // bút đang được giữ 
       chamCuoi=0; chamXY=null; hover=-1; self.resetView(); return;
     }
     chamCuoi=nay; chamXY=[t.clientX,t.clientY];
-    bamGhim(t.clientX-cvs.getBoundingClientRect().left);
+    bamTrongKhung(t.clientX-cvs.getBoundingClientRect().left);
   });
 
   let rt=null;

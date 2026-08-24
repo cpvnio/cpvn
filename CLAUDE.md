@@ -4021,10 +4021,12 @@ VN-Index    1.821,60     (hồng sen)
 > đúng thứ dòng chú giải trên đầu đã in khi rê chuột. Đo: tắt cả hai đường rồi bấm — không
 > ghim gì.
 
-> **TAM GIÁC + NÉT LIỀN, KHÁC HẲN THANH NGẮM.** Thanh ngắm là nét ĐỨT và chạy theo chuột; mốc
-> ghim là nét LIỀN và đứng yên. Không phân biệt được hai cái thì bấm xong không biết mình đã
-> ghim hay chưa — cùng bài học đã ghi ở mục *GHIM PHIÊN* của /phantich. Và tam giác nằm ngoài
-> rìa vùng vẽ nên không cắt ngang chính dữ liệu đang xem.
+> **CHỈ TAM GIÁC, KHÔNG CÓ THANH DỌC (sửa 27/08/2026).** User: *"nên bỏ thanh dọc khi nhấn
+> chuột trên biểu đồ đi"*. Bản 23/08 vừa viết ra lý do "vạch dọc cắt ngang chính dữ liệu đang
+> xem nên dùng tam giác" vừa **vẫn vẽ cả vạch dọc** — hai tam giác kẹp trên/dưới đã chỉ đủ
+> đúng cột rồi, cái vạch chỉ thêm một nét chạy suốt vùng giá. Phân biệt với thanh ngắm nay ở
+> **CHỖ ĐỨNG**, không ở nét: thanh ngắm là nét đứt chạy theo chuột, tam giác bám mép trên/mép
+> dưới và đứng yên. Cùng bài học đã ghi ở mục *GHIM PHIÊN* của /phantich.
 
 > **HỘP IN SỐ ĐẦY ĐỦ, KHÔNG RÚT GỌN.** Dòng chú giải trên đầu phải nhét O/H/L/C/%/KL vào một
 > hàng nên `35.3K` là đúng ở đó; hộp này người ta BẤM RA để đọc một con số cụ thể, mà `35.3K`
@@ -4206,9 +4208,50 @@ Neo chào sàn tích luỹ cả chục năm nên khoảng hở hiện tại có 
 max **21.402%** — 17% số mã lệch quá 100%. Ở mức đó hai đường không gặp nhau nữa, mà một đường
 không bao giờ cắt thì **không nói được gì về hiện tại**; nó chỉ là một dữ kiện lịch sử đứng yên.
 
-`NEO_MAC` ba nấc, bấm ô `⚓` để xoay vòng: **1 năm** (mặc định) → **3 năm** → **Từ đầu**. Quy
-theo khung để mọi khung nói cùng một quãng (1 năm = 250 nến Ngày · 52 Tuần · 12 Tháng · 1 Năm).
-Ghim một phiên rồi bấm `⚓ Neo` thì neo vào đúng phiên đó; bấm lại thì trả về mặc định.
+**BỘ MỐC LÀ HAI Ô RIÊNG, KHÔNG PHẢI MỘT Ô XOAY VÒNG (sửa 27/08/2026).** User: *"mục chọn
+1-3-từ đầu nên để dạng tuỳ chọn, tôi có thể chọn 1-2-3-4-5-6-7-8-9-10-all"* và *"neo nên là 1
+mục riêng, bấm vào nút neo xong mới bấm vào vị trí cần neo"*.
+
+| ô | bấm vào thì | trạng thái sáng |
+|---|---|---|
+| **`Mốc N năm`** | mở **bảng chọn** 1..10 hoặc `Tất cả`, xếp 5+5+1 ngay dưới ô | bảng đang mở |
+| **`⚓ Neo`** | vào chế độ **chờ**; bấm tiếp vào phiên nào thì neo vào phiên đó | đang chờ, hoặc đang neo tay (ô in ngày neo) |
+
+Ô `Neo` là một vòng ba trạng thái một chiều: `Neo` → *chờ* → *đang neo tay* (`⚓ 21/08/2025`) →
+bấm lần nữa là bỏ neo tay, về mốc số năm. Chọn số năm **đè lên** neo tay — chọn mốc mới là
+thay mốc cũ, không cộng dồn hai mốc. `Esc` thoát cả hai trạng thái dở dang.
+
+Ba chỗ bản cũ hỏng, ghi lại để đừng dựng lại:
+
+- **Ba nấc bỏ trống quãng 4..9 năm** — đúng quãng chứa trọn một chu kỳ thị trường.
+- **Xoay vòng thì muốn quay lại nấc vừa lướt qua phải bấm hết một vòng.**
+- **Neo tay đi kèm việc ghim phiên**: phải ghim một phiên trước thì ô neo mới hiện ra, tức là
+  muốn neo tay phải đoán trúng một thao tác không ghi ở đâu cả.
+
+Quy theo khung để mọi khung nói cùng một quãng (1 năm = 250 nến Ngày · 52 Tuần · 12 Tháng ·
+1 Năm). `neoSoNam(v)` nhận **thẳng số năm** (`0` = Tất cả) chứ không nhận chỉ số trong một
+mảng: chỉ số thì mỗi lần thêm/bớt một nấc là mọi chỗ gọi lệch đi một bậc mà không ai báo. Số
+ngoài khoảng bị **kẹp** chứ không xoay vòng — gọi nhầm `11` ra `10` thì nhìn là thấy, xoay
+vòng ra `1` thì không.
+
+> **BẢNG CHỌN VẼ THẲNG LÊN CANVAS**, không dựng thẻ DOM: ô mở nó nằm trong khung đồ thị, mà
+> một lớp DOM chồng lên canvas phải tự đồng bộ toạ độ với mọi lượt kéo/phóng/đổi khổ và cả chế
+> độ toàn màn hình — đúng thứ `veHopGhim`/`veHopSK` đã chọn tránh. Vẽ **sau cùng** trong
+> `draw()`: hộp đọc số của phiên đang ghim tự chọn một trong bốn góc, có lúc chọn đúng góc
+> trái trên. Bấm **ra ngoài** bảng thì đóng bảng và **nuốt** cú bấm — bằng không một cú bấm
+> vừa đóng bảng vừa ghim nhầm một phiên nằm ngay dưới.
+
+> **HÀNG Ô TỰ XUỐNG DÒNG KHI HẾT CHỖ.** Tách ô Neo ra riêng là hàng này có tới năm ô; ở khổ
+> điện thoại (vùng vẽ ~310px) ô cuối bị cắt cụt hoặc chạy hẳn ra ngoài canvas — bấm không
+> trúng mà cũng không thấy nó đâu. Thà tốn thêm 22px chiều cao.
+
+> **NHỊP HAI KHÔNG ĐƯỢC GHIM PHIÊN.** `bamTrongKhung = bamNeo || bamGhim`: đang chờ neo thì cú
+> bấm chỉ đặt mốc neo. Hai việc trên cùng một cú bấm là neo xong tự dưng mọc thêm một hộp đọc
+> số. `bamNeo` cũng **không** đi qua `choGhim()`: bật riêng dải *So với chỉ số* (vốn hoá lẫn
+> đường chỉ số đều tắt) thì ô Neo vẫn hiện, nên phải neo được.
+
+`test_sm.js` khối ⑬ khoá cả luồng này qua `bamThu(px,py)` — đúng đường định tuyến của cú bấm
+thật, vì môi trường giả không phát được sự kiện chuột.
 
 > **MỐC MẶC ĐỊNH KHÔNG TRÔI KHI KÉO CHART** — nó đếm lùi từ phiên **CUỐI CHUỖI**, không phải từ
 > mép khung nhìn. Kéo/phóng bao nhiêu cũng không dời được; chỉ khi có phiên mới thì nó lùi đúng
