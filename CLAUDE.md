@@ -4238,10 +4238,52 @@ chiếu với **bản dựng lại độc lập bằng Node đọc thẳng kho**
 `smNeo` ORS +180,12 · HHV −41,26 · VCK −9,07 · VNM −21,41 · GAS +18,52 · DHC +902,83; `sm120`
 VIC +35,19 · VHM +63,32 · THD +316,05 (HNX) · SHS −20,47 (HNX) · ORS +9,71.
 
-> **BỘ THỐNG KÊ HIỆU QUẢ CŨ ĐÃ VÔ GIÁ TRỊ.** Mọi con số trong mục *"tỉ lệ thắng 66,7% · PF
-> 5,94"* dựng trên `cách nền`, tức trên đại lượng có sai số +17,2% và sai thước (vốn hoá).
-> Phải chạy lại trên `sm*` trước khi dùng lại bất kỳ con số nào trong đó. Bản cũ của cả hai mục
-> lưu ở `docs/muc-cu-cachnen.md`.
+### THỐNG KÊ CHẠY LẠI TRÊN THƯỚC ĐÚNG — VÀ NÓ LẬT PHẦN LỚN BỘ SỐ CŨ
+
+Bộ số cũ (*"tỉ lệ thắng 66,7% · PF 5,94"*) dựng trên `cách nền`, tức trên đại lượng **sai
+thước** (vốn hoá) và mang **sai số chung +17,2%**. Đã chạy lại toàn bộ trên `sm{N}`: 1.487 mã
+cả ba sàn (HOSE 395 · HNX 298 · UPCOM 794), 3.997.017 phiên, hoàn toàn nhân quả, vào lệnh ở
+**giá mở phiên kế tiếp**, cắt lỗ −10%, bán 1/3 tại +20% và +40%, giữ tối đa 200 phiên, lọc vốn
+hoá ≥1.000 tỷ + GTGD 60 phiên ≥2 tỷ.
+
+| tín hiệu | lệnh | THẮNG | TB/lệnh | PF |
+|---|---|---|---|---|
+| nền: mua bất kỳ phiên nào | 87.033 | 39,2% | +2,8% | 1,45 |
+| **sm60 > 0** | 44.963 | **41,0%** | **+3,7%** | **1,61** |
+| sm60 > +20% | 14.495 | 40,9% | +3,9% | 1,64 |
+| sm60 < 0 | 43.349 | 37,3% | +1,9% | **1,29** |
+| sm120 > 0 | 46.616 | 40,7% | +3,5% | 1,57 |
+| sm250 > 0 | 47.433 | 38,7% | +2,7% | 1,42 |
+| sm250 < 0 | 36.782 | 39,4% | +2,9% | 1,46 |
+
+**BA KẾT LUẬN, VÀ CHÚNG NGƯỢC VỚI GIẢ THUYẾT MỞ ĐẦU:**
+
+1. **Quán tính 60–120 phiên có ăn, nhưng mỏng**: PF 1,45 → 1,61. Không phải 5,94.
+2. **Mua mã ĐANG TỤT HẬU thì TỆ HƠN nền** (`sm60 < 0`: PF 1,29 so với 1,45). Đây chính là ý
+   tưởng khởi đầu cả chuỗi việc này — *"mã tụt sâu dưới VN-Index rồi bùng nổ trở lại"* — và
+   trên thước đúng thì nó là một cách làm **kém hơn mua bừa**.
+3. **Cửa sổ 250 phiên không có tín hiệu gì**: mọi ô đều 1,42–1,46, tức bằng nền.
+
+**CỔNG CHỈ SỐ VẪN LÀ THÀNH PHẦN MẠNH NHẤT** (EMA20<EMA50 và VN-Index>EMA20 — thị trường vừa
+bật lên từ nhịp giảm trung hạn):
+
+| | lệnh | THẮNG | TB | PF |
+|---|---|---|---|---|
+| không lọc sức mạnh · cổng MỞ | 10.194 | 44,2% | +5,4% | 1,93 |
+| **sm60 > 0 · cổng MỞ** | 4.982 | **47,3%** | **+6,9%** | **2,28** |
+| sm60 > +20% · cổng MỞ | 1.264 | 48,6% | +7,8% | 2,47 |
+| sm60 > 0 · cổng ĐÓNG | 39.981 | 40,2% | +3,3% | 1,54 |
+
+Cổng một mình đưa PF 1,45 → 1,93; thêm `sm60>0` lên 2,28. Vẫn xa 5,94 của bộ số cũ.
+
+**KHÔNG ỔN ĐỊNH THEO NĂM** (`sm60>0` + cổng mở): 2020 thắng 70% (+27,5%) · 2021 75% (+17,5%) ·
+2023 67% (+12,7%), nhưng **2022 chỉ 21% (−5,3%)** · 2018 34% (−0,3%) · 2019 37% (−1,3%) · 2024
+34% (−0,9%). Bốn năm âm trên mười hai.
+
+> **KHÔNG ĐƯA BỘ NÀY LÊN GIAO DIỆN.** PF 2,28 với 4 năm âm trên 12, và đã tìm ra sau khi dò
+> hàng chục tổ hợp — đó là mức không đủ để biến thành một cái nút. Ba chip `smHon`/`smKem`/
+> `smManh` là **thước đo** (người dùng tự đặt ngưỡng, tự đọc), không phải khuyến nghị. Bản cũ
+> của mục này lưu ở `docs/muc-cu-cachnen.md` để đối chiếu.
 
 
 ### CHỈ SỐ ĐÃ SÂU TỚI 2000, VÀ `kho_chiso` NAY TRỘN THAY VÌ GHI ĐÈ (23/08/2026)
