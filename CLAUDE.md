@@ -4016,10 +4016,37 @@ VN-Index    1.821,60     (hồng sen)
 > không có ngưỡng thì mỗi lần kéo chart xong lại ghim nhầm một phiên. Đo: kéo 108px thì mốc
 > ghim giữ nguyên. Bấm lại ĐÚNG cột đang ghim = bỏ ghim.
 
-> **CHỈ BẬT KHI CÓ ĐƯỜNG PHỦ (`ind.vh || ind.idx`).** Chart này có sẵn bộ công cụ vẽ PTKT nên
-> đổi hành vi của cú bấm là chuyện phải có lý do; không bật đường nào thì hộp chỉ lặp lại
-> đúng thứ dòng chú giải trên đầu đã in khi rê chuột. Đo: tắt cả hai đường rồi bấm — không
-> ghim gì.
+> **CHỈ BẬT KHI CÓ ĐƯỜNG/DẢI SO SÁNH (`ind.vh || ind.idx || ind.rs`).** Chart này có sẵn bộ
+> công cụ vẽ PTKT nên đổi hành vi của cú bấm là chuyện phải có lý do; không bật cái nào thì
+> hộp chỉ lặp lại đúng thứ dòng chú giải trên đầu đã in khi rê chuột. Đo: tắt cả ba rồi bấm
+> trúng nến — không ghim gì. **`rs` được thêm vào 27/08/2026**: trước đây loại nó ra vì hộp
+> kéo theo một thanh dọc xuyên vùng giá chỉ để đọc một số nằm ở dải dưới — thanh dọc đã bỏ,
+> và user chốt là bấm vào chính dải đó phải hiện hộp, nên lý do cũ hết hiệu lực.
+
+**BẤM TRÚNG DỮ LIỆU MỚI GHIM (27/08/2026).** User: *"tôi muốn khi nhấn vào đường giá hoặc
+nhấn vào khoảng trống là sẽ biến mất; nhấn vào đường giá hoặc VN-Index hoặc biểu đồ (so với
+VN-Index — neo) mới xuất hiện"*. Bản trước **chỉ xét X** — bấm bất kỳ đâu trong vùng vẽ là
+ghim, kể cả khoảng trắng mênh mông trên/dưới nến. Vùng giá phần lớn LÀ chỗ trống, nên xác
+suất bung hộp ngoài ý muốn cao hơn hẳn xác suất cố tình bấm, mà hộp thì che đúng chỗ đang đọc.
+
+| bấm vào | kết quả |
+|---|---|
+| đường giá (bật nến: cả thân lẫn bóng) | ghim phiên đó |
+| đường chỉ số · đường vốn hoá | ghim phiên đó |
+| **bất kỳ đâu trong khung dải "So với chỉ số"** | ghim phiên đó |
+| đúng cột đang ghim | bỏ ghim |
+| chỗ trống, đang có hộp | **tắt hộp**, nuốt cú bấm |
+| chỗ trống, không có hộp | không làm gì, trả `false` cho việc khác |
+
+> **DÒ THEO ĐOẠN, KHÔNG THEO MỘT ĐIỂM.** Trong bề ngang một cột, đường đi từ giá trị nến
+> TRƯỚC sang nến SAU; lấy mỗi giá trị tại cột đó rồi so thì đoạn nào dốc là bấm trúng nét vẫn
+> báo trượt. Ngưỡng `NGUONG_GHIM = 8px` — vừa tay cho cả chuột lẫn ngón mà không nuốt chỗ trống.
+
+> **DẢI TÍNH CẢ KHUNG, KHÔNG ĐÒI TRÚNG NÉT.** Dải là một khung riêng: bấm đâu trong đó cũng là
+> đang trỏ vào chính nó, mà đòi trúng nét trong một dải cao 18% màn hình là bắt bí. Hình học
+> dải (`geo.rsTop` / `geo.rsBh`) và hàm quy vốn hoá ra y (`geo.yVH`) nay **đẩy ra `geo`** —
+> lớp bấm nằm ngoài `draw()` nên không thấy biến cục bộ trong đó; đoạn vẽ dải đọc lại đúng hai
+> số ấy chứ không tự tính, giữ một nguồn duy nhất.
 
 > **CHỈ TAM GIÁC, KHÔNG CÓ THANH DỌC (sửa 27/08/2026).** User: *"nên bỏ thanh dọc khi nhấn
 > chuột trên biểu đồ đi"*. Bản 23/08 vừa viết ra lý do "vạch dọc cắt ngang chính dữ liệu đang

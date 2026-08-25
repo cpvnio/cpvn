@@ -343,5 +343,92 @@ const lamMac=()=>CPChart(cvs,{});
   kiem('tắt so sánh -> hết ô Mốc', !!oNut('__moc'), false);
 }
 
+/* ── ⑭ HỘP ĐỌC SỐ: BẤM TRÚNG DỮ LIỆU MỚI HIỆN, BẤM CHỖ TRỐNG THÌ TẮT ────────
+   User 27/08: *"tôi muốn khi nhấn vào đường giá hoặc nhấn vào khoảng trống là sẽ biến mất;
+   nhấn vào đường giá hoặc VN-Index hoặc biểu đồ (so với VN-Index — neo) mới xuất hiện"*.
+   Bản trước chỉ xét X nên bấm đâu trong vùng vẽ cũng ghim — mà vùng giá phần lớn là chỗ
+   trống. Khoá lại từng đích một, vì trượt một đích thì cái đó im lặng không bấm được nữa. */
+{
+  const n=600, f=i=>[10000*(1+0.3*Math.sin(i/60)), 500*(1+0.25*Math.cos(i/23))];
+  const R=chuoi(n,f);
+  const ch=lamMac(); ch.setRows(R,'d'); ch.neoSoNam(0); ch.setInd({rs:true});
+  const kh=()=>ch.khungNhin();
+  const pxCot=j=>j*kh().cw+kh().cw/2;             // tâm cột thứ j trong khung nhìn
+  const K=kh(), giua=Math.floor((K.i1-K.i0)/2);
+  const giCua=j=>kh().i0+j;
+
+  /* --- bấm TRÚNG nến --- */
+  ch.setGhim(null);
+  const yNen=ch.yOfV(R[giCua(giua)].c);
+  kiem('bấm trúng nến -> nuốt cú bấm', ch.bamThu(pxCot(giua),yNen), 'khung');
+  kiem('bấm trúng nến -> ghim đúng phiên đó', ch.ghim(), R[giCua(giua)].t);
+  /* Bấm lại ĐÚNG cột đó = bỏ ghim (nếp cũ, user cũng nhắc "nhấn vào đường giá là biến mất") */
+  ch.bamThu(pxCot(giua),ch.yOfV(R[giCua(giua)].c));
+  kiem('bấm lại đúng nến đang ghim -> bỏ ghim', ch.ghim(), null);
+
+  /* --- bấm vào KHOẢNG TRỐNG trong vùng giá --- */
+  /* Chọn cột nào mà mép trên vùng giá cách nến của nó thật xa, để chắc chắn là chỗ trống. */
+  let jTrong=-1;
+  for(let j=0;j<K.i1-K.i0;j++){
+    const r=R[giCua(j)]; if(!r) continue;
+    if(ch.yOfV(r.c)-K.padTv>40){ jTrong=j; break; }
+  }
+  kiem('tìm được một cột có khoảng trống phía trên', jTrong>=0, true);
+  const yTrong=K.padTv+4;
+  kiem('bấm chỗ trống lúc chưa ghim -> KHÔNG nuốt, không ghim',
+       ch.bamThu(pxCot(jTrong),yTrong), '');
+  kiem('bấm chỗ trống -> vẫn không có gì bị ghim', ch.ghim(), null);
+  /* Đang có hộp mà bấm chỗ trống -> TẮT hộp, và nuốt cú bấm đó */
+  ch.bamThu(pxCot(giua),ch.yOfV(R[giCua(giua)].c));
+  kiem('ghim lại được', ch.ghim()!=null, true);
+  kiem('đang ghim, bấm chỗ trống -> nuốt cú bấm', ch.bamThu(pxCot(jTrong),yTrong), 'khung');
+  kiem('đang ghim, bấm chỗ trống -> hộp biến mất', ch.ghim(), null);
+
+  /* --- bấm vào DẢI "so với chỉ số" --- */
+  kiem('dải có mốc hình học', kh().rsTop>0&&kh().rsBh>0, true);
+  const yDai=kh().rsTop+kh().rsBh/2;
+  kiem('bấm giữa dải -> nuốt cú bấm', ch.bamThu(pxCot(giua),yDai), 'khung');
+  kiem('bấm giữa dải -> ghim đúng phiên đó', ch.ghim(), R[giCua(giua)].t);
+  /* Dải mở khoá được MỘT MÌNH: đây là chỗ bản cũ khoá lại (`choGhim` chỉ nhận vh/idx) */
+  kiem('chỉ bật dải, không bật đường nào -> vẫn ghim được',
+       (ch.setGhim(null), ch.bamThu(pxCot(giua),yDai), ch.ghim()!=null), true);
+
+  /* --- bấm vào ĐƯỜNG CHỈ SỐ --- */
+  ch.setInd({idx:true}); ch.setGhim(null);
+  const L=ch.smSo().ln;
+  let jIx=-1;
+  for(let j=0;j<kh().i1-kh().i0;j++){
+    const gi=giCua(j), a=L[gi]; if(a==null) continue;
+    /* Phải cách nến >30px thì mới chứng minh được là trúng ĐƯỜNG CHỈ SỐ chứ không phải
+       trúng nến; và phải nằm trong vùng giá, kẻo bấm ra ngoài khung. */
+    const yi=ch.yOfV(a);
+    if(yi>kh().padTv+6&&yi<kh().padTv+kh().plotHv-6&&Math.abs(yi-ch.yOfV(R[gi].c))>30){ jIx=j; break; }
+  }
+  kiem('tìm được cột mà đường chỉ số tách hẳn khỏi nến', jIx>=0, true);
+  kiem('bấm trúng đường chỉ số -> nuốt cú bấm',
+       ch.bamThu(pxCot(jIx),ch.yOfV(L[giCua(jIx)])), 'khung');
+  kiem('bấm trúng đường chỉ số -> ghim đúng phiên đó', ch.ghim(), R[giCua(jIx)].t);
+
+  /* --- TẮT NẾN (đồ thị đường): đích là đoạn đường đóng cửa, không phải thân+bóng --- */
+  ch.setGhim(null); ch.setInd({rs:true,idx:false,nen:false});
+  {
+    const gi=giCua(giua), r=R[gi];
+    kiem('tắt nến, bấm trúng đường giá -> ghim',
+         (ch.bamThu(pxCot(giua),ch.yOfV(r.c)), ch.ghim()), r.t);
+    /* Chỗ trống vẫn phải là chỗ trống: cách đường đóng cửa 60px thì không được ghim. */
+    ch.setGhim(null);
+    const yXa=ch.yOfV(r.c)-60>kh().padTv+2?ch.yOfV(r.c)-60:ch.yOfV(r.c)+60;
+    kiem('tắt nến, bấm cách đường giá 60px -> không ghim',
+         (ch.bamThu(pxCot(giua),yXa), ch.ghim()), null);
+  }
+  ch.setInd({nen:true});
+
+  /* --- tắt hết đường/dải thì cú bấm trả lại cho việc khác --- */
+  ch.setGhim(null); ch.setInd({rs:false,idx:false,vh:false});
+  kiem('tắt hết so sánh -> bấm trúng nến cũng không ghim',
+       ch.bamThu(pxCot(giua),ch.yOfV(R[giCua(giua)].c)), '');
+  kiem('tắt hết so sánh -> không có gì bị ghim', ch.ghim(), null);
+}
+
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);
 process.exit(fail?1:0);

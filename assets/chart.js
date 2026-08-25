@@ -437,6 +437,8 @@ let veBut=false;                                   // bút đang được giữ 
   self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH,
                        oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w)),
                        oNut:mocHit.map(m=>({k:m.k,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)})),
+                       padTv:geo.padTv, plotHv:geo.plotHv,
+                       rsTop:geo.rsTop, rsBh:geo.rsBh,
                        oNam:mocMenu.filter(m=>m.k==='nam')
                               .map(m=>({v:m.v,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)})),
                        oNeo:(m=>m?{x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)}:null)
@@ -521,6 +523,10 @@ let veBut=false;                                   // bút đang được giữ 
     /* Hình học dải RSI phải biết TỪ ĐÂY, không đợi tới đoạn vẽ đường RSI ở cuối draw():
        lớp vẽ chạy trước đoạn đó, thiếu mốc là hình của dải RSI bị coi như không vẽ được. */
     geo.rsiTop=rsiH?h-22-subH+4:null; geo.rsiH=rsiH?rsiH-10:0;
+    /* Dải "So với chỉ số" cũng phải có mốc TỪ ĐÂY, cùng lý do: từ 27/08/2026 lớp bấm phải
+       biết dải nằm ở đâu để phân biệt "bấm trúng dải" với "bấm vào chỗ trống". Một nguồn
+       duy nhất — đoạn vẽ dải ở cuối draw() đọc lại hai số này chứ không tự tính. */
+    geo.rsTop=rsH?h-22-rsH+4:null; geo.rsBh=rsH?rsH-10:0;
     /* TRỤC PHẢI THỨ HAI cho cặp vốn hoá ↔ chỉ số. Cặp này KHÔNG dùng chung trục với nến:
        trục giá tự khít theo nến đang hiện, dính vào đó là mọi phép neo cứng đều trôi khỏi
        khung (đo được 47,5% số cửa sổ). Có trục riêng thì nến giữ nguyên thang của nến, cặp
@@ -567,6 +573,7 @@ let veBut=false;                                   // bút đang được giữ 
             y:v=>padT+(hi-Math.log(v))/(hi-lo)*plotH};
       }
     }
+    geo.yVH=P2?P2.y:null;      // lớp bấm ngoài draw() dò trúng đường vốn hoá bằng hàm này
 
     const pad=(mx-mn)*0.06; mn-=pad; mx+=pad;
     if(yZoom!==1||yPan!==0){                    // người dùng đã kéo/giãn trục giá bằng tay
@@ -911,7 +918,7 @@ let veBut=false;                                   // bút đang được giữ 
        THANG CỐ ĐỊNH THEO CẢ CHUỖI, không theo khung nhìn (bài học 23/08: lấy min/max của
        `vis` thì kéo ngang một cái là đường đổi hình). */
     if(ind.rs&&rsH){
-      const top=h-22-rsH+4, bh=rsH-10, S=smArr();
+      const top=geo.rsTop, bh=geo.rsBh, S=smArr();
       const nhan='So với '+ixTen+(S.a>=0&&rows[S.a]?(' — neo '+ngayNgan(rows[S.a].t)):'');
       x.textAlign='left'; x.textBaseline='middle';
       if(S.a<0||S.co<2){
@@ -1299,7 +1306,7 @@ let veBut=false;                                   // bút đang được giữ 
     return Math.round(rows[lo].t+(rows[hi].t-rows[lo].t)*(k-lo));
   }
   const vOfY=py=>geo.mx-(py-geo.padTv)/geo.plotHv*(geo.mx-geo.mn);
-  self.vOfY=vOfY; self.tOfX=tOfX;
+  self.vOfY=vOfY; self.tOfX=tOfX; self.yOfV=v=>yOfV(v);
   const DCOL='#2962ff';
   const yOfV=v=>geo.padTv+(geo.mx-v)/(geo.mx-geo.mn)*geo.plotHv;   // bản dùng ngoài draw()
   /* ---- KHUNG VẼ: 'main' = vùng giá · 'rsi' = dải RSI (thang cố định 0..100) ----
@@ -1597,31 +1604,76 @@ let veBut=false;                                   // bút đang được giữ 
     }
     self.draw(); return true;
   }
-  /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó. */
-  const choGhim=()=>!!(ind.vh||ind.idx);
-  function bamGhim(px){
-    /* CHỈ MỞ KHOÁ KHI CÓ ĐƯỜNG PHỦ TRÊN VÙNG GIÁ (user chốt 25/08: *"thanh dọc này chỉ
-       xuất hiện khi bật vốn hoá hoặc VN-Index"*). Có lúc tao cho `rs` mở khoá luôn vì hộp
-       ghim in được dòng "Cách nền" — nhưng dải nằm ở khung riêng phía dưới, ghim một thanh
-       dọc xuyên qua vùng giá để đọc nó thì thanh ấy che nến mà chẳng phục vụ cái gì đang
-       xem. Bật vốn hoá/VN-Index thì khác: lúc đó thanh dọc trỏ đúng vào thứ người ta đang
-       so sánh. */
+  /* BẤM (không phải KÉO) trong vùng vẽ -> ghim / bỏ ghim đúng cột đó.
+     CHỈ MỞ KHOÁ KHI CÓ ĐƯỜNG/DẢI SO SÁNH. Không có cái nào thì hộp chỉ lặp lại đúng thứ
+     dòng chú giải trên đầu đã in sẵn khi rê chuột — mà đổi hành vi của cú bấm trên một
+     chart có sẵn bộ công cụ vẽ là chuyện phải có lý do.
+     `rs` NAY CŨNG MỞ KHOÁ (27/08/2026). Trước đây loại nó ra vì hộp kéo theo một thanh dọc
+     xuyên qua vùng giá chỉ để đọc một con số nằm ở dải dưới. Thanh dọc đã bỏ, và user vừa
+     chốt là bấm vào chính dải đó phải hiện hộp — nên lý do cũ hết hiệu lực. */
+  const choGhim=()=>!!(ind.vh||ind.idx||ind.rs);
+  /* ---- BẤM TRÚNG DỮ LIỆU MỚI GHIM (user chốt 27/08/2026) -----------------------
+     *"tôi muốn khi nhấn vào đường giá hoặc nhấn vào khoảng trống là sẽ biến mất; nhấn vào
+     đường giá hoặc VN-Index hoặc biểu đồ (so với VN-Index — neo) mới xuất hiện"*.
+
+     Bản trước chỉ xét X: bấm BẤT KỲ đâu trong vùng vẽ là ghim, kể cả khoảng trắng mênh
+     mông phía trên/dưới nến. Vùng giá phần lớn là chỗ trống, nên xác suất bung hộp ngoài ý
+     muốn cao hơn hẳn xác suất cố tình bấm — và hộp thì che mất chính chỗ đang đọc.
+
+     BA ĐÍCH: đường giá (bật nến thì tính cả thân lẫn bóng), đường chỉ số, đường vốn hoá.
+     Cộng thêm CẢ KHUNG của dải "So với chỉ số" — dải là một khung riêng, bấm đâu trong đó
+     cũng là đang trỏ vào chính nó, đòi trúng nét trong một dải cao 18% màn hình là bắt bí.
+     Dò theo ĐOẠN chứ không theo một điểm: trong bề ngang một cột, đường đi từ giá trị nến
+     trước sang nến sau — lấy mỗi giá trị tại cột đó thì đoạn nào dốc là bấm trúng nét vẫn
+     báo trượt. */
+  const NGUONG_GHIM=8;                 // vừa tay cho cả chuột lẫn ngón, không nuốt chỗ trống
+  function trungDuLieu(gi,py){
+    if(py==null) return true;          // chỗ gọi không biết y -> giữ nguyên nếp cũ
+    if(ind.rs&&geo.rsTop!=null&&py>=geo.rsTop-4&&py<=geo.rsTop+geo.rsBh+4) return true;
+    const r=rows[gi]; if(!r) return false;
+    const T=NGUONG_GHIM;
+    const trong=(a,b)=>py>=Math.min(a,b)-T&&py<=Math.max(a,b)+T;
+    const t=rows[gi-1], s=rows[gi+1];
+    if(ind.nen){ if(trong(yOfV(r.h),yOfV(r.l))) return true; }
+    else{
+      const c=[r.c, t?t.c:r.c, s?s.c:r.c];
+      if(trong(yOfV(Math.min(...c)),yOfV(Math.max(...c)))) return true;
+    }
+    if(ind.idx){
+      const L=smArr().ln, a=L[gi];
+      if(a!=null){
+        const v=[a, L[gi-1]!=null?L[gi-1]:a, L[gi+1]!=null?L[gi+1]:a];
+        if(trong(yOfV(Math.min(...v)),yOfV(Math.max(...v)))) return true;
+      }
+    }
+    if(ind.vh&&geo.yVH&&r.vh>0){
+      const v=[r.vh, (t&&t.vh>0)?t.vh:r.vh, (s&&s.vh>0)?s.vh:r.vh];
+      if(trong(geo.yVH(Math.min(...v)),geo.yVH(Math.max(...v)))) return true;
+    }
+    return false;
+  }
+  function bamGhim(px,py){
     if(!choGhim()) return false;
     if(!(px>=0&&px<=geo.plotW)||!rows.length) return false;
+    /* BẤM TRƯỢT MÀ ĐANG CÓ HỘP -> TẮT HỘP, và nuốt cú bấm. Đây đúng là nửa đầu yêu cầu của
+       user: bấm ra khoảng trống là hộp biến mất. Không có hộp thì trả FALSE để cú bấm còn
+       đi tiếp được cho việc khác. */
+    const tat=()=>{ if(ghimT==null) return false; ghimT=null; self.draw(); return true; };
     const gi=i0+idxAt(px);
-    if(gi<0||gi>=rows.length) return false;      // rê vào vùng trống tương lai
+    if(gi<0||gi>=rows.length) return tat();      // bấm vào vùng trống tương lai
+    if(!trungDuLieu(gi,py)) return tat();
     ghimT=(ghimT===rows[gi].t)?null:rows[gi].t;
     self.draw();
     return true;
   }
   /* Cú bấm (không kéo) trong vùng vẽ: đang chờ neo thì ĐẶT MỐC NEO, còn lại thì ghim
      phiên để đọc số. Một cửa vào duy nhất cho cả chuột lẫn ngón tay. */
-  function bamTrongKhung(px){ return bamNeo(px)||bamGhim(px); }
+  function bamTrongKhung(px,py){ return bamNeo(px)||bamGhim(px,py); }
   /* Cửa vào cho bộ kiểm thử: môi trường giả không phát được sự kiện chuột thật, mà luồng
      neo hai nhịp thì đúng là thứ hỏng im lặng được. Trả về nơi cú bấm rơi vào. */
   self.bamThu=function(px,py){
     if(bamMoc(px,py)) return 'o';
-    if(bamTrongKhung(px)) return 'khung';
+    if(bamTrongKhung(px,py)) return 'khung';
     return '';
   };
   const idxAt=px=>{
@@ -1680,7 +1732,8 @@ let veBut=false;                                   // bút đang được giữ 
        lúc nhả. Không có ngưỡng thì mỗi lần kéo chart xong là ghim nhầm một phiên. */
     if(drag&&!drag.axis&&!dmove&&!tool&&!pending&&
        Math.abs(e.clientX-drag.x)<4&&Math.abs(e.clientY-drag.y)<4){
-      bamTrongKhung(e.clientX-cvs.getBoundingClientRect().left);
+      const rn=cvs.getBoundingClientRect();
+      bamTrongKhung(e.clientX-rn.left, e.clientY-rn.top);
     }
     if(dmove){ dmove=null; if(opt.onDraws) opt.onDraws(draws); }
     drag=null; cvs.style.cursor=tool?'crosshair':'';
@@ -1891,7 +1944,8 @@ let veBut=false;                                   // bút đang được giữ 
       chamCuoi=0; chamXY=null; hover=-1; self.resetView(); return;
     }
     chamCuoi=nay; chamXY=[t.clientX,t.clientY];
-    bamTrongKhung(t.clientX-cvs.getBoundingClientRect().left);
+    { const rn=cvs.getBoundingClientRect();
+      bamTrongKhung(t.clientX-rn.left, t.clientY-rn.top); }
   });
 
   let rt=null;
