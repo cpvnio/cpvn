@@ -4390,48 +4390,57 @@ trên giao diện.
 > **thiếu dữ liệu phải TRƯỢT chứ không được LỌT** — mã chưa đủ N phiên có `sm{N} = null`, một
 > phép so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
 
-### CHIP "DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT" — bảng giá (27/08/2026)
+### CHIP "DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CÁCH ≤10%" — bảng giá (27/08/2026)
 
-User chốt sau **bốn vòng đo**: *"check mã nào dưới đường VN-Index trong thời gian dài, sau đó
-giá hiện tại đang cách VN-Index ngắn nhất và có xu hướng — nhưng VẪN DƯỚI VN-Index"*.
+User chốt sau **năm vòng đo**: *"1 năm có 250 phiên thì tầm 125 phiên gần nhất dưới VN-Index
+nhưng giá chỉ còn cách VN-Index khoảng 10% thì đạt · 2 năm thì tầm 200 phiên · 3–10 năm thì
+khoảng 300 phiên"*.
 
 Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm", nên bộ lọc nói đúng thứ người dùng nhìn
-thấy. Khoảng cách tới đường chỉ số `kc(i) = R(a)/R(i) − 1` với `R(i) = giá(i) ÷ chỉ số(i)`,
-`a` = phiên neo; `kc > 0` là đang ở DƯỚI, càng nhỏ càng áp sát. Kho ghi **`ap1..ap10` = PHÂN
-VỊ (%) của `kc` hôm nay trong cả cửa sổ N năm** (`0` = chưa bao giờ gần thế này); chip hỏi
-`≤ 10`, đọc ra là *"chưa tới 10% số phiên trong N năm qua mã này ở gần chỉ số như bây giờ"*.
+thấy. Khoảng hở `q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1`; `q < 0` là đang ở DƯỚI,
+và `−q` chính là *"thấp hơn đường chỉ số bao nhiêu %"*.
 
-**BA CỔNG, MỖI CỔNG CHỮA MỘT CA LỌT LƯỚI ĐÃ BẮT ĐƯỢC:**
+**HAI ĐIỀU KIỆN, HẾT:**
 
-| cổng | chữa ca nào |
+| | |
 |---|---|
-| ① **vẫn phải Ở DƯỚI** (`kc > 0` hôm nay) | **VBB** mốc 1 năm: phá lên **+25,7%** ngày 22/07/2026 rồi hạ về **−3,0%**. Bản trước chỉ hỏi "đỉnh trong 50 phiên" nên nhận cả cái đỉnh **đã qua** |
-| ② **khoảng cách đang THU HẸP** so với 60 phiên trước | đó chính là *"có xu hướng"*; không có nó thì mã đang giãn ra cũng lọt miễn tình cờ ở vùng gần |
-| ③ **bỏ 20 phiên dính ngay sau mốc neo** | tại phiên neo hai đường TRÙNG NHAU theo định nghĩa (`kc ≈ 0`), tính cả vùng đó thì "gần nhất" luôn rơi vào ngay sau mốc neo — đo được **0–2 mã** trên cả ba sàn trước khi bỏ |
+| ① | `L` phiên gần nhất **đều** có `q < 0` — ở dưới liên tục, không một phiên nào nhô lên |
+| ② | khoảng cách hôm nay `−q` ≤ **10%** |
 
-> **PHÂN VỊ CHỨ KHÔNG PHẢI "ĐÚNG HÔM NAY LÀ GẦN NHẤT".** Đòi hôm nay là cực tiểu tuyệt đối của
-> cả nghìn phiên là dao cạo — đo được **0–2 mã**. Phân vị cho dung sai mà vẫn nói được một câu
-> đọc thẳng ra nghĩa. Ngưỡng nằm ở CLIENT nên nới không phải dựng lại kho: `≤10` cho 15 mã ở
-> mốc 1 năm, `≤20` cho 34.
+`L` đổi theo mốc: **1 năm → 125 · 2 năm → 200 · 3..10 năm → 300 phiên**.
 
-**BỐN CA MẪU — `test_smkho.js` khoá riêng, cả bốn phải TRƯỢT ở MỌI mốc:**
-`VBB` (phá lên rồi hạ về) · `NVB` (đỉnh đang tụt: ở TRÊN chỉ số gần trọn 2 năm, `q` đỉnh
-**+62%** tháng 7/2025, tụt về chạm **0,00%** ngày 07/08/2026 rồi nảy) · `VIC` và `VHM` (đang
-ở trên chỉ số). Đo phiên 25/08/2026: VBB phân vị **28,1%** · NVB **76,2%** · VIC/VHM `null`.
+Kho ghi `ap1..ap10` = **khoảng cách hôm nay (%)**, và CHỈ ghi khi ① đã thoả; client chỉ còn
+việc so ngưỡng. **`null` nghĩa là có phiên nhô lên trong `L` phiên** — tức không phải mã đang
+hỏi. Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
 
-Đo phiên 25/08/2026 — chip bắt được: **1 năm 15 mã · 2 năm 2 · 3 năm 2 · 4 năm 4 · 5 năm 3 ·
-6 năm 3 · 7 năm 3 · 8 năm 4 · 9 năm 2 · 10 năm 3**. Hiếm ở mốc dài là đúng bản chất: *"dưới
-đường chỉ số 5 năm suốt, nay áp sát nhất mà vẫn chưa vượt"* không phải chuyện thường xuyên.
+> **NEO Ở "NGAY BÂY GIỜ", KHÔNG NEO Ở LÚC CẮT.** Bản trước đòi *"ở dưới suốt 600 phiên NGAY
+> TRƯỚC VẾT CẮT"* và chết vì ngay sát vết cắt giá luôn dập dềnh quanh vạch — **0 mã đạt**. Ở
+> đây `L` phiên tính ngược từ HÔM NAY, mà hôm nay mã vẫn còn ở dưới, nên không có vùng dập
+> dềnh nào để vướng.
 
-> **BA BẢN ĐÃ THỬ RỒI BỎ, đừng dựng lại:**
-> · **"Mọi vết cắt lên trong 50 phiên"** — một nửa số mã lọt lưới đang nằm LẠI DƯỚI đường chỉ
->   số (TCB cắt lên 19/08 rồi rơi xuống 20/08). Mở chart thấy giá nằm dưới thì đọc ra là **bộ
->   lọc hỏng**.
-> · **"Ở dưới suốt 600 phiên rồi mới cắt"** — đòi từng phiên một thì **0 mã** (ngay trước lúc
->   cắt giá luôn dập dềnh quanh vạch); nới thành 95% còn 1–3 mã mỗi mốc. Ngưỡng: 100% → 0 ·
->   98% → 3 · 95% → 3 · 80% → 11 · 70% → 12.
-> · **"Đỉnh khoảng hở trong 50 phiên + quá nửa cửa sổ ở dưới"** — nhận cả đỉnh **đã qua**, đó
->   là ca VBB.
+**BỐN CA MẪU USER ĐÃ BẮT — `test_smkho.js` khoá riêng, cả bốn phải TRƯỢT ở MỌI mốc:**
+
+| mã | vì sao lọt lưới ở bản cũ | nay bị loại bởi |
+|---|---|---|
+| **VBB** | phá lên **+25,7%** ngày 22/07/2026 rồi hạ về −3,0%; bản cũ chỉ hỏi "đỉnh trong 50 phiên" nên nhận cả cái đỉnh **đã qua** | ① — có phiên nhô lên trong 125 phiên |
+| **NVB** | ở TRÊN chỉ số gần trọn 2 năm (`q` đỉnh **+62%** tháng 7/2025) rồi tụt về chạm **0,00%** ngày 07/08/2026 và nảy — đỉnh đang tụt, không phải đáy đang vượt | ② mốc 1 năm (cách **43,5%**) · ① các mốc còn lại |
+| **VIC · VHM** | đang ở TRÊN đường chỉ số | ① |
+
+Đo phiên 25/08/2026 — **ở dưới liên tục / cách ≤10%**: 1 năm 743 → **28 mã** · 2 năm 765 → 7
+· 3 năm 561 → 2 · 5 năm 491 → 1 · 10 năm 738 → 4.
+
+> **NGƯỠNG 10% NẰM Ở CLIENT** nên siết hay nới không phải dựng lại kho. Mốc 1 năm: ≤5% → 7 mã
+> · ≤10% → 28 · ≤15% → 70 · ≤20% → 172. Mã áp sát nhất toàn thị trường ở mốc 1 năm cách
+> **1,83%**; ở mốc 5 năm là **8,92%** — mốc càng dài thì khoảng cách càng khó nhỏ, nên ít mã
+> là đúng bản chất chứ không phải bộ lọc hỏng.
+
+> **BỐN BẢN ĐÃ THỬ RỒI BỎ, đừng dựng lại:**
+> · *"Mọi vết cắt lên trong 50 phiên"* — một nửa số mã lọt lưới đang nằm LẠI DƯỚI (TCB cắt
+>   lên 19/08 rồi rơi xuống 20/08).
+> · *"Ở dưới suốt 600 phiên rồi mới cắt"* — đòi từng phiên thì **0 mã**; nới 95% còn 1–3 mã.
+> · *"Đỉnh khoảng hở trong 50 phiên + quá nửa cửa sổ ở dưới"* — nhận cả đỉnh **đã qua** (VBB).
+> · *"Phân vị khoảng cách ≤10% + đang thu hẹp"* — đúng hướng nhưng phân vị là một đại lượng
+>   tương đối, hai mã cùng phân vị có thể cách chỉ số 3% và 40%. User muốn con số TUYỆT ĐỐI.
 
 **ĐỐI CHIẾU ĐẦU–CUỐI VỚI CHÍNH CHART** (VCB, mốc 5 năm, phiên 24/08/2026): phiên neo
 `2021-08-18` · `q` trước khi cắt `−0,027%` · tại phiên cắt `+1,081%` · phiên cuối `+3,299%`,

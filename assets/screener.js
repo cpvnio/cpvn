@@ -65,10 +65,10 @@ CPScreen.chips=[
   {id:'rsi30', g:'Kỹ thuật', nm:'RSI < 30 (quá bán)'},
   {id:'rsi80m',g:'Kỹ thuật', nm:'Lần đầu trong tháng RSI > {n}', opts:[70,75,80], def:80},
   {id:'hi52',  g:'Kỹ thuật', nm:'Gần đỉnh 52 tuần'},
-  /* DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT — đo trên đúng đường chart trang mã vẽ ở mốc "N năm",
-     cửa sổ chính là N năm đó. Mã VẪN Ở DƯỚI đường chỉ số và khoảng cách đang thu hẹp.
-     Mã sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX-Index · UPCOM→UPCOM). */
-  {id:'catN',  g:'Kỹ thuật', nm:'Dưới chỉ số {n} năm, đang áp sát nhất',
+  /* DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CHỈ CÒN CÁCH ≤10% — đo trên đúng đường chart trang mã
+     vẽ ở mốc "N năm". Số phiên phải ở dưới liên tục đổi theo mốc: 1 năm 125 · 2 năm 200 ·
+     3–10 năm 300. Mã sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX · UPCOM→UPCOM). */
+  {id:'catN',  g:'Kỹ thuật', nm:'Dưới chỉ số {n} năm liên tục, nay cách ≤10%',
    opts:[1,2,3,4,5,6,7,8,9,10], def:1},
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
@@ -121,14 +121,13 @@ CPScreen.chip=function(id,c,n){
        lọt, tín hiệu mất hết ý nghĩa. `rsiPM` rỗng = hôm nay là phiên ĐẦU THÁNG. */
     case 'rsi80m':return t.rsi!=null&&t.rsi>n&&(t.rsiPM==null||t.rsiPM<=n);
     case 'hi52':  return t.dhi!=null&&t.dhi>=-15;
-    /* DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT. Kho ghi `apN` = PHÂN VỊ (%) của khoảng cách hôm
-       nay trong cả cửa sổ N năm — `0` nghĩa là chưa bao giờ gần thế này. Client hỏi ≤ 10:
-       "chưa tới 10% số phiên trong N năm qua mã này ở gần chỉ số như bây giờ".
-       Kho đã lọc sẵn ba cổng, và mỗi cổng chữa một ca lọt lưới đã bắt được: phải VẪN Ở DƯỚI
-       (VBB đã phá lên +25,7% rồi hạ về, bản trước vẫn nhận), khoảng cách phải đang THU HẸP
-       (đó là "có xu hướng"), và bỏ 20 phiên dính ngay sau mốc neo khỏi phép so.
-       Ngưỡng ở CLIENT nên nới ra không phải dựng lại kho — nới lên 20 thì rổ rộng gấp 2–4
-       lần. `null` phải TRƯỢT, đừng viết kiểu `!(v>10)`. */
+    /* DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CÁCH ≤10%. Kho ghi `apN` = KHOẢNG CÁCH (%) từ giá tới
+       đường chỉ số hôm nay, và CHỈ ghi khi `L` phiên gần nhất đều nằm dưới đường đó
+       (1 năm 125 · 2 năm 200 · 3–10 năm 300). Nên `null` = có phiên nhô lên trong quãng ấy,
+       tức không phải mã đang hỏi — đúng ba ca đã bắt: VBB phá lên rồi hạ về, VIC/VHM đang ở
+       trên. Client chỉ còn việc so ngưỡng.
+       Ngưỡng ở CLIENT nên đổi không phải dựng lại kho: ≤5% cho 7 mã ở mốc 1 năm, ≤10% cho
+       28, ≤20% cho 172. `null` phải TRƯỢT, đừng viết kiểu `!(v>10)`. */
     case 'catN':  { const v=t['ap'+n]; return v!=null&&v<=10; }
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;

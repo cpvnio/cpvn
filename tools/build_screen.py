@@ -570,35 +570,37 @@ def build_fund(meta):
 CHISO_SAN = {'HOSE': 'VNINDEX', 'HNX': 'HNX', 'UPCOM': 'UPCOM'}
 SM_CUA    = (20, 60, 120, 250)
 
-# ── DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT (27/08/2026) ──────────────────────────────────
-# User chốt sau bốn vòng đo: *"check mã nào dưới đường VN-Index trong thời gian dài, sau đó
-# giá hiện tại đang cách VN-Index ngắn nhất và có xu hướng — nhưng VẪN DƯỚI VN-Index"*.
+# ── DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CHỈ CÒN CÁCH ÍT (27/08/2026) ──────────────────────
+# User chốt sau năm vòng đo: *"1 năm có 250 phiên thì tầm 125 phiên gần nhất dưới VN-Index
+# nhưng giá chỉ còn cách VN-Index khoảng 10% thì đạt · 2 năm thì tầm 200 phiên · 3–10 năm thì
+# khoảng 300 phiên"*.
 #
-# Đo trên đúng đường chart trang mã vẽ ở mốc "N năm". Khoảng cách tới đường chỉ số:
-#     kc(i) = R(a)/R(i) − 1        với R(i) = giá(i) ÷ chỉ số(i), a = phiên neo
-# `kc > 0` là đang ở DƯỚI, càng nhỏ càng áp sát. Ghi ra **PHÂN VỊ của `kc` hôm nay** trong cả
-# cửa sổ (0 = chưa bao giờ gần thế này); chip hỏi ≤ 10.
+# Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm". Khoảng hở
+#     q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1        a = phiên neo, lùi N×250 nến
+# `q < 0` là đang ở DƯỚI đường chỉ số, và `−q` chính là "thấp hơn đường chỉ số bao nhiêu %".
 #
-# BA CỔNG, mỗi cổng chữa đúng một ca lọt lưới user đã bắt:
-# ① VẪN PHẢI Ở DƯỚI (`kc > 0` hôm nay). VBB ở mốc 1 năm từng lọt: nó PHÁ LÊN tới +25,7% ngày
-#    22/07/2026 rồi hạ về −3,0% — user: *"rõ ràng đã phá lên khỏi VN-Index khá lâu rồi, nay
-#    đang hạ xuống về VN-Index"*. Bản trước chỉ hỏi "đỉnh trong 50 phiên" nên nhận cả cái
-#    đỉnh ĐÃ QUA.
-# ② KHOẢNG CÁCH ĐANG THU HẸP so với 60 phiên trước — đó là "có xu hướng". Không có cổng này
-#    thì mã đang giãn ra cũng lọt miễn nó tình cờ ở vùng gần.
-# ③ BỎ 20 PHIÊN ĐẦU SAU MỐC NEO khỏi phép so. Tại phiên neo hai đường TRÙNG NHAU theo định
-#    nghĩa nên `kc ≈ 0`; tính cả vùng đó thì "gần nhất" luôn rơi vào ngay sau mốc neo và
-#    **không mã nào đạt** — đo được đúng 0–2 mã trên cả ba sàn trước khi bỏ vùng dính.
+# HAI ĐIỀU KIỆN, HẾT:
+#   ① `L` phiên gần nhất **đều** có `q < 0` — ở dưới liên tục, không một phiên nào nhô lên;
+#   ② khoảng cách hôm nay `−q` đủ nhỏ — chip hỏi ≤ 10%.
+# `L` đổi theo mốc: 1 năm → 125 · 2 năm → 200 · 3..10 năm → 300 phiên.
 #
-# PHÂN VỊ CHỨ KHÔNG PHẢI "ĐÚNG HÔM NAY LÀ GẦN NHẤT": đòi hôm nay là cực tiểu tuyệt đối của
-# cả nghìn phiên là dao cạo — đo được 0–2 mã. Phân vị cho dung sai mà vẫn nói đúng một câu
-# đọc được: *"chưa tới 10% số phiên trong N năm qua mã này ở gần chỉ số như bây giờ"*.
-# Ngưỡng nằm ở CLIENT nên đổi không phải dựng lại kho — cùng lối với `rsiPM`.
+# KHO GHI KHOẢNG CÁCH (%), KHÔNG GHI CỜ — cùng bài học với `rsiPM`: ngưỡng 10% nằm ở CLIENT
+# nên siết xuống 5% hay nới lên 15% không phải dựng lại kho.
+#
+# VÌ SAO NEO Ở "NGAY BÂY GIỜ" MÀ KHÔNG NEO Ở LÚC CẮT — bản trước đòi "ở dưới suốt 600 phiên
+# NGAY TRƯỚC VẾT CẮT" và chết vì ngay sát vết cắt giá luôn dập dềnh quanh vạch: 0 mã đạt.
+# Ở đây `L` phiên tính ngược từ HÔM NAY, mà hôm nay mã vẫn còn ở dưới, nên không có vùng dập
+# dềnh nào để vướng.
+#
+# BA CA MẪU USER ĐÃ BẮT, cả ba đều bị điều kiện ① hoặc ② loại:
+#   · VBB mốc 1 năm — phá lên +25,7% ngày 22/07/2026 rồi hạ về −3,0%. Khoảng cách nay chỉ 3%
+#     (qua ②) nhưng trong 125 phiên gần nhất CÓ phiên ở trên -> ① loại.
+#   · NVB mốc 1 năm — cách tới 30,3%, ② loại; mốc 2 năm thì đang Ở TRÊN, ① loại.
+#   · VIC / VHM — đang ở trên đường chỉ số, ① loại.
 CAT_NAM = tuple(range(1, 11))    # 1..10 năm
 CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
-CAT_BO  = 20                     # bỏ bấy nhiêu phiên dính ngay sau mốc neo
-CAT_XU  = 60                     # so với bấy nhiêu phiên trước để biết đang thu hẹp
-CAT_MIN = 150                    # cửa sổ ngắn hơn thế thì phân vị không nói được gì
+CAT_DUOI = {1: 125, 2: 200}      # số phiên gần nhất phải ở dưới; mốc khác dùng CAT_DUOI_MAC
+CAT_DUOI_MAC = 300
 
 
 def _nap_chiso():
@@ -644,11 +646,10 @@ def suc_manh(d, floor, CS):
 
 
 def cat_len(P, X):
-    """Phân vị (%) của khoảng cách tới đường chỉ số neo N năm, tính trên cả cửa sổ N năm.
+    """Khoảng cách (%) từ giá tới đường chỉ số neo N năm, CHỈ ghi khi `L` phiên gần nhất đều
+    nằm dưới đường đó. `None` = có phiên nhô lên trong `L` phiên, hoặc chuỗi quá ngắn.
 
-    `0` = chưa bao giờ áp sát như bây giờ. `None` khi mã KHÔNG còn ở dưới đường chỉ số, hoặc
-    khoảng cách đang GIÃN RA so với `CAT_XU` phiên trước, hoặc cửa sổ quá ngắn.
-    Xem khối chú thích trên để biết vì sao ba cổng đó bắt buộc.
+    Số dương, càng nhỏ càng áp sát. Chip hỏi ≤ 10. Xem khối chú thích trên.
     """
     r = {('ap%d' % N): None for N in CAT_NAM}
     n = len(P)
@@ -656,22 +657,18 @@ def cat_len(P, X):
         return r
     R = [P[i] / X[i] for i in range(n)]
     for N in CAT_NAM:
+        L = CAT_DUOI.get(N, CAT_DUOI_MAC)
         a = n - 1 - N * CAT_NEN
         if a < 0:
             a = 0                       # chuỗi ngắn hơn N năm -> neo phiên đầu, y như chart
-        lo = a + CAT_BO                 # ③ bỏ vùng hai đường còn dính nhau quanh mốc neo
-        if n - 1 - lo < CAT_MIN:
-            continue
+        if n - 1 - a < L:
+            continue                    # `L` phiên phải nằm trọn sau phiên neo
         ra = R[a]
-        if R[n - 1] >= ra:
-            continue                    # ① đã vượt lên -> không phải thứ đang hỏi
-        # khoảng cách: dương khi ở dưới, càng nhỏ càng áp sát
-        kc = [ra / R[k] - 1.0 for k in range(lo, n)]
-        nay = kc[-1]
-        if len(kc) <= CAT_XU or not (nay < kc[-1 - CAT_XU]):
-            continue                    # ② phải đang THU HẸP, không phải đang giãn ra
-        gan_hon = sum(1 for v in kc if v < nay)
-        r['ap%d' % N] = round(100.0 * gan_hon / len(kc), 1)
+        # ① `L` phiên gần nhất ĐỀU ở dưới — một phiên nhô lên là loại
+        if any(R[k] >= ra for k in range(n - L, n)):
+            continue
+        # ② khoảng cách hôm nay, tính bằng % so với mức của đường chỉ số
+        r['ap%d' % N] = round(100.0 * (ra / R[n - 1] - 1.0), 2)
     return r
 
 

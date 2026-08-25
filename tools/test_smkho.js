@@ -31,7 +31,8 @@ if(!scr||!scr.d){ console.log('  (chưa có data/screen.json — bỏ qua)'); pr
 /* ---- dựng lại độc lập ------------------------------------------------------ */
 const SAN_CHISO={HOSE:'VNINDEX',HNX:'HNX',UPCOM:'UPCOM'};
 const CUA=[20,60,120,250];
-const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, BO=20, XU=60, MIN_CUA=150, NGUONG=10;
+const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, NGUONG=10;
+const DUOI=N=>N===1?125:(N===2?200:300);   // số phiên gần nhất phải ở dưới, theo mốc
 const CS={};
 for(const t of new Set(Object.values(SAN_CHISO))){
   const j=F(path.join(R,'data','chiso',t+'.json'));
@@ -59,20 +60,18 @@ function tuTinh(sym){
   const r2=x=>Math.round(x*100)/100;
   ra.smNeo=r2(((P[n-1]/P[0])/(X[n-1]/X[0])-1)*100);
   for(const W of CUA) if(n>W) ra['sm'+W]=r2(((P[n-1]/P[n-1-W])/(X[n-1]/X[n-1-W])-1)*100);
-  /* DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT. Dựng lại bằng ĐÚNG công thức của chart (`q` của
-     `smArr`) chứ không dùng lối tắt tỉ số của build_screen — hai đường phải ra cùng một đáp
-     án thì mới chứng minh được lối tắt đó đúng. */
+  /* DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CÁCH BAO NHIÊU %. Dựng lại bằng ĐÚNG công thức của
+     chart (`q` của `smArr`) chứ không dùng lối tắt tỉ số của build_screen — hai đường phải
+     ra cùng một đáp án thì mới chứng minh được lối tắt đó đúng. */
   for(const N of NAM){
     ra['ap'+N]=null;
-    const a=Math.max(0,n-1-N*NEN), lo=a+BO;
-    if(n-1-lo<MIN_CUA) continue;
+    const L=DUOI(N), a=Math.max(0,n-1-N*NEN);
+    if(n-1-a<L) continue;
     const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;   // y hệt `q[i]` mà chart.js vẽ ra dải
-    if(q(n-1)>=0) continue;                                // ① phải VẪN Ở DƯỚI
-    const kc=[]; for(let k=lo;k<n;k++) kc.push(1/(1+q(k))-1);   // khoảng cách, dương = ở dưới
-    const nay=kc[kc.length-1];
-    if(kc.length<=XU||!(nay<kc[kc.length-1-XU])) continue;  // ② phải đang THU HẸP
-    let ganHon=0; for(const v of kc) if(v<nay) ganHon++;
-    ra['ap'+N]=Math.round(1000*ganHon/kc.length)/10;
+    let nho=true;
+    for(let k=n-L;k<n;k++) if(q(k)>=0){ nho=false; break; }   // ① L phiên gần nhất ĐỀU ở dưới
+    if(!nho) continue;
+    ra['ap'+N]=Math.round(100*(1/(1+q(n-1))-1)*100)/100;      // ② khoảng cách hôm nay, %
   }
   return ra;
 }
@@ -141,17 +140,17 @@ for(const s of ['HOSE','HNX','UPCOM']){
   }
 }
 
-/* ---- DƯỚI CHỈ SỐ, ĐANG ÁP SÁT: bất biến riêng ----------------------------- */
+/* ---- DƯỚI CHỈ SỐ LIÊN TỤC, NAY CÁCH ÍT: bất biến riêng -------------------- */
 {
   const V=[];
   for(const sym of Object.keys(scr.d)) for(const N of NAM){
     const v=scr.d[sym][ix['ap'+N]];
     if(v!=null) V.push({sym,N,v});
   }
-  kiem('có kha khá giá trị ap để kiểm', V.length>1000, true);
-  kiem('mọi phân vị nằm trong [0, 100]', V.every(x=>x.v>=0&&x.v<=100), true);
+  kiem('có kha khá giá trị ap để kiểm', V.length>2000, true);
+  kiem('mọi khoảng cách đều DƯƠNG (mã đang ở dưới)', V.every(x=>x.v>0), true);
 
-  /* SOI THẲNG ĐỊNH NGHĨA — ba cổng, kiểm từng cái trên mã lọt lưới. */
+  /* SOI THẲNG HAI ĐIỀU KIỆN trên mã lọt lưới. */
   let daKiem=0, sai=[];
   for(const x of V.filter(y=>y.v<=NGUONG).slice(0,60)){
     const h=F(path.join(R,'data','hist',x.sym+'.json'));
@@ -159,28 +158,28 @@ for(const s of ['HOSE','HNX','UPCOM']){
     const P=[],X=[];
     for(let i=0;i<h.t.length;i++){ const c=h.c[i]; if(!c||c<=0) continue;
       const v=ixs[ngay(h.t[i])]; if(!v) continue; P.push(c); X.push(v); }
-    const n=P.length, a=Math.max(0,n-1-x.N*NEN), lo=a+BO;
+    const n=P.length, L=DUOI(x.N), a=Math.max(0,n-1-x.N*NEN);
     const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;
-    if(!(q(n-1)<0)) sai.push(`${x.sym}/ap${x.N}: đang Ở TRÊN chỉ số (q=${q(n-1).toFixed(4)})`);
-    const kc=[]; for(let k=lo;k<n;k++) kc.push(1/(1+q(k))-1);
-    const nay=kc[kc.length-1];
-    if(!(nay<kc[kc.length-1-XU])) sai.push(`${x.sym}/ap${x.N}: khoảng cách đang GIÃN RA`);
-    let ganHon=0; for(const v of kc) if(v<nay) ganHon++;
-    const pv=100*ganHon/kc.length;
-    if(pv>NGUONG+1e-6) sai.push(`${x.sym}/ap${x.N}: phân vị thật ${pv.toFixed(1)}% > ${NGUONG}%`);
+    for(let k=n-L;k<n;k++) if(q(k)>=0)
+      { sai.push(`${x.sym}/ap${x.N}: phiên ${k} NHÔ LÊN trên chỉ số (q=${q(k).toFixed(4)})`); break; }
+    const kc=100*(1/(1+q(n-1))-1);
+    if(Math.abs(kc-x.v)>0.011) sai.push(`${x.sym}/ap${x.N}: khoảng cách kho ${x.v} vs tự tính ${kc.toFixed(2)}`);
     daKiem++;
   }
-  console.log(`  · soi thẳng ba cổng trên ${daKiem} ca`);
-  kiem('mã lọt lưới: vẫn ở DƯỚI · khoảng cách đang THU HẸP · phân vị đúng ngưỡng', sai.length, 0);
+  console.log(`  · soi thẳng hai điều kiện trên ${daKiem} ca`);
+  kiem('mã lọt lưới: L phiên gần nhất ĐỀU ở dưới · khoảng cách ghi đúng', sai.length, 0);
   if(sai.length) console.log('      ví dụ: '+sai.slice(0,4).join(' · '));
 
-  /* BA CA MẪU USER ĐÃ BẮT — đều phải TRƯỢT ở mọi mốc.
-     VBB phá lên +25,7% rồi hạ về · NVB đỉnh đang tụt · VIC/VHM đang ở trên chỉ số. */
+  /* BỐN CA MẪU USER ĐÃ BẮT — đều phải TRƯỢT ở mọi mốc.
+     VBB phá lên +25,7% rồi hạ về · NVB cách tới 43,5% (mốc 1 năm) · VIC/VHM đang ở trên. */
   for(const m of ['VBB','NVB','VIC','VHM']){
     if(!scr.d[m]) continue;
     const lot=NAM.filter(N=>{const v=scr.d[m][ix['ap'+N]];return v!=null&&v<=NGUONG;});
     kiem(`${m} không lọt ở mốc nào`, lot.join(',')||'—', '—');
   }
+  /* SỐ PHIÊN "Ở DƯỚI" ĐỔI THEO MỐC — khoá lại kẻo ai đó gộp về một hằng số. */
+  kiem('số phiên phải ở dưới: 1 năm 125 · 2 năm 200 · 3+ năm 300',
+    [DUOI(1),DUOI(2),DUOI(3),DUOI(10)].join(','), '125,200,300,300');
   const dem=N=>Object.keys(scr.d).filter(s=>{const v=scr.d[s][ix['ap'+N]];return v!=null&&v<=NGUONG;}).length;
   kiem('mốc 1 năm bắt được ít nhất vài mã', dem(1)>=5, true);
   console.log('  · chip bắt được (≤'+NGUONG+'%): '+NAM.map(N=>N+' năm '+dem(N)).join(' · '));
