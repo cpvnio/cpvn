@@ -437,7 +437,10 @@ let veBut=false;                                   // bút đang được giữ 
   self.khungNhin=()=>({i0:i0,i1:i1,cw:geo.cw,plotW:geo.plotW,plotH:geo.plotH,
                        oBam:mocHit.map(m=>m.k+':'+Math.round(m.x)+'-'+Math.round(m.x+m.w)),
                        oNut:mocHit.map(m=>({k:m.k,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)})),
-                       oNam:mocMenu.map(m=>({v:m.v,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)}))});
+                       oNam:mocMenu.filter(m=>m.k==='nam')
+                              .map(m=>({v:m.v,x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)})),
+                       oNeo:(m=>m?{x:Math.round(m.x+m.w/2),y:Math.round(m.y+m.h/2)}:null)
+                              (mocMenu.find(m=>m.k==='neo'))});
   self.neoTai=function(t){ neoT=(t==null?null:t); smCache.k=''; self.draw(); return self; };
   self.neoDang=()=>{ const S=smArr(); return S.a>=0&&rows[S.a]?rows[S.a].t:null; };
   /* Đặt mốc mặc định theo SỐ NĂM (0 = tất cả). Nhận thẳng số năm chứ không nhận chỉ số
@@ -449,6 +452,11 @@ let veBut=false;                                   // bút đang được giữ 
     return {nam:neoNam,ten:tenNam(neoNam)}; };
   /* Trạng thái bộ mốc, cho trang ngoài và bộ kiểm thử đọc. */
   self.mocTrangThai=()=>({nam:neoNam, tay:neoT, mo:mocMo, cho:neoArm});
+  /* Nhãn ĐÃ VẼ của ô Mốc và của nút Neo trong bảng. Trả về đúng chuỗi vừa in lên canvas,
+     không tính lại: nhãn là thứ duy nhất nói ra trạng thái khi bảng đã đóng, mà tính lại ở
+     một chỗ thứ hai thì hai nơi lệch nhau lúc nào không ai biết. */
+  self.nhanMoc=()=>{ const m=mocHit.find(o=>o.k==='__moc'); return m?m.ten:null; };
+  self.tenNutNeo=()=>{ const m=mocMenu.find(o=>o.k==='neo'); return m?m.ten:null; };
   const fmtSM=v=>{ const p=v*100;
     return (p>=0?'+':'')+p.toLocaleString('vi-VN',{maximumFractionDigits:Math.abs(p)<10?1:0})+'%'; };
 
@@ -801,19 +809,22 @@ let veBut=false;                                   // bút đang được giữ 
        cái mà chính nó phải bật mới có. Trang nào nhận `onInd` là trang biết đi nạp.
        Khung "Trong ngày" là nến 5 phút, hai kho kia chỉ có số theo PHIÊN nên bỏ hẳn ô. */
     if(iv!=='i'&&(opt.onInd||rows.some(r=>r&&r.ix>0))) cvNut.push(['rs','So với chỉ số']);
-    /* HAI Ô MỐC — hiện bất cứ khi nào đang bật đường/dải so sánh. Tách hẳn hai việc từng
-       chung một ô:
-         · "Mốc N năm" mở BẢNG CHỌN số năm (1..10 hoặc Tất cả);
-         · "⚓ Neo"    bật chế độ chờ, bấm tiếp vào phiên nào thì neo vào phiên đó; đang neo
-           tay thì ô sáng và in NGÀY neo, bấm lần nữa là bỏ neo tay, trả về mốc số năm.
-       Gộp chúng lại như bản cũ thì một ô phải mang hai nghĩa tuỳ trạng thái ẩn (có đang
-       ghim phiên hay không) — bấm vào không đoán được sẽ ra gì. */
+    /* MỘT Ô MỐC DUY NHẤT, MỞ BẢNG CHỌN (user chốt 27/08/2026: *"nên đặt tuỳ chọn neo giá
+       vào ô Tất cả trong hình, như vậy sẽ gọn hơn"*). Bản trước để `⚓ Neo` thành ô thứ hai
+       trên hàng: hàng này là chỗ chật nhất của cả khung (khổ điện thoại vùng vẽ ~205px) nên
+       thêm một ô là hàng xuống hẳn hai dòng. Nút Neo nay nằm TRONG bảng chọn, cạnh `Tất cả`
+       — nó vốn là một cách trả lời câu "so từ lúc nào", đúng chỗ của nó.
+       NHÃN MANG LUÔN TRẠNG THÁI, vì bảng đóng thì nó là thứ duy nhất còn nói được:
+         · đang chờ chọn phiên -> `⚓ Bấm chọn phiên`, ô sáng;
+         · đang neo tay        -> `Mốc 05/06/2026`, in NGÀY chứ không in số năm (số năm lúc
+           này không có hiệu lực, in ra là nói dối);
+         · còn lại            -> `Mốc 7 năm`. */
     if(ind.idx||ind.rs){
-      cvNut.push(['__moc','Mốc '+tenNam(neoNam),mocMo]);
       const S0=smArr();
-      const nhanNeo=neoArm?'⚓ Bấm chọn phiên'
-                   :(neoT!=null&&S0.a>=0&&rows[S0.a]?'⚓ '+ngayNgan(rows[S0.a].t):'⚓ Neo');
-      cvNut.push(['__neo',nhanNeo,neoArm||neoT!=null]);
+      const nhan=neoArm?'⚓ Bấm chọn phiên'
+                :(neoT!=null&&S0.a>=0&&rows[S0.a]?'Mốc '+ngayNgan(rows[S0.a].t)
+                 :'Mốc '+tenNam(neoNam));
+      cvNut.push(['__moc',nhan,mocMo||neoArm]);
     }
     if(plotH>=150&&cvNut.length){
       x.font='700 10px system-ui'; x.textAlign='left'; x.textBaseline='middle';
@@ -832,7 +843,7 @@ let veBut=false;                                   // bút đang được giữ 
         else x.fillRect(mx0,by,bw,bh);
         x.fillStyle=bat?(light()?'#ffffff':'#0a0a0c'):MUT();
         x.fillText(ten,mx0+8,by+bh/2+0.5);
-        mocHit.push({x:mx0,y:by,w:bw,h:bh,k:mk});
+        mocHit.push({x:mx0,y:by,w:bw,h:bh,k:mk,ten:ten});
         mx0+=bw+6;
       }
     }
@@ -1136,21 +1147,34 @@ let veBut=false;                                   // bút đang được giữ 
       if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,pw,ph,8); x.fill(); x.stroke(); }
       else { x.fillRect(bx,by,pw,ph); x.strokeRect(bx,by,pw,ph); }
       x.font='700 10px system-ui'; x.textAlign='center'; x.textBaseline='middle';
-      NEO_CHON.forEach((v,i)=>{
-        const cot=v?i%COT:0, hang=v?Math.floor(i/COT):2;      // ô "Tất cả" chiếm trọn hàng ba
-        const ow=v?CW:(COT*CW+(COT-1)*GAP);
-        const ox=bx+PAD+cot*(CW+GAP), oy=by+PAD+hang*(CH+GAP);
-        /* Chỉ sáng khi số năm ĐANG THẬT SỰ có hiệu lực. Neo tay đè lên số năm, nên lúc đó
-           không ô nào sáng — bằng không bảng nói dối là đang so từ mốc N năm. */
-        const chon=(neoT==null&&neoNam===v);
+      const RONG=COT*CW+(COT-1)*GAP, W2=(RONG-GAP)/2;   // hàng ba chia đôi: Tất cả | Neo
+      const oVe=(ox,oy,ow,ten,chon)=>{
         x.fillStyle=chon?(light()?'rgba(15,23,42,.86)':'rgba(233,233,239,.90)')
                         :(light()?'rgba(15,23,42,.07)':'rgba(255,255,255,.10)');
         if(x.roundRect){ x.beginPath(); x.roundRect(ox,oy,ow,CH,6); x.fill(); }
         else x.fillRect(ox,oy,ow,CH);
         x.fillStyle=chon?(light()?'#ffffff':'#0a0a0c'):MUT();
-        x.fillText(v?String(v):'Tất cả',ox+ow/2,oy+CH/2+0.5);
-        mocMenu.push({x:ox,y:oy,w:ow,h:CH,v:v});
-      });
+        x.fillText(ten,ox+ow/2,oy+CH/2+0.5);
+      };
+      /* Chỉ sáng khi số năm ĐANG THẬT SỰ có hiệu lực. Neo tay đè lên số năm, nên lúc đó
+         không ô năm nào sáng — bằng không bảng nói dối là đang so từ mốc N năm. */
+      const sangNam=v=>(neoT==null&&neoNam===v);
+      for(let i=0;i<10;i++){
+        const v=NEO_CHON[i];
+        const ox=bx+PAD+(i%COT)*(CW+GAP), oy=by+PAD+Math.floor(i/COT)*(CH+GAP);
+        oVe(ox,oy,CW,String(v),sangNam(v));
+        mocMenu.push({x:ox,y:oy,w:CW,h:CH,k:'nam',v:v});
+      }
+      const y3=by+PAD+2*(CH+GAP);
+      oVe(bx+PAD,y3,W2,'Tất cả',sangNam(0));
+      mocMenu.push({x:bx+PAD,y:y3,w:W2,h:CH,k:'nam',v:0});
+      /* NÚT NEO NẰM CẠNH "TẤT CẢ". Ba trạng thái, nhưng bảng đóng ngay khi vào chế độ chờ
+         (nó che mất chính vùng phải bấm) nên `Đang chờ` chỉ hiện nếu trạng thái lỡ chồng
+         nhau — vẽ ra cho bảng không bao giờ nói sai, chứ không phải đường đi thường. */
+      const tenNeo=neoArm?'⚓ Đang chờ':(neoT!=null?'↺ Bỏ neo':'⚓ Neo');
+      const nx=bx+PAD+W2+GAP;
+      oVe(nx,y3,W2,tenNeo,neoArm||neoT!=null);
+      mocMenu.push({x:nx,y:y3,w:W2,h:CH,k:'neo',ten:tenNeo});
       x.textAlign='left';
     }
   };
@@ -1536,23 +1560,23 @@ let veBut=false;                                   // bút đang được giữ 
     if(mocMo){
       for(const m of mocMenu){
         if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
-          mocMo=false; self.neoSoNam(m.v); return true;
+          mocMo=false;                       // chọn xong là đóng, kể cả khi vào chế độ chờ:
+          if(m.k!=='neo'){ self.neoSoNam(m.v); return true; }   // bảng che đúng chỗ phải bấm
+          /* Ba trạng thái, một chiều: chờ -> huỷ | đang neo tay -> bỏ neo | còn lại -> chờ.
+             Ô sáng ở hai trạng thái đầu, nên luật "đang sáng thì bấm là tắt" vẫn đúng. */
+          if(neoArm) neoArm=false;
+          else if(neoT!=null){ neoT=null; smCache.k=''; }
+          else neoArm=true;
+          self.draw(); return true;
         }
       }
       mocMo=false; self.draw(); return true;
     }
     for(const m of mocHit){
       if(px>=m.x&&px<=m.x+m.w&&py>=m.y&&py<=m.y+m.h){
-        if(m.k==='__moc'){ mocMo=true; neoArm=false; self.draw(); return true; }
-        /* BA TRẠNG THÁI, một chiều: chờ -> huỷ chờ | đang neo tay -> bỏ neo | còn lại ->
-           vào chế độ chờ. Ô sáng ở cả hai trạng thái đầu, nên luật "ô đang sáng thì bấm là
-           tắt" vẫn đúng như mọi ô công tắc khác trên hàng này. */
-        if(m.k==='__neo'){
-          if(neoArm) neoArm=false;
-          else if(neoT!=null){ neoT=null; smCache.k=''; }
-          else neoArm=true;
-          mocMo=false; self.draw(); return true;
-        }
+        /* Bấm ô Mốc lúc ĐANG CHỜ thì vừa huỷ chờ vừa mở bảng: người ta quay lại ô này là
+           đang muốn đổi mốc, bắt bấm hai lần (một lần huỷ, một lần mở) là thừa. */
+        if(m.k==='__moc'){ neoArm=false; mocMo=true; self.draw(); return true; }
         ind[m.k]=!ind[m.k]; self.draw();
         if(opt.onInd) opt.onInd(m.k,ind[m.k]);   // trang ngoài đi nạp kho nếu cần
         return true;

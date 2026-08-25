@@ -239,46 +239,60 @@ const lamMac=()=>CPChart(cvs,{});
   kiem('thêm 1 phiên -> mốc lùi đúng 1 nến', ch.smSo().a, a1+1);
 }
 
-/* ── ⑬ BỘ MỐC TRÊN KHUNG: bảng chọn số năm + neo tay HAI NHỊP ───────────────
-   User 27/08: *"mục chọn 1-3-từ đầu nên để dạng tuỳ chọn"* và *"neo nên là 1 mục riêng,
-   bấm vào nút neo xong mới bấm vào vị trí cần neo"*. Luồng hai nhịp là thứ hỏng IM LẶNG
-   được: chart vẫn vẽ đúng, chỉ là bấm xong không có gì xảy ra. Đi qua `bamThu` — đúng
-   đường định tuyến của cú bấm thật — chứ môi trường giả không phát được sự kiện chuột. */
+/* ── ⑬ BỘ MỐC TRÊN KHUNG: MỘT ô mở bảng chọn, neo tay HAI NHỊP ──────────────
+   User 27/08: *"mục chọn 1-3-từ đầu nên để dạng tuỳ chọn"*, *"neo nên là 1 mục riêng, bấm
+   vào nút neo xong mới bấm vào vị trí cần neo"*, rồi *"nên đặt tuỳ chọn neo giá vào ô Tất
+   cả trong hình, như vậy sẽ gọn hơn"*. Luồng hai nhịp là thứ hỏng IM LẶNG được: chart vẫn
+   vẽ đúng, chỉ là bấm xong không có gì xảy ra. Đi qua `bamThu` — đúng đường định tuyến của
+   cú bấm thật — chứ môi trường giả không phát được sự kiện chuột. */
 {
   const n=900, f=i=>[10000*(1+0.3*Math.sin(i/60)), 500*(1+0.1*Math.cos(i/45))];
   const ch=lamMac(); ch.setRows(chuoi(n,f),'d');
   ch.setInd({rs:true});                      // ô mốc chỉ hiện khi có đường/dải so sánh
   const oNut=k=>ch.khungNhin().oNut.find(o=>o.k===k);
   kiem('bật dải so sánh -> có ô "Mốc"', !!oNut('__moc'), true);
-  kiem('bật dải so sánh -> có ô "Neo"', !!oNut('__neo'), true);
+  /* HÀNG Ô CHỈ CÒN MỘT Ô MỐC. Đây đúng là điều user đổi ở lượt cuối: nút Neo dọn vào trong
+     bảng cho hàng đỡ chật, nên hàng phải KHÔNG còn ô `__neo` nào. */
+  kiem('nút Neo không còn nằm trên hàng ô', !!oNut('__neo'), false);
+  /* Chuỗi thử không có sự kiện cổ tức/BCTC nên hai ô đó không hiện — hàng còn đúng
+     `rs` + `__moc`, và quan trọng là KHÔNG có ô nào đứng sau `__moc`. */
+  kiem('hàng ô còn đúng hai cái', ch.khungNhin().oNut.map(o=>o.k).join(','), 'rs,__moc');
 
   /* --- bảng chọn số năm --- */
   kiem('chưa bấm -> bảng chọn đóng', ch.mocTrangThai().mo, false);
-  const om=oNut('__moc');
-  kiem('bấm ô Mốc -> nuốt cú bấm', ch.bamThu(om.x,om.y), 'o');
+  const om=()=>oNut('__moc');
+  kiem('bấm ô Mốc -> nuốt cú bấm', ch.bamThu(om().x,om().y), 'o');
   kiem('bấm ô Mốc -> bảng mở', ch.mocTrangThai().mo, true);
   const oNam=ch.khungNhin().oNam;
-  kiem('bảng có đủ 11 lựa chọn', oNam.length, 11);
+  kiem('bảng có đủ 11 lựa chọn năm', oNam.length, 11);
   kiem('có đủ 1..10 và Tất cả', oNam.map(o=>o.v).join(','), '1,2,3,4,5,6,7,8,9,10,0');
+  kiem('bảng có thêm nút Neo', !!ch.khungNhin().oNeo, true);
+  /* Nút Neo đứng CẠNH "Tất cả" (cùng hàng ba), không phải một hàng riêng — nếu nó tụt
+     xuống hàng bốn thì bảng cao thêm mà user vừa bảo là muốn gọn lại. */
+  kiem('nút Neo cùng hàng với "Tất cả"',
+       ch.khungNhin().oNeo.y, oNam.find(o=>o.v===0).y);
   const o5=oNam.find(o=>o.v===5);
   kiem('bấm ô "5" -> nuốt cú bấm', ch.bamThu(o5.x,o5.y), 'o');
   kiem('bấm ô "5" -> mốc thành 5 năm', ch.mocTrangThai().nam, 5);
   kiem('chọn xong -> bảng đóng', ch.mocTrangThai().mo, false);
   kiem('mốc 5 năm -> neo lùi 1.250 nến', ch.smSo().a, n-1-1250<0?0:n-1-1250);
-  const oAll=(ch.bamThu(om.x,om.y), ch.khungNhin().oNam.find(o=>o.v===0));
+  const oAll=(ch.bamThu(om().x,om().y), ch.khungNhin().oNam.find(o=>o.v===0));
   ch.bamThu(oAll.x,oAll.y);
   kiem('bấm "Tất cả" -> neo phiên 0', ch.smSo().a, 0);
   /* Bấm RA NGOÀI bảng: đóng bảng, và nuốt cú bấm để nó không đi tiếp thành ghim phiên */
-  ch.bamThu(om.x,om.y);
+  ch.bamThu(om().x,om().y);
   kiem('bấm ra ngoài bảng -> nuốt cú bấm', ch.bamThu(400,240), 'o');
   kiem('bấm ra ngoài bảng -> bảng đóng', ch.mocTrangThai().mo, false);
   kiem('bấm ra ngoài bảng -> không ghim nhầm phiên', ch.ghim(), null);
 
-  /* --- neo tay hai nhịp --- */
-  const on=()=>oNut('__neo');
+  /* --- neo tay hai nhịp, nút nằm trong bảng --- */
+  const bamNeo=()=>{ ch.bamThu(om().x,om().y);            // mở bảng
+                     const o=ch.khungNhin().oNeo; return ch.bamThu(o.x,o.y); };
   kiem('chưa bấm Neo -> không ở chế độ chờ', ch.mocTrangThai().cho, false);
-  ch.bamThu(on().x,on().y);
+  kiem('bấm Neo trong bảng -> nuốt cú bấm', bamNeo(), 'o');
   kiem('bấm Neo -> vào chế độ chờ', ch.mocTrangThai().cho, true);
+  /* BẢNG PHẢI ĐÓNG NGAY: nó phủ đúng vùng người ta sắp phải bấm để chọn phiên. */
+  kiem('vào chế độ chờ -> bảng đóng', ch.mocTrangThai().mo, false);
   kiem('mới bấm Neo -> chưa neo tay', ch.mocTrangThai().tay, null);
   const kh=ch.khungNhin(), px=300, iMuon=kh.i0+Math.floor(px/kh.cw);
   kiem('nhịp hai: bấm trong khung -> nuốt cú bấm', ch.bamThu(px,240), 'khung');
@@ -287,32 +301,46 @@ const lamMac=()=>CPChart(cvs,{});
   /* Nhịp hai KHÔNG được ghim phiên: hai việc khác nhau trên cùng một cú bấm là bấm neo
      xong tự dưng mọc thêm một hộp đọc số. */
   kiem('nhịp hai -> không ghim phiên', ch.ghim(), null);
-  /* Đang neo tay: bấm ô Neo lần nữa = BỎ neo tay, trả về mốc số năm đang chọn */
-  ch.bamThu(on().x,on().y);
-  kiem('bấm Neo khi đang neo tay -> bỏ neo tay', ch.mocTrangThai().tay, null);
+  /* Đang neo tay: nhãn ô Mốc phải in NGÀY neo, vì bảng đóng rồi thì nó là thứ duy nhất
+     còn nói được là đang so từ mốc nào. */
+  kiem('đang neo tay -> ô Mốc in ngày, không in số năm',
+       /^Mốc \d{2}\/\d{2}\/\d{4}$/.test(ch.nhanMoc()), true);
+  /* Đang neo tay: nút trong bảng thành "Bỏ neo", bấm là trả về mốc số năm đang chọn */
+  ch.bamThu(om().x,om().y);
+  kiem('đang neo tay -> nút trong bảng là "Bỏ neo"', ch.tenNutNeo(), '↺ Bỏ neo');
+  { const o=ch.khungNhin().oNeo; ch.bamThu(o.x,o.y); }
+  kiem('bấm Bỏ neo -> hết mốc tay', ch.mocTrangThai().tay, null);
   kiem('bỏ neo tay -> về mốc "Tất cả" đang chọn', ch.smSo().a, 0);
   kiem('bỏ neo tay -> không vào chế độ chờ', ch.mocTrangThai().cho, false);
+  kiem('hết neo tay -> ô Mốc in lại số năm', ch.nhanMoc(), 'Mốc Tất cả');
   /* Chọn số năm ĐÈ lên neo tay — chọn mốc mới là thay mốc cũ, không cộng dồn hai mốc */
-  ch.bamThu(on().x,on().y); ch.bamThu(px,240);
+  bamNeo(); ch.bamThu(px,240);
   kiem('neo tay lại -> có mốc tay', ch.mocTrangThai().tay!=null, true);
-  ch.bamThu(om.x,om.y);
+  ch.bamThu(om().x,om().y);
   const o2=ch.khungNhin().oNam.find(o=>o.v===2); ch.bamThu(o2.x,o2.y);
   kiem('chọn số năm -> xoá mốc neo tay', ch.mocTrangThai().tay, null);
   kiem('chọn số năm -> neo theo 2 năm', ch.smSo().a, n-1-500);
 
+  /* --- ô Mốc lúc đang chờ: vừa huỷ chờ vừa mở bảng, không bắt bấm hai lần --- */
+  bamNeo();
+  kiem('đang chờ -> nhãn ô Mốc đổi hẳn', ch.nhanMoc(), '⚓ Bấm chọn phiên');
+  ch.bamThu(om().x,om().y);
+  kiem('bấm ô Mốc lúc đang chờ -> huỷ chờ', ch.mocTrangThai().cho, false);
+  kiem('bấm ô Mốc lúc đang chờ -> mở luôn bảng', ch.mocTrangThai().mo, true);
+  ch.bamThu(400,240);                                   // đóng bảng
+
   /* --- Esc thoát được cả hai trạng thái dở dang --- */
-  ch.bamThu(on().x,on().y);
+  bamNeo();
   kiem('Esc khi đang chờ neo -> nuốt phím', ch.cancelTool(), true);
   kiem('Esc -> thoát chế độ chờ', ch.mocTrangThai().cho, false);
-  ch.bamThu(om.x,om.y);
+  ch.bamThu(om().x,om().y);
   kiem('Esc khi bảng đang mở -> nuốt phím', ch.cancelTool(), true);
   kiem('Esc -> bảng đóng', ch.mocTrangThai().mo, false);
   kiem('Esc lúc không có gì dở -> KHÔNG nuốt phím', ch.cancelTool(), false);
 
-  /* --- tắt hết đường so sánh thì hai ô biến mất --- */
+  /* --- tắt hết đường so sánh thì ô mốc biến mất --- */
   ch.setInd({rs:false,idx:false});
   kiem('tắt so sánh -> hết ô Mốc', !!oNut('__moc'), false);
-  kiem('tắt so sánh -> hết ô Neo', !!oNut('__neo'), false);
 }
 
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);

@@ -4208,18 +4208,44 @@ Neo chào sàn tích luỹ cả chục năm nên khoảng hở hiện tại có 
 max **21.402%** — 17% số mã lệch quá 100%. Ở mức đó hai đường không gặp nhau nữa, mà một đường
 không bao giờ cắt thì **không nói được gì về hiện tại**; nó chỉ là một dữ kiện lịch sử đứng yên.
 
-**BỘ MỐC LÀ HAI Ô RIÊNG, KHÔNG PHẢI MỘT Ô XOAY VÒNG (sửa 27/08/2026).** User: *"mục chọn
-1-3-từ đầu nên để dạng tuỳ chọn, tôi có thể chọn 1-2-3-4-5-6-7-8-9-10-all"* và *"neo nên là 1
-mục riêng, bấm vào nút neo xong mới bấm vào vị trí cần neo"*.
+**BỘ MỐC LÀ MỘT Ô MỞ BẢNG CHỌN (sửa 27/08/2026).** User: *"mục chọn 1-3-từ đầu nên để dạng
+tuỳ chọn, tôi có thể chọn 1-2-3-4-5-6-7-8-9-10-all"*, *"neo nên là 1 mục riêng, bấm vào nút
+neo xong mới bấm vào vị trí cần neo"*, rồi *"nên đặt tuỳ chọn neo giá vào ô Tất cả trong hình,
+như vậy sẽ gọn hơn"*.
 
-| ô | bấm vào thì | trạng thái sáng |
-|---|---|---|
-| **`Mốc N năm`** | mở **bảng chọn** 1..10 hoặc `Tất cả`, xếp 5+5+1 ngay dưới ô | bảng đang mở |
-| **`⚓ Neo`** | vào chế độ **chờ**; bấm tiếp vào phiên nào thì neo vào phiên đó | đang chờ, hoặc đang neo tay (ô in ngày neo) |
+Hàng ô trong khung giữ **đúng một** ô mốc; bấm vào nó mở bảng chọn xếp **5+5+1**, hàng ba chia
+đôi `Tất cả` | `⚓ Neo`:
 
-Ô `Neo` là một vòng ba trạng thái một chiều: `Neo` → *chờ* → *đang neo tay* (`⚓ 21/08/2025`) →
-bấm lần nữa là bỏ neo tay, về mốc số năm. Chọn số năm **đè lên** neo tay — chọn mốc mới là
-thay mốc cũ, không cộng dồn hai mốc. `Esc` thoát cả hai trạng thái dở dang.
+```
+ Cổ tức   BCTC   So với chỉ số   Mốc 7 năm
+                                ┌───────────────────┐
+                                │  1  2  3  4  5    │
+                                │  6  7  8  9  10   │
+                                │  Tất cả │ ⚓ Neo   │
+                                └───────────────────┘
+```
+
+> **NÚT NEO NẰM TRONG BẢNG, KHÔNG PHẢI TRÊN HÀNG Ô.** Bản đầu của lượt này để nó thành ô thứ
+> hai trên hàng, và hàng đó là chỗ **chật nhất** của cả khung — ở khổ điện thoại (vùng vẽ
+> ~205px) thêm một ô là hàng xuống hẳn hai dòng. Nó vốn cũng chỉ là một cách trả lời câu "so
+> từ lúc nào", nên đứng cạnh `Tất cả` là đúng chỗ. Hàng ba **chia đôi** chứ không thêm hàng
+> bốn: thêm hàng thì bảng cao lên, mà thứ user đổi ở đây chính là muốn gọn lại.
+
+Nút `Neo` là một vòng ba trạng thái một chiều: `⚓ Neo` → *chờ* → *đang neo tay* → `↺ Bỏ neo`
+về mốc số năm. **Bảng đóng ngay khi vào chế độ chờ** — nó phủ đúng vùng người ta sắp phải bấm.
+Chọn số năm **đè lên** neo tay: chọn mốc mới là thay mốc cũ, không cộng dồn hai mốc. `Esc`
+thoát cả hai trạng thái dở dang.
+
+**NHÃN Ô MỐC MANG LUÔN TRẠNG THÁI**, vì bảng đóng rồi thì nó là thứ duy nhất còn nói được:
+
+| trạng thái | nhãn |
+|---|---|
+| bình thường | `Mốc 7 năm` |
+| đang neo tay | `Mốc 05/06/2026` — in **ngày**, vì số năm lúc này không có hiệu lực |
+| đang chờ chọn phiên | `⚓ Bấm chọn phiên`, ô sáng |
+
+Bấm ô Mốc lúc **đang chờ** thì vừa huỷ chờ vừa **mở luôn bảng**: quay lại ô này là đang muốn
+đổi mốc, bắt bấm hai lần (một lần huỷ, một lần mở) là thừa.
 
 Ba chỗ bản cũ hỏng, ghi lại để đừng dựng lại:
 
@@ -4251,7 +4277,10 @@ vòng ra `1` thì không.
 > đường chỉ số đều tắt) thì ô Neo vẫn hiện, nên phải neo được.
 
 `test_sm.js` khối ⑬ khoá cả luồng này qua `bamThu(px,py)` — đúng đường định tuyến của cú bấm
-thật, vì môi trường giả không phát được sự kiện chuột.
+thật, vì môi trường giả không phát được sự kiện chuột. Nhãn thì đọc bằng `nhanMoc()` /
+`tenNutNeo()`, trả về **đúng chuỗi vừa in lên canvas** chứ không tính lại: nhãn là thứ duy
+nhất nói ra trạng thái khi bảng đã đóng, tính lại ở một chỗ thứ hai là hai nơi lệch nhau lúc
+nào không ai biết.
 
 > **MỐC MẶC ĐỊNH KHÔNG TRÔI KHI KÉO CHART** — nó đếm lùi từ phiên **CUỐI CHUỖI**, không phải từ
 > mép khung nhìn. Kéo/phóng bao nhiêu cũng không dời được; chỉ khi có phiên mới thì nó lùi đúng
