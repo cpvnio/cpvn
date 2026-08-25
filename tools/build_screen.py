@@ -37,8 +37,10 @@ FIELDS = [
                                           # (để client hỏi "lần đầu vượt N" với N bất kỳ)
     'smNeo','sm20','sm60','sm120','sm250',  # SỨC MẠNH SO VỚI CHỈ SỐ SÀN — xem suc_manh()
     'avgval60',                           # GTGD bình quân 60 phiên (đồng) — cổng thanh khoản
-    # SỐ PHIÊN KỂ TỪ LẦN CẮT LÊN đường chỉ số neo N năm, N = 1..10 — xem cat_len()
-    'cat1','cat2','cat3','cat4','cat5','cat6','cat7','cat8','cat9','cat10',
+    # SỐ PHIÊN KỂ TỪ LẦN CẮT LÊN đường chỉ số neo N năm, N = 3..10 — xem cat_len()
+    'cat3','cat4','cat5','cat6','cat7','cat8','cat9','cat10',
+    # KHOẢNG HỞ ĐANG Ở ĐỈNH BAO NHIÊU PHIÊN (mã tụt sau nay áp sát chỉ số) — xem cat_len()
+    'gn3','gn4','gn5','gn6','gn7','gn8','gn9','gn10',
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -594,9 +596,48 @@ SM_CUA    = (20, 60, 120, 250)
 #
 # GHI SỐ PHIÊN, KHÔNG GHI CỜ — cùng bài học với `rsiPM`: ghi cờ cho riêng ngưỡng 50 thì đổi
 # ngưỡng là phải dựng lại cả kho, còn ghi số thì cửa sổ nào cũng hỏi được.
-CAT_NAM = tuple(range(1, 11))    # 1..10 năm
+# PHẢI Ở DƯỚI THẬT LÂU TRƯỚC KHI CẮT (user chốt 27/08/2026: *"trong 600 phiên trước đó giá
+# phải ở dưới đường chỉ số và chỉ mới vừa cắt lên trong 50 phiên gần nhất"*).
+#
+# Vì sao cần: NVB ở mốc 2 năm từng lọt lưới, mà đọc ra thì NGƯỢC HẲN ý định — nó ở TRÊN chỉ
+# số gần trọn hai năm (q đỉnh +62% tháng 7/2025), rồi tụt dần về đường chỉ số, chạm đúng
+# 0,00% ngày 07/08/2026 và nảy lên. User: *"nó giống như vừa cắt xuống mà nhỉ"* — đúng: đó
+# là một ĐỈNH ĐANG TỤT chạm vạch rồi bật, không phải một mã tụt lại phía sau nay vượt lên.
+# Đòi 600 phiên ở dưới ngay trước vết cắt thì loại sạch họ "chạm rồi nảy".
+#
+# HỆ QUẢ BẮT BUỘC: MỐC 1 VÀ 2 NĂM KHÔNG CÒN CHỖ. 600 phiên "ở dưới" phải nằm TRỌN sau phiên
+# neo — trước phiên neo thì chart không vẽ đường chỉ số, không ai NHÌN THẤY mã đó ở trên hay
+# dưới, mà bộ lọc này phải nói đúng thứ người dùng nhìn thấy. Vết cắt trong 50 phiên gần
+# nhất cần mốc neo lùi ít nhất 600+50 = 650 phiên, tức N ≥ 2,6 -> N từ 3 năm trở lên.
+CAT_NAM = tuple(range(3, 11))    # 3..10 năm — dưới 3 thì 600 phiên không đủ chỗ, xem trên
 CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
 CAT_CUA = 50                     # cửa sổ "vừa cắt" mà chip đang hỏi (phiên)
+CAT_DUOI= 600                    # số phiên xét ngay trước vết cắt
+# "Ở DƯỚI SUỐT 600 PHIÊN" PHẢI ĐỌC LÀ GẦN-NHƯ-SUỐT, KHÔNG PHẢI TỪNG PHIÊN MỘT — đo mới biết.
+# Ngay trước lúc cắt, giá luôn dập dềnh quanh đường chỉ số vài phiên, nên đòi 100% số phiên ở
+# dưới thì **0 mã nào đạt** (đo 25/08/2026 trên cả ba sàn). Phân bố của 111 ứng viên ở mốc 3
+# năm: trung vị chỉ ở dưới **15%** số phiên — tức phần lớn là kiểu NVB, ở TRÊN gần hết quãng
+# rồi tụt về chạm vạch. Ngưỡng theo số mã còn lại: 100% -> 0 · 98% -> 3 · 95% -> 3 · 90% -> 3
+# · 80% -> 11 · 70% -> 12. Chọn 95%: cho phép tối đa 30 phiên nhô lên (đúng phần dập dềnh),
+# và ba mã còn lại đều là ca thật — ASP ở dưới 99,7% số phiên, đáy q −51,5%; HHP 99,2%/−41,8%;
+# SCO 98,3%/−60,9%. Đổi ngưỡng là đổi ĐÚNG một hằng số này.
+CAT_TY  = 0.95                   # tỉ lệ tối thiểu số phiên ở dưới trong `CAT_DUOI` phiên đó
+
+# ── ÁP SÁT CHỈ SỐ Ở MỨC GẦN NHẤT 2 NĂM (`gn*`, user chốt 27/08/2026) ───────────────────
+# *"nếu không đạt thì chỉ cần nó gần đường chỉ số nhất trong 2 năm là được — kiểu như đang
+# tạo đỉnh gần chỉ số nhất hoặc quanh quẩn gần với khoảng cách ngắn nhất với chỉ số"*.
+#
+# Luật 600 phiên ở dưới quá chặt: chỉ 1–3 mã mỗi mốc. Nới bằng cách hỏi thẳng thứ mắt nhìn
+# thấy — khoảng hở `q` hôm nay có phải là mức CAO NHẤT (gần đường chỉ số nhất tính từ dưới
+# lên, hoặc đã vượt lên) trong hai năm qua không. Ghi ra SỐ PHIÊN mà hôm nay đang là đỉnh,
+# nên hỏi 1 năm hay 3 năm cũng được, không phải dựng lại kho.
+#
+# KÈM CỔNG "PHẢI LÀ MÃ TỤT SAU": quá nửa số phiên trong cửa sổ phải ở DƯỚI đường chỉ số.
+# Không có cổng này thì một mã DẪN ĐẦU liên tục lập đỉnh mới so với chỉ số cũng lọt — mà đó
+# là thứ ngược hẳn ý định, đúng họ NVB. Ngưỡng "quá nửa" không phải số tinh chỉnh: nó là
+# nghĩa đen của câu "mã này nằm dưới chỉ số".
+GN_CUA  = 500                    # 2 năm — cửa sổ xét "gần nhất"
+GN_TY   = 0.50                   # quá nửa số phiên phải ở dưới thì mới gọi là mã tụt sau
 CAT_DO  = 250                    # quét ngược tối đa bấy nhiêu phiên; xa hơn thì không còn "vừa"
 
 def _nap_chiso():
@@ -652,6 +693,7 @@ def cat_len(P, X):
       · chuỗi quá ngắn để câu hỏi có nghĩa.
     """
     r = {('cat%d' % N): None for N in CAT_NAM}
+    r.update({('gn%d' % N): None for N in CAT_NAM})
     n = len(P)
     if n < 2:
         return r
@@ -672,7 +714,31 @@ def cat_len(P, X):
             i -= 1
         if i <= a + 1 or R[i - 1] > ra:
             continue                    # ở trên từ ngay sau phiên neo, hoặc lâu hơn cửa quét
+        # ---- 600 PHIÊN NGAY TRƯỚC VẾT CẮT PHẢI GẦN NHƯ ĐỀU Ở DƯỚI ----
+        # Nằm TRỌN sau phiên neo, bằng không là hỏi về quãng chart không vẽ ra.
+        if i - CAT_DUOI < a:
+            continue
+        duoi = sum(1 for k in range(i - CAT_DUOI, i) if R[k] <= ra)
+        if duoi < CAT_TY * CAT_DUOI:
+            continue
         r['cat%d' % N] = (n - 1) - i
+    # ---- ÁP SÁT CHỈ SỐ Ở MỨC GẦN NHẤT 2 NĂM ----
+    for N in CAT_NAM:
+        a = n - 1 - N * CAT_NEN
+        if a < 0:
+            a = 0
+        cua = min(GN_CUA, n - 1 - a)        # cửa sổ phải nằm trọn sau phiên neo
+        if cua < 60:
+            continue                        # quá ngắn thì "gần nhất 2 năm" không có nghĩa
+        ra = R[a]
+        lo = n - 1 - cua
+        if sum(1 for k in range(lo, n) if R[k] <= ra) < GN_TY * (cua + 1):
+            continue                        # không phải mã tụt sau -> bỏ
+        # đếm ngược tới phiên gần nhất có khoảng hở CAO HƠN hôm nay
+        j = n - 1
+        while j > lo and R[j - 1] <= R[n - 1]:
+            j -= 1
+        r['gn%d' % N] = (n - 1) - j if R[j - 1] > R[n - 1] else cua
     return r
 
 

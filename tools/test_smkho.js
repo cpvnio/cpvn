@@ -31,7 +31,8 @@ if(!scr||!scr.d){ console.log('  (chưa có data/screen.json — bỏ qua)'); pr
 /* ---- dựng lại độc lập ------------------------------------------------------ */
 const SAN_CHISO={HOSE:'VNINDEX',HNX:'HNX',UPCOM:'UPCOM'};
 const CUA=[20,60,120,250];
-const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, CUA_CAT=50, DO_CAT=250;
+const NAM=[3,4,5,6,7,8,9,10], NEN=250, CUA_CAT=50, DO_CAT=250, DUOI=600, TY=0.95,
+      GN_CUA=500, GN_TY=0.50;
 const CS={};
 for(const t of new Set(Object.values(SAN_CHISO))){
   const j=F(path.join(R,'data','chiso',t+'.json'));
@@ -73,7 +74,22 @@ function tuTinh(sym){
     let i=n-1;
     while(i>lo&&q(i-1)>0) i--;
     if(i<=a+1||q(i-1)>0) continue;             // ở trên từ sau phiên neo, hoặc lâu quá cửa quét
+    if(i-DUOI<a) continue;                     // cửa sổ 600 phiên phải nằm trọn sau phiên neo
+    let duoi=0; for(let k=i-DUOI;k<i;k++) if(q(k)<=0) duoi++;
+    if(duoi<TY*DUOI) continue;                 // chưa đủ "gần như suốt 600 phiên ở dưới"
     ra['cat'+N]=(n-1)-i;
+  }
+  /* ÁP SÁT CHỈ SỐ Ở MỨC GẦN NHẤT 2 NĂM — đường vào thứ hai của chip. */
+  for(const N of NAM){
+    ra['gn'+N]=null;
+    const a=Math.max(0,n-1-N*NEN), cua=Math.min(GN_CUA,n-1-a);
+    if(cua<60) continue;
+    const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;
+    const lo=n-1-cua;
+    let duoi=0; for(let k=lo;k<n;k++) if(q(k)<=0) duoi++;
+    if(duoi<GN_TY*(cua+1)) continue;           // không phải mã tụt sau
+    let j=n-1; while(j>lo&&q(j-1)<=q(n-1)) j--;
+    ra['gn'+N]=(q(j-1)>q(n-1))?(n-1)-j:cua;
   }
   return ra;
 }
@@ -82,9 +98,11 @@ function tuTinh(sym){
 const ix={}; scr.f.forEach((k,i)=>ix[k]=i);
 kiem('screen.json có đủ 5 trường sm',
   ['smNeo','sm20','sm60','sm120','sm250'].every(k=>k in ix), true);
-kiem('screen.json có đủ 10 trường cat', NAM.every(N=>('cat'+N) in ix), true);
+kiem('screen.json có đủ 8 trường cat', NAM.every(N=>('cat'+N) in ix), true);
+kiem('screen.json có đủ 8 trường gn', NAM.every(N=>('gn'+N) in ix), true);
 
-const truong=['smNeo','sm20','sm60','sm120','sm250'].concat(NAM.map(N=>'cat'+N));
+const truong=['smNeo','sm20','sm60','sm120','sm250']
+  .concat(NAM.map(N=>'cat'+N)).concat(NAM.map(N=>'gn'+N));
 let soSanh=0, lech=[], nullSai=[], thieuKho=0;
 for(const sym of Object.keys(scr.d)){
   if(!fs.existsSync(path.join(R,'data','hist',sym+'.json'))){ thieuKho++; continue; }
@@ -147,7 +165,9 @@ for(const s of ['HOSE','HNX','UPCOM']){
     const v=scr.d[sym][ix['cat'+N]];
     if(v!=null) V.push({sym,N,v});
   }
-  kiem('có kha khá vết cắt để kiểm', V.length>500, true);
+  /* Vết cắt nay HIẾM theo đúng thiết kế (đòi gần như suốt 600 phiên ở dưới), nên ngưỡng cũ
+     ">500 vết" là ngưỡng của bản trước — giữ lại là ca kiểm luôn đỏ mà chẳng nói gì. */
+  kiem('có vết cắt để kiểm', V.length>0, true);
   /* Trần là ĐÚNG `DO_CAT`, không phải `DO_CAT-1`: đoạn đang-ở-trên được phép bắt đầu ngay
      tại mép cửa quét (`n-1-DO_CAT`), nên tuổi lớn nhất bằng chính `DO_CAT`. */
   kiem('mọi tuổi vết cắt nằm trong [0, '+DO_CAT+']',
@@ -190,8 +210,19 @@ for(const s of ['HOSE','HNX','UPCOM']){
 
   /* MỐC DÀI HƠN THÌ KHÓ CẮT HƠN — đường neo càng xa thì khoảng hở tích luỹ càng lớn.
      Không phải luật cứng cho từng mã, nhưng trên cả kho thì phải thấy rõ. */
-  const dem=N=>Object.keys(scr.d).filter(s=>{const v=scr.d[s][ix['cat'+N]];return v!=null&&v<=CUA_CAT;}).length;
-  kiem('mốc 1 năm bắt được nhiều mã hơn mốc 10 năm', dem(1)>dem(10), true);
+  /* HAI ĐƯỜNG VÀO CỦA CHIP — đếm đúng thứ giao diện hỏi. */
+  const dem=N=>Object.keys(scr.d).filter(s=>{
+    const c=scr.d[s][ix['cat'+N]], g=scr.d[s][ix['gn'+N]];
+    return (c!=null&&c<=CUA_CAT)||(g!=null&&g>=GN_CUA);}).length;
+  const demCat=N=>Object.keys(scr.d).filter(s=>{const v=scr.d[s][ix['cat'+N]];return v!=null&&v<=CUA_CAT;}).length;
+  kiem('đường "áp sát 2 năm" nới thêm được so với chỉ xét vết cắt', dem(5)>demCat(5), true);
+  /* `gn` không bao giờ vượt cửa sổ, và cửa sổ tối đa là 2 năm. */
+  const G=[];
+  for(const sym of Object.keys(scr.d)) for(const N of NAM){
+    const v=scr.d[sym][ix['gn'+N]]; if(v!=null) G.push(v);
+  }
+  kiem('mọi giá trị gn nằm trong [0, '+GN_CUA+']',
+    G.every(v=>Number.isInteger(v)&&v>=0&&v<=GN_CUA), true);
   /* MỌI MÃ LỌT LƯỚI PHẢI ĐANG Ở TRÊN — đây là bất biến user kiểm được bằng mắt, và là thứ
      phân biệt bản này với bản đầu (bản đầu nhận cả vết cắt đã bị xoá ngay sau đó, khoảng
      một nửa số mã lọt lưới đang nằm lại dưới đường chỉ số). */
@@ -201,7 +232,8 @@ for(const s of ['HOSE','HNX','UPCOM']){
     const tu=tuTinh(sym); if(tu['cat'+N]==null) duoi++;
   }
   kiem('không mã nào được chấm "vừa cắt lên" mà đang ở dưới', duoi, 0);
-  console.log(`  · vừa cắt trong ${CUA_CAT} phiên: 1 năm ${dem(1)} mã · 3 năm ${dem(3)} · 5 năm ${dem(5)} · 10 năm ${dem(10)}`);
+  console.log(`  · chip bắt được: 3 năm ${dem(3)} mã · 5 năm ${dem(5)} · 10 năm ${dem(10)}`
+    +`   (riêng vết cắt: ${demCat(3)} · ${demCat(5)} · ${demCat(10)})`);
 }
 
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);
