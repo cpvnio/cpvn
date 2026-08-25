@@ -4406,14 +4406,20 @@ và `−q` chính là *"thấp hơn đường chỉ số bao nhiêu %"*.
 | | |
 |---|---|
 | ① | `L` phiên **đều** có `q < 0`, tính ngược từ **TRƯỚC đoạn vừa cắt lên** (nếu có) |
-| ② | nếu đang ở trên thì **cả đoạn** đã vượt phải nằm trong **+5%** |
-| ③ | vị trí hôm nay nằm trong vùng **−10% .. +5%** (chip lo phần này) |
+| ② | nếu đang ở trên thì **cả đoạn** đã vượt phải nằm trong **+5%** (cổng hình dạng, ở kho) |
+| ③ | vị trí hôm nay nằm trong vùng **6% dưới → 3% trên** (chip lo phần này) |
 
 `L` đổi theo mốc: **1 năm → 125 · 2 năm → 200 · 3..10 năm → 300 phiên**.
 
 Kho ghi `ap1..ap10` = **vị trí của giá so với đường chỉ số, tính bằng %**: **dương = còn ở
-dưới bấy nhiêu · âm = đã vượt lên bấy nhiêu**. Chip hỏi `−5 ≤ ap ≤ 10`. **`null` = không phải
+dưới bấy nhiêu · âm = đã vượt lên bấy nhiêu**. Chip hỏi `−3 ≤ ap ≤ 6`. **`null` = không phải
 hình dạng đang hỏi.** Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
+
+> **VÙNG CỦA CHIP VÀ CỔNG HÌNH DẠNG CỦA KHO LÀ HAI THỨ KHÁC NHAU — đừng gộp làm một hằng số.**
+> Vùng (`−3 .. +6`) là *"bây giờ giá đang ở đâu"*, nằm ở CLIENT nên đổi không phải dựng lại
+> kho. Cổng `CAT_TREN = +5%` là *"đoạn đã vượt có phải kiểu phá lên rồi chạy không"*, phải ở
+> kho vì client chỉ có MỘT con số của hôm nay, không thấy cả đoạn. Cổng cố ý rộng hơn mép
+> trên của vùng một chút để còn nới được mà không phải dựng lại.
 
 > **`L` TÍNH TỪ TRƯỚC ĐOẠN VỪA CẮT, KHÔNG PHẢI TỪ HÔM NAY.** Bản trước bắt `L` phiên **gần
 > nhất** đều ở dưới, nên mã VỪA cắt lên — đúng thứ user muốn thấy — lại bị loại ngay tại
@@ -4435,13 +4441,19 @@ hình dạng đang hỏi.** Mã sàn nào so với chỉ số sàn ấy, y như 
 | **NVB** | ở TRÊN chỉ số gần trọn 2 năm (`q` đỉnh **+62%** tháng 7/2025) rồi tụt về chạm **0,00%** ngày 07/08/2026 và nảy — đỉnh đang tụt, không phải đáy đang vượt | ② mốc 1 năm (cách **43,5%**) · ① các mốc còn lại |
 | **VIC · VHM** | đang ở TRÊN đường chỉ số | ① |
 
-Đo phiên 25/08/2026 — **có hình dạng / trong vùng −5..10%**: 1 năm 746 → **31 mã** (3 mã đã
-vượt lên) · 2 năm 767 → 9 (2 đã vượt) · 3 năm 561 → 2 · 5 năm 491 → 1 · 10 năm 738 → 4.
+Đo phiên 25/08/2026 — số mã lọt theo bề rộng vùng (user siết `10%/5%` → `6%/3%` ngày
+27/08/2026):
 
-> **HAI ĐẦU VÙNG NẰM Ở CLIENT** nên siết hay nới không phải dựng lại kho. Mốc 1 năm, riêng
-> phần còn ở dưới: ≤5% → 7 mã · ≤10% → 28 · ≤15% → 70 · ≤20% → 172. Mã áp sát nhất toàn thị
-> trường ở mốc 1 năm cách **1,83%**; ở mốc 5 năm là **8,92%** — mốc càng dài thì khoảng cách
-> càng khó nhỏ, nên ít mã là đúng bản chất chứ không phải bộ lọc hỏng.
+| mốc | 1n | 2n | 3n | 4n | 5n | 7n | 10n |
+|---|---|---|---|---|---|---|---|
+| vùng cũ `6%↓ .. 5%↑` … tức `−5..10` | 31 | 9 | 2 | 3 | 1 | 2 | 4 |
+| **vùng nay `6%↓ .. 3%↑`** | **9** | 3 | 1 | 1 | 0 | 1 | 0 |
+
+> **HAI ĐẦU VÙNG NẰM Ở CLIENT** nên siết hay nới chỉ đụng một dòng `screener.js`, không dựng
+> lại kho. Mốc 1 năm, riêng phần còn ở dưới: ≤5% → 7 mã · ≤10% → 28 · ≤15% → 70 · ≤20% → 172.
+> Mã áp sát nhất toàn thị trường ở mốc 1 năm cách **1,83%**; ở mốc 5 năm là **8,92%** — mốc
+> càng dài thì khoảng cách càng khó nhỏ, nên **mốc dài về 0 mã ở vùng hẹp là đúng bản chất**,
+> không phải bộ lọc hỏng.
 
 > **BỐN BẢN ĐÃ THỬ RỒI BỎ, đừng dựng lại:**
 > · *"Mọi vết cắt lên trong 50 phiên"* — một nửa số mã lọt lưới đang nằm LẠI DƯỚI (TCB cắt

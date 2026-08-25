@@ -31,7 +31,10 @@ if(!scr||!scr.d){ console.log('  (chưa có data/screen.json — bỏ qua)'); pr
 /* ---- dựng lại độc lập ------------------------------------------------------ */
 const SAN_CHISO={HOSE:'VNINDEX',HNX:'HNX',UPCOM:'UPCOM'};
 const CUA=[20,60,120,250];
-const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, DUOI_MAX=10, TREN_MAX=5;
+const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250;
+/* VÙNG chip đang hỏi (client) và CỔNG hình dạng của kho là HAI THỨ KHÁC NHAU — cổng rộng hơn
+   mép trên một chút để nới vùng không phải dựng lại kho. Đừng gộp làm một hằng số. */
+const DUOI_MAX=6, TREN_MAX=3, GATE_TREN=5;
 const DUOI=N=>N===1?125:(N===2?200:300);   // số phiên gần nhất phải ở dưới, theo mốc
 const CS={};
 for(const t of new Set(Object.values(SAN_CHISO))){
@@ -70,7 +73,7 @@ function tuTinh(sym){
     let c=0; while(c<n-1-a&&q(n-1-c)>=0) c++;             // đoạn ĐANG ở trên, tính ngược
     if(c){
       let cao=-Infinity; for(let k=n-c;k<n;k++) cao=Math.max(cao,q(k));
-      if(cao>TREN_MAX/100) continue;                       // ② vọt quá +5% -> đã phá lên và chạy
+      if(cao>GATE_TREN/100) continue;                      // ② vọt quá +5% -> đã phá lên và chạy
     }
     const het=n-c;
     if(het-L<a) continue;
@@ -156,7 +159,7 @@ for(const s of ['HOSE','HNX','UPCOM']){
   }
   kiem('có kha khá giá trị ap để kiểm', V.length>2000, true);
   /* Số ÂM là hợp lệ (đã vượt lên) nhưng kho đã chặn ở +5%, nên không được âm quá thế. */
-  kiem('mã đã vượt lên không bao giờ quá +5%', V.every(x=>x.v>=-TREN_MAX-0.011), true);
+  kiem('kho không giữ mã đã vượt quá +5%', V.every(x=>x.v>=-GATE_TREN-0.011), true);
 
   /* SOI THẲNG HAI ĐIỀU KIỆN trên mã lọt lưới. */
   let daKiem=0, sai=[];
@@ -169,8 +172,8 @@ for(const s of ['HOSE','HNX','UPCOM']){
     const n=P.length, L=DUOI(x.N), a=Math.max(0,n-1-x.N*NEN);
     const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;
     let c=0; while(c<n-1-a&&q(n-1-c)>=0) c++;
-    for(let k=n-c;k<n;k++) if(q(k)>TREN_MAX/100+1e-9)
-      { sai.push(`${x.sym}/ap${x.N}: đoạn vượt lên tới ${(100*q(k)).toFixed(1)}% > ${TREN_MAX}%`); break; }
+    for(let k=n-c;k<n;k++) if(q(k)>GATE_TREN/100+1e-9)
+      { sai.push(`${x.sym}/ap${x.N}: đoạn vượt lên tới ${(100*q(k)).toFixed(1)}% > ${GATE_TREN}%`); break; }
     const het=n-c;
     for(let k=het-L;k<het;k++) if(q(k)>=0)
       { sai.push(`${x.sym}/ap${x.N}: phiên ${k} NHÔ LÊN trong ${L} phiên phải ở dưới`); break; }
@@ -193,6 +196,8 @@ for(const s of ['HOSE','HNX','UPCOM']){
     [DUOI(1),DUOI(2),DUOI(3),DUOI(10)].join(','), '125,200,300,300');
   const dem=N=>Object.keys(scr.d).filter(s=>trongVung(scr.d[s][ix['ap'+N]])).length;
   kiem('mốc 1 năm bắt được ít nhất vài mã', dem(1)>=5, true);
+  kiem('vùng chip đúng như tài liệu: −3 .. +6',
+    [-TREN_MAX,DUOI_MAX].join('..'), '-3..6');
   const daVuot=NAM.reduce((t,N)=>t+Object.keys(scr.d).filter(s=>{
     const v=scr.d[s][ix['ap'+N]];return trongVung(v)&&v<0;}).length,0);
   kiem('có mã ĐÃ VƯỢT lên lọt lưới (vùng chấp nhận phần âm thật sự hoạt động)', daVuot>0, true);

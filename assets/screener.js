@@ -125,11 +125,15 @@ CPScreen.chip=function(id,c,n){
        chỉ số, tính bằng %: **DƯƠNG là còn ở dưới bấy nhiêu · ÂM là đã vượt lên bấy nhiêu**.
        Kho chỉ ghi khi đúng hình dạng: `L` phiên TRƯỚC đoạn vừa cắt đều nằm dưới (1 năm 125 ·
        2 năm 200 · 3–10 năm 300), và đoạn vừa vượt (nếu có) chưa quá +5%.
-       Client hỏi vùng **−5 .. +10**: còn cách tối đa 10%, hoặc đã chạm, hoặc vừa cắt qua và
-       lên tới 5%. Hai đầu vùng nằm ở CLIENT nên đổi không phải dựng lại kho.
+       Client hỏi vùng **−3 .. +6**: còn cách tối đa 6%, hoặc đã chạm, hoặc vừa cắt qua và
+       lên tới 3%. Hai đầu vùng nằm ở CLIENT nên đổi không phải dựng lại kho — lượt siết
+       10%/5% xuống 6%/3% (27/08/2026) chỉ đụng đúng dòng dưới.
+       Kho vẫn chặn "cả đoạn đã vượt phải trong +5%" (`CAT_TREN`) rộng hơn mép trên +3% một
+       chút: đó là cổng chống HÌNH DẠNG "phá lên rồi chạy" (ca VBB vọt +25,7%), không phải
+       mép của vùng đang hỏi. Nhờ vậy nới mép trên tới +5% vẫn không cần dựng lại kho.
        `null` = không phải hình dạng đang hỏi (VBB phá lên rồi hạ về · VIC/VHM ở trên quá
        xa). PHẢI TRƯỢT — đừng viết kiểu `!(v>10)`, `null` lọt qua mọi phép so. */
-    case 'catN':  { const v=t['ap'+n]; return v!=null&&v>=-5&&v<=10; }
+    case 'catN':  { const v=t['ap'+n]; return v!=null&&v>=-3&&v<=6; }
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;
     case 'nnd10': return (c.fbuy||0)*p>=1e10;
