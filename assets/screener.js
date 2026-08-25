@@ -65,11 +65,11 @@ CPScreen.chips=[
   {id:'rsi30', g:'Kỹ thuật', nm:'RSI < 30 (quá bán)'},
   {id:'rsi80m',g:'Kỹ thuật', nm:'Lần đầu trong tháng RSI > {n}', opts:[70,75,80], def:80},
   {id:'hi52',  g:'Kỹ thuật', nm:'Gần đỉnh 52 tuần'},
-  /* MÃ TỤT SAU CHỈ SỐ NAY ÁP SÁT — đo trên đúng đường chart trang mã vẽ ở mốc "N năm".
-     Mã của sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX-Index · UPCOM→UPCOM).
-     Số năm từ 3 trở lên: dưới 3 thì cửa sổ 600 phiên không nằm lọt sau phiên neo. */
-  {id:'catN',  g:'Kỹ thuật', nm:'Tụt sau chỉ số {n} năm, nay áp sát nhất 2 năm',
-   opts:[3,4,5,6,7,8,9,10], def:5},
+  /* MÃ TỤT SAU CHỈ SỐ NAY ÁP SÁT NHẤT — đo trên đúng đường chart trang mã vẽ ở mốc "N năm",
+     và CỬA SỔ CHÍNH LÀ N NĂM ĐÓ (1 năm xét 250 phiên, 3 năm xét 750…), không có hằng số nào
+     khác. Mã sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX-Index · UPCOM→UPCOM). */
+  {id:'catN',  g:'Kỹ thuật', nm:'Tụt sau chỉ số {n} năm, nay áp sát nhất',
+   opts:[1,2,3,4,5,6,7,8,9,10], def:3},
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
   {id:'nnd10', g:'Dòng tiền', nm:'NN mua hôm nay ≥ 10 tỷ'},
@@ -121,17 +121,15 @@ CPScreen.chip=function(id,c,n){
        lọt, tín hiệu mất hết ý nghĩa. `rsiPM` rỗng = hôm nay là phiên ĐẦU THÁNG. */
     case 'rsi80m':return t.rsi!=null&&t.rsi>n&&(t.rsiPM==null||t.rsiPM<=n);
     case 'hi52':  return t.dhi!=null&&t.dhi>=-15;
-    /* MÃ TỤT SAU CHỈ SỐ NAY ÁP SÁT — HAI ĐƯỜNG VÀO, đạt một trong hai là được:
-         · `catN` = số phiên kể từ lúc CẮT LÊN thật và còn giữ được (kho đã đòi gần như suốt
-           600 phiên trước đó phải ở dưới) -> hỏi ≤ 50 phiên;
-         · `gnN`  = khoảng hở với chỉ số đang là ĐỈNH của bao nhiêu phiên -> hỏi ≥ 500 phiên,
-           tức đang áp sát chỉ số ở mức gần nhất 2 năm (kể cả chưa cắt lên).
-       Đường thứ hai có vì đường thứ nhất quá chặt — chỉ 1–3 mã mỗi mốc.
+    /* MÃ TỤT SAU CHỈ SỐ NAY ÁP SÁT NHẤT. Kho ghi `gnN` = số phiên kể từ lúc đường giá áp
+       sát đường chỉ số NHẤT trong cả cửa sổ N năm; client hỏi ≤ 50. Kho đã lọc sẵn hai
+       cổng: chỉ tính từ SAU phiên neo (tại đó hai đường trùng nhau, tính cả là vô nghĩa) và
+       mã phải TỤT SAU thật (quá nửa cửa sổ nằm dưới) — bằng không mã dẫn đầu lập đỉnh mới
+       cũng lọt, mà với nó "đỉnh" là XA đường chỉ số nhất.
        Ghi SỐ thay vì cờ nên đổi cửa sổ không phải dựng lại kho — cùng lối với `rsiPM`.
        `null` phải TRƯỢT, đừng viết kiểu `!(v>50)`: `null` lọt qua mọi phép so là bảng trộn
        mã đạt với mã không có dữ liệu, mà nhìn không ra. */
-    case 'catN':  { const c=t['cat'+n], g=t['gn'+n];
-                    return (c!=null&&c<=50)||(g!=null&&g>=500); }
+    case 'catN':  { const v=t['gn'+n]; return v!=null&&v<=50; }
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;
     case 'nnd10': return (c.fbuy||0)*p>=1e10;

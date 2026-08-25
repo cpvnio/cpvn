@@ -4390,107 +4390,65 @@ trên giao diện.
 > **thiếu dữ liệu phải TRƯỢT chứ không được LỌT** — mã chưa đủ N phiên có `sm{N} = null`, một
 > phép so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
 
-### CHIP "VỪA CẮT LÊN CHỈ SỐ N NĂM" — bảng giá (27/08/2026)
+### CHIP "TỤT SAU CHỈ SỐ N NĂM, NAY ÁP SÁT NHẤT" — bảng giá (27/08/2026)
 
-User: *"ở mục bảng giá tôi muốn thêm 1 bộ lọc: các mã có đường giá vừa cắt lên VN-Index x
-năm trong 50 phiên gần nhất"*. Đây ĐÚNG là thứ chart trang mã vẽ ở mốc "N năm", nên nó rút
-gọn được thành một phép so tỉ số, khỏi dựng lại đường nào:
+User qua ba vòng: *"các mã có đường giá vừa cắt lên VN-Index x năm trong 50 phiên gần nhất"*
+→ *"ở trường hợp NVB nó giống như vừa cắt xuống mà nhỉ"* → *"1 năm thì check từ tổng số phiên
+của 1 năm, 3 năm thì tổng số phiên của 3 năm, không nhất thiết là 600 phiên — miễn 50 phiên
+gần nhất nó có vị thế gần đường chỉ số nhất là được"*.
 
-```
-ln(i) = giá(a) × chỉ số(i) ÷ chỉ số(a)          a = phiên neo, lùi N×250 nến
-R(i)  = giá(i) ÷ chỉ số(i)   ->   cắt lên tại i  ⇔  R(i−1) ≤ R(a) < R(i)
-```
+Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm", nên bộ lọc nói đúng thứ người dùng nhìn
+thấy. Khoảng hở `q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1`; `q` càng cao thì đường
+giá càng áp sát (rồi vượt) đường chỉ số. Kho ghi **`gn1..gn10` = số phiên kể từ lúc `q` đạt
+ĐỈNH của cả cửa sổ N năm**; chip hỏi `≤ 50`. Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
 
-**CHIP CÓ HAI ĐƯỜNG VÀO, đạt một trong hai là được** (`cat*` và `gn*`, N = 3..10):
+**CỬA SỔ CHÍNH LÀ N NĂM ĐÓ — không còn hằng số nào khác.** 1 năm xét 250 phiên, 3 năm xét
+750… Bản trước đóng đinh 600 phiên nên mốc 1 và 2 năm không dùng được (600 phiên không nằm
+lọt sau phiên neo); nay mốc nào cũng chạy.
 
-| trường | nghĩa | chip hỏi |
-|---|---|---|
-| `catN` | số phiên kể từ vết cắt lên **còn giữ được tới nay**, và **gần như suốt 600 phiên trước đó ở dưới** | `≤ 50` |
-| `gnN` | khoảng hở với chỉ số **đang là ĐỈNH của bao nhiêu phiên** (mã tụt sau nay áp sát) | `≥ 500` |
+> **HAI CHỐT, GỠ CÁI NÀO CŨNG SAI:**
+> ① **ĐỈNH XÉT TỪ SAU PHIÊN NEO.** Tại phiên neo hai đường TRÙNG NHAU theo định nghĩa
+>   (`q = 0`), nên tính cả nó thì "gần nhau nhất" luôn rơi đúng vào phiên neo — câu hỏi tự
+>   vô nghĩa.
+> ② **PHẢI LÀ MÃ TỤT SAU**: quá nửa số phiên trong cửa sổ ở DƯỚI đường chỉ số. Không có cổng
+>   này thì một mã DẪN ĐẦU liên tục lập đỉnh mới cũng lọt — mà với nó "đỉnh `q`" là **XA**
+>   đường chỉ số nhất, ngược hẳn nghĩa "áp sát". Ngưỡng "quá nửa" là nghĩa đen của câu *"mã
+>   này nằm dưới chỉ số"*, không phải số tinh chỉnh.
 
-Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
+**NVB LÀ CA MẪU — ĐỈNH ĐANG TỤT, KHÔNG PHẢI ĐÁY ĐANG VƯỢT.** Ở mốc 2 năm nó ở **TRÊN** chỉ số
+gần trọn hai năm (`q` đỉnh **+62%** tháng 7/2025), tụt dần, chạm đúng **0,00%** ngày
+07/08/2026 rồi nảy. Máy chấm "cắt lên", mắt đọc "vừa cắt xuống". Và không hiếm: trong 111 ứng
+viên của bản đầu ở mốc 3 năm, **trung vị chỉ ở dưới 15%** số phiên trước đó. Cổng ② loại sạch
+họ này — `test_smkho.js` khoá riêng một ca cho NVB.
 
-> **VẾT CẮT PHẢI CÒN GIỮ ĐƯỢC — đo được, không phải sở thích.** Bản đầu nhận mọi vết cắt
-> trong cửa sổ, kể cả vết bị xoá ngay phiên sau. Đo phiên 24/08/2026: **khoảng một nửa** số
-> mã lọt lưới đang nằm LẠI DƯỚI đường chỉ số (1 năm 157/335 · 3 năm 91/192 · 5 năm 73/168 ·
-> 10 năm 57/111) — TCB cắt lên 19/08 rồi rơi xuống ngay 20/08. Người dùng bấm bộ lọc xong mở
-> chart ra thấy đường giá nằm DƯỚI đường chỉ số thì đọc ra là **bộ lọc hỏng**, chứ không ai
-> đọc ra "đã cắt rồi rơi lại". Nên `catN` chỉ đếm khi HIỆN VẪN ĐANG Ở TRÊN.
+> **HAI BẢN ĐÃ THỬ RỒI BỎ, đừng dựng lại:**
+> · **"Mọi vết cắt lên trong 50 phiên"** — một nửa số mã lọt lưới đang nằm LẠI DƯỚI đường chỉ
+>   số (TCB cắt lên 19/08 rồi rơi xuống 20/08). Bấm lọc xong mở chart thấy giá nằm dưới thì
+>   đọc ra là **bộ lọc hỏng**.
+> · **"Ở dưới suốt 600 phiên rồi mới cắt"** — đòi từng phiên một thì **0 mã nào đạt** (ngay
+>   trước lúc cắt giá luôn dập dềnh quanh vạch); nới thành 95% thì còn 1–3 mã mỗi mốc, quá
+>   chặt để dùng. Số mã theo ngưỡng: 100% → 0 · 98% → 3 · 95% → 3 · 80% → 11 · 70% → 12.
 
-> **PHẢI TỪNG Ở DƯỚI THẬT LÂU — NGƯỢC LẠI LÀ BẮT NHẦM ĐỈNH ĐANG TỤT.** User bắt lỗi: *"ở
-> trường hợp NVB nó giống như vừa cắt xuống mà nhỉ"*. Đúng — NVB ở mốc 2 năm ở **TRÊN** chỉ
-> số gần trọn hai năm (q đỉnh **+62%** tháng 7/2025), rồi tụt dần, chạm đúng **0,00%** ngày
-> 07/08/2026 và nảy lên. Máy chấm là "cắt lên", mắt đọc là "vừa cắt xuống". Và nó KHÔNG hiếm:
-> trong 111 ứng viên ở mốc 3 năm, **trung vị chỉ ở dưới 15%** số phiên trước đó.
->
-> **"Ở DƯỚI SUỐT 600 PHIÊN" PHẢI ĐỌC LÀ GẦN-NHƯ-SUỐT (95%), KHÔNG PHẢI TỪNG PHIÊN MỘT.** Ngay
-> trước lúc cắt giá luôn dập dềnh quanh đường chỉ số vài phiên, nên đòi 100% thì **0 mã nào
-> đạt**. Số mã còn lại theo ngưỡng: 100% → 0 · 98% → 3 · 95% → 3 · 80% → 11 · 70% → 12. Chọn
-> **95%** (cho phép 30 phiên nhô lên); ba mã còn lại đều là ca thật — ASP ở dưới 99,7% số
-> phiên đáy q −51,5% · HHP 99,2%/−41,8% · SCO 98,3%/−60,9%. Đổi ngưỡng là đổi đúng `CAT_TY`.
->
-> **HỆ QUẢ: MỐC 1 VÀ 2 NĂM KHÔNG CÒN CHỖ.** 600 phiên "ở dưới" phải nằm TRỌN sau phiên neo —
-> trước phiên neo chart không vẽ đường chỉ số, không ai NHÌN THẤY mã ở trên hay dưới, mà bộ
-> lọc này phải nói đúng thứ người dùng nhìn thấy. Vết cắt trong 50 phiên cần mốc lùi ≥ 650
-> phiên, tức **N ≥ 3**.
-
-> **ĐƯỜNG VÀO THỨ HAI: ÁP SÁT CHỈ SỐ Ở MỨC GẦN NHẤT 2 NĂM (`gn*`).** User: *"nếu không đạt
-> thì chỉ cần nó gần đường chỉ số nhất trong 2 năm là được — kiểu như đang tạo đỉnh gần chỉ
-> số nhất hoặc quanh quẩn gần với khoảng cách ngắn nhất"*. Luật 600 phiên quá chặt (1–3 mã
-> mỗi mốc), nên hỏi thẳng thứ mắt nhìn thấy: khoảng hở `q` hôm nay có phải mức **cao nhất
-> trong 500 phiên** không — gần đường chỉ số nhất tính từ dưới lên, hoặc đã vượt lên.
-> **Kèm cổng "phải là mã TỤT SAU"**: quá nửa số phiên trong cửa sổ phải ở DƯỚI. Không có cổng
-> này thì một mã DẪN ĐẦU liên tục lập đỉnh mới so với chỉ số cũng lọt — ngược hẳn ý định,
-> đúng họ NVB (nó có `gn = 1`, vì q từng cao hơn hẳn hồi 2025). Ngưỡng "quá nửa" là nghĩa đen
-> của câu *"mã này nằm dưới chỉ số"*, không phải số tinh chỉnh.
-> Đo phiên 25/08/2026 — chip bắt được **3 năm 6 mã · 5 năm 7 · 10 năm 5** (riêng vết cắt:
-> 3 · 3 · 1), hợp cả tám mốc **11 mã**. Hiếm là đúng bản chất: *"tụt sau chỉ số suốt hai năm
-> rồi nay áp sát nhất"* vốn không phải chuyện thường xuyên.
-
-> **NEO CỦA HÔM NAY, KHÔNG PHẢI NEO CUỐN CHIẾU.** `a` lùi từ phiên CUỐI CHUỖI nên nó dời một
-> nến mỗi phiên mới; vết cắt 40 phiên trước vẫn được chấm bằng `R(a)` của HÔM NAY. Chủ ý:
-> bộ lọc phải trả lời *"mở chart lên bây giờ, chọn mốc N năm, có thấy vết cắt gần đây không"*
-> — chứ không phải một đại lượng khác mà chart không vẽ ra.
-
-> **GHI SỐ PHIÊN, KHÔNG GHI CỜ** — cùng bài học với `rsiPM`: ghi cờ cho riêng ngưỡng 50 thì
-> đổi ngưỡng là phải dựng lại cả kho. **`null` phải TRƯỢT**, đừng viết kiểu `!(v>50)`.
-
-> **BỐN TRƯỜNG HỢP `catN` TRẢ `null` và đều có lý do riêng:** đang ở dưới · đã ở trên liên
-> tục quá 250 phiên (không còn là "vừa") · ở trên ngay từ sau phiên neo, tức **chưa hề có vết
-> cắt nào** (hai đường trùng nhau TẠI phiên neo theo định nghĩa, đó không phải một lần cắt) ·
-> chưa đủ "gần như suốt 600 phiên ở dưới". Cộng cổng "mốc neo phải cách hiện tại ít nhất 50
-> phiên", bằng không câu hỏi tự mâu thuẫn.
+Đo phiên 25/08/2026 — chip bắt được: **1 năm 60 mã · 2 năm 19 · 3 năm 18 · 4 năm 9 · 5 năm 7
+· 6 năm 19 · 7 năm 16 · 8 năm 14 · 9 năm 13 · 10 năm 14**, hợp cả mười mốc **96 mã**.
 
 **ĐỐI CHIẾU ĐẦU–CUỐI VỚI CHÍNH CHART** (VCB, mốc 5 năm, phiên 24/08/2026) — bộ lọc phải nói
-đúng thứ người dùng nhìn thấy:
-
-| | chart trang mã | `screen.json` |
-|---|---|---|
-| phiên neo | 2021-08-18 | 2021-08-18 |
-| tuổi vết cắt | 17 phiên | 17 |
-| `q` trước khi cắt | −0,027% | −0,027% |
-| `q` tại phiên cắt | +1,081% | +1,081% |
-| `q` phiên cuối | +3,299% | +3,299% |
+đúng thứ người dùng nhìn thấy: phiên neo `2021-08-18` · `q` trước khi cắt `−0,027%` · tại
+phiên cắt `+1,081%` · phiên cuối `+3,299%`, chart và kho khớp **từng con số**.
 
 > **CHART CÓ THỂ CÓ THÊM NẾN HÔM NAY, KHO THÌ KHÔNG** — `q` của nến đó là `null` (chưa có
 > điểm chỉ số). Đối chiếu phải bỏ qua ô `null` ở cuối, đừng đọc `q[n-1]` rồi kết luận "đang ở
 > dưới". Đã dính đúng vậy khi soi VCB.
 
-**SỨC DỰ BÁO: KHÔNG PHÂN BIỆT ĐƯỢC VỚI NGẪU NHIÊN — đo rồi, đừng bán nó như tín hiệu.**
-Hồi kiểm nhân quả (mốc neo tính TẠI phiên ra tín hiệu, cổng thanh khoản 2 tỷ/phiên):
+> **GHI SỐ PHIÊN, KHÔNG GHI CỜ** — cùng bài học với `rsiPM`: ghi cờ cho riêng ngưỡng 50 thì
+> đổi ngưỡng là phải dựng lại cả kho. **`null` phải TRƯỢT**, đừng viết kiểu `!(v>50)`.
 
-| sau 60 phiên | n | trung vị | thắng | >+20% |
-|---|---|---|---|---|
-| **nền (mọi phiên)** | 22.131 | −1,17% | 46,8% | 16,7% |
-| vừa cắt mốc 1 năm | 13.364 | −1,31% | 46,7% | 17,8% |
-| vừa cắt mốc 3 năm | 6.953 | −0,23% | 49,2% | 21,1% |
-| vừa cắt mốc 5 năm | 4.543 | −1,47% | 46,5% | 19,1% |
-
-Mốc 3 năm trông nhỉnh hơn, nhưng **không sống sót phép sửa vón cụm**: gộp mỗi tháng một quan
-sát (124 tháng) thì chênh lệch so với nền còn **trung bình +1,11% · trung vị −1,02% · thắng
-nền 55/124 tháng · t ≈ 1,59**. Đúng cái bẫy đã ghi ở mục *THỐNG KÊ CHẠY LẠI TRÊN THƯỚC ĐÚNG*:
-tín hiệu dựa vào mốc chung của cả thị trường thì bắn theo TỪNG ĐỢT, đếm mỗi tín hiệu một
-phiếu là đếm cùng một sự kiện vài trăm lần.
+**SỨC DỰ BÁO: KHÔNG PHÂN BIỆT ĐƯỢC VỚI NGẪU NHIÊN — đo rồi, đừng bán nó như tín hiệu.** Hồi
+kiểm nhân quả bản "vừa cắt lên" (cổng thanh khoản 2 tỷ/phiên), sau 60 phiên: nền trung vị
+−1,17% thắng 46,8% · mốc 1 năm −1,31%/46,7% · mốc 3 năm −0,23%/49,2% · mốc 5 năm −1,47%/46,5%.
+Mốc 3 năm trông nhỉnh hơn nhưng **không sống sót phép sửa vón cụm**: gộp mỗi tháng một quan
+sát (124 tháng) còn trung vị **−1,02%**, thắng nền **55/124** tháng, **t ≈ 1,59**. Đúng cái
+bẫy đã ghi ở mục *THỐNG KÊ CHẠY LẠI TRÊN THƯỚC ĐÚNG*.
 > Vì thế chip này là **thước đo** — người dùng tự chọn số năm, tự đọc — đúng ràng buộc ở mục
 > *Ranh giới pháp lý*. Đừng gắn nhãn "tín hiệu", đừng xếp hạng, đừng cắt top N.
 

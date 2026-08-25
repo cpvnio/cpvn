@@ -37,10 +37,8 @@ FIELDS = [
                                           # (để client hỏi "lần đầu vượt N" với N bất kỳ)
     'smNeo','sm20','sm60','sm120','sm250',  # SỨC MẠNH SO VỚI CHỈ SỐ SÀN — xem suc_manh()
     'avgval60',                           # GTGD bình quân 60 phiên (đồng) — cổng thanh khoản
-    # SỐ PHIÊN KỂ TỪ LẦN CẮT LÊN đường chỉ số neo N năm, N = 3..10 — xem cat_len()
-    'cat3','cat4','cat5','cat6','cat7','cat8','cat9','cat10',
-    # KHOẢNG HỞ ĐANG Ở ĐỈNH BAO NHIÊU PHIÊN (mã tụt sau nay áp sát chỉ số) — xem cat_len()
-    'gn3','gn4','gn5','gn6','gn7','gn8','gn9','gn10',
+    # SỐ PHIÊN KỂ TỪ LÚC ÁP SÁT CHỈ SỐ NHẤT trong cả cửa sổ N năm, N = 1..10 — xem cat_len()
+    'gn1','gn2','gn3','gn4','gn5','gn6','gn7','gn8','gn9','gn10',
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -572,73 +570,34 @@ def build_fund(meta):
 CHISO_SAN = {'HOSE': 'VNINDEX', 'HNX': 'HNX', 'UPCOM': 'UPCOM'}
 SM_CUA    = (20, 60, 120, 250)
 
-# ── CẮT LÊN ĐƯỜNG CHỈ SỐ NEO N NĂM (27/08/2026) ────────────────────────────────────────
-# User: *"các mã có đường giá vừa cắt lên VN-Index x năm trong 50 phiên gần nhất"*.
+# ── TỤT SAU CHỈ SỐ N NĂM, NAY ÁP SÁT NHẤT (27/08/2026) ────────────────────────────────
+# User: *"các mã có đường giá vừa cắt lên VN-Index x năm trong 50 phiên gần nhất"*, rồi chốt
+# lại sau hai vòng đo: *"1 năm thì check từ tổng số phiên của 1 năm, 3 năm thì tổng số phiên
+# của 3 năm — không nhất thiết là 600 phiên, như vậy sẽ đa dụng hơn; miễn 50 phiên gần nhất
+# nó có vị thế gần đường chỉ số nhất là được"*.
 #
-# Đây ĐÚNG là thứ chart trang mã đang vẽ ở mốc "N năm": đường chỉ số quy về đơn vị giá,
-#     ln(i) = giá(a) × chỉ số(i) ÷ chỉ số(a)          a = phiên neo, lùi N×250 nến
-# nên "giá cắt LÊN đường chỉ số" rút gọn thành một phép so tỉ số:
-#     R(i) = giá(i) ÷ chỉ số(i)   ->   cắt lên tại i  ⇔  R(i−1) ≤ R(a) < R(i)
-# Không cần dựng lại đường nào, và kết quả khớp từng phiên với thứ người dùng NHÌN THẤY
-# trên chart khi chọn đúng mốc ấy.
+# CỬA SỔ CHÍNH LÀ N NĂM ĐÓ, không còn hằng số 600 nào. Đo trên đúng đường chart trang mã vẽ ở
+# mốc "N năm": đường chỉ số quy về đơn vị giá, neo lùi N×250 nến. Khoảng hở
+#     q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1
+# `q` càng cao thì đường giá càng áp sát (rồi vượt) đường chỉ số. Ghi ra SỐ PHIÊN kể từ lúc
+# `q` đạt ĐỈNH của cả cửa sổ; chip hỏi ≤ 50.
 #
-# NEO CỦA HÔM NAY, KHÔNG PHẢI NEO CUỐN CHIẾU. `a` lùi từ phiên CUỐI CHUỖI nên nó dời một
-# nến mỗi phiên mới; một lần cắt 40 phiên trước vẫn được chấm bằng `R(a)` của HÔM NAY. Đó
-# là chủ ý: bộ lọc phải trả lời "mở chart lên bây giờ, chọn mốc N năm, có thấy vết cắt gần
-# đây không" — chứ không phải một đại lượng khác mà chart không vẽ ra.
-#
-# VẾT CẮT PHẢI CÒN GIỮ ĐƯỢC — ĐO ĐƯỢC, KHÔNG PHẢI SỞ THÍCH. Bản đầu nhận mọi vết cắt trong
-# cửa sổ, kể cả vết đã bị xoá ngay sau đó. Đo phiên 24/08/2026: **khoảng một nửa** số mã lọt
-# lưới đang nằm LẠI DƯỚI đường chỉ số (1 năm 157/335 · 3 năm 91/192 · 5 năm 73/168 · 10 năm
-# 57/111) — TCB cắt lên 19/08 rồi rơi xuống ngay phiên sau. Người dùng bấm bộ lọc xong mở
-# chart ra thấy đường giá nằm DƯỚI đường chỉ số thì đọc ra là bộ lọc hỏng, chứ không ai đọc
-# ra là "đã cắt rồi rơi lại". Nên `catN` chỉ đếm khi HIỆN VẪN ĐANG Ở TRÊN.
-#
-# GHI SỐ PHIÊN, KHÔNG GHI CỜ — cùng bài học với `rsiPM`: ghi cờ cho riêng ngưỡng 50 thì đổi
-# ngưỡng là phải dựng lại cả kho, còn ghi số thì cửa sổ nào cũng hỏi được.
-# PHẢI Ở DƯỚI THẬT LÂU TRƯỚC KHI CẮT (user chốt 27/08/2026: *"trong 600 phiên trước đó giá
-# phải ở dưới đường chỉ số và chỉ mới vừa cắt lên trong 50 phiên gần nhất"*).
-#
-# Vì sao cần: NVB ở mốc 2 năm từng lọt lưới, mà đọc ra thì NGƯỢC HẲN ý định — nó ở TRÊN chỉ
-# số gần trọn hai năm (q đỉnh +62% tháng 7/2025), rồi tụt dần về đường chỉ số, chạm đúng
-# 0,00% ngày 07/08/2026 và nảy lên. User: *"nó giống như vừa cắt xuống mà nhỉ"* — đúng: đó
-# là một ĐỈNH ĐANG TỤT chạm vạch rồi bật, không phải một mã tụt lại phía sau nay vượt lên.
-# Đòi 600 phiên ở dưới ngay trước vết cắt thì loại sạch họ "chạm rồi nảy".
-#
-# HỆ QUẢ BẮT BUỘC: MỐC 1 VÀ 2 NĂM KHÔNG CÒN CHỖ. 600 phiên "ở dưới" phải nằm TRỌN sau phiên
-# neo — trước phiên neo thì chart không vẽ đường chỉ số, không ai NHÌN THẤY mã đó ở trên hay
-# dưới, mà bộ lọc này phải nói đúng thứ người dùng nhìn thấy. Vết cắt trong 50 phiên gần
-# nhất cần mốc neo lùi ít nhất 600+50 = 650 phiên, tức N ≥ 2,6 -> N từ 3 năm trở lên.
-CAT_NAM = tuple(range(3, 11))    # 3..10 năm — dưới 3 thì 600 phiên không đủ chỗ, xem trên
+# HAI CHỐT, GỠ CÁI NÀO CŨNG SAI:
+# ① ĐỈNH XÉT TỪ SAU PHIÊN NEO. Tại phiên neo hai đường TRÙNG NHAU theo định nghĩa (q = 0),
+#    nên nếu tính cả nó thì "gần nhau nhất" luôn rơi đúng vào phiên neo — câu hỏi tự vô nghĩa.
+# ② PHẢI LÀ MÃ TỤT SAU: quá nửa số phiên trong cửa sổ ở DƯỚI đường chỉ số. Không có cổng này
+#    thì một mã DẪN ĐẦU liên tục lập đỉnh mới so với chỉ số cũng lọt — mà với nó "đỉnh q" là
+#    XA đường chỉ số nhất, ngược hẳn nghĩa "áp sát". Đúng họ NVB: user bắt lỗi *"ở trường hợp
+#    NVB nó giống như vừa cắt xuống mà nhỉ"* — NVB ở TRÊN chỉ số gần trọn hai năm (q đỉnh
+#    +62% tháng 7/2025) rồi tụt về chạm 0,00% ngày 07/08/2026 và nảy: đỉnh đang tụt, không
+#    phải đáy đang vượt. Ngưỡng "quá nửa" là nghĩa đen của câu *"mã này nằm dưới chỉ số"*,
+#    không phải số tinh chỉnh.
+CAT_NAM = tuple(range(1, 11))    # 1..10 năm
 CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
-CAT_CUA = 50                     # cửa sổ "vừa cắt" mà chip đang hỏi (phiên)
-CAT_DUOI= 600                    # số phiên xét ngay trước vết cắt
-# "Ở DƯỚI SUỐT 600 PHIÊN" PHẢI ĐỌC LÀ GẦN-NHƯ-SUỐT, KHÔNG PHẢI TỪNG PHIÊN MỘT — đo mới biết.
-# Ngay trước lúc cắt, giá luôn dập dềnh quanh đường chỉ số vài phiên, nên đòi 100% số phiên ở
-# dưới thì **0 mã nào đạt** (đo 25/08/2026 trên cả ba sàn). Phân bố của 111 ứng viên ở mốc 3
-# năm: trung vị chỉ ở dưới **15%** số phiên — tức phần lớn là kiểu NVB, ở TRÊN gần hết quãng
-# rồi tụt về chạm vạch. Ngưỡng theo số mã còn lại: 100% -> 0 · 98% -> 3 · 95% -> 3 · 90% -> 3
-# · 80% -> 11 · 70% -> 12. Chọn 95%: cho phép tối đa 30 phiên nhô lên (đúng phần dập dềnh),
-# và ba mã còn lại đều là ca thật — ASP ở dưới 99,7% số phiên, đáy q −51,5%; HHP 99,2%/−41,8%;
-# SCO 98,3%/−60,9%. Đổi ngưỡng là đổi ĐÚNG một hằng số này.
-CAT_TY  = 0.95                   # tỉ lệ tối thiểu số phiên ở dưới trong `CAT_DUOI` phiên đó
+CAT_CUA = 50                     # cửa sổ "vừa áp sát" mà chip đang hỏi (phiên)
+CAT_MIN = 60                     # cửa sổ ngắn hơn thế thì "gần nhất N năm" không có nghĩa
+CAT_TY  = 0.50                   # quá nửa số phiên phải ở dưới thì mới gọi là mã tụt sau
 
-# ── ÁP SÁT CHỈ SỐ Ở MỨC GẦN NHẤT 2 NĂM (`gn*`, user chốt 27/08/2026) ───────────────────
-# *"nếu không đạt thì chỉ cần nó gần đường chỉ số nhất trong 2 năm là được — kiểu như đang
-# tạo đỉnh gần chỉ số nhất hoặc quanh quẩn gần với khoảng cách ngắn nhất với chỉ số"*.
-#
-# Luật 600 phiên ở dưới quá chặt: chỉ 1–3 mã mỗi mốc. Nới bằng cách hỏi thẳng thứ mắt nhìn
-# thấy — khoảng hở `q` hôm nay có phải là mức CAO NHẤT (gần đường chỉ số nhất tính từ dưới
-# lên, hoặc đã vượt lên) trong hai năm qua không. Ghi ra SỐ PHIÊN mà hôm nay đang là đỉnh,
-# nên hỏi 1 năm hay 3 năm cũng được, không phải dựng lại kho.
-#
-# KÈM CỔNG "PHẢI LÀ MÃ TỤT SAU": quá nửa số phiên trong cửa sổ phải ở DƯỚI đường chỉ số.
-# Không có cổng này thì một mã DẪN ĐẦU liên tục lập đỉnh mới so với chỉ số cũng lọt — mà đó
-# là thứ ngược hẳn ý định, đúng họ NVB. Ngưỡng "quá nửa" không phải số tinh chỉnh: nó là
-# nghĩa đen của câu "mã này nằm dưới chỉ số".
-GN_CUA  = 500                    # 2 năm — cửa sổ xét "gần nhất"
-GN_TY   = 0.50                   # quá nửa số phiên phải ở dưới thì mới gọi là mã tụt sau
-CAT_DO  = 250                    # quét ngược tối đa bấy nhiêu phiên; xa hơn thì không còn "vừa"
 
 def _nap_chiso():
     """Đọc cả ba kho chỉ số một lần. Trả {tên: {ngày: điểm}}."""
@@ -683,17 +642,12 @@ def suc_manh(d, floor, CS):
 
 
 def cat_len(P, X):
-    """Số phiên kể từ lần đường giá CẮT LÊN đường chỉ số neo N năm VÀ GIỮ ĐƯỢC TỚI NAY.
+    """Số phiên kể từ lúc đường giá ÁP SÁT đường chỉ số neo N năm NHẤT trong cả cửa sổ N năm.
 
-    Nói cách khác: độ dài đoạn đang-ở-TRÊN hiện hành, tính bằng phiên. `None` khi
-      · đang ở DƯỚI đường chỉ số (kể cả vừa cắt lên rồi rơi lại — xem khối chú thích trên);
-      · đã ở trên liên tục quá `CAT_DO` phiên, tức không còn là "vừa";
-      · ở trên ngay từ sau phiên neo, tức chưa hề có vết cắt nào (hai đường trùng nhau TẠI
-        phiên neo theo định nghĩa, đó không phải một lần cắt);
-      · chuỗi quá ngắn để câu hỏi có nghĩa.
+    `None` khi mã không phải "tụt sau chỉ số" (quá nửa cửa sổ nằm TRÊN), hoặc cửa sổ quá
+    ngắn để câu hỏi có nghĩa. Xem khối chú thích trên để biết vì sao hai cổng đó bắt buộc.
     """
-    r = {('cat%d' % N): None for N in CAT_NAM}
-    r.update({('gn%d' % N): None for N in CAT_NAM})
+    r = {('gn%d' % N): None for N in CAT_NAM}
     n = len(P)
     if n < 2:
         return r
@@ -702,43 +656,18 @@ def cat_len(P, X):
         a = n - 1 - N * CAT_NEN
         if a < 0:
             a = 0                       # chuỗi ngắn hơn N năm -> neo phiên đầu, y như chart
-        # MỐC NEO NẰM TRONG CHÍNH CỬA SỔ ĐANG HỎI THÌ CÂU HỎI VÔ NGHĨA.
-        if n - 1 - a < CAT_CUA:
+        if n - 1 - a < CAT_MIN:
             continue
         ra = R[a]
-        if R[n - 1] <= ra:
-            continue                    # đang ở dưới -> không có gì để nói
-        lo = max(a + 1, n - 1 - CAT_DO)
-        i = n - 1
-        while i > lo and R[i - 1] > ra:
-            i -= 1
-        if i <= a + 1 or R[i - 1] > ra:
-            continue                    # ở trên từ ngay sau phiên neo, hoặc lâu hơn cửa quét
-        # ---- 600 PHIÊN NGAY TRƯỚC VẾT CẮT PHẢI GẦN NHƯ ĐỀU Ở DƯỚI ----
-        # Nằm TRỌN sau phiên neo, bằng không là hỏi về quãng chart không vẽ ra.
-        if i - CAT_DUOI < a:
-            continue
-        duoi = sum(1 for k in range(i - CAT_DUOI, i) if R[k] <= ra)
-        if duoi < CAT_TY * CAT_DUOI:
-            continue
-        r['cat%d' % N] = (n - 1) - i
-    # ---- ÁP SÁT CHỈ SỐ Ở MỨC GẦN NHẤT 2 NĂM ----
-    for N in CAT_NAM:
-        a = n - 1 - N * CAT_NEN
-        if a < 0:
-            a = 0
-        cua = min(GN_CUA, n - 1 - a)        # cửa sổ phải nằm trọn sau phiên neo
-        if cua < 60:
-            continue                        # quá ngắn thì "gần nhất 2 năm" không có nghĩa
-        ra = R[a]
-        lo = n - 1 - cua
-        if sum(1 for k in range(lo, n) if R[k] <= ra) < GN_TY * (cua + 1):
-            continue                        # không phải mã tụt sau -> bỏ
-        # đếm ngược tới phiên gần nhất có khoảng hở CAO HƠN hôm nay
-        j = n - 1
-        while j > lo and R[j - 1] <= R[n - 1]:
-            j -= 1
-        r['gn%d' % N] = (n - 1) - j if R[j - 1] > R[n - 1] else cua
+        # ĐỈNH XÉT TỪ a+1: tại phiên neo hai đường trùng nhau, tính cả nó là câu hỏi vô nghĩa
+        duoi = sum(1 for k in range(a + 1, n) if R[k] <= ra)
+        if duoi < CAT_TY * (n - 1 - a):
+            continue                    # không phải mã tụt sau -> bỏ
+        j = a + 1
+        for k in range(a + 2, n):
+            if R[k] > R[j]:
+                j = k                   # phiên áp sát chỉ số nhất trong cửa sổ
+        r['gn%d' % N] = (n - 1) - j
     return r
 
 
