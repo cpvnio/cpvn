@@ -29,6 +29,11 @@
   Cache-Control: public, max-age=0, must-revalidate
 /duongdua
   Cache-Control: public, max-age=0, must-revalidate
+# Trang ẩn /fun — cả mạch JS nằm inline trong file, đúng lý do của luật ngay trên.
+/fun
+  Cache-Control: public, max-age=0, must-revalidate
+/fun.html
+  Cache-Control: public, max-age=0, must-revalidate
 
 # Logo doanh nghiệp: đã kho hoá trong repo, nội dung gắn liền tên mã và gần như không đổi
 # -> cho trình duyệt giữ 1 NĂM. Vào lần sau không tốn byte nào, hiện tức thì.

@@ -32,6 +32,8 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
 | `assets/mobi.css` + `assets/mobi.js` | 103+101 | **Khung mobile dùng chung cả 4 trang** — thanh tab đáy + bốn lối rẽ của Radar. Chỉ sống trong `@media(max-width:760px)` |
 | `demo-mobi*.html`, `demo-nen.html` | — | Bản demo để CHỌN, không nằm trong luồng chính. `demo-mobi.html` so hai mẫu bằng 2 iframe + postMessage |
+| `fun.html` | 330 | **TRANG ẨN `/fun`** — chỉ số VN-Index giả định. Không mục nào trên web trỏ tới, `noindex`. Tự chứa, chỉ đọc `data/fun.json` |
+| `tools/kho_fun.py` | 190 | Dựng `data/fun.json` cho trang trên. KHÔNG gọi mạng, ~2 giây. Bước `[3a]` của lượt EOD |
 | `refresh_daily.py` | 715 | Toàn bộ "backend": 11 bước cào → ghi kho |
 | `tools/build_screen.py` | 624 | Sinh `screen.json`/`fund.json`/`market.json`. refresh_daily gọi ở bước 10 |
 | `tools/build_nganh.py` | 250 | Sinh `data/nganh/{MÃ}.json` — chỉ số đặc thù ngành, KHÔNG gọi mạng. Bước 6d |
@@ -78,6 +80,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/tapdoan.json` | Bản đồ tập đoàn: nhóm → mã con + % mẹ nắm. `tools/build_tapdoan.py` dựng |
 | `data/quy.json` | Danh mục các quỹ: quỹ → mã đang nắm + giá trị + **kỳ công bố**. Cùng script |
 | `data/cotuc.json` | Lịch chốt quyền: cổ tức tiền/CP, CP thưởng, phát hành thêm + ngày GDKHQ. `tools/build_cotuc.py` |
+| `data/fun.json` | **Chỉ số VN-Index GIẢ ĐỊNH** (VIC và VHM cố định 200.000 tỷ) cho trang ẩn `/fun`: `d` ngày · `c` chỉ số thật · `g` chuỗi giả định đã ghép (neo phiên đầu) · `w` tỉ trọng VIC+VHM. 113 KB. `tools/kho_fun.py` |
 | `data/health.json` | `date` = **ngày phiên** — khoá điều phối giữa VPS và Actions |
 
 ## Nến vẽ chart — KHO TRƯỚC, nguồn ngoài chỉ khi kho không dùng được
@@ -4871,6 +4874,76 @@ dựng lại từ số 0). Tác vụ trỏ thẳng vào file TRONG kho nên sử
 - **Logo cache 1 năm immutable** — thay file cùng tên sẽ không bao giờ tới người đã ghé.
 - Nến ngày `'D'` thì `CPChart.aggregate` trả về **chính mảng gốc**, sửa nến cuối tại chỗ là
   sửa luôn bộ nhớ đệm của mã đó.
+
+## `/fun` — VN-INDEX GIẢ ĐỊNH, TRANG ẨN (27/08/2026)
+
+User: *"thêm 1 chỉ số là VN-Index khi VIC vốn hoá cố định 200k tỷ và VHM cũng 200k tỷ … chỉ số
+này nên đặt ở 1 trang ẩn cpvn.io/fun, không xuất hiện trên web, chỉ ai biết tên miền /fun mới
+xem được"*.
+
+```
+r_còn lại  = (r_chỉ số − w_VIC·r_VIC − w_VHM·r_VHM) ÷ (1 − w_VIC − w_VHM)
+r_giả định = r_còn lại × vốn hoá còn lại ÷ (vốn hoá còn lại + 400.000 tỷ)
+```
+
+**BÓC KHỎI CHỈ SỐ THẬT, KHÔNG DỰNG LẠI CHỈ SỐ TỪ ĐẦU.** Dựng lại từ 405 mã HOSE thì mọi sai số
+của kho (35 mã đã huỷ niêm yết không còn trong kho, phiên thiếu giá, vốn hoá suy ngược) đi
+thẳng vào KẾT QUẢ. Bóc thì phần "cả sàn trừ hai mã" neo vào chính chỉ số HOSE công bố; sai số
+của kho chỉ còn ảnh hưởng tới TRỌNG SỐ — bậc hai, nhỏ hơn hẳn.
+
+**ĐÃ ĐỐI CHIẾU HAI ĐƯỜNG ĐỘC LẬP** (3.400 phiên 2013→2026), và đây là thứ duy nhất cho phép
+tin một con số **không có nguồn nào để đối chiếu**:
+
+| phép đo | trung bình \|lệch\|/phiên | p99 | max | tương quan |
+|---|---|---|---|---|
+| dựng lại cả chỉ số từ 405 mã ↔ chỉ số HOSE thật | **0,070%** | 0,375% | 0,805% | **0,9960** |
+| "phần còn lại" dựng-lại-từ-mã ↔ bóc-khỏi-chỉ-số | **0,079%** | 0,414% | 0,871% | **0,9951** |
+
+Kết quả neo 17/05/2018: VN-Index **1.030,64 → 1.788,78 (+73,6%)** · bản ghim **→ 1.454,63
+(+41,1%)**, chênh **−334 điểm (−18,7%)**. VIC+VHM đang chiếm **26,7%** vốn hoá HOSE; ghim ở
+200.000 tỷ thì còn 3,0% mỗi mã.
+
+> **KHÔNG PHẢI LÚC NÀO BẢN GHIM CŨNG THẤP HƠN — đừng đọc nó thành "bỏ Vingroup ra thì chỉ số
+> tệ hơn".** Suốt 2024–2025 bản ghim CAO HƠN chỉ số thật (+6,8% đầu 2024, +7,2% đầu 2025) vì
+> hai mã đó đang giảm; sang 2026 thì lật hẳn. Nó đo ĐÓNG GÓP của hai mã, không đo tốt xấu.
+
+**CHUỖI GHI RA LÀ CHUỖI LỢI SUẤT GHÉP, NEO Ở PHIÊN ĐẦU.** Trang tự neo lại ở mốc nào cũng được
+bằng `g[i]/g[T]·c[T]` — đúng bằng việc ghép lại từ phiên T với mức xuất phát `c[T]`, **không
+phải xấp xỉ** (`test_fun.py` khối ④). Nên kho KHÔNG ghi nhiều bản neo sẵn.
+
+**VHM CHỈ TÍNH TỪ NGÀY LÊN SÀN (17/05/2018)** — đóng đinh vốn hoá cho một mã chưa niêm yết là
+bịa ra một cấu phần không có thật.
+
+> **TRƯỚC 20/11/2017 VỐN HOÁ VIC CÒN DƯỚI 200.000 TỶ** (2013 chỉ 56.000 tỷ), nên ở quãng đó
+> giả định làm VIC **TO HƠN** thực tế và kéo chỉ số giả định xuống. Đó là hệ quả đúng của giả
+> định, không phải lỗi — nhưng vì thế mốc mặc định của trang là **17/05/2018**, phiên đầu tiên
+> cả hai mã đều đã vượt 200.000 tỷ. Chip "Tất cả" vẫn xem được, và trang nói rõ điều này.
+
+**KIỂM: `python3 tools/test_fun.py`** — 25 phép, chạy trước mỗi lần đẩy nếu có đụng vào
+`kho_fun.py`. Ba lớp: ① **đẳng thức** (bơm số giả biết trước đáp án: ghim đúng bằng vốn hoá
+thật + mã đứng yên phải trùng khít chỉ số thật) · ② **nhân quả** (thêm phiên mới không đổi giá
+trị đã tính) · ③ **đối chiếu hai đường độc lập** trên kho thật.
+
+> **BẪY VIẾT KIỂM THỬ ĐÃ DÍNH, cả hai đều là KỲ VỌNG sai chứ không phải code sai:** ①  tỉ
+> trọng ĐỔI TỪNG PHIÊN (phần còn lại lớn lên trong khi 200.000 tỷ đứng yên) nên đáp án phải
+> tính bằng vòng lặp, luỹ thừa một hằng số ra 1.167,45 trong khi đúng là 1.170,27; ② muốn chỉ
+> số THẬT vẫn tăng trong lúc bản ghim giảm thì phần VIC kéo lên phải lớn hơn phần còn lại kéo
+> xuống — bộ số 100.000/900.000 cho chỉ số thật GIẢM, ca kiểm khi đó tự mâu thuẫn.
+
+**ẨN NGHĨA LÀ KHÔNG QUẢNG BÁ, KHÔNG PHẢI BẢO MẬT.** Không mục nào trên web trỏ tới `/fun`,
+site không có sitemap, và trang mang `noindex,nofollow,noarchive`. Ai biết đường dẫn thì vẫn
+mở được — **đừng đặt gì nhạy cảm ở đây**. **KHÔNG khai `/fun` vào `robots.txt`**: file đó
+công khai nên `Disallow: /fun` chính là quảng cáo đường dẫn.
+
+> **KHÔNG cần rule trong `_redirects`** — Cloudflare Pages tự phục vụ `/fun` cho `fun.html`,
+> y như `/bubbles`. Thêm rule là vòng lặp 307, đúng cảnh báo ở đầu file đó. Nhưng **PHẢI thêm
+> `_headers`** `must-revalidate` cho cả `/fun` lẫn `/fun.html`: toàn bộ mạch JS nằm inline
+> trong file mà HTML thì không có `?v=`.
+
+**CÂU CHỮ TRÊN TRANG GIỮ TRUNG TÍNH.** User gọi nó là *"VN-Index khi Vingroup không pump"*;
+trang thì gọi đúng phép tính — *"VN-Index giả định: VIC và VHM cố định 200.000 tỷ"*. Đây là
+trang CÔNG KHAI (ẩn chỉ là không quảng bá), và một câu ám chỉ doanh nghiệp có tên thao túng
+giá là thứ khác hẳn một phép tính giả định. Kèm khối miễn trừ như mọi trang khác.
 
 ## Quyết định đã chốt, đừng đề xuất lại
 

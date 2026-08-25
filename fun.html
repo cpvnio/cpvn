@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VN-Index giả định — VIC & VHM cố định 200.000 tỷ</title>
+<!-- TRANG ẨN. Không mục nào trên web trỏ tới đây, không nằm trong sitemap (site không có
+     sitemap), và noindex để công cụ tìm kiếm không đưa vào kết quả. Đây là ẩn theo nghĩa
+     "không quảng bá", KHÔNG phải bảo mật: ai biết đường dẫn thì vẫn mở được. Đừng đặt gì
+     nhạy cảm ở đây. -->
+<meta name="robots" content="noindex,nofollow,noarchive"/>
+<meta name="googlebot" content="noindex,nofollow"/>
+<script>(function(){var t=localStorage.getItem('cpvn_theme');
+  document.documentElement.dataset.theme=(t===null?'light':t);})();</script>
+<link rel="icon" type="image/png" href="assets/logo-64.png?v=3"/>
+<style>
+:root{
+  --bg:#1b2130; --card:rgba(35,43,61,.72); --solid:#232b3d;
+  --line:rgba(255,255,255,.10); --txt:#e8ecf5; --mut:#9aa6bd; --faint:#74809a;
+  --green:#22c98a; --red:#f0505c; --gold:#f5b40a;
+  --that:#db2777;              /* chỉ số THẬT — hồng sen, cùng màu đường chỉ số của trang mã */
+  --gd:#22d3ee;                /* bản GIẢ ĐỊNH */
+  --r:16px;
+}
+html[data-theme="light"]{
+  --bg:#eef0f4; --card:rgba(255,255,255,.86); --solid:#ffffff;
+  --line:rgba(15,23,42,.09); --txt:#101321; --mut:#5d6272; --faint:#9aa0af;
+  --green:#0a9e63; --red:#dc3644; --gold:#a16207;
+  --that:#db2777; --gd:#0891b2;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font:14px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+main{max-width:1080px;margin:0 auto;padding:22px 16px 60px}
+h1{font-size:23px;line-height:1.25;margin:0 0 4px;letter-spacing:-.2px}
+h2{font-size:15px;margin:30px 0 10px;letter-spacing:.02em}
+.sub{color:var(--mut);margin:0 0 22px;font-size:13.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.tt{display:flex;align-items:baseline;gap:9px;margin-bottom:16px}
+.tt b{font-size:16px;letter-spacing:.3px}
+.tt span{color:var(--faint);font-size:12px}
+
+/* ba ô số lớn */
+.oo{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.o{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px}
+.o .k{color:var(--mut);font-size:11.5px;letter-spacing:.04em;text-transform:uppercase}
+.o .v{font-size:26px;font-weight:800;margin-top:3px;letter-spacing:-.5px}
+.o .p{color:var(--faint);font-size:12px;margin-top:2px}
+.o.a .v{color:var(--that)} .o.b .v{color:var(--gd)}
+@media(max-width:640px){.oo{grid-template-columns:1fr}.o .v{font-size:23px}}
+
+/* hàng chip chọn mốc */
+.moc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.moc button{background:var(--card);border:1px solid var(--line);color:var(--mut);
+  border-radius:9px;padding:6px 11px;font:600 12.5px system-ui;cursor:pointer}
+.moc button.on{background:var(--txt);color:var(--bg);border-color:transparent}
+
+.wrap{position:relative}
+canvas{display:block;width:100%}
+#cv{height:340px} #cw{height:96px}
+@media(max-width:640px){#cv{height:260px}}
+.leg{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 0;color:var(--mut);font-size:12.5px}
+.leg i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.doc{min-height:22px;margin-top:8px;color:var(--mut);font-size:12.5px}
+.doc b{color:var(--txt)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase}
+.ghi{color:var(--mut);font-size:13px;line-height:1.65}
+.ghi p{margin:0 0 10px} .ghi code{background:var(--solid);padding:1px 5px;border-radius:5px;font-size:12.5px}
+.ghi ul{margin:0 0 10px;padding-left:20px} .ghi li{margin-bottom:5px}
+.up{color:var(--green)} .dn{color:var(--red)}
+.mientru{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
+  color:var(--faint);font-size:12px;line-height:1.7}
+</style>
+</head>
+<body>
+<main>
+  <h1>VN-Index giả định</h1>
+  <p class="sub">Chỉ số sẽ ở đâu nếu vốn hoá <b>VIC</b> và <b>VHM</b> đứng yên ở <b>200.000 tỷ</b> mỗi mã,
+     còn phần sàn còn lại chạy đúng như đã chạy.</p>
+
+  <div class="oo" id="oo"></div>
+
+  <div class="card">
+    <div class="tt"><b>So với chỉ số thật</b><span id="ttNgay"></span></div>
+    <div class="moc" id="moc"></div>
+    <div class="wrap"><canvas id="cv"></canvas></div>
+    <div class="leg">
+      <span><i style="background:var(--that)"></i>VN-Index thật</span>
+      <span><i style="background:var(--gd)"></i>Giả định (VIC &amp; VHM cố định 200.000 tỷ)</span>
+    </div>
+    <div class="doc" id="doc"></div>
+  </div>
+
+  <h2>VIC + VHM chiếm bao nhiêu vốn hoá sàn HOSE</h2>
+  <div class="card">
+    <div class="wrap"><canvas id="cw"></canvas></div>
+    <div class="doc" id="docw"></div>
+  </div>
+
+  <h2>Hôm nay</h2>
+  <div class="card" style="overflow-x:auto"><table id="bang"></table></div>
+
+  <h2>Cách tính</h2>
+  <div class="card ghi" id="ghi"></div>
+
+  <div class="mientru">
+    Toàn bộ nội dung trên trang này là <b>thống kê mô tả quá khứ</b> và một phép tính giả định,
+    không phải khuyến nghị đầu tư. CPVN.IO không phải công ty chứng khoán và không có giấy phép
+    tư vấn đầu tư. Người vận hành trang có thể nắm giữ cổ phiếu xuất hiện ở đây.
+  </div>
+</main>
+
+<script>
+/* ============================================================================
+   /fun — VN-Index giả định. Đọc data/fun.json (tools/kho_fun.py dựng).
+
+   NEO LẠI Ở MỐC NÀO CŨNG LÀ PHÉP ĐÚNG, KHÔNG PHẢI XẤP XỈ. Kho ghi chuỗi lợi suất đã ghép,
+   neo ở phiên đầu; `g[i]/g[T]·c[T]` bằng đúng việc ghép lại từ phiên T với mức xuất phát
+   c[T]. `tools/test_fun.py` khối ④ khoá tính chất này.
+   ========================================================================== */
+const $=id=>document.getElementById(id);
+const light=()=>document.documentElement.dataset.theme==='light';
+const CSS=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const so=(v,n=2)=>v==null?'—':v.toLocaleString('vi-VN',{minimumFractionDigits:n,maximumFractionDigits:n});
+const pc=v=>(v>=0?'+':'')+v.toLocaleString('vi-VN',{maximumFractionDigits:1})+'%';
+const ty=v=>Math.round(v).toLocaleString('vi-VN')+' tỷ';
+const ngay=s=>s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
+
+let R=null, T=0, hover=-1;
+/* Mốc neo. `nam` = số năm đếm lùi từ phiên cuối; 0 = từ đầu chuỗi; `d` = một ngày cụ thể.
+   17/05/2018 là mặc định vì đó là phiên ĐẦU TIÊN cả hai mã cùng niêm yết VÀ cùng đã vượt
+   200.000 tỷ — trước đó giả định làm VIC TO HƠN thực tế, xem mục Cách tính. */
+const MOC=[{t:'1 năm',nam:1},{t:'3 năm',nam:3},{t:'5 năm',nam:5},
+           {t:'Từ 17/05/2018',d:'2018-05-17'},{t:'Tất cả',nam:0}];
+let mocI=3;
+
+function moc2T(m){
+  const D=R.d, n=D.length;
+  if(m.d) { const i=D.findIndex(x=>x>=m.d); return i<0?0:i; }
+  if(!m.nam) return 0;
+  const c=D[n-1], moc=(+c.slice(0,4)-m.nam)+c.slice(4);
+  const i=D.findIndex(x=>x>=moc);
+  return i<0?0:i;
+}
+/* Chuỗi giả định đã neo lại về mốc T, cùng đơn vị điểm với chỉ số thật. */
+const gAt=i=>R.c[T]*R.g[i]/R.g[T];
+
+function veMoc(){
+  $('moc').innerHTML=MOC.map((m,i)=>
+    '<button data-i="'+i+'"'+(i===mocI?' class="on"':'')+'>'+m.t+'</button>').join('');
+  $('moc').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    mocI=+b.dataset.i; T=moc2T(MOC[mocI]); veMoc(); ve();
+  });
+}
+
+/* ---- một bộ vẽ đường dùng chung cho cả hai canvas -------------------------
+   Vẽ THẲNG lên canvas chứ không dựng SVG: hai đồ thị này chỉ có đường và lưới, mà canvas
+   thì khỏi phải nghĩ tới chuyện hàng nghìn nút DOM ở khung "Tất cả" (3.400 phiên). */
+function khung(cv){
+  const DPR=Math.min(2,devicePixelRatio||1), w=cv.clientWidth, h=cv.clientHeight;
+  cv.width=Math.round(w*DPR); cv.height=Math.round(h*DPR);
+  const x=cv.getContext('2d'); x.setTransform(DPR,0,0,DPR,0,0); x.clearRect(0,0,w,h);
+  return {x,w,h};
+}
+/* `so` = số khoảng chia. Dải tỉ trọng chỉ cao 70px nên 4 khoảng là nhãn dính vào nhau —
+   truyền 2 cho nó. */
+function truc(x,w,h,padL,padT,plotH,lo,hi,fmt,so){
+  so=so||4;
+  x.strokeStyle=CSS('--line'); x.lineWidth=1;
+  x.fillStyle=CSS('--faint'); x.font='11px system-ui'; x.textAlign='left'; x.textBaseline='middle';
+  for(let k=0;k<=so;k++){
+    const v=lo+(hi-lo)*k/so, yy=padT+plotH-plotH*k/so;
+    x.beginPath(); x.moveTo(padL,yy); x.lineTo(w-6,yy); x.stroke();
+    x.fillText(fmt(v),4,yy);
+  }
+}
+/* NHÃN ĐẦU DẠT TRÁI, NHÃN CUỐI DẠT PHẢI — cả hai nằm đúng mép vùng vẽ, để giữa thì một nửa
+   chạy ra ngoài canvas và bị xén (đã dính: "08/2026" hiện thành "08/20"). */
+function nhanNgay(x,D,i0,i1,padL,plotW,y){
+  x.fillStyle=CSS('--faint'); x.font='11px system-ui'; x.textBaseline='top';
+  const n=i1-i0, buoc=Math.max(1,Math.floor(n/5));
+  for(let i=i0;i<i1;i+=buoc){
+    const X=padL+(i-i0)/(n-1||1)*plotW, cuoi=(i+buoc>=i1);
+    x.textAlign=(i===i0)?'left':(cuoi?'right':'center');
+    x.fillText(D[i].slice(0,7).split('-').reverse().join('/'),X,y);
+  }
+}
+
+function veChinh(){
+  const {x,w,h}=khung($('cv')), D=R.d, n=D.length;
+  const padL=52, padT=10, padB=20, plotW=w-padL-6, plotH=h-padT-padB;
+  let lo=Infinity, hi=-Infinity;
+  for(let i=T;i<n;i++){ const a=R.c[i], b=gAt(i);
+    lo=Math.min(lo,a,b); hi=Math.max(hi,a,b); }
+  const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
+  const X=i=>padL+(i-T)/((n-1-T)||1)*plotW, Y=v=>padT+(hi-v)/(hi-lo)*plotH;
+  truc(x,w,h,padL,padT,plotH,lo,hi,v=>so(v,0));
+  nhanNgay(x,D,T,n,padL,plotW,padT+plotH+5);
+  const duong=(f,mau,day)=>{ x.strokeStyle=mau; x.lineWidth=day; x.lineJoin='round';
+    x.beginPath(); for(let i=T;i<n;i++){ const xx=X(i),yy=Y(f(i)); i===T?x.moveTo(xx,yy):x.lineTo(xx,yy); }
+    x.stroke(); };
+  duong(i=>R.c[i],CSS('--that'),1.8);
+  duong(i=>gAt(i),CSS('--gd'),2.2);
+  if(hover>=T&&hover<n){
+    const xx=X(hover);
+    x.strokeStyle=CSS('--faint'); x.setLineDash([4,4]); x.lineWidth=1;
+    x.beginPath(); x.moveTo(xx,padT); x.lineTo(xx,padT+plotH); x.stroke(); x.setLineDash([]);
+    for(const [f,mau] of [[i=>R.c[i],CSS('--that')],[i=>gAt(i),CSS('--gd')]]){
+      x.fillStyle=mau; x.beginPath(); x.arc(xx,Y(f(hover)),3.4,0,6.284); x.fill();
+    }
+  }
+  return {padL,plotW};
+}
+function veTrong(){
+  const {x,w,h}=khung($('cw')), D=R.d, n=D.length;
+  const padL=52, padT=8, padB=18, plotW=w-padL-6, plotH=h-padT-padB;
+  let lo=Infinity, hi=-Infinity;
+  for(let i=T;i<n;i++){ lo=Math.min(lo,R.w[i]); hi=Math.max(hi,R.w[i]); }
+  const pad=(hi-lo)*0.12||1; lo=Math.max(0,lo-pad); hi+=pad;
+  const X=i=>padL+(i-T)/((n-1-T)||1)*plotW, Y=v=>padT+(hi-v)/(hi-lo)*plotH;
+  truc(x,w,h,padL,padT,plotH,lo,hi,v=>so(v,1)+'%',2);
+  nhanNgay(x,D,T,n,padL,plotW,padT+plotH+4);
+  x.strokeStyle=CSS('--gold'); x.lineWidth=2; x.lineJoin='round';
+  x.beginPath(); for(let i=T;i<n;i++){ const xx=X(i),yy=Y(R.w[i]); i===T?x.moveTo(xx,yy):x.lineTo(xx,yy); }
+  x.stroke();
+  if(hover>=T&&hover<n){
+    const xx=X(hover);
+    x.strokeStyle=CSS('--faint'); x.setLineDash([4,4]); x.lineWidth=1;
+    x.beginPath(); x.moveTo(xx,padT); x.lineTo(xx,padT+plotH); x.stroke(); x.setLineDash([]);
+    x.fillStyle=CSS('--gold'); x.beginPath(); x.arc(xx,Y(R.w[hover]),3.4,0,6.284); x.fill();
+  }
+}
+
+function docSo(){
+  const n=R.d.length, i=(hover>=T&&hover<n)?hover:n-1;
+  const that=R.c[i], gd=gAt(i), ch=gd-that;
+  $('doc').innerHTML='<b>'+ngay(R.d[i])+'</b> · thật <b>'+so(that)+'</b> · giả định <b>'+so(gd)
+    +'</b> · chênh <b class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'+':'')+so(ch)+' điểm ('
+    +pc(100*(gd/that-1))+')</b>';
+  $('docw').innerHTML='<b>'+ngay(R.d[i])+'</b> · VIC + VHM chiếm <b>'+so(R.w[i],1)
+    +'%</b> vốn hoá sàn HOSE';
+}
+/* MỌI THỨ ĐỌC MỐC NEO ĐỀU PHẢI VẼ LẠI TRONG MỘT HÀM. Bẫy đã dính: bấm đổi mốc thì đồ thị và
+   dòng đọc số đổi theo, nhưng BA Ô SỐ LỚN vẫn in mốc cũ — hai chỗ trên cùng một màn hình nói
+   hai mốc khác nhau, mà ô số lớn mới là thứ người ta đọc trước. `veOO` luôn lấy phiên CUỐI
+   nên gọi nó trong cả lượt rê chuột cũng không sao. */
+function ve(){ veChinh(); veTrong(); docSo(); veOO(); }
+
+/* Rê chuột trên MỘT trong hai canvas thì CẢ HAI cùng đổi mốc — chúng chung một trục thời
+   gian, mà câu hỏi ở đây luôn là "lúc đó tỉ trọng bao nhiêu thì chênh lệch bấy nhiêu". */
+function batRe(cv){
+  cv.addEventListener('mousemove',e=>{
+    const r=cv.getBoundingClientRect(), padL=52, plotW=cv.clientWidth-padL-6;
+    const n=R.d.length, t=(e.clientX-r.left-padL)/plotW;
+    const i=Math.round(T+t*((n-1-T)||1));
+    const m=Math.max(T,Math.min(n-1,i));
+    if(m!==hover){ hover=m; ve(); }
+  });
+  cv.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; ve(); } });
+}
+
+function veOO(){
+  const n=R.d.length, that=R.c[n-1], gd=gAt(n-1), ch=gd-that;
+  $('ttNgay').textContent='phiên '+ngay(R.d[n-1])+' · neo '+ngay(R.d[T]);
+  $('oo').innerHTML=
+    '<div class="o a"><div class="k">VN-Index thật</div><div class="v">'+so(that)+'</div>'
+      +'<div class="p">phiên '+ngay(R.d[n-1])+'</div></div>'
+   +'<div class="o b"><div class="k">Giả định</div><div class="v">'+so(gd)+'</div>'
+      +'<div class="p">neo từ '+ngay(R.d[T])+'</div></div>'
+   +'<div class="o"><div class="k">Chênh lệch</div><div class="v '+(ch>=0?'up':'dn')+'">'
+      +(ch>=0?'+':'')+so(ch,0)+'</div><div class="p">điểm · '+pc(100*(gd/that-1))+'</div></div>';
+}
+
+function veBang(){
+  const n=R.d.length, vic=R.nay.VIC, vhm=R.nay.VHM, san=R.vhSan;
+  const conlai=san-vic-vhm, sanGD=conlai+R.ghim*2;
+  const hang=(a,b,c,d)=>'<tr><td>'+a+'</td><td>'+b+'</td><td>'+c+'</td><td>'+d+'</td></tr>';
+  $('bang').innerHTML=
+    '<thead><tr><th>Cấu phần</th><th>Vốn hoá thật</th><th>Giả định</th><th>Tỉ trọng thật → giả định</th></tr></thead><tbody>'
+   +hang('VIC',ty(vic),ty(R.ghim),so(100*vic/san,1)+'% → '+so(100*R.ghim/sanGD,1)+'%')
+   +hang('VHM',ty(vhm),ty(R.ghim),so(100*vhm/san,1)+'% → '+so(100*R.ghim/sanGD,1)+'%')
+   +hang('Phần sàn còn lại ('+(R.soMa-2)+' mã)',ty(conlai),ty(conlai),
+         so(100*conlai/san,1)+'% → '+so(100*conlai/sanGD,1)+'%')
+   +hang('<b>Tổng vốn hoá HOSE</b>','<b>'+ty(san)+'</b>','<b>'+ty(sanGD)+'</b>','')
+   +'</tbody>';
+}
+
+function veGhi(){
+  $('ghi').innerHTML=
+   '<p>VN-Index là chỉ số bình quân gia quyền vốn hoá, nên lợi suất một phiên của nó tách được '
+  +'thành phần đóng góp của từng mã. Từ đó <b>bóc riêng phần “cả sàn trừ VIC và VHM”</b>:</p>'
+  +'<p><code>r_còn lại = (r_chỉ số − w_VIC·r_VIC − w_VHM·r_VHM) ÷ (1 − w_VIC − w_VHM)</code></p>'
+  +'<p>rồi ghép lại với hai mã ấy ở trạng thái giả định. Vốn hoá cố định thì theo định nghĩa '
+  +'lợi suất của chúng bằng 0, nên phần còn lại bị pha loãng đúng bằng tỉ trọng mới:</p>'
+  +'<p><code>r_giả định = r_còn lại × vốn hoá còn lại ÷ (vốn hoá còn lại + 400.000 tỷ)</code></p>'
+  +'<ul>'
+  +'<li><b>Bóc khỏi chỉ số thật, không dựng lại chỉ số từ đầu.</b> Dựng lại từ '+R.soMa
+  +' mã HOSE thì mọi sai số của kho đi thẳng vào kết quả; bóc thì phần “cả sàn trừ hai mã” '
+  +'neo vào chính chỉ số HOSE công bố.</li>'
+  +'<li><b>Đã đối chiếu hai đường độc lập</b> trên 3.400 phiên (2013→nay): dựng lại cả chỉ số '
+  +'từ '+R.soMa+' mã so với chỉ số thật lệch trung bình <b>0,070%/phiên</b> (tương quan 0,9960); '
+  +'“phần còn lại” tính bằng hai cách khác nhau lệch trung bình <b>0,079%/phiên</b>.</li>'
+  +'<li><b>VHM chỉ tính từ ngày lên sàn (17/05/2018).</b> Trước đó nó chưa niêm yết.</li>'
+  +'<li><b>Trước 20/11/2017 vốn hoá VIC còn dưới 200.000 tỷ</b> (năm 2013 chỉ 56.000 tỷ), nên ở '
+  +'quãng đó giả định làm VIC <b>to hơn</b> thực tế và kéo chỉ số giả định xuống. Đó là hệ quả '
+  +'đúng của giả định chứ không phải lỗi — nhưng vì thế mốc mặc định là 17/05/2018, phiên đầu '
+  +'tiên cả hai mã đều đã vượt 200.000 tỷ.</li>'
+  +'<li>Giá dùng để tính là <b>giá đã điều chỉnh</b> (đã hạ nền cổ tức, chia tách, quyền mua), '
+  +'đúng thứ chỉ số hấp thụ vào ước số.</li>'
+  +'</ul>'
+  +'<p style="color:var(--faint)">Kho dựng lúc '+R.generated+' · '+R.d.length+' phiên từ '
+  +ngay(R.d[0])+' · nguồn: kho vốn hoá và kho chỉ số của chính CPVN.</p>';
+}
+
+fetch('data/fun.json').then(r=>r.json()).then(j=>{
+  R=j; T=moc2T(MOC[mocI]);
+  veMoc(); veBang(); veGhi(); ve();
+  batRe($('cv')); batRe($('cw'));
+  let rt=null;
+  addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(ve,120); });
+}).catch(e=>{
+  document.querySelector('main').insertAdjacentHTML('beforeend',
+    '<div class="card" style="color:var(--red)">Không tải được <code>data/fun.json</code> — '
+    +'chạy <code>python3 tools/kho_fun.py</code> để dựng kho.</div>');
+});
+</script>
+</body>
+</html>

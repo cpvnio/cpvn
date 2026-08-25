@@ -105,6 +105,12 @@ if ($LASTEXITCODE -ne 0) { "kho_giaodich --tt EXIT $LASTEXITCODE - bo qua, chay 
 & $py tools\kho_giaodich.py --chiso 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_giaodich --chiso EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# [3a] CHI SO GIA DINH cho trang an /fun -> data/fun.json. KHONG goi mang, ~2 giay.
+# PHAI DUNG SAU CA HAI: kho_vonhoa [1d] (tu trong so VIC/VHM) va kho_giaodich --chiso [3]
+# (chi so that lam nen). Chay truoc mot trong hai la ghi ra mot chuoi thieu phien moi nhat.
+& $py tools\kho_fun.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_fun EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # [4] DỰNG BẢNG PHIÊN LẦN ĐẦU — vài giây. Tới đây trang /phantich đã có đủ giá, khối lượng,
 # giá trị, thoả thuận, khối ngoại, tự doanh, vốn hoá.
 # [3b] TI LE LUU THONG tinh lai tu so co dong -> ghi de `freeFloat` trong data/profile.
