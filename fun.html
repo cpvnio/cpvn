@@ -64,6 +64,9 @@ canvas{display:block;width:100%}
 .leg i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
 .doc{min-height:22px;margin-top:8px;color:var(--mut);font-size:12.5px}
 .doc b{color:var(--txt)}
+.doc .goi{color:var(--faint)}
+.doc .ghimtag{background:var(--txt);color:var(--bg);border-radius:7px;padding:2px 8px;
+  font-size:11.5px;font-weight:700;white-space:nowrap}
 
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line)}
@@ -131,7 +134,13 @@ const pc=v=>(v>=0?'+':'')+v.toLocaleString('vi-VN',{maximumFractionDigits:1})+'%
 const ty=v=>Math.round(v).toLocaleString('vi-VN')+' tỷ';
 const ngay=s=>s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
 
-let R=null, T=0, hover=-1;
+let R=null, T=0, hover=-1, ghim=null;
+/* MỐC ĐANG ĐỌC = mốc GHIM nếu có, không thì mốc đang rê. Ghim rồi thì rê chuột KHÔNG đổi
+   phiên nữa — ghim là để giữ số đứng yên mà đọc, cùng luật với đồ thị /phantich và trang mã.
+   Trên điện thoại không có `hover` nào cả, nên ghim là ĐƯỜNG DUY NHẤT để đọc số. */
+const iDoc=()=>{ const n=R.d.length;
+  if(ghim!=null&&ghim>=T&&ghim<n) return ghim;
+  return (hover>=T&&hover<n)?hover:-1; };
 /* Mốc neo. `nam` = số năm đếm lùi từ phiên cuối; 0 = từ đầu chuỗi; `d` = một ngày cụ thể.
    17/05/2018 là mặc định vì đó là phiên ĐẦU TIÊN cả hai mã cùng niêm yết VÀ cùng đã vượt
    200.000 tỷ — trước đó giả định làm VIC TO HƠN thực tế, xem mục Cách tính. */
@@ -154,7 +163,7 @@ function veMoc(){
   $('moc').innerHTML=MOC.map((m,i)=>
     '<button data-i="'+i+'"'+(i===mocI?' class="on"':'')+'>'+m.t+'</button>').join('');
   $('moc').querySelectorAll('button').forEach(b=>b.onclick=()=>{
-    mocI=+b.dataset.i; T=moc2T(MOC[mocI]); veMoc(); ve();
+    mocI=+b.dataset.i; T=moc2T(MOC[mocI]); ghim=null; hover=-1; veMoc(); ve();
   });
 }
 
@@ -183,12 +192,63 @@ function truc(x,w,h,padL,padT,plotH,lo,hi,fmt,so){
    chạy ra ngoài canvas và bị xén (đã dính: "08/2026" hiện thành "08/20"). */
 function nhanNgay(x,D,i0,i1,padL,plotW,y){
   x.fillStyle=CSS('--faint'); x.font='11px system-ui'; x.textBaseline='top';
-  const n=i1-i0, buoc=Math.max(1,Math.floor(n/5));
-  for(let i=i0;i<i1;i+=buoc){
-    const X=padL+(i-i0)/(n-1||1)*plotW, cuoi=(i+buoc>=i1);
-    x.textAlign=(i===i0)?'left':(cuoi?'right':'center');
+  /* SỐ NHÃN CHIA THEO BỀ RỘNG, đừng để cứng 5 khoảng. Nhãn "05/2018" rộng ~44px, nên ở khổ
+     điện thoại (vùng vẽ 251px) sáu nhãn là chồng lên nhau thành một vệt — đã dính.
+     RẢI THEO `k/kh` CHỨ ĐỪNG CỘNG DỒN `i += buoc`: cộng dồn thì phiên CUỐI gần như luôn rơi
+     ra ngoài vòng lặp và mất nhãn ngày mới nhất — đúng thứ người ta liếc vào trước tiên
+     (đã dính: khổ điện thoại chỉ còn "05/2018 · 07/2022", mất hẳn 08/2026). */
+  const n=i1-i0, kh=Math.max(2,Math.min(5,Math.floor(plotW/120)));
+  for(let k=0;k<=kh;k++){
+    const i=i0+Math.round(k*(n-1)/kh);
+    const X=padL+(i-i0)/(n-1||1)*plotW;
+    x.textAlign=(k===0)?'left':(k===kh?'right':'center');
     x.fillText(D[i].slice(0,7).split('-').reverse().join('/'),X,y);
   }
+}
+
+/* ---- HỘP ĐỌC SỐ VẼ THẲNG LÊN CANVAS ---------------------------------------
+   User 27/08/2026: *"tôi click chuột vào chart không thấy hiện giá VN-Index, tôi muốn hiện
+   lên dễ nhìn hơn"*. Bản đầu chỉ có MỘT DÒNG CHỮ XÁM dưới đồ thị: mắt đang ở trên chart thì
+   không ai nhìn xuống dưới legend, và trên điện thoại thì không có `mousemove` nào nên bấm
+   vào chart đúng là không ra gì thật.
+   Vẽ lên canvas chứ không dựng thẻ DOM — toạ độ đổi theo mọi lượt đổi mốc và đổi khổ màn,
+   cùng lý do `veHopGhim` của `assets/chart.js` đã chọn. */
+function veHop(x,w,X,i,padT,plotH,Y){
+  const that=R.c[i], gd=gAt(i), ch=gd-that;
+  const dong=[['VN-Index thật',so(that),CSS('--that')],
+              ['Giả định',so(gd),CSS('--gd')],
+              ['Chênh',(ch>=0?'+':'')+so(ch)+' · '+pc(100*(gd/that-1)),
+               ch>=0?CSS('--green'):CSS('--red')]];
+  const tieu=ngay(R.d[i]);
+  x.font='700 12.5px system-ui';
+  let wN=x.measureText(tieu).width;
+  x.font='11.5px system-ui';
+  for(const d of dong){
+    x.font='11.5px system-ui'; const a=x.measureText(d[0]).width;
+    x.font='700 12px system-ui'; wN=Math.max(wN,a+22+x.measureText(d[1]).width);
+  }
+  const bw=wN+26, bh=22+dong.length*17+8;
+  /* Đặt hộp ở NỬA ĐỐI DIỆN với hai đường tại cột đó — chúng chạy sát nhau nên chỉ cần nhìn
+     một điểm là biết nên né lên hay né xuống. Kẹp trong khung để không bị xén ở mép. */
+  const yTB=(Y(that)+Y(gd))/2;
+  let by=(yTB<padT+plotH/2)?(padT+plotH-bh-8):(padT+8);
+  let bx=X+16; if(bx+bw>w-6) bx=X-bw-16;
+  bx=Math.max(4,Math.min(bx,w-bw-4));
+  x.fillStyle=CSS('--solid'); x.strokeStyle=CSS('--line'); x.lineWidth=1;
+  if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,bw,bh,10); x.fill(); x.stroke(); }
+  else { x.fillRect(bx,by,bw,bh); x.strokeRect(bx,by,bw,bh); }
+  x.textAlign='left'; x.textBaseline='middle';
+  x.fillStyle=CSS('--txt'); x.font='700 12.5px system-ui';
+  x.fillText(tieu,bx+12,by+15);
+  dong.forEach((d,k)=>{
+    const yy=by+32+k*17;
+    x.fillStyle=d[2]; x.beginPath(); x.arc(bx+15,yy,3.2,0,6.284); x.fill();
+    x.fillStyle=CSS('--mut'); x.font='11.5px system-ui'; x.textAlign='left';
+    x.fillText(d[0],bx+23,yy);
+    x.fillStyle=d[2]; x.font='700 12px system-ui'; x.textAlign='right';
+    x.fillText(d[1],bx+bw-12,yy);
+  });
+  x.textAlign='left';
 }
 
 function veChinh(){
@@ -206,13 +266,26 @@ function veChinh(){
     x.stroke(); };
   duong(i=>R.c[i],CSS('--that'),1.8);
   duong(i=>gAt(i),CSS('--gd'),2.2);
-  if(hover>=T&&hover<n){
-    const xx=X(hover);
-    x.strokeStyle=CSS('--faint'); x.setLineDash([4,4]); x.lineWidth=1;
+  const i=iDoc();
+  if(i>=0){
+    const xx=X(i), daGhim=(ghim!=null);
+    /* NÉT ĐỨT KHI ĐANG RÊ, NÉT LIỀN + TAM GIÁC KHI ĐÃ GHIM — không phân biệt được hai
+       trạng thái thì bấm xong không biết mình đã ghim hay chưa, mà đó đúng là câu hỏi duy
+       nhất lúc ấy. Cùng ký hiệu với đồ thị của /phantich và trang mã. */
+    x.strokeStyle=daGhim?CSS('--mut'):CSS('--faint'); x.lineWidth=1;
+    if(!daGhim) x.setLineDash([4,4]);
     x.beginPath(); x.moveTo(xx,padT); x.lineTo(xx,padT+plotH); x.stroke(); x.setLineDash([]);
-    for(const [f,mau] of [[i=>R.c[i],CSS('--that')],[i=>gAt(i),CSS('--gd')]]){
-      x.fillStyle=mau; x.beginPath(); x.arc(xx,Y(f(hover)),3.4,0,6.284); x.fill();
+    if(daGhim){
+      x.fillStyle=CSS('--txt');
+      const tam=(yy,xuong)=>{ x.beginPath(); x.moveTo(xx,yy);
+        x.lineTo(xx-5,yy+(xuong?-7:7)); x.lineTo(xx+5,yy+(xuong?-7:7)); x.closePath(); x.fill(); };
+      tam(padT+1,true); tam(padT+plotH-1,false);
     }
+    for(const [f,mau] of [[j=>R.c[j],CSS('--that')],[j=>gAt(j),CSS('--gd')]]){
+      x.fillStyle=mau; x.beginPath(); x.arc(xx,Y(f(i)),daGhim?4.2:3.4,0,6.284); x.fill();
+      if(daGhim){ x.strokeStyle=CSS('--solid'); x.lineWidth=1.6; x.stroke(); }
+    }
+    veHop(x,w,xx,i,padT,plotH,Y);
   }
   return {padL,plotW};
 }
@@ -228,20 +301,25 @@ function veTrong(){
   x.strokeStyle=CSS('--gold'); x.lineWidth=2; x.lineJoin='round';
   x.beginPath(); for(let i=T;i<n;i++){ const xx=X(i),yy=Y(R.w[i]); i===T?x.moveTo(xx,yy):x.lineTo(xx,yy); }
   x.stroke();
-  if(hover>=T&&hover<n){
-    const xx=X(hover);
-    x.strokeStyle=CSS('--faint'); x.setLineDash([4,4]); x.lineWidth=1;
+  const i=iDoc();
+  if(i>=0){
+    const xx=X(i), daGhim=(ghim!=null);
+    x.strokeStyle=daGhim?CSS('--mut'):CSS('--faint'); x.lineWidth=1;
+    if(!daGhim) x.setLineDash([4,4]);
     x.beginPath(); x.moveTo(xx,padT); x.lineTo(xx,padT+plotH); x.stroke(); x.setLineDash([]);
-    x.fillStyle=CSS('--gold'); x.beginPath(); x.arc(xx,Y(R.w[hover]),3.4,0,6.284); x.fill();
+    x.fillStyle=CSS('--gold'); x.beginPath(); x.arc(xx,Y(R.w[i]),daGhim?4.2:3.4,0,6.284); x.fill();
+    if(daGhim){ x.strokeStyle=CSS('--solid'); x.lineWidth=1.6; x.stroke(); }
   }
 }
 
 function docSo(){
-  const n=R.d.length, i=(hover>=T&&hover<n)?hover:n-1;
+  const n=R.d.length, j=iDoc(), i=(j>=0?j:n-1);
   const that=R.c[i], gd=gAt(i), ch=gd-that;
   $('doc').innerHTML='<b>'+ngay(R.d[i])+'</b> · thật <b>'+so(that)+'</b> · giả định <b>'+so(gd)
     +'</b> · chênh <b class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'+':'')+so(ch)+' điểm ('
-    +pc(100*(gd/that-1))+')</b>';
+    +pc(100*(gd/that-1))+')</b>'
+    +(ghim!=null?' <span class="ghimtag">đã ghim — bấm lần nữa để bỏ</span>'
+                :' <span class="goi">bấm vào đồ thị để ghim một phiên</span>');
   $('docw').innerHTML='<b>'+ngay(R.d[i])+'</b> · VIC + VHM chiếm <b>'+so(R.w[i],1)
     +'%</b> vốn hoá sàn HOSE';
 }
@@ -251,17 +329,54 @@ function docSo(){
    nên gọi nó trong cả lượt rê chuột cũng không sao. */
 function ve(){ veChinh(); veTrong(); docSo(); veOO(); }
 
+/* ---- VẼ XONG PHẢI ĐO LẠI (`veChac`) --------------------------------------
+   Lượt vẽ ĐẦU TIÊN sau khi `fetch` xong chạy lúc bố cục CHƯA ngã ngũ: đo được
+   `clientWidth = 507` trong khi bề rộng thật là 1014, nên canvas dựng bitmap bằng nửa khổ
+   rồi trình duyệt kéo giãn gấp đôi — MỌI THỨ to gấp đôi, nhãn trục đè lên nhau. Nhìn ra
+   như lỗi phông chữ chứ không ai nghĩ tới kích thước canvas.
+   Đúng con bệnh `veLaiFinChartChac` của `cophieu.html` đã ghi trong CLAUDE.md, và cách chữa
+   cũng vậy: vẽ xong thì SO LẠI bitmap với bề rộng thật, lệch thì vẽ thêm đúng một lượt.
+   `ResizeObserver` là đường phụ (bắt cả khi thẻ cha đổi khổ mà cửa sổ không resize) —
+   ĐỪNG coi nó là chỗ dựa duy nhất: tab ở nền thì nó không bắn. */
+function veChac(){
+  ve();
+  const DPR=Math.min(2,devicePixelRatio||1);
+  for(const id of ['cv','cw']){
+    const c=$(id);
+    if(Math.abs(c.width/DPR-c.clientWidth)>1||Math.abs(c.height/DPR-c.clientHeight)>1){
+      ve(); return;
+    }
+  }
+}
+
 /* Rê chuột trên MỘT trong hai canvas thì CẢ HAI cùng đổi mốc — chúng chung một trục thời
    gian, mà câu hỏi ở đây luôn là "lúc đó tỉ trọng bao nhiêu thì chênh lệch bấy nhiêu". */
+const iTaiX=(cv,clientX)=>{
+  const r=cv.getBoundingClientRect(), padL=52, plotW=cv.clientWidth-padL-6;
+  const n=R.d.length, t=(clientX-r.left-padL)/plotW;
+  return Math.max(T,Math.min(n-1,Math.round(T+t*((n-1-T)||1))));
+};
 function batRe(cv){
+  cv.style.cursor='pointer';
   cv.addEventListener('mousemove',e=>{
-    const r=cv.getBoundingClientRect(), padL=52, plotW=cv.clientWidth-padL-6;
-    const n=R.d.length, t=(e.clientX-r.left-padL)/plotW;
-    const i=Math.round(T+t*((n-1-T)||1));
-    const m=Math.max(T,Math.min(n-1,i));
+    if(ghim!=null) return;                 // đã ghim thì rê chuột không đổi phiên nữa
+    const m=iTaiX(cv,e.clientX);
     if(m!==hover){ hover=m; ve(); }
   });
   cv.addEventListener('mouseleave',()=>{ if(hover!==-1){ hover=-1; ve(); } });
+  /* BẤM = GHIM / BỎ GHIM. Bấm lại đúng cột đang ghim thì bỏ. */
+  cv.addEventListener('click',e=>{
+    const m=iTaiX(cv,e.clientX);
+    ghim=(ghim===m)?null:m; hover=-1; ve();
+  });
+  /* CẢM ỨNG: `click` giả sinh ra sau cú chạm có nơi có nơi không, mà đây lại là đường DUY
+     NHẤT để đọc số trên điện thoại — bắt thẳng `touchend` rồi nuốt cú `click` theo sau. */
+  cv.addEventListener('touchend',e=>{
+    const t=e.changedTouches&&e.changedTouches[0]; if(!t) return;
+    if(e.cancelable) e.preventDefault();
+    const m=iTaiX(cv,t.clientX);
+    ghim=(ghim===m)?null:m; hover=-1; ve();
+  },{passive:false});
 }
 
 function veOO(){
@@ -319,10 +434,14 @@ function veGhi(){
 
 fetch('data/fun.json').then(r=>r.json()).then(j=>{
   R=j; T=moc2T(MOC[mocI]);
-  veMoc(); veBang(); veGhi(); ve();
+  veMoc(); veBang(); veGhi(); veChac();
   batRe($('cv')); batRe($('cw'));
   let rt=null;
-  addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(ve,120); });
+  addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(veChac,120); });
+  if(window.ResizeObserver){
+    const ro=new ResizeObserver(()=>ve());   // đặt bitmap KHÔNG đổi content-box -> không lặp
+    ro.observe($('cv')); ro.observe($('cw'));
+  }
 }).catch(e=>{
   document.querySelector('main').insertAdjacentHTML('beforeend',
     '<div class="card" style="color:var(--red)">Không tải được <code>data/fun.json</code> — '

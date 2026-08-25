@@ -4919,6 +4919,34 @@ bịa ra một cấu phần không có thật.
 > định, không phải lỗi — nhưng vì thế mốc mặc định của trang là **17/05/2018**, phiên đầu tiên
 > cả hai mã đều đã vượt 200.000 tỷ. Chip "Tất cả" vẫn xem được, và trang nói rõ điều này.
 
+**HỘP ĐỌC SỐ VẼ THẲNG LÊN CANVAS, VÀ GHIM ĐƯỢC (27/08/2026).** User: *"tôi click chuột vào
+chart không thấy hiện giá VN-Index, tôi muốn hiện lên dễ nhìn hơn"*. Bản đầu chỉ có **một
+dòng chữ xám dưới đồ thị**: mắt đang ở trên chart thì không ai nhìn xuống dưới legend, và
+trên điện thoại **không có `mousemove` nào** nên bấm vào chart đúng là không ra gì thật.
+
+- **Bấm = ghim / bỏ ghim**, và đã ghim thì rê chuột không đổi phiên nữa — cùng luật với đồ
+  thị /phantich và trang mã. Trên điện thoại ghim là **đường duy nhất** để đọc số nên bắt
+  thẳng `touchend` rồi nuốt cú `click` theo sau; `click` giả sau cú chạm có nơi có nơi không.
+- **Nét ĐỨT khi đang rê, nét LIỀN + tam giác khi đã ghim.** Không phân biệt hai trạng thái
+  thì bấm xong không biết mình đã ghim hay chưa.
+- Hộp đặt ở **nửa đối diện** với hai đường tại cột đó (chúng chạy sát nhau nên chỉ cần nhìn
+  một điểm), kẹp trong khung để không bị xén ở mép. Đổi mốc thì **bỏ ghim** — mốc cũ có thể
+  nằm ngoài khung mới.
+
+> **LƯỢT VẼ ĐẦU TIÊN BỊ PHÓNG 2× — `veChac()`.** `ve()` chạy ngay khi `fetch` xong, lúc bố
+> cục CHƯA ngã ngũ: đo được `clientWidth = 507` trong khi bề rộng thật là 1014, nên canvas
+> dựng bitmap bằng nửa khổ rồi trình duyệt kéo giãn gấp đôi — **mọi thứ to gấp đôi, nhãn trục
+> đè lên nhau**, nhìn ra như lỗi phông chữ chứ không ai nghĩ tới kích thước canvas. Đúng con
+> bệnh `veLaiFinChartChac` của `cophieu.html`, và cách chữa cũng vậy: vẽ xong thì **so lại
+> bitmap với bề rộng thật**, lệch thì vẽ thêm đúng một lượt. `ResizeObserver` chỉ là đường
+> phụ — tab ở nền thì nó không bắn.
+
+> **NHÃN NGÀY RẢI THEO `k/kh`, ĐỪNG CỘNG DỒN `i += buoc`.** Cộng dồn thì phiên CUỐI gần như
+> luôn rơi ra ngoài vòng lặp và **mất nhãn ngày mới nhất** — thứ người ta liếc vào trước tiên
+> (đã dính: khổ điện thoại chỉ còn `05/2018 · 07/2022`, mất hẳn `08/2026`). Số nhãn chia theo
+> bề rộng (`plotW/120`, kẹp 2..5): nhãn `05/2018` rộng ~44px nên sáu nhãn ở vùng vẽ 251px là
+> chồng thành một vệt. Đo lại cả 5 mốc × hai khổ: **0 cặp đè nhau, 0 nhãn tràn mép**.
+
 **KIỂM: `python3 tools/test_fun.py`** — 25 phép, chạy trước mỗi lần đẩy nếu có đụng vào
 `kho_fun.py`. Ba lớp: ① **đẳng thức** (bơm số giả biết trước đáp án: ghim đúng bằng vốn hoá
 thật + mã đứng yên phải trùng khít chỉ số thật) · ② **nhân quả** (thêm phiên mới không đổi giá
