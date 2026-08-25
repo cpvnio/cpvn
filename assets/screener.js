@@ -65,6 +65,10 @@ CPScreen.chips=[
   {id:'rsi30', g:'Kỹ thuật', nm:'RSI < 30 (quá bán)'},
   {id:'rsi80m',g:'Kỹ thuật', nm:'Lần đầu trong tháng RSI > {n}', opts:[70,75,80], def:80},
   {id:'hi52',  g:'Kỹ thuật', nm:'Gần đỉnh 52 tuần'},
+  /* VỪA CẮT LÊN ĐƯỜNG CHỈ SỐ NEO N NĂM — đúng thứ chart trang mã vẽ ở mốc "N năm".
+     Mã của sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX-Index · UPCOM→UPCOM). */
+  {id:'catN',  g:'Kỹ thuật', nm:'Vừa cắt lên chỉ số {n} năm (≤50 phiên)',
+   opts:[1,2,3,4,5,6,7,8,9,10], def:1},
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
   {id:'nnd10', g:'Dòng tiền', nm:'NN mua hôm nay ≥ 10 tỷ'},
@@ -116,6 +120,12 @@ CPScreen.chip=function(id,c,n){
        lọt, tín hiệu mất hết ý nghĩa. `rsiPM` rỗng = hôm nay là phiên ĐẦU THÁNG. */
     case 'rsi80m':return t.rsi!=null&&t.rsi>n&&(t.rsiPM==null||t.rsiPM<=n);
     case 'hi52':  return t.dhi!=null&&t.dhi>=-15;
+    /* VỪA CẮT LÊN ĐƯỜNG CHỈ SỐ NEO N NĂM. Kho ghi TUỔI của vết cắt gần nhất (số phiên kể
+       từ lúc cắt, null = không có vết nào trong 250 phiên); client chỉ việc so với cửa sổ.
+       Ghi số thay vì cờ nên đổi cửa sổ không phải dựng lại kho — cùng lối với `rsiPM`.
+       `null` phải TRƯỢT, đừng viết kiểu `!(v>50)`: `null` lọt qua mọi phép so là bảng trộn
+       mã có vết cắt với mã chưa từng cắt, mà nhìn không ra. */
+    case 'catN':  { const v=t['cat'+n]; return v!=null&&v<=50; }
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;
     case 'nnd10': return (c.fbuy||0)*p>=1e10;

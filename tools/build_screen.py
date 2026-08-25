@@ -37,6 +37,8 @@ FIELDS = [
                                           # (để client hỏi "lần đầu vượt N" với N bất kỳ)
     'smNeo','sm20','sm60','sm120','sm250',  # SỨC MẠNH SO VỚI CHỈ SỐ SÀN — xem suc_manh()
     'avgval60',                           # GTGD bình quân 60 phiên (đồng) — cổng thanh khoản
+    # SỐ PHIÊN KỂ TỪ LẦN CẮT LÊN đường chỉ số neo N năm, N = 1..10 — xem cat_len()
+    'cat1','cat2','cat3','cat4','cat5','cat6','cat7','cat8','cat9','cat10',
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -568,6 +570,35 @@ def build_fund(meta):
 CHISO_SAN = {'HOSE': 'VNINDEX', 'HNX': 'HNX', 'UPCOM': 'UPCOM'}
 SM_CUA    = (20, 60, 120, 250)
 
+# ── CẮT LÊN ĐƯỜNG CHỈ SỐ NEO N NĂM (27/08/2026) ────────────────────────────────────────
+# User: *"các mã có đường giá vừa cắt lên VN-Index x năm trong 50 phiên gần nhất"*.
+#
+# Đây ĐÚNG là thứ chart trang mã đang vẽ ở mốc "N năm": đường chỉ số quy về đơn vị giá,
+#     ln(i) = giá(a) × chỉ số(i) ÷ chỉ số(a)          a = phiên neo, lùi N×250 nến
+# nên "giá cắt LÊN đường chỉ số" rút gọn thành một phép so tỉ số:
+#     R(i) = giá(i) ÷ chỉ số(i)   ->   cắt lên tại i  ⇔  R(i−1) ≤ R(a) < R(i)
+# Không cần dựng lại đường nào, và kết quả khớp từng phiên với thứ người dùng NHÌN THẤY
+# trên chart khi chọn đúng mốc ấy.
+#
+# NEO CỦA HÔM NAY, KHÔNG PHẢI NEO CUỐN CHIẾU. `a` lùi từ phiên CUỐI CHUỖI nên nó dời một
+# nến mỗi phiên mới; một lần cắt 40 phiên trước vẫn được chấm bằng `R(a)` của HÔM NAY. Đó
+# là chủ ý: bộ lọc phải trả lời "mở chart lên bây giờ, chọn mốc N năm, có thấy vết cắt gần
+# đây không" — chứ không phải một đại lượng khác mà chart không vẽ ra.
+#
+# VẾT CẮT PHẢI CÒN GIỮ ĐƯỢC — ĐO ĐƯỢC, KHÔNG PHẢI SỞ THÍCH. Bản đầu nhận mọi vết cắt trong
+# cửa sổ, kể cả vết đã bị xoá ngay sau đó. Đo phiên 24/08/2026: **khoảng một nửa** số mã lọt
+# lưới đang nằm LẠI DƯỚI đường chỉ số (1 năm 157/335 · 3 năm 91/192 · 5 năm 73/168 · 10 năm
+# 57/111) — TCB cắt lên 19/08 rồi rơi xuống ngay phiên sau. Người dùng bấm bộ lọc xong mở
+# chart ra thấy đường giá nằm DƯỚI đường chỉ số thì đọc ra là bộ lọc hỏng, chứ không ai đọc
+# ra là "đã cắt rồi rơi lại". Nên `catN` chỉ đếm khi HIỆN VẪN ĐANG Ở TRÊN.
+#
+# GHI SỐ PHIÊN, KHÔNG GHI CỜ — cùng bài học với `rsiPM`: ghi cờ cho riêng ngưỡng 50 thì đổi
+# ngưỡng là phải dựng lại cả kho, còn ghi số thì cửa sổ nào cũng hỏi được.
+CAT_NAM = tuple(range(1, 11))    # 1..10 năm
+CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
+CAT_CUA = 50                     # cửa sổ "vừa cắt" mà chip đang hỏi (phiên)
+CAT_DO  = 250                    # quét ngược tối đa bấy nhiêu phiên; xa hơn thì không còn "vừa"
+
 def _nap_chiso():
     """Đọc cả ba kho chỉ số một lần. Trả {tên: {ngày: điểm}}."""
     ra = {}
@@ -606,6 +637,42 @@ def suc_manh(d, floor, CS):
     for W in SM_CUA:
         if n > W:
             r['sm%d' % W] = round(((P[-1] / P[-1 - W]) / (X[-1] / X[-1 - W]) - 1) * 100, 2)
+    r.update(cat_len(P, X))
+    return r
+
+
+def cat_len(P, X):
+    """Số phiên kể từ lần đường giá CẮT LÊN đường chỉ số neo N năm VÀ GIỮ ĐƯỢC TỚI NAY.
+
+    Nói cách khác: độ dài đoạn đang-ở-TRÊN hiện hành, tính bằng phiên. `None` khi
+      · đang ở DƯỚI đường chỉ số (kể cả vừa cắt lên rồi rơi lại — xem khối chú thích trên);
+      · đã ở trên liên tục quá `CAT_DO` phiên, tức không còn là "vừa";
+      · ở trên ngay từ sau phiên neo, tức chưa hề có vết cắt nào (hai đường trùng nhau TẠI
+        phiên neo theo định nghĩa, đó không phải một lần cắt);
+      · chuỗi quá ngắn để câu hỏi có nghĩa.
+    """
+    r = {('cat%d' % N): None for N in CAT_NAM}
+    n = len(P)
+    if n < 2:
+        return r
+    R = [P[i] / X[i] for i in range(n)]
+    for N in CAT_NAM:
+        a = n - 1 - N * CAT_NEN
+        if a < 0:
+            a = 0                       # chuỗi ngắn hơn N năm -> neo phiên đầu, y như chart
+        # MỐC NEO NẰM TRONG CHÍNH CỬA SỔ ĐANG HỎI THÌ CÂU HỎI VÔ NGHĨA.
+        if n - 1 - a < CAT_CUA:
+            continue
+        ra = R[a]
+        if R[n - 1] <= ra:
+            continue                    # đang ở dưới -> không có gì để nói
+        lo = max(a + 1, n - 1 - CAT_DO)
+        i = n - 1
+        while i > lo and R[i - 1] > ra:
+            i -= 1
+        if i <= a + 1 or R[i - 1] > ra:
+            continue                    # ở trên từ ngay sau phiên neo, hoặc lâu hơn cửa quét
+        r['cat%d' % N] = (n - 1) - i
     return r
 
 

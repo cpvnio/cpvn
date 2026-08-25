@@ -4390,6 +4390,73 @@ trên giao diện.
 > **thiếu dữ liệu phải TRƯỢT chứ không được LỌT** — mã chưa đủ N phiên có `sm{N} = null`, một
 > phép so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
 
+### CHIP "VỪA CẮT LÊN CHỈ SỐ N NĂM" — bảng giá (27/08/2026)
+
+User: *"ở mục bảng giá tôi muốn thêm 1 bộ lọc: các mã có đường giá vừa cắt lên VN-Index x
+năm trong 50 phiên gần nhất"*. Đây ĐÚNG là thứ chart trang mã vẽ ở mốc "N năm", nên nó rút
+gọn được thành một phép so tỉ số, khỏi dựng lại đường nào:
+
+```
+ln(i) = giá(a) × chỉ số(i) ÷ chỉ số(a)          a = phiên neo, lùi N×250 nến
+R(i)  = giá(i) ÷ chỉ số(i)   ->   cắt lên tại i  ⇔  R(i−1) ≤ R(a) < R(i)
+```
+
+Kho ghi `cat1..cat10` = **số phiên kể từ vết cắt lên gần nhất MÀ CÒN GIỮ ĐƯỢC TỚI NAY**;
+chip hỏi `<= 50`. Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
+
+> **VẾT CẮT PHẢI CÒN GIỮ ĐƯỢC — đo được, không phải sở thích.** Bản đầu nhận mọi vết cắt
+> trong cửa sổ, kể cả vết bị xoá ngay phiên sau. Đo phiên 24/08/2026: **khoảng một nửa** số
+> mã lọt lưới đang nằm LẠI DƯỚI đường chỉ số (1 năm 157/335 · 3 năm 91/192 · 5 năm 73/168 ·
+> 10 năm 57/111) — TCB cắt lên 19/08 rồi rơi xuống ngay 20/08. Người dùng bấm bộ lọc xong mở
+> chart ra thấy đường giá nằm DƯỚI đường chỉ số thì đọc ra là **bộ lọc hỏng**, chứ không ai
+> đọc ra "đã cắt rồi rơi lại". Nên `catN` chỉ đếm khi HIỆN VẪN ĐANG Ở TRÊN.
+
+> **NEO CỦA HÔM NAY, KHÔNG PHẢI NEO CUỐN CHIẾU.** `a` lùi từ phiên CUỐI CHUỖI nên nó dời một
+> nến mỗi phiên mới; vết cắt 40 phiên trước vẫn được chấm bằng `R(a)` của HÔM NAY. Chủ ý:
+> bộ lọc phải trả lời *"mở chart lên bây giờ, chọn mốc N năm, có thấy vết cắt gần đây không"*
+> — chứ không phải một đại lượng khác mà chart không vẽ ra.
+
+> **GHI SỐ PHIÊN, KHÔNG GHI CỜ** — cùng bài học với `rsiPM`: ghi cờ cho riêng ngưỡng 50 thì
+> đổi ngưỡng là phải dựng lại cả kho. **`null` phải TRƯỢT**, đừng viết kiểu `!(v>50)`.
+
+> **BA TRƯỜNG HỢP TRẢ `null` và đều có lý do riêng:** đang ở dưới · đã ở trên liên tục quá
+> 250 phiên (không còn là "vừa") · ở trên ngay từ sau phiên neo, tức **chưa hề có vết cắt
+> nào** — hai đường trùng nhau TẠI phiên neo theo định nghĩa, đó không phải một lần cắt. Cộng
+> thêm cổng "mốc neo phải cách hiện tại ít nhất 50 phiên", bằng không câu hỏi tự mâu thuẫn.
+
+**ĐỐI CHIẾU ĐẦU–CUỐI VỚI CHÍNH CHART** (VCB, mốc 5 năm, phiên 24/08/2026) — bộ lọc phải nói
+đúng thứ người dùng nhìn thấy:
+
+| | chart trang mã | `screen.json` |
+|---|---|---|
+| phiên neo | 2021-08-18 | 2021-08-18 |
+| tuổi vết cắt | 17 phiên | 17 |
+| `q` trước khi cắt | −0,027% | −0,027% |
+| `q` tại phiên cắt | +1,081% | +1,081% |
+| `q` phiên cuối | +3,299% | +3,299% |
+
+> **CHART CÓ THỂ CÓ THÊM NẾN HÔM NAY, KHO THÌ KHÔNG** — `q` của nến đó là `null` (chưa có
+> điểm chỉ số). Đối chiếu phải bỏ qua ô `null` ở cuối, đừng đọc `q[n-1]` rồi kết luận "đang ở
+> dưới". Đã dính đúng vậy khi soi VCB.
+
+**SỨC DỰ BÁO: KHÔNG PHÂN BIỆT ĐƯỢC VỚI NGẪU NHIÊN — đo rồi, đừng bán nó như tín hiệu.**
+Hồi kiểm nhân quả (mốc neo tính TẠI phiên ra tín hiệu, cổng thanh khoản 2 tỷ/phiên):
+
+| sau 60 phiên | n | trung vị | thắng | >+20% |
+|---|---|---|---|---|
+| **nền (mọi phiên)** | 22.131 | −1,17% | 46,8% | 16,7% |
+| vừa cắt mốc 1 năm | 13.364 | −1,31% | 46,7% | 17,8% |
+| vừa cắt mốc 3 năm | 6.953 | −0,23% | 49,2% | 21,1% |
+| vừa cắt mốc 5 năm | 4.543 | −1,47% | 46,5% | 19,1% |
+
+Mốc 3 năm trông nhỉnh hơn, nhưng **không sống sót phép sửa vón cụm**: gộp mỗi tháng một quan
+sát (124 tháng) thì chênh lệch so với nền còn **trung bình +1,11% · trung vị −1,02% · thắng
+nền 55/124 tháng · t ≈ 1,59**. Đúng cái bẫy đã ghi ở mục *THỐNG KÊ CHẠY LẠI TRÊN THƯỚC ĐÚNG*:
+tín hiệu dựa vào mốc chung của cả thị trường thì bắn theo TỪNG ĐỢT, đếm mỗi tín hiệu một
+phiếu là đếm cùng một sự kiện vài trăm lần.
+> Vì thế chip này là **thước đo** — người dùng tự chọn số năm, tự đọc — đúng ràng buộc ở mục
+> *Ranh giới pháp lý*. Đừng gắn nhãn "tín hiệu", đừng xếp hạng, đừng cắt top N.
+
 **KIỂM:** `node tools/test_sm.js` (29 ca, lõi trong `chart.js`) + `node tools/test_smkho.js`
 (11 ca, KHO `screen.json`). File thứ hai **dựng lại toàn bộ `sm*` bằng Node** từ `data/hist` +
 `data/chiso` + `universe.json` rồi so với những gì `build_screen.py` đã ghi — **7.577 con số
