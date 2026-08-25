@@ -4390,104 +4390,72 @@ trên giao diện.
 > **thiếu dữ liệu phải TRƯỢT chứ không được LỌT** — mã chưa đủ N phiên có `sm{N} = null`, một
 > phép so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
 
-### CHIP "DƯỚI CHỈ SỐ N NĂM, NAY SÁT HOẶC VỪA VƯỢT" — bảng giá (27/08/2026)
+### BA CHIP: DƯỚI / TRÊN / VỪA CẮT CHỈ SỐ N NĂM — bảng giá (27/08/2026)
 
-User chốt sau **năm vòng đo**: *"1 năm có 250 phiên thì tầm 125 phiên gần nhất dưới VN-Index
-nhưng giá chỉ còn cách VN-Index khoảng 10% thì đạt · 2 năm thì tầm 200 phiên · 3–10 năm thì
-khoảng 300 phiên"*, rồi nói rõ **"khoảng 10%" là một VÙNG**: *"cách 10% hoặc gần cắt hoặc đã
-chạm vào VN-Index hoặc đã cắt qua và đi lên 5% so với VN-Index thì đều phù hợp"*.
+User **bỏ** bộ *"dưới chỉ số N năm, nay sát hoặc vừa vượt"* (phức tạp, năm vòng đo) và chốt
+lại **ba thước đơn giản trên CÙNG một phép đo, đều "xét trong 10 phiên gần nhất"**:
+
+| chip | nghĩa |
+|---|---|
+| **Dưới chỉ số {n} năm** | đường giá ở DƯỚI đường chỉ số **suốt** 10 phiên gần nhất |
+| **Trên chỉ số {n} năm** | đường giá ở TRÊN đường chỉ số **suốt** 10 phiên gần nhất |
+| **Vừa cắt chỉ số {n} năm** | có mặt **cả hai** phía trong 10 phiên — tức vừa cắt qua |
 
 Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm", nên bộ lọc nói đúng thứ người dùng nhìn
-thấy. Khoảng hở `q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1`; `q < 0` là đang ở DƯỚI,
-và `−q` chính là *"thấp hơn đường chỉ số bao nhiêu %"*.
+thấy. Khoảng hở `q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1` với `a` = phiên neo lùi
+**N×250 nến hợp lệ** từ phiên cuối; `q > 0` là TRÊN, `q < 0` là DƯỚI. Mã sàn nào so với chỉ số
+sàn ấy (HOSE→VN-Index · HNX→HNX · UPCOM→UPCOM), y như `sm*`.
 
-**BA ĐIỀU KIỆN:**
+**KHO GHI HAI SỐ / MỐC, KHÔNG GHI CỜ.** `loN = min(q)·100`, `hiN = max(q)·100` trên cửa sổ 10
+phiên cuối. Client suy cả ba thước, **ngưỡng cắt = 0 nằm ở CLIENT** (đổi không phải dựng kho):
 
-| | |
-|---|---|
-| ① | `L` phiên **đều** có `q < 0`, tính ngược từ **TRƯỚC đoạn vừa cắt lên** (nếu có) |
-| ② | nếu đang ở trên thì **cả đoạn** đã vượt phải nằm trong **+5%** (cổng hình dạng, ở kho) |
-| ③ | vị trí hôm nay nằm trong vùng **6% dưới → 3% trên** (chip lo phần này) |
+    dưới N  ⟺ hiN < 0          trên N  ⟺ loN > 0          vừa cắt N  ⟺ loN < 0 < hiN
 
-`L` đổi theo mốc: **1 năm → 125 · 2 năm → 200 · 3..10 năm → 300 phiên**.
+Ba tập **RỜI NHAU** ở mỗi mốc: một mã rơi vào đúng một trong ba (hoặc không, nếu chạm đúng
+vạch 0). `test_smkho.js` khoá tính rời-nhau + gần-vét-cạn này.
 
-Kho ghi `ap1..ap10` = **vị trí của giá so với đường chỉ số, tính bằng %**: **dương = còn ở
-dưới bấy nhiêu · âm = đã vượt lên bấy nhiêu**. Chip hỏi `−3 ≤ ap ≤ 6`. **`null` = không phải
-hình dạng đang hỏi.** Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
+> **MÃ CHƯA ĐỦ N NĂM → `loN = hiN = null` → KHÔNG XÉT ở mốc đó.** Chỗ này CỐ Ý khác chart:
+> chart kẹp neo về phiên đầu để vẫn VẼ được đường; còn bộ lọc "N năm" thì không xếp một mã
+> thiếu lịch sử — nếu kẹp thì "3 năm" và "5 năm" ra CÙNG kết quả cho một mã non, vô nghĩa.
+> Kiểm chứng sống: VHM (lên sàn 17/05/2018) có `lo/hi` tới mốc 8 năm, **mốc 9–10 năm là
+> `null`**. `null` PHẢI TRƯỢT ở client — đừng viết `!(v>0)`, `null` lọt qua mọi phép so.
 
-> **VÙNG CỦA CHIP VÀ CỔNG HÌNH DẠNG CỦA KHO LÀ HAI THỨ KHÁC NHAU — đừng gộp làm một hằng số.**
-> Vùng (`−3 .. +6`) là *"bây giờ giá đang ở đâu"*, nằm ở CLIENT nên đổi không phải dựng lại
-> kho. Cổng `CAT_TREN = +5%` là *"đoạn đã vượt có phải kiểu phá lên rồi chạy không"*, phải ở
-> kho vì client chỉ có MỘT con số của hôm nay, không thấy cả đoạn. Cổng cố ý rộng hơn mép
-> trên của vùng một chút để còn nới được mà không phải dựng lại.
+> **NEO ĐẾM LÙI THEO NẾN HỢP LỆ, KHÔNG THEO CHỈ SỐ MẢNG.** Ở `build_screen`, `P`/`X` đã lọc
+> sạch phiên thiếu chỉ số nên `a = n−1−N×250` trùng khít cách chart đếm lùi `lui` nến hợp lệ.
+> Cửa sổ đo `w0 = n−10` (kẹp `w0 > a`) — với N ≥ 1 thì neo lùi ≥ 250 nến nên 10 phiên cuối
+> luôn nằm xa sau neo, guard chỉ để phòng.
 
-> **`L` TÍNH TỪ TRƯỚC ĐOẠN VỪA CẮT, KHÔNG PHẢI TỪ HÔM NAY.** Bản trước bắt `L` phiên **gần
-> nhất** đều ở dưới, nên mã VỪA cắt lên — đúng thứ user muốn thấy — lại bị loại ngay tại
-> khoảnh khắc nó cắt.
+**ĐO PHIÊN 25/08/2026** (số mã: dưới / trên / vừa cắt, theo mốc):
 
-> **ĐOẠN ĐÃ VƯỢT PHẢI NẰM TRONG +5% (điều kiện ②), không chỉ vị trí hôm nay.** Không có nó
-> thì mã vọt lên +25% rồi rơi về +3% vẫn lọt — đúng hình dạng VBB mà user đã bác.
+| mốc | 1n | 2n | 3n | 5n | 7n | 10n |
+|---|---|---|---|---|---|---|
+| dưới | 1098 | 1120 | 992 | 772 | 845 | 558 |
+| trên | 280 | 279 | 385 | 587 | 424 | 263 |
+| vừa cắt | 120 | 79 | 82 | 60 | 47 | 20 |
 
-> **NEO Ở "NGAY BÂY GIỜ", KHÔNG NEO Ở LÚC CẮT.** Bản trước đòi *"ở dưới suốt 600 phiên NGAY
-> TRƯỚC VẾT CẮT"* và chết vì ngay sát vết cắt giá luôn dập dềnh quanh vạch — **0 mã đạt**. Ở
-> đây `L` phiên tính ngược từ HÔM NAY, mà hôm nay mã vẫn còn ở dưới, nên không có vùng dập
-> dềnh nào để vướng.
+Vài mã quen (phân loại có lý): VIC **trên mọi mốc** · VHM **trên 1–8, null 9–10** · NVB
+**dưới hầu hết mốc** · VBB **1 năm vừa cắt** (từ trên hạ về, cắt xuống trong 10 phiên — nay là
+kết quả ĐÚNG của thước "vừa cắt", không còn là dương tính giả như bộ lọc gộp cũ).
 
-**BỐN CA MẪU USER ĐÃ BẮT — `test_smkho.js` khoá riêng, cả bốn phải TRƯỢT ở MỌI mốc:**
+> **ĐÂY LÀ THƯỚC ĐO, KHÔNG PHẢI TÍN HIỆU.** Người dùng tự chọn số năm, tự đọc — đúng ràng buộc
+> ở mục *Ranh giới pháp lý*. Đừng gắn nhãn "nên mua/bán", đừng xếp hạng, đừng cắt top N. Hồi
+> kiểm bản "vừa cắt lên" trước đây (cổng thanh khoản 2 tỷ/phiên, gộp mỗi tháng một quan sát)
+> cho `t ≈ 1,59` — **không phân biệt được với ngẫu nhiên**; giữ nguyên tinh thần đó cho cả ba.
 
-| mã | vì sao lọt lưới ở bản cũ | nay bị loại bởi |
-|---|---|---|
-| **VBB** | phá lên **+25,7%** ngày 22/07/2026 rồi hạ về −3,0%; bản cũ chỉ hỏi "đỉnh trong 50 phiên" nên nhận cả cái đỉnh **đã qua** | ① — có phiên nhô lên trong 125 phiên |
-| **NVB** | ở TRÊN chỉ số gần trọn 2 năm (`q` đỉnh **+62%** tháng 7/2025) rồi tụt về chạm **0,00%** ngày 07/08/2026 và nảy — đỉnh đang tụt, không phải đáy đang vượt | ② mốc 1 năm (cách **43,5%**) · ① các mốc còn lại |
-| **VIC · VHM** | đang ở TRÊN đường chỉ số | ① |
+> **BỐN BẢN "DƯỚI RỒI VỪA VƯỢT" ĐÃ THỬ RỒI BỎ** (đừng dựng lại cho "thông minh" hơn): mọi vết
+> cắt trong 50 phiên (một nửa đã rơi lại dưới) · ở dưới suốt 600 phiên rồi mới cắt (0 mã) ·
+> đỉnh khoảng hở + quá nửa cửa sổ ở dưới (nhận cả đỉnh ĐÃ QUA — ca VBB) · phân vị khoảng cách
+> (đại lượng tương đối, hai mã cùng phân vị cách 3% và 40%). User cuối cùng chọn ĐƠN GIẢN: ba
+> trạng thái, một cửa sổ 10 phiên.
 
-Đo phiên 25/08/2026 — số mã lọt theo bề rộng vùng (user siết `10%/5%` → `6%/3%` ngày
-27/08/2026):
-
-| mốc | 1n | 2n | 3n | 4n | 5n | 7n | 10n |
-|---|---|---|---|---|---|---|---|
-| vùng cũ `6%↓ .. 5%↑` … tức `−5..10` | 31 | 9 | 2 | 3 | 1 | 2 | 4 |
-| **vùng nay `6%↓ .. 3%↑`** | **9** | 3 | 1 | 1 | 0 | 1 | 0 |
-
-> **HAI ĐẦU VÙNG NẰM Ở CLIENT** nên siết hay nới chỉ đụng một dòng `screener.js`, không dựng
-> lại kho. Mốc 1 năm, riêng phần còn ở dưới: ≤5% → 7 mã · ≤10% → 28 · ≤15% → 70 · ≤20% → 172.
-> Mã áp sát nhất toàn thị trường ở mốc 1 năm cách **1,83%**; ở mốc 5 năm là **8,92%** — mốc
-> càng dài thì khoảng cách càng khó nhỏ, nên **mốc dài về 0 mã ở vùng hẹp là đúng bản chất**,
-> không phải bộ lọc hỏng.
-
-> **BỐN BẢN ĐÃ THỬ RỒI BỎ, đừng dựng lại:**
-> · *"Mọi vết cắt lên trong 50 phiên"* — một nửa số mã lọt lưới đang nằm LẠI DƯỚI (TCB cắt
->   lên 19/08 rồi rơi xuống 20/08).
-> · *"Ở dưới suốt 600 phiên rồi mới cắt"* — đòi từng phiên thì **0 mã**; nới 95% còn 1–3 mã.
-> · *"Đỉnh khoảng hở trong 50 phiên + quá nửa cửa sổ ở dưới"* — nhận cả đỉnh **đã qua** (VBB).
-> · *"Phân vị khoảng cách ≤10% + đang thu hẹp"* — đúng hướng nhưng phân vị là một đại lượng
->   tương đối, hai mã cùng phân vị có thể cách chỉ số 3% và 40%. User muốn con số TUYỆT ĐỐI.
-
-**ĐỐI CHIẾU ĐẦU–CUỐI VỚI CHÍNH CHART** (VCB, mốc 5 năm, phiên 24/08/2026): phiên neo
-`2021-08-18` · `q` trước khi cắt `−0,027%` · tại phiên cắt `+1,081%` · phiên cuối `+3,299%`,
-chart và kho khớp **từng con số**.
-
-> **CHART CÓ THỂ CÓ THÊM NẾN HÔM NAY, KHO THÌ KHÔNG** — `q` của nến đó là `null` (chưa có
-> điểm chỉ số). Đối chiếu phải bỏ qua ô `null` ở cuối, đừng đọc `q[n-1]` rồi kết luận "đang ở
-> dưới". Đã dính đúng vậy khi soi VCB.
-
-> **GHI SỐ, KHÔNG GHI CỜ** — cùng bài học với `rsiPM`. **`null` phải TRƯỢT**, đừng viết kiểu
-> `!(v>10)`.
-
-**SỨC DỰ BÁO: KHÔNG PHÂN BIỆT ĐƯỢC VỚI NGẪU NHIÊN — đo rồi, đừng bán nó như tín hiệu.** Hồi
-kiểm nhân quả bản "vừa cắt lên" (cổng thanh khoản 2 tỷ/phiên), sau 60 phiên: nền trung vị
-−1,17% thắng 46,8% · mốc 1 năm −1,31%/46,7% · mốc 3 năm −0,23%/49,2% · mốc 5 năm −1,47%/46,5%.
-Mốc 3 năm trông nhỉnh hơn nhưng **không sống sót phép sửa vón cụm**: gộp mỗi tháng một quan
-sát (124 tháng) còn trung vị **−1,02%**, thắng nền **55/124** tháng, **t ≈ 1,59**.
-> Vì thế chip này là **thước đo** — người dùng tự chọn số năm, tự đọc — đúng ràng buộc ở mục
-> *Ranh giới pháp lý*. Đừng gắn nhãn "tín hiệu", đừng xếp hạng, đừng cắt top N.
-
-**KIỂM:** `node tools/test_sm.js` (29 ca, lõi trong `chart.js`) + `node tools/test_smkho.js`
-(11 ca, KHO `screen.json`). File thứ hai **dựng lại toàn bộ `sm*` bằng Node** từ `data/hist` +
+**KIỂM:** `node tools/test_sm.js` (125 ca, lõi trong `chart.js`) + `node tools/test_smkho.js`
+(21 ca, KHO `screen.json`). File thứ hai **dựng lại toàn bộ `sm*` bằng Node** từ `data/hist` +
 `data/chiso` + `universe.json` rồi so với những gì `build_screen.py` đã ghi — **7.577 con số
 trên 1.521 mã, không con nào lệch quá 0,01**. Nó cũng khoá hai bất biến dễ hỏng im lặng: mã HNX
 phải khớp bản dùng HNX-Index và **không** khớp bản dùng nhầm VNINDEX; mã mới niêm yết có
-`smNeo` nhưng `sm250` phải là `null`. Nó thay `test_loc.js` (đã xoá cùng lượt gỡ chip) và mạnh
+`smNeo` nhưng `sm250` phải là `null`. Nó cũng **dựng lại toàn bộ `loN`/`hiN` bằng công thức
+`q` của chart** rồi khoá: `lo ≤ hi`, ba tập dưới/trên/vừa cắt RỜI NHAU và gần vét cạn, và soi
+thẳng đường `q` trên vài chục mã "vừa cắt" để chắc chúng thật sự có `q` hai phía vạch 0. Nó thay `test_loc.js` (đã xoá cùng lượt gỡ chip) và mạnh
 hơn hẳn: kiểm dữ liệu thật thay vì kiểm mấy nhánh `case` của giao diện.
 
 Đối chiếu tay lúc dựng, khớp tới hai chữ số thập phân:

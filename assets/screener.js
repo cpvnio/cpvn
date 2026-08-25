@@ -65,11 +65,14 @@ CPScreen.chips=[
   {id:'rsi30', g:'Kỹ thuật', nm:'RSI < 30 (quá bán)'},
   {id:'rsi80m',g:'Kỹ thuật', nm:'Lần đầu trong tháng RSI > {n}', opts:[70,75,80], def:80},
   {id:'hi52',  g:'Kỹ thuật', nm:'Gần đỉnh 52 tuần'},
-  /* DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CHỈ CÒN CÁCH ≤10% — đo trên đúng đường chart trang mã
-     vẽ ở mốc "N năm". Số phiên phải ở dưới liên tục đổi theo mốc: 1 năm 125 · 2 năm 200 ·
-     3–10 năm 300. Mã sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX · UPCOM→UPCOM). */
-  {id:'catN',  g:'Kỹ thuật', nm:'Dưới chỉ số {n} năm, nay sát hoặc vừa vượt',
-   opts:[1,2,3,4,5,6,7,8,9,10], def:1},
+  /* VỊ TRÍ SO VỚI CHỈ SỐ NEO N NĂM, XÉT 10 PHIÊN GẦN NHẤT — đo trên ĐÚNG đường chart trang
+     mã vẽ ở mốc "N năm". Kho ghi loN/hiN = min/max khoảng hở q trong 10 phiên cuối (%): q>0 là
+     giá TRÊN chỉ số, q<0 là DƯỚI. Ba thước RỜI NHAU: dưới = hi<0 (dưới suốt 10 phiên) · trên =
+     lo>0 (trên suốt 10 phiên) · vừa cắt = lo<0<hi (có mặt hai phía trong 10 phiên). Mã sàn nào
+     so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX · UPCOM→UPCOM). */
+  {id:'duoiN', g:'Kỹ thuật', nm:'Dưới chỉ số {n} năm', opts:[1,2,3,4,5,6,7,8,9,10], def:1},
+  {id:'trenN', g:'Kỹ thuật', nm:'Trên chỉ số {n} năm', opts:[1,2,3,4,5,6,7,8,9,10], def:1},
+  {id:'catN',  g:'Kỹ thuật', nm:'Vừa cắt chỉ số {n} năm', opts:[1,2,3,4,5,6,7,8,9,10], def:1},
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
   {id:'nnd10', g:'Dòng tiền', nm:'NN mua hôm nay ≥ 10 tỷ'},
@@ -121,19 +124,13 @@ CPScreen.chip=function(id,c,n){
        lọt, tín hiệu mất hết ý nghĩa. `rsiPM` rỗng = hôm nay là phiên ĐẦU THÁNG. */
     case 'rsi80m':return t.rsi!=null&&t.rsi>n&&(t.rsiPM==null||t.rsiPM<=n);
     case 'hi52':  return t.dhi!=null&&t.dhi>=-15;
-    /* DƯỚI CHỈ SỐ N NĂM, NAY SÁT HOẶC VỪA VƯỢT. Kho ghi `apN` = vị trí của giá so với đường
-       chỉ số, tính bằng %: **DƯƠNG là còn ở dưới bấy nhiêu · ÂM là đã vượt lên bấy nhiêu**.
-       Kho chỉ ghi khi đúng hình dạng: `L` phiên TRƯỚC đoạn vừa cắt đều nằm dưới (1 năm 125 ·
-       2 năm 200 · 3–10 năm 300), và đoạn vừa vượt (nếu có) chưa quá +5%.
-       Client hỏi vùng **−3 .. +6**: còn cách tối đa 6%, hoặc đã chạm, hoặc vừa cắt qua và
-       lên tới 3%. Hai đầu vùng nằm ở CLIENT nên đổi không phải dựng lại kho — lượt siết
-       10%/5% xuống 6%/3% (27/08/2026) chỉ đụng đúng dòng dưới.
-       Kho vẫn chặn "cả đoạn đã vượt phải trong +5%" (`CAT_TREN`) rộng hơn mép trên +3% một
-       chút: đó là cổng chống HÌNH DẠNG "phá lên rồi chạy" (ca VBB vọt +25,7%), không phải
-       mép của vùng đang hỏi. Nhờ vậy nới mép trên tới +5% vẫn không cần dựng lại kho.
-       `null` = không phải hình dạng đang hỏi (VBB phá lên rồi hạ về · VIC/VHM ở trên quá
-       xa). PHẢI TRƯỢT — đừng viết kiểu `!(v>10)`, `null` lọt qua mọi phép so. */
-    case 'catN':  { const v=t['ap'+n]; return v!=null&&v>=-3&&v<=6; }
+    /* VỊ TRÍ SO VỚI CHỈ SỐ NEO N NĂM, xét 10 phiên gần nhất. Kho ghi `loN`/`hiN` = min/max
+       khoảng hở q (giá so với đường chỉ số neo N năm) trong 10 phiên cuối, %. q>0 là TRÊN,
+       q<0 là DƯỚI. Ba thước RỜI NHAU. `null` = mã chưa đủ N năm -> PHẢI TRƯỢT (đừng viết kiểu
+       `!(v>0)`, `null` lọt qua mọi phép so). GHI SỐ KHÔNG GHI CỜ: ngưỡng cắt = 0 ở client. */
+    case 'duoiN': { const h=t['hi'+n]; return h!=null&&h<0; }   // dưới đường suốt 10 phiên
+    case 'trenN': { const l=t['lo'+n]; return l!=null&&l>0; }   // trên đường suốt 10 phiên
+    case 'catN':  { const l=t['lo'+n],h=t['hi'+n]; return l!=null&&h!=null&&l<0&&h>0; } // vừa cắt
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;
     case 'nnd10': return (c.fbuy||0)*p>=1e10;

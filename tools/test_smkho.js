@@ -31,11 +31,7 @@ if(!scr||!scr.d){ console.log('  (chưa có data/screen.json — bỏ qua)'); pr
 /* ---- dựng lại độc lập ------------------------------------------------------ */
 const SAN_CHISO={HOSE:'VNINDEX',HNX:'HNX',UPCOM:'UPCOM'};
 const CUA=[20,60,120,250];
-const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250;
-/* VÙNG chip đang hỏi (client) và CỔNG hình dạng của kho là HAI THỨ KHÁC NHAU — cổng rộng hơn
-   mép trên một chút để nới vùng không phải dựng lại kho. Đừng gộp làm một hằng số. */
-const DUOI_MAX=6, TREN_MAX=3, GATE_TREN=5;
-const DUOI=N=>N===1?125:(N===2?200:300);   // số phiên gần nhất phải ở dưới, theo mốc
+const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, CUA_NEO=10;   // CUA_NEO = "xét 10 phiên gần nhất"
 const CS={};
 for(const t of new Set(Object.values(SAN_CHISO))){
   const j=F(path.join(R,'data','chiso',t+'.json'));
@@ -63,24 +59,19 @@ function tuTinh(sym){
   const r2=x=>Math.round(x*100)/100;
   ra.smNeo=r2(((P[n-1]/P[0])/(X[n-1]/X[0])-1)*100);
   for(const W of CUA) if(n>W) ra['sm'+W]=r2(((P[n-1]/P[n-1-W])/(X[n-1]/X[n-1-W])-1)*100);
-  /* DƯỚI CHỈ SỐ N NĂM, NAY SÁT HOẶC VỪA VƯỢT. Dựng lại bằng ĐÚNG công thức của chart
-     (`q` của `smArr`) chứ không dùng lối tắt tỉ số của build_screen — hai đường phải ra cùng
-     một đáp án thì mới chứng minh được lối tắt đó đúng. */
+  /* VỊ TRÍ SO VỚI CHỈ SỐ NEO N NĂM, xét 10 phiên gần nhất. Dựng lại bằng ĐÚNG công thức của
+     chart (`q` của `smArr`) chứ không dùng lối tắt tỉ số của build — hai đường phải ra cùng
+     đáp án thì mới chứng minh lối tắt đúng. loN/hiN = min/max của q trên 10 phiên cuối (%). */
   for(const N of NAM){
-    ra['ap'+N]=null;
-    const L=DUOI(N), a=Math.max(0,n-1-N*NEN);
-    const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;   // y hệt `q[i]` mà chart.js vẽ ra dải
-    let c=0; while(c<n-1-a&&q(n-1-c)>=0) c++;             // đoạn ĐANG ở trên, tính ngược
-    if(c){
-      let cao=-Infinity; for(let k=n-c;k<n;k++) cao=Math.max(cao,q(k));
-      if(cao>GATE_TREN/100) continue;                      // ② vọt quá +5% -> đã phá lên và chạy
-    }
-    const het=n-c;
-    if(het-L<a) continue;
-    let nho=true;
-    for(let k=het-L;k<het;k++) if(q(k)>=0){ nho=false; break; }   // ① L phiên ĐỀU ở dưới
-    if(!nho) continue;
-    ra['ap'+N]=Math.round(100*(1/(1+q(n-1))-1)*100)/100;   // dương = còn dưới · âm = đã vượt
+    ra['lo'+N]=null; ra['hi'+N]=null;
+    const a=n-1-N*NEN;
+    if(a<0) continue;                                     // chưa đủ N năm -> null, y build
+    const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;   // y hệt `q[i]` chart.js vẽ ra dải
+    let w0=n-CUA_NEO; if(w0<=a) w0=a+1;
+    let lo=Infinity, hi=-Infinity;
+    for(let i=w0;i<n;i++){ const v=q(i); if(v<lo)lo=v; if(v>hi)hi=v; }
+    ra['lo'+N]=Math.round(100*lo*100)/100;
+    ra['hi'+N]=Math.round(100*hi*100)/100;
   }
   return ra;
 }
@@ -89,11 +80,11 @@ function tuTinh(sym){
 const ix={}; scr.f.forEach((k,i)=>ix[k]=i);
 kiem('screen.json có đủ 5 trường sm',
   ['smNeo','sm20','sm60','sm120','sm250'].every(k=>k in ix), true);
-kiem('screen.json có đủ 10 trường ap', NAM.every(N=>('ap'+N) in ix), true);
+kiem('screen.json có đủ 20 trường lo/hi', NAM.every(N=>('lo'+N) in ix&&('hi'+N) in ix), true);
 kiem('cột cat*/gn* cũ đã gỡ hẳn',
-  NAM.some(N=>('cat'+N) in ix||('gn'+N) in ix), false);
+  NAM.some(N=>('cat'+N) in ix||('gn'+N) in ix||('ap'+N) in ix), false);
 
-const truong=['smNeo','sm20','sm60','sm120','sm250'].concat(NAM.map(N=>'ap'+N));
+const truong=['smNeo','sm20','sm60','sm120','sm250'].concat(NAM.map(N=>'lo'+N)).concat(NAM.map(N=>'hi'+N));
 let soSanh=0, lech=[], nullSai=[], thieuKho=0;
 for(const sym of Object.keys(scr.d)){
   if(!fs.existsSync(path.join(R,'data','hist',sym+'.json'))){ thieuKho++; continue; }
@@ -149,59 +140,73 @@ for(const s of ['HOSE','HNX','UPCOM']){
   }
 }
 
-/* ---- DƯỚI CHỈ SỐ LIÊN TỤC, NAY SÁT / VỪA VƯỢT: bất biến riêng ------------- */
+/* ---- BA THƯỚC dưới / trên / vừa cắt: bất biến riêng ----------------------- */
 {
-  const trongVung=v=>v!=null&&v>=-TREN_MAX&&v<=DUOI_MAX;
-  const V=[];
-  for(const sym of Object.keys(scr.d)) for(const N of NAM){
-    const v=scr.d[sym][ix['ap'+N]];
-    if(v!=null) V.push({sym,N,v});
-  }
-  kiem('có kha khá giá trị ap để kiểm', V.length>2000, true);
-  /* Số ÂM là hợp lệ (đã vượt lên) nhưng kho đã chặn ở +5%, nên không được âm quá thế. */
-  kiem('kho không giữ mã đã vượt quá +5%', V.every(x=>x.v>=-GATE_TREN-0.011), true);
+  const g=(sym,N,k)=>scr.d[sym][ix[k+N]];
+  const co  =(s,N)=>g(s,N,'lo')!=null&&g(s,N,'hi')!=null;
+  const duoi=(s,N)=>co(s,N)&&g(s,N,'hi')<0;              // dưới đường suốt 10 phiên
+  const tren=(s,N)=>co(s,N)&&g(s,N,'lo')>0;              // trên đường suốt 10 phiên
+  const cat =(s,N)=>co(s,N)&&g(s,N,'lo')<0&&g(s,N,'hi')>0; // có mặt hai phía -> vừa cắt
+  const syms=Object.keys(scr.d);
 
-  /* SOI THẲNG HAI ĐIỀU KIỆN trên mã lọt lưới. */
+  // lo ≤ hi (min ≤ max) ở mọi mốc
+  let loHi=0, badLoHi=[];
+  for(const s of syms) for(const N of NAM) if(co(s,N)){ loHi++;
+    if(g(s,N,'lo')>g(s,N,'hi')+1e-9) badLoHi.push(`${s}/${N}`); }
+  kiem('có kha khá cặp lo/hi để kiểm', loHi>2000, true);
+  kiem('lo ≤ hi ở mọi mốc', badLoHi.length, 0);
+
+  // BA TẬP RỜI NHAU: không mã nào rơi vào hai nhóm cùng một mốc
+  let chong=[];
+  for(const s of syms) for(const N of NAM) if(duoi(s,N)+tren(s,N)+cat(s,N)>1) chong.push(`${s}/${N}`);
+  kiem('dưới/trên/vừa cắt rời nhau (không mã nào ở hai nhóm cùng mốc)', chong.length, 0);
+
+  // GẦN VÉT CẠN: cặp lo/hi nào cũng rơi vào một trong ba, trừ ca chạm đúng vạch 0
+  let ngoai=[];
+  for(const s of syms) for(const N of NAM) if(co(s,N)&&!duoi(s,N)&&!tren(s,N)&&!cat(s,N)){
+    if(Math.abs(g(s,N,'lo'))>1e-9&&Math.abs(g(s,N,'hi'))>1e-9)
+      ngoai.push(`${s}/${N} lo=${g(s,N,'lo')} hi=${g(s,N,'hi')}`);
+  }
+  kiem('mọi cặp lo/hi thuộc dưới|trên|vừa cắt (trừ ca chạm đúng vạch 0)', ngoai.length, 0);
+  if(ngoai.length) console.log('      ví dụ: '+ngoai.slice(0,4).join(' · '));
+
+  const demD=N=>syms.filter(s=>duoi(s,N)).length;
+  const demT=N=>syms.filter(s=>tren(s,N)).length;
+  const demC=N=>syms.filter(s=>cat(s,N)).length;
+  kiem('mốc 1 năm: DƯỚI có mã',    demD(1)>=5, true);
+  kiem('mốc 1 năm: TRÊN có mã',    demT(1)>=5, true);
+  kiem('mốc 1 năm: VỪA CẮT có mã', demC(1)>=1, true);
+
+  // Soi thẳng đường q trên vài chục ca "vừa cắt": phải có q hai phía 0 và số khớp
   let daKiem=0, sai=[];
-  for(const x of V.filter(y=>trongVung(y.v)).slice(0,60)){
-    const h=F(path.join(R,'data','hist',x.sym+'.json'));
-    const ixs=CS[SAN_CHISO[SAN[x.sym]]||'']; if(!h||!ixs) continue;
+  const catList=[]; for(const s of syms) for(const N of NAM) if(cat(s,N)) catList.push({s,N});
+  for(const x of catList.slice(0,60)){
+    const h=F(path.join(R,'data','hist',x.s+'.json'));
+    const ixs=CS[SAN_CHISO[SAN[x.s]]||'']; if(!h||!ixs) continue;
     const P=[],X=[];
     for(let i=0;i<h.t.length;i++){ const c=h.c[i]; if(!c||c<=0) continue;
       const v=ixs[ngay(h.t[i])]; if(!v) continue; P.push(c); X.push(v); }
-    const n=P.length, L=DUOI(x.N), a=Math.max(0,n-1-x.N*NEN);
-    const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;
-    let c=0; while(c<n-1-a&&q(n-1-c)>=0) c++;
-    for(let k=n-c;k<n;k++) if(q(k)>GATE_TREN/100+1e-9)
-      { sai.push(`${x.sym}/ap${x.N}: đoạn vượt lên tới ${(100*q(k)).toFixed(1)}% > ${GATE_TREN}%`); break; }
-    const het=n-c;
-    for(let k=het-L;k<het;k++) if(q(k)>=0)
-      { sai.push(`${x.sym}/ap${x.N}: phiên ${k} NHÔ LÊN trong ${L} phiên phải ở dưới`); break; }
-    const kc=100*(1/(1+q(n-1))-1);
-    if(Math.abs(kc-x.v)>0.011) sai.push(`${x.sym}/ap${x.N}: kho ${x.v} vs tự tính ${kc.toFixed(2)}`);
+    const n=P.length, a=n-1-x.N*NEN; if(a<0) continue;
+    const c0=P[a],x0=X[a],q=i=>(P[i]/c0)/(X[i]/x0)-1;
+    let w0=n-CUA_NEO; if(w0<=a) w0=a+1;
+    let lo=Infinity,hi=-Infinity; for(let i=w0;i<n;i++){ const v=q(i); if(v<lo)lo=v; if(v>hi)hi=v; }
+    if(!(lo<0&&hi>0)) sai.push(`${x.s}/${x.N}: kho bảo cắt nhưng tự tính lo=${(100*lo).toFixed(2)} hi=${(100*hi).toFixed(2)}`);
+    const LO=Math.round(100*lo*100)/100, HI=Math.round(100*hi*100)/100;
+    if(Math.abs(LO-g(x.s,x.N,'lo'))>0.011||Math.abs(HI-g(x.s,x.N,'hi'))>0.011)
+      sai.push(`${x.s}/${x.N}: kho ${g(x.s,x.N,'lo')}/${g(x.s,x.N,'hi')} vs tự ${LO}/${HI}`);
     daKiem++;
   }
-  console.log(`  · soi thẳng hai điều kiện trên ${daKiem} ca`);
-  kiem('mã lọt lưới: L phiên trước đoạn cắt ĐỀU ở dưới · đoạn vượt ≤+5% · số ghi đúng',
-    sai.length, 0);
+  console.log(`  · soi thẳng đường q trên ${daKiem} ca "vừa cắt"`);
+  kiem('mã "vừa cắt" thật sự có q hai phía vạch 0 · số khớp', sai.length, 0);
   if(sai.length) console.log('      ví dụ: '+sai.slice(0,4).join(' · '));
 
-  /* BỐN CA MẪU USER ĐÃ BẮT — đều phải TRƯỢT ở mọi mốc. */
-  for(const m of ['VBB','NVB','VIC','VHM']){
+  // Chẩn đoán vài mã quen (không assert cứng — chỉ in để thấy phân loại có lý)
+  for(const m of ['VIC','VHM','NVB','VBB']){
     if(!scr.d[m]) continue;
-    const lot=NAM.filter(N=>trongVung(scr.d[m][ix['ap'+N]]));
-    kiem(`${m} không lọt ở mốc nào`, lot.join(',')||'—', '—');
+    const lab=N=>duoi(m,N)?'dưới':tren(m,N)?'trên':cat(m,N)?'cắt':(co(m,N)?'~0':'—');
+    console.log(`  · ${m}: `+NAM.map(N=>N+lab(N)).join(' '));
   }
-  kiem('số phiên phải ở dưới: 1 năm 125 · 2 năm 200 · 3+ năm 300',
-    [DUOI(1),DUOI(2),DUOI(3),DUOI(10)].join(','), '125,200,300,300');
-  const dem=N=>Object.keys(scr.d).filter(s=>trongVung(scr.d[s][ix['ap'+N]])).length;
-  kiem('mốc 1 năm bắt được ít nhất vài mã', dem(1)>=5, true);
-  kiem('vùng chip đúng như tài liệu: −3 .. +6',
-    [-TREN_MAX,DUOI_MAX].join('..'), '-3..6');
-  const daVuot=NAM.reduce((t,N)=>t+Object.keys(scr.d).filter(s=>{
-    const v=scr.d[s][ix['ap'+N]];return trongVung(v)&&v<0;}).length,0);
-  kiem('có mã ĐÃ VƯỢT lên lọt lưới (vùng chấp nhận phần âm thật sự hoạt động)', daVuot>0, true);
-  console.log('  · chip bắt được (−'+TREN_MAX+'..'+DUOI_MAX+'%): '+NAM.map(N=>N+' năm '+dem(N)).join(' · '));
+  console.log('  · dưới|trên|cắt theo mốc: '+NAM.map(N=>N+'n '+demD(N)+'/'+demT(N)+'/'+demC(N)).join(' · '));
 }
 
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);

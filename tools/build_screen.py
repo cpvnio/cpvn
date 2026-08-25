@@ -37,8 +37,10 @@ FIELDS = [
                                           # (để client hỏi "lần đầu vượt N" với N bất kỳ)
     'smNeo','sm20','sm60','sm120','sm250',  # SỨC MẠNH SO VỚI CHỈ SỐ SÀN — xem suc_manh()
     'avgval60',                           # GTGD bình quân 60 phiên (đồng) — cổng thanh khoản
-    # PHÂN VỊ (%) CỦA KHOẢNG CÁCH TỚI CHỈ SỐ trong cửa sổ N năm, N = 1..10 — xem cat_len()
-    'ap1','ap2','ap3','ap4','ap5','ap6','ap7','ap8','ap9','ap10',
+    # VỊ TRÍ SO VỚI CHỈ SỐ NEO N NĂM (min/max của q trong 10 phiên gần nhất, %), N = 1..10 —
+    # xem vitri_neo(); client suy ra dưới/trên/vừa cắt. Nối đuôi nên client đọc theo TÊN.
+    'lo1','lo2','lo3','lo4','lo5','lo6','lo7','lo8','lo9','lo10',
+    'hi1','hi2','hi3','hi4','hi5','hi6','hi7','hi8','hi9','hi10',
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -570,37 +572,27 @@ def build_fund(meta):
 CHISO_SAN = {'HOSE': 'VNINDEX', 'HNX': 'HNX', 'UPCOM': 'UPCOM'}
 SM_CUA    = (20, 60, 120, 250)
 
-# ── DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY ĐÃ ÁP SÁT / VỪA CHẠM / VỪA VƯỢT (27/08/2026) ──────
-# User chốt sau năm vòng đo: *"1 năm có 250 phiên thì tầm 125 phiên gần nhất dưới VN-Index
-# nhưng giá chỉ còn cách VN-Index khoảng 10% thì đạt · 2 năm thì tầm 200 phiên · 3–10 năm thì
-# khoảng 300 phiên"*, rồi nói rõ "khoảng 10%" là một VÙNG: *"cách 10% hoặc gần cắt hoặc đã
-# chạm vào VN-Index hoặc đã cắt qua và đi lên 5% so với VN-Index thì đều phù hợp"*.
+# ── VỊ TRÍ SO VỚI CHỈ SỐ NEO N NĂM, XÉT 10 PHIÊN GẦN NHẤT (27/08/2026) ────────────────
+# User chốt (thay bộ "dưới … nay sát/vừa vượt" phức tạp bằng ba thước đơn giản trên cùng một
+# phép đo, đều "xét trong 10 phiên gần nhất"):  dưới · trên · vừa cắt chỉ số N năm.
 #
 # Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm". Khoảng hở
-#     q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1        a = phiên neo, lùi N×250 nến
-# Kho ghi `ap` = **−q hôm nay, tính bằng %**: DƯƠNG là còn ở dưới bấy nhiêu %, ÂM là đã vượt
-# lên bấy nhiêu %. Chip hỏi `−5 ≤ ap ≤ 10`.
+#     q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1 = R[i]/R[a] − 1     (R = giá/chỉ số)
+# a = phiên neo, lùi N×250 NẾN HỢP LỆ từ phiên cuối — đúng cách chart đếm lùi. Ở build, P/X đã
+# lọc sạch phiên thiếu số nên a = n−1−N×250 trùng khít cách đếm ấy. q>0 là giá TRÊN đường chỉ
+# số, q<0 là DƯỚI.
 #
-# BA ĐIỀU KIỆN:
-#   ① `L` phiên **đều** ở dưới (`q < 0`), tính ngược từ TRƯỚC đoạn vừa cắt lên (nếu có);
-#      `L` = 1 năm 125 · 2 năm 200 · 3..10 năm 300.
-#   ② nếu đang ở trên thì cả ĐOẠN đã vượt phải nằm trong +5% — vọt quá rồi thì không còn là
-#      "vừa chạm / vừa cắt" nữa, đó là đã phá lên và chạy.
-#   ③ vị trí hôm nay nằm trong vùng `−10% .. +5%` (chip lo phần này).
-#
-# VÌ SAO PHẢI TÍNH `L` TỪ TRƯỚC ĐOẠN VỪA CẮT: bản trước bắt `L` phiên gần nhất đều ở dưới,
-# nên mã VỪA cắt lên — đúng thứ user muốn thấy — lại bị loại ngay khi nó cắt.
-#
-# BỐN CA MẪU USER ĐÃ BẮT, cả bốn vẫn phải trượt:
-#   · VBB mốc 1 năm — phá lên +25,7% ngày 22/07/2026 rồi hạ về −3,0%. Đang ở dưới nên đoạn
-#     "ở dưới" chỉ dài ~24 phiên, trước đó là ở TRÊN -> ① loại.
-#   · NVB mốc 1 năm — cách tới 43,5%, ③ loại; mốc khác ① loại.
-#   · VIC / VHM — ở trên đường chỉ số quá xa, ② loại.
+# Với mỗi N ghi HAI SỐ trên cửa sổ 10 phiên cuối:  loN = min(q)·100 · hiN = max(q)·100 (%).
+# Client suy ra cả ba thước, ngưỡng cắt = 0 nằm ở CLIENT (ghi số, không ghi cờ):
+#     dưới N  ⟺ hiN < 0        (dưới đường suốt 10 phiên)
+#     trên N  ⟺ loN > 0        (trên đường suốt 10 phiên)
+#     cắt  N  ⟺ loN < 0 < hiN  (có mặt CẢ HAI phía trong 10 phiên -> vừa cắt)
+# Ba tập RỜI NHAU theo N. Mã CHƯA đủ N năm -> loN = hiN = null -> không xét ở mốc đó (khác
+# chart: chart kẹp neo về phiên đầu để vẫn VẼ được; bộ lọc N năm thì không xếp mã thiếu lịch
+# sử, tránh "3 năm" và "5 năm" ra cùng kết quả cho một mã non). null PHẢI TRƯỢT ở client.
 CAT_NAM = tuple(range(1, 11))    # 1..10 năm
-CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
-CAT_DUOI = {1: 125, 2: 200}      # số phiên phải ở dưới; mốc khác dùng CAT_DUOI_MAC
-CAT_DUOI_MAC = 300
-CAT_TREN = 5.0                   # đã vượt lên thì cả đoạn vượt phải nằm trong bấy nhiêu %
+CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN.d của chart.js
+CAT_CUA = 10                     # "xét trong 10 phiên gần nhất" — cửa sổ đo min/max của q
 
 
 def _nap_chiso():
@@ -641,44 +633,40 @@ def suc_manh(d, floor, CS):
     for W in SM_CUA:
         if n > W:
             r['sm%d' % W] = round(((P[-1] / P[-1 - W]) / (X[-1] / X[-1 - W]) - 1) * 100, 2)
-    r.update(cat_len(P, X))
+    r.update(vitri_neo(P, X))
     return r
 
 
-def cat_len(P, X):
-    """Vị trí của giá so với đường chỉ số neo N năm, tính bằng %:
-    **dương = còn ở dưới bấy nhiêu · âm = đã vượt lên bấy nhiêu.**
-
-    Chỉ ghi khi `L` phiên trước đoạn vừa cắt đều nằm dưới, và đoạn vừa cắt (nếu có) chưa
-    vượt quá `CAT_TREN`%. `None` = không phải hình dạng đang hỏi. Xem khối chú thích trên.
-    """
-    r = {('ap%d' % N): None for N in CAT_NAM}
+def vitri_neo(P, X):
+    """Vị trí đường giá so với đường chỉ số NEO N NĂM, đo trong CAT_CUA phiên gần nhất.
+    Ghi loN/hiN = min/max của khoảng hở q trên 10 phiên cuối (%). Xem khối chú thích trên:
+    client suy ba thước dưới/trên/vừa cắt từ hai số này. `None` = mã chưa đủ N năm."""
+    r = {}
+    for N in CAT_NAM:
+        r['lo%d' % N] = None
+        r['hi%d' % N] = None
     n = len(P)
     if n < 2:
         return r
     R = [P[i] / X[i] for i in range(n)]
     for N in CAT_NAM:
-        L = CAT_DUOI.get(N, CAT_DUOI_MAC)
         a = n - 1 - N * CAT_NEN
         if a < 0:
-            a = 0                       # chuỗi ngắn hơn N năm -> neo phiên đầu, y như chart
+            continue                     # chưa đủ N năm -> để null, không xét mốc này
         ra = R[a]
-        # đoạn ĐANG Ở TRÊN tính ngược từ hôm nay (rỗng nếu hôm nay còn ở dưới)
-        c = 0
-        while c < n - 1 - a and R[n - 1 - c] >= ra:
-            c += 1
-        if c:
-            # ② cả đoạn vượt phải nằm trong CAT_TREN% — vọt quá là đã phá lên và chạy
-            cao = max(R[k] / ra - 1.0 for k in range(n - c, n))
-            if cao > CAT_TREN / 100.0:
-                continue
-        het = n - c                     # `L` phiên ở dưới nằm ngay TRƯỚC đoạn vượt
-        if het - L < a:
-            continue                    # không đủ chỗ sau phiên neo
-        # ① `L` phiên đó ĐỀU ở dưới — một phiên nhô lên là loại
-        if any(R[k] >= ra for k in range(het - L, het)):
-            continue
-        r['ap%d' % N] = round(100.0 * (ra / R[n - 1] - 1.0), 2)
+        w0 = n - CAT_CUA
+        if w0 <= a:
+            w0 = a + 1                   # cửa sổ đo luôn nằm SAU phiên neo
+        lo = hi = None
+        for i in range(w0, n):
+            q = R[i] / ra - 1.0
+            if lo is None or q < lo:
+                lo = q
+            if hi is None or q > hi:
+                hi = q
+        if lo is not None:
+            r['lo%d' % N] = round(100.0 * lo, 2)
+            r['hi%d' % N] = round(100.0 * hi, 2)
     return r
 
 
