@@ -37,8 +37,8 @@ FIELDS = [
                                           # (để client hỏi "lần đầu vượt N" với N bất kỳ)
     'smNeo','sm20','sm60','sm120','sm250',  # SỨC MẠNH SO VỚI CHỈ SỐ SÀN — xem suc_manh()
     'avgval60',                           # GTGD bình quân 60 phiên (đồng) — cổng thanh khoản
-    # SỐ PHIÊN KỂ TỪ LÚC ÁP SÁT CHỈ SỐ NHẤT trong cả cửa sổ N năm, N = 1..10 — xem cat_len()
-    'gn1','gn2','gn3','gn4','gn5','gn6','gn7','gn8','gn9','gn10',
+    # PHÂN VỊ (%) CỦA KHOẢNG CÁCH TỚI CHỈ SỐ trong cửa sổ N năm, N = 1..10 — xem cat_len()
+    'ap1','ap2','ap3','ap4','ap5','ap6','ap7','ap8','ap9','ap10',
 ]
 # `flat60` sinh ra để vá đúng một lỗ hổng của bộ lọc "biến động thấp": nó không phân biệt
 # được mã ổn định THẬT với mã KHÔNG CHẠY. TLD khớp 1,86 tỷ/phiên (qua cổng thanh khoản)
@@ -570,33 +570,35 @@ def build_fund(meta):
 CHISO_SAN = {'HOSE': 'VNINDEX', 'HNX': 'HNX', 'UPCOM': 'UPCOM'}
 SM_CUA    = (20, 60, 120, 250)
 
-# ── TỤT SAU CHỈ SỐ N NĂM, NAY ÁP SÁT NHẤT (27/08/2026) ────────────────────────────────
-# User: *"các mã có đường giá vừa cắt lên VN-Index x năm trong 50 phiên gần nhất"*, rồi chốt
-# lại sau hai vòng đo: *"1 năm thì check từ tổng số phiên của 1 năm, 3 năm thì tổng số phiên
-# của 3 năm — không nhất thiết là 600 phiên, như vậy sẽ đa dụng hơn; miễn 50 phiên gần nhất
-# nó có vị thế gần đường chỉ số nhất là được"*.
+# ── DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT (27/08/2026) ──────────────────────────────────
+# User chốt sau bốn vòng đo: *"check mã nào dưới đường VN-Index trong thời gian dài, sau đó
+# giá hiện tại đang cách VN-Index ngắn nhất và có xu hướng — nhưng VẪN DƯỚI VN-Index"*.
 #
-# CỬA SỔ CHÍNH LÀ N NĂM ĐÓ, không còn hằng số 600 nào. Đo trên đúng đường chart trang mã vẽ ở
-# mốc "N năm": đường chỉ số quy về đơn vị giá, neo lùi N×250 nến. Khoảng hở
-#     q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1
-# `q` càng cao thì đường giá càng áp sát (rồi vượt) đường chỉ số. Ghi ra SỐ PHIÊN kể từ lúc
-# `q` đạt ĐỈNH của cả cửa sổ; chip hỏi ≤ 50.
+# Đo trên đúng đường chart trang mã vẽ ở mốc "N năm". Khoảng cách tới đường chỉ số:
+#     kc(i) = R(a)/R(i) − 1        với R(i) = giá(i) ÷ chỉ số(i), a = phiên neo
+# `kc > 0` là đang ở DƯỚI, càng nhỏ càng áp sát. Ghi ra **PHÂN VỊ của `kc` hôm nay** trong cả
+# cửa sổ (0 = chưa bao giờ gần thế này); chip hỏi ≤ 10.
 #
-# HAI CHỐT, GỠ CÁI NÀO CŨNG SAI:
-# ① ĐỈNH XÉT TỪ SAU PHIÊN NEO. Tại phiên neo hai đường TRÙNG NHAU theo định nghĩa (q = 0),
-#    nên nếu tính cả nó thì "gần nhau nhất" luôn rơi đúng vào phiên neo — câu hỏi tự vô nghĩa.
-# ② PHẢI LÀ MÃ TỤT SAU: quá nửa số phiên trong cửa sổ ở DƯỚI đường chỉ số. Không có cổng này
-#    thì một mã DẪN ĐẦU liên tục lập đỉnh mới so với chỉ số cũng lọt — mà với nó "đỉnh q" là
-#    XA đường chỉ số nhất, ngược hẳn nghĩa "áp sát". Đúng họ NVB: user bắt lỗi *"ở trường hợp
-#    NVB nó giống như vừa cắt xuống mà nhỉ"* — NVB ở TRÊN chỉ số gần trọn hai năm (q đỉnh
-#    +62% tháng 7/2025) rồi tụt về chạm 0,00% ngày 07/08/2026 và nảy: đỉnh đang tụt, không
-#    phải đáy đang vượt. Ngưỡng "quá nửa" là nghĩa đen của câu *"mã này nằm dưới chỉ số"*,
-#    không phải số tinh chỉnh.
+# BA CỔNG, mỗi cổng chữa đúng một ca lọt lưới user đã bắt:
+# ① VẪN PHẢI Ở DƯỚI (`kc > 0` hôm nay). VBB ở mốc 1 năm từng lọt: nó PHÁ LÊN tới +25,7% ngày
+#    22/07/2026 rồi hạ về −3,0% — user: *"rõ ràng đã phá lên khỏi VN-Index khá lâu rồi, nay
+#    đang hạ xuống về VN-Index"*. Bản trước chỉ hỏi "đỉnh trong 50 phiên" nên nhận cả cái
+#    đỉnh ĐÃ QUA.
+# ② KHOẢNG CÁCH ĐANG THU HẸP so với 60 phiên trước — đó là "có xu hướng". Không có cổng này
+#    thì mã đang giãn ra cũng lọt miễn nó tình cờ ở vùng gần.
+# ③ BỎ 20 PHIÊN ĐẦU SAU MỐC NEO khỏi phép so. Tại phiên neo hai đường TRÙNG NHAU theo định
+#    nghĩa nên `kc ≈ 0`; tính cả vùng đó thì "gần nhất" luôn rơi vào ngay sau mốc neo và
+#    **không mã nào đạt** — đo được đúng 0–2 mã trên cả ba sàn trước khi bỏ vùng dính.
+#
+# PHÂN VỊ CHỨ KHÔNG PHẢI "ĐÚNG HÔM NAY LÀ GẦN NHẤT": đòi hôm nay là cực tiểu tuyệt đối của
+# cả nghìn phiên là dao cạo — đo được 0–2 mã. Phân vị cho dung sai mà vẫn nói đúng một câu
+# đọc được: *"chưa tới 10% số phiên trong N năm qua mã này ở gần chỉ số như bây giờ"*.
+# Ngưỡng nằm ở CLIENT nên đổi không phải dựng lại kho — cùng lối với `rsiPM`.
 CAT_NAM = tuple(range(1, 11))    # 1..10 năm
 CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
-CAT_CUA = 50                     # cửa sổ "vừa áp sát" mà chip đang hỏi (phiên)
-CAT_MIN = 60                     # cửa sổ ngắn hơn thế thì "gần nhất N năm" không có nghĩa
-CAT_TY  = 0.50                   # quá nửa số phiên phải ở dưới thì mới gọi là mã tụt sau
+CAT_BO  = 20                     # bỏ bấy nhiêu phiên dính ngay sau mốc neo
+CAT_XU  = 60                     # so với bấy nhiêu phiên trước để biết đang thu hẹp
+CAT_MIN = 150                    # cửa sổ ngắn hơn thế thì phân vị không nói được gì
 
 
 def _nap_chiso():
@@ -642,12 +644,13 @@ def suc_manh(d, floor, CS):
 
 
 def cat_len(P, X):
-    """Số phiên kể từ lúc đường giá ÁP SÁT đường chỉ số neo N năm NHẤT trong cả cửa sổ N năm.
+    """Phân vị (%) của khoảng cách tới đường chỉ số neo N năm, tính trên cả cửa sổ N năm.
 
-    `None` khi mã không phải "tụt sau chỉ số" (quá nửa cửa sổ nằm TRÊN), hoặc cửa sổ quá
-    ngắn để câu hỏi có nghĩa. Xem khối chú thích trên để biết vì sao hai cổng đó bắt buộc.
+    `0` = chưa bao giờ áp sát như bây giờ. `None` khi mã KHÔNG còn ở dưới đường chỉ số, hoặc
+    khoảng cách đang GIÃN RA so với `CAT_XU` phiên trước, hoặc cửa sổ quá ngắn.
+    Xem khối chú thích trên để biết vì sao ba cổng đó bắt buộc.
     """
-    r = {('gn%d' % N): None for N in CAT_NAM}
+    r = {('ap%d' % N): None for N in CAT_NAM}
     n = len(P)
     if n < 2:
         return r
@@ -656,18 +659,19 @@ def cat_len(P, X):
         a = n - 1 - N * CAT_NEN
         if a < 0:
             a = 0                       # chuỗi ngắn hơn N năm -> neo phiên đầu, y như chart
-        if n - 1 - a < CAT_MIN:
+        lo = a + CAT_BO                 # ③ bỏ vùng hai đường còn dính nhau quanh mốc neo
+        if n - 1 - lo < CAT_MIN:
             continue
         ra = R[a]
-        # ĐỈNH XÉT TỪ a+1: tại phiên neo hai đường trùng nhau, tính cả nó là câu hỏi vô nghĩa
-        duoi = sum(1 for k in range(a + 1, n) if R[k] <= ra)
-        if duoi < CAT_TY * (n - 1 - a):
-            continue                    # không phải mã tụt sau -> bỏ
-        j = a + 1
-        for k in range(a + 2, n):
-            if R[k] > R[j]:
-                j = k                   # phiên áp sát chỉ số nhất trong cửa sổ
-        r['gn%d' % N] = (n - 1) - j
+        if R[n - 1] >= ra:
+            continue                    # ① đã vượt lên -> không phải thứ đang hỏi
+        # khoảng cách: dương khi ở dưới, càng nhỏ càng áp sát
+        kc = [ra / R[k] - 1.0 for k in range(lo, n)]
+        nay = kc[-1]
+        if len(kc) <= CAT_XU or not (nay < kc[-1 - CAT_XU]):
+            continue                    # ② phải đang THU HẸP, không phải đang giãn ra
+        gan_hon = sum(1 for v in kc if v < nay)
+        r['ap%d' % N] = round(100.0 * gan_hon / len(kc), 1)
     return r
 
 

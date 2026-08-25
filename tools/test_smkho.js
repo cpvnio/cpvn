@@ -31,7 +31,7 @@ if(!scr||!scr.d){ console.log('  (chưa có data/screen.json — bỏ qua)'); pr
 /* ---- dựng lại độc lập ------------------------------------------------------ */
 const SAN_CHISO={HOSE:'VNINDEX',HNX:'HNX',UPCOM:'UPCOM'};
 const CUA=[20,60,120,250];
-const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, CUA_GN=50, MIN_CUA=60, TY=0.50;
+const NAM=[1,2,3,4,5,6,7,8,9,10], NEN=250, BO=20, XU=60, MIN_CUA=150, NGUONG=10;
 const CS={};
 for(const t of new Set(Object.values(SAN_CHISO))){
   const j=F(path.join(R,'data','chiso',t+'.json'));
@@ -59,18 +59,20 @@ function tuTinh(sym){
   const r2=x=>Math.round(x*100)/100;
   ra.smNeo=r2(((P[n-1]/P[0])/(X[n-1]/X[0])-1)*100);
   for(const W of CUA) if(n>W) ra['sm'+W]=r2(((P[n-1]/P[n-1-W])/(X[n-1]/X[n-1-W])-1)*100);
-  /* ÁP SÁT ĐƯỜNG CHỈ SỐ NHẤT TRONG CẢ CỬA SỔ N NĂM. Dựng lại bằng ĐÚNG công thức của
-     chart (`q` của `smArr`) chứ không dùng lối tắt tỉ số của build_screen — hai đường phải
-     ra cùng một đáp án thì mới chứng minh được lối tắt đó đúng. */
+  /* DƯỚI CHỈ SỐ N NĂM, ĐANG ÁP SÁT NHẤT. Dựng lại bằng ĐÚNG công thức của chart (`q` của
+     `smArr`) chứ không dùng lối tắt tỉ số của build_screen — hai đường phải ra cùng một đáp
+     án thì mới chứng minh được lối tắt đó đúng. */
   for(const N of NAM){
-    ra['gn'+N]=null;
-    const a=Math.max(0,n-1-N*NEN);
-    if(n-1-a<MIN_CUA) continue;
+    ra['ap'+N]=null;
+    const a=Math.max(0,n-1-N*NEN), lo=a+BO;
+    if(n-1-lo<MIN_CUA) continue;
     const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;   // y hệt `q[i]` mà chart.js vẽ ra dải
-    let duoi=0; for(let k=a+1;k<n;k++) if(q(k)<=0) duoi++;
-    if(duoi<TY*(n-1-a)) continue;                          // không phải mã tụt sau
-    let j=a+1; for(let k=a+2;k<n;k++) if(q(k)>q(j)) j=k;
-    ra['gn'+N]=(n-1)-j;
+    if(q(n-1)>=0) continue;                                // ① phải VẪN Ở DƯỚI
+    const kc=[]; for(let k=lo;k<n;k++) kc.push(1/(1+q(k))-1);   // khoảng cách, dương = ở dưới
+    const nay=kc[kc.length-1];
+    if(kc.length<=XU||!(nay<kc[kc.length-1-XU])) continue;  // ② phải đang THU HẸP
+    let ganHon=0; for(const v of kc) if(v<nay) ganHon++;
+    ra['ap'+N]=Math.round(1000*ganHon/kc.length)/10;
   }
   return ra;
 }
@@ -79,10 +81,11 @@ function tuTinh(sym){
 const ix={}; scr.f.forEach((k,i)=>ix[k]=i);
 kiem('screen.json có đủ 5 trường sm',
   ['smNeo','sm20','sm60','sm120','sm250'].every(k=>k in ix), true);
-kiem('screen.json có đủ 10 trường gn', NAM.every(N=>('gn'+N) in ix), true);
-kiem('cột cat* cũ đã gỡ hẳn', NAM.some(N=>('cat'+N) in ix), false);
+kiem('screen.json có đủ 10 trường ap', NAM.every(N=>('ap'+N) in ix), true);
+kiem('cột cat*/gn* cũ đã gỡ hẳn',
+  NAM.some(N=>('cat'+N) in ix||('gn'+N) in ix), false);
 
-const truong=['smNeo','sm20','sm60','sm120','sm250'].concat(NAM.map(N=>'gn'+N));
+const truong=['smNeo','sm20','sm60','sm120','sm250'].concat(NAM.map(N=>'ap'+N));
 let soSanh=0, lech=[], nullSai=[], thieuKho=0;
 for(const sym of Object.keys(scr.d)){
   if(!fs.existsSync(path.join(R,'data','hist',sym+'.json'))){ thieuKho++; continue; }
@@ -138,48 +141,49 @@ for(const s of ['HOSE','HNX','UPCOM']){
   }
 }
 
-/* ---- ÁP SÁT CHỈ SỐ: bất biến riêng ---------------------------------------- */
+/* ---- DƯỚI CHỈ SỐ, ĐANG ÁP SÁT: bất biến riêng ----------------------------- */
 {
   const V=[];
   for(const sym of Object.keys(scr.d)) for(const N of NAM){
-    const v=scr.d[sym][ix['gn'+N]];
+    const v=scr.d[sym][ix['ap'+N]];
     if(v!=null) V.push({sym,N,v});
   }
-  kiem('có kha khá giá trị gn để kiểm', V.length>2000, true);
-  kiem('mọi gn là số nguyên không âm',
-    V.every(x=>Number.isInteger(x.v)&&x.v>=0), true);
+  kiem('có kha khá giá trị ap để kiểm', V.length>1000, true);
+  kiem('mọi phân vị nằm trong [0, 100]', V.every(x=>x.v>=0&&x.v<=100), true);
 
-  /* KIỂM THẲNG ĐỊNH NGHĨA: phiên được chỉ ra phải là phiên `q` CAO NHẤT kể từ sau phiên neo,
-     và mã phải thật sự TỤT SAU (quá nửa cửa sổ nằm dưới). Đây đúng hai chốt mà bản trước
-     thiếu và đã để lọt NVB — một đỉnh đang tụt chứ không phải đáy đang vượt. */
+  /* SOI THẲNG ĐỊNH NGHĨA — ba cổng, kiểm từng cái trên mã lọt lưới. */
   let daKiem=0, sai=[];
-  for(const x of V.filter(y=>y.v<=CUA_GN).slice(0,60)){
+  for(const x of V.filter(y=>y.v<=NGUONG).slice(0,60)){
     const h=F(path.join(R,'data','hist',x.sym+'.json'));
     const ixs=CS[SAN_CHISO[SAN[x.sym]]||'']; if(!h||!ixs) continue;
     const P=[],X=[];
     for(let i=0;i<h.t.length;i++){ const c=h.c[i]; if(!c||c<=0) continue;
       const v=ixs[ngay(h.t[i])]; if(!v) continue; P.push(c); X.push(v); }
-    const n=P.length, a=Math.max(0,n-1-x.N*NEN);
+    const n=P.length, a=Math.max(0,n-1-x.N*NEN), lo=a+BO;
     const c0=P[a], x0=X[a], q=i=>(P[i]/c0)/(X[i]/x0)-1;
-    const j=(n-1)-x.v;
-    for(let k=a+1;k<n;k++) if(q(k)>q(j))
-      { sai.push(`${x.sym}/gn${x.N}: phiên ${k} còn áp sát hơn (${q(k).toFixed(4)} > ${q(j).toFixed(4)})`); break; }
-    let duoi=0; for(let k=a+1;k<n;k++) if(q(k)<=0) duoi++;
-    if(duoi<TY*(n-1-a)) sai.push(`${x.sym}/gn${x.N}: chỉ ${duoi}/${n-1-a} phiên ở dưới — không phải mã tụt sau`);
+    if(!(q(n-1)<0)) sai.push(`${x.sym}/ap${x.N}: đang Ở TRÊN chỉ số (q=${q(n-1).toFixed(4)})`);
+    const kc=[]; for(let k=lo;k<n;k++) kc.push(1/(1+q(k))-1);
+    const nay=kc[kc.length-1];
+    if(!(nay<kc[kc.length-1-XU])) sai.push(`${x.sym}/ap${x.N}: khoảng cách đang GIÃN RA`);
+    let ganHon=0; for(const v of kc) if(v<nay) ganHon++;
+    const pv=100*ganHon/kc.length;
+    if(pv>NGUONG+1e-6) sai.push(`${x.sym}/ap${x.N}: phân vị thật ${pv.toFixed(1)}% > ${NGUONG}%`);
     daKiem++;
   }
-  console.log(`  · soi thẳng định nghĩa trên ${daKiem} ca`);
-  kiem('phiên được chỉ ra ĐÚNG là phiên áp sát nhất · và mã thật sự tụt sau', sai.length, 0);
+  console.log(`  · soi thẳng ba cổng trên ${daKiem} ca`);
+  kiem('mã lọt lưới: vẫn ở DƯỚI · khoảng cách đang THU HẸP · phân vị đúng ngưỡng', sai.length, 0);
   if(sai.length) console.log('      ví dụ: '+sai.slice(0,4).join(' · '));
 
-  /* NVB LÀ CA MẪU CỦA BẢN TRƯỚC — đỉnh đang tụt chạm vạch rồi nảy. Phải TRƯỢT ở mọi mốc. */
-  if(scr.d.NVB){
-    const lot=NAM.filter(N=>{const v=scr.d.NVB[ix['gn'+N]];return v!=null&&v<=CUA_GN;});
-    kiem('NVB (đỉnh đang tụt) không lọt ở mốc nào', lot.join(',')||'—', '—');
+  /* BA CA MẪU USER ĐÃ BẮT — đều phải TRƯỢT ở mọi mốc.
+     VBB phá lên +25,7% rồi hạ về · NVB đỉnh đang tụt · VIC/VHM đang ở trên chỉ số. */
+  for(const m of ['VBB','NVB','VIC','VHM']){
+    if(!scr.d[m]) continue;
+    const lot=NAM.filter(N=>{const v=scr.d[m][ix['ap'+N]];return v!=null&&v<=NGUONG;});
+    kiem(`${m} không lọt ở mốc nào`, lot.join(',')||'—', '—');
   }
-  const dem=N=>Object.keys(scr.d).filter(s=>{const v=scr.d[s][ix['gn'+N]];return v!=null&&v<=CUA_GN;}).length;
-  kiem('mốc nào cũng bắt được ít nhất một mã', NAM.every(N=>dem(N)>0), true);
-  console.log('  · chip bắt được: '+NAM.map(N=>N+' năm '+dem(N)).join(' · '));
+  const dem=N=>Object.keys(scr.d).filter(s=>{const v=scr.d[s][ix['ap'+N]];return v!=null&&v<=NGUONG;}).length;
+  kiem('mốc 1 năm bắt được ít nhất vài mã', dem(1)>=5, true);
+  console.log('  · chip bắt được (≤'+NGUONG+'%): '+NAM.map(N=>N+' năm '+dem(N)).join(' · '));
 }
 
 console.log('\n'+'─'.repeat(60)+`\n  ĐẠT ${pass} · HỎNG ${fail}\n`);
