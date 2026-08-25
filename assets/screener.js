@@ -68,7 +68,7 @@ CPScreen.chips=[
   /* DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CHỈ CÒN CÁCH ≤10% — đo trên đúng đường chart trang mã
      vẽ ở mốc "N năm". Số phiên phải ở dưới liên tục đổi theo mốc: 1 năm 125 · 2 năm 200 ·
      3–10 năm 300. Mã sàn nào so với chỉ số sàn ấy (HOSE→VN-Index · HNX→HNX · UPCOM→UPCOM). */
-  {id:'catN',  g:'Kỹ thuật', nm:'Dưới chỉ số {n} năm liên tục, nay cách ≤10%',
+  {id:'catN',  g:'Kỹ thuật', nm:'Dưới chỉ số {n} năm, nay sát hoặc vừa vượt',
    opts:[1,2,3,4,5,6,7,8,9,10], def:1},
   {id:'vol2',  g:'Kỹ thuật', nm:'Vol đột biến ×2'},
   {id:'nn30',  g:'Dòng tiền', nm:'NN mua ròng 30 phiên'},
@@ -121,14 +121,15 @@ CPScreen.chip=function(id,c,n){
        lọt, tín hiệu mất hết ý nghĩa. `rsiPM` rỗng = hôm nay là phiên ĐẦU THÁNG. */
     case 'rsi80m':return t.rsi!=null&&t.rsi>n&&(t.rsiPM==null||t.rsiPM<=n);
     case 'hi52':  return t.dhi!=null&&t.dhi>=-15;
-    /* DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CÁCH ≤10%. Kho ghi `apN` = KHOẢNG CÁCH (%) từ giá tới
-       đường chỉ số hôm nay, và CHỈ ghi khi `L` phiên gần nhất đều nằm dưới đường đó
-       (1 năm 125 · 2 năm 200 · 3–10 năm 300). Nên `null` = có phiên nhô lên trong quãng ấy,
-       tức không phải mã đang hỏi — đúng ba ca đã bắt: VBB phá lên rồi hạ về, VIC/VHM đang ở
-       trên. Client chỉ còn việc so ngưỡng.
-       Ngưỡng ở CLIENT nên đổi không phải dựng lại kho: ≤5% cho 7 mã ở mốc 1 năm, ≤10% cho
-       28, ≤20% cho 172. `null` phải TRƯỢT, đừng viết kiểu `!(v>10)`. */
-    case 'catN':  { const v=t['ap'+n]; return v!=null&&v<=10; }
+    /* DƯỚI CHỈ SỐ N NĂM, NAY SÁT HOẶC VỪA VƯỢT. Kho ghi `apN` = vị trí của giá so với đường
+       chỉ số, tính bằng %: **DƯƠNG là còn ở dưới bấy nhiêu · ÂM là đã vượt lên bấy nhiêu**.
+       Kho chỉ ghi khi đúng hình dạng: `L` phiên TRƯỚC đoạn vừa cắt đều nằm dưới (1 năm 125 ·
+       2 năm 200 · 3–10 năm 300), và đoạn vừa vượt (nếu có) chưa quá +5%.
+       Client hỏi vùng **−5 .. +10**: còn cách tối đa 10%, hoặc đã chạm, hoặc vừa cắt qua và
+       lên tới 5%. Hai đầu vùng nằm ở CLIENT nên đổi không phải dựng lại kho.
+       `null` = không phải hình dạng đang hỏi (VBB phá lên rồi hạ về · VIC/VHM ở trên quá
+       xa). PHẢI TRƯỢT — đừng viết kiểu `!(v>10)`, `null` lọt qua mọi phép so. */
+    case 'catN':  { const v=t['ap'+n]; return v!=null&&v>=-5&&v<=10; }
     case 'vol2':  return (t.volr||0)>=2;
     case 'nn30':  return (t.nn20||0)>0;
     case 'nnd10': return (c.fbuy||0)*p>=1e10;

@@ -4390,28 +4390,37 @@ trên giao diện.
 > **thiếu dữ liệu phải TRƯỢT chứ không được LỌT** — mã chưa đủ N phiên có `sm{N} = null`, một
 > phép so viết ẩu kiểu `!(v<=0)` cho `null` đi qua và bảng trộn mã đủ với mã chưa đủ dữ liệu.
 
-### CHIP "DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CÁCH ≤10%" — bảng giá (27/08/2026)
+### CHIP "DƯỚI CHỈ SỐ N NĂM, NAY SÁT HOẶC VỪA VƯỢT" — bảng giá (27/08/2026)
 
 User chốt sau **năm vòng đo**: *"1 năm có 250 phiên thì tầm 125 phiên gần nhất dưới VN-Index
 nhưng giá chỉ còn cách VN-Index khoảng 10% thì đạt · 2 năm thì tầm 200 phiên · 3–10 năm thì
-khoảng 300 phiên"*.
+khoảng 300 phiên"*, rồi nói rõ **"khoảng 10%" là một VÙNG**: *"cách 10% hoặc gần cắt hoặc đã
+chạm vào VN-Index hoặc đã cắt qua và đi lên 5% so với VN-Index thì đều phù hợp"*.
 
 Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm", nên bộ lọc nói đúng thứ người dùng nhìn
 thấy. Khoảng hở `q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1`; `q < 0` là đang ở DƯỚI,
 và `−q` chính là *"thấp hơn đường chỉ số bao nhiêu %"*.
 
-**HAI ĐIỀU KIỆN, HẾT:**
+**BA ĐIỀU KIỆN:**
 
 | | |
 |---|---|
-| ① | `L` phiên gần nhất **đều** có `q < 0` — ở dưới liên tục, không một phiên nào nhô lên |
-| ② | khoảng cách hôm nay `−q` ≤ **10%** |
+| ① | `L` phiên **đều** có `q < 0`, tính ngược từ **TRƯỚC đoạn vừa cắt lên** (nếu có) |
+| ② | nếu đang ở trên thì **cả đoạn** đã vượt phải nằm trong **+5%** |
+| ③ | vị trí hôm nay nằm trong vùng **−10% .. +5%** (chip lo phần này) |
 
 `L` đổi theo mốc: **1 năm → 125 · 2 năm → 200 · 3..10 năm → 300 phiên**.
 
-Kho ghi `ap1..ap10` = **khoảng cách hôm nay (%)**, và CHỈ ghi khi ① đã thoả; client chỉ còn
-việc so ngưỡng. **`null` nghĩa là có phiên nhô lên trong `L` phiên** — tức không phải mã đang
-hỏi. Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
+Kho ghi `ap1..ap10` = **vị trí của giá so với đường chỉ số, tính bằng %**: **dương = còn ở
+dưới bấy nhiêu · âm = đã vượt lên bấy nhiêu**. Chip hỏi `−5 ≤ ap ≤ 10`. **`null` = không phải
+hình dạng đang hỏi.** Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
+
+> **`L` TÍNH TỪ TRƯỚC ĐOẠN VỪA CẮT, KHÔNG PHẢI TỪ HÔM NAY.** Bản trước bắt `L` phiên **gần
+> nhất** đều ở dưới, nên mã VỪA cắt lên — đúng thứ user muốn thấy — lại bị loại ngay tại
+> khoảnh khắc nó cắt.
+
+> **ĐOẠN ĐÃ VƯỢT PHẢI NẰM TRONG +5% (điều kiện ②), không chỉ vị trí hôm nay.** Không có nó
+> thì mã vọt lên +25% rồi rơi về +3% vẫn lọt — đúng hình dạng VBB mà user đã bác.
 
 > **NEO Ở "NGAY BÂY GIỜ", KHÔNG NEO Ở LÚC CẮT.** Bản trước đòi *"ở dưới suốt 600 phiên NGAY
 > TRƯỚC VẾT CẮT"* và chết vì ngay sát vết cắt giá luôn dập dềnh quanh vạch — **0 mã đạt**. Ở
@@ -4426,13 +4435,13 @@ hỏi. Mã sàn nào so với chỉ số sàn ấy, y như `sm*`.
 | **NVB** | ở TRÊN chỉ số gần trọn 2 năm (`q` đỉnh **+62%** tháng 7/2025) rồi tụt về chạm **0,00%** ngày 07/08/2026 và nảy — đỉnh đang tụt, không phải đáy đang vượt | ② mốc 1 năm (cách **43,5%**) · ① các mốc còn lại |
 | **VIC · VHM** | đang ở TRÊN đường chỉ số | ① |
 
-Đo phiên 25/08/2026 — **ở dưới liên tục / cách ≤10%**: 1 năm 743 → **28 mã** · 2 năm 765 → 7
-· 3 năm 561 → 2 · 5 năm 491 → 1 · 10 năm 738 → 4.
+Đo phiên 25/08/2026 — **có hình dạng / trong vùng −5..10%**: 1 năm 746 → **31 mã** (3 mã đã
+vượt lên) · 2 năm 767 → 9 (2 đã vượt) · 3 năm 561 → 2 · 5 năm 491 → 1 · 10 năm 738 → 4.
 
-> **NGƯỠNG 10% NẰM Ở CLIENT** nên siết hay nới không phải dựng lại kho. Mốc 1 năm: ≤5% → 7 mã
-> · ≤10% → 28 · ≤15% → 70 · ≤20% → 172. Mã áp sát nhất toàn thị trường ở mốc 1 năm cách
-> **1,83%**; ở mốc 5 năm là **8,92%** — mốc càng dài thì khoảng cách càng khó nhỏ, nên ít mã
-> là đúng bản chất chứ không phải bộ lọc hỏng.
+> **HAI ĐẦU VÙNG NẰM Ở CLIENT** nên siết hay nới không phải dựng lại kho. Mốc 1 năm, riêng
+> phần còn ở dưới: ≤5% → 7 mã · ≤10% → 28 · ≤15% → 70 · ≤20% → 172. Mã áp sát nhất toàn thị
+> trường ở mốc 1 năm cách **1,83%**; ở mốc 5 năm là **8,92%** — mốc càng dài thì khoảng cách
+> càng khó nhỏ, nên ít mã là đúng bản chất chứ không phải bộ lọc hỏng.
 
 > **BỐN BẢN ĐÃ THỬ RỒI BỎ, đừng dựng lại:**
 > · *"Mọi vết cắt lên trong 50 phiên"* — một nửa số mã lọt lưới đang nằm LẠI DƯỚI (TCB cắt

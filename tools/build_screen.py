@@ -570,37 +570,37 @@ def build_fund(meta):
 CHISO_SAN = {'HOSE': 'VNINDEX', 'HNX': 'HNX', 'UPCOM': 'UPCOM'}
 SM_CUA    = (20, 60, 120, 250)
 
-# ── DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY CHỈ CÒN CÁCH ÍT (27/08/2026) ──────────────────────
+# ── DƯỚI CHỈ SỐ N NĂM LIÊN TỤC, NAY ĐÃ ÁP SÁT / VỪA CHẠM / VỪA VƯỢT (27/08/2026) ──────
 # User chốt sau năm vòng đo: *"1 năm có 250 phiên thì tầm 125 phiên gần nhất dưới VN-Index
 # nhưng giá chỉ còn cách VN-Index khoảng 10% thì đạt · 2 năm thì tầm 200 phiên · 3–10 năm thì
-# khoảng 300 phiên"*.
+# khoảng 300 phiên"*, rồi nói rõ "khoảng 10%" là một VÙNG: *"cách 10% hoặc gần cắt hoặc đã
+# chạm vào VN-Index hoặc đã cắt qua và đi lên 5% so với VN-Index thì đều phù hợp"*.
 #
 # Đo trên ĐÚNG đường chart trang mã vẽ ở mốc "N năm". Khoảng hở
 #     q(i) = [giá(i)/giá(a)] ÷ [chỉ số(i)/chỉ số(a)] − 1        a = phiên neo, lùi N×250 nến
-# `q < 0` là đang ở DƯỚI đường chỉ số, và `−q` chính là "thấp hơn đường chỉ số bao nhiêu %".
+# Kho ghi `ap` = **−q hôm nay, tính bằng %**: DƯƠNG là còn ở dưới bấy nhiêu %, ÂM là đã vượt
+# lên bấy nhiêu %. Chip hỏi `−5 ≤ ap ≤ 10`.
 #
-# HAI ĐIỀU KIỆN, HẾT:
-#   ① `L` phiên gần nhất **đều** có `q < 0` — ở dưới liên tục, không một phiên nào nhô lên;
-#   ② khoảng cách hôm nay `−q` đủ nhỏ — chip hỏi ≤ 10%.
-# `L` đổi theo mốc: 1 năm → 125 · 2 năm → 200 · 3..10 năm → 300 phiên.
+# BA ĐIỀU KIỆN:
+#   ① `L` phiên **đều** ở dưới (`q < 0`), tính ngược từ TRƯỚC đoạn vừa cắt lên (nếu có);
+#      `L` = 1 năm 125 · 2 năm 200 · 3..10 năm 300.
+#   ② nếu đang ở trên thì cả ĐOẠN đã vượt phải nằm trong +5% — vọt quá rồi thì không còn là
+#      "vừa chạm / vừa cắt" nữa, đó là đã phá lên và chạy.
+#   ③ vị trí hôm nay nằm trong vùng `−10% .. +5%` (chip lo phần này).
 #
-# KHO GHI KHOẢNG CÁCH (%), KHÔNG GHI CỜ — cùng bài học với `rsiPM`: ngưỡng 10% nằm ở CLIENT
-# nên siết xuống 5% hay nới lên 15% không phải dựng lại kho.
+# VÌ SAO PHẢI TÍNH `L` TỪ TRƯỚC ĐOẠN VỪA CẮT: bản trước bắt `L` phiên gần nhất đều ở dưới,
+# nên mã VỪA cắt lên — đúng thứ user muốn thấy — lại bị loại ngay khi nó cắt.
 #
-# VÌ SAO NEO Ở "NGAY BÂY GIỜ" MÀ KHÔNG NEO Ở LÚC CẮT — bản trước đòi "ở dưới suốt 600 phiên
-# NGAY TRƯỚC VẾT CẮT" và chết vì ngay sát vết cắt giá luôn dập dềnh quanh vạch: 0 mã đạt.
-# Ở đây `L` phiên tính ngược từ HÔM NAY, mà hôm nay mã vẫn còn ở dưới, nên không có vùng dập
-# dềnh nào để vướng.
-#
-# BA CA MẪU USER ĐÃ BẮT, cả ba đều bị điều kiện ① hoặc ② loại:
-#   · VBB mốc 1 năm — phá lên +25,7% ngày 22/07/2026 rồi hạ về −3,0%. Khoảng cách nay chỉ 3%
-#     (qua ②) nhưng trong 125 phiên gần nhất CÓ phiên ở trên -> ① loại.
-#   · NVB mốc 1 năm — cách tới 30,3%, ② loại; mốc 2 năm thì đang Ở TRÊN, ① loại.
-#   · VIC / VHM — đang ở trên đường chỉ số, ① loại.
+# BỐN CA MẪU USER ĐÃ BẮT, cả bốn vẫn phải trượt:
+#   · VBB mốc 1 năm — phá lên +25,7% ngày 22/07/2026 rồi hạ về −3,0%. Đang ở dưới nên đoạn
+#     "ở dưới" chỉ dài ~24 phiên, trước đó là ở TRÊN -> ① loại.
+#   · NVB mốc 1 năm — cách tới 43,5%, ③ loại; mốc khác ① loại.
+#   · VIC / VHM — ở trên đường chỉ số quá xa, ② loại.
 CAT_NAM = tuple(range(1, 11))    # 1..10 năm
 CAT_NEN = 250                    # số nến MỘT năm ở khung Ngày — sao y NAM_NEN của chart.js
-CAT_DUOI = {1: 125, 2: 200}      # số phiên gần nhất phải ở dưới; mốc khác dùng CAT_DUOI_MAC
+CAT_DUOI = {1: 125, 2: 200}      # số phiên phải ở dưới; mốc khác dùng CAT_DUOI_MAC
 CAT_DUOI_MAC = 300
+CAT_TREN = 5.0                   # đã vượt lên thì cả đoạn vượt phải nằm trong bấy nhiêu %
 
 
 def _nap_chiso():
@@ -646,10 +646,11 @@ def suc_manh(d, floor, CS):
 
 
 def cat_len(P, X):
-    """Khoảng cách (%) từ giá tới đường chỉ số neo N năm, CHỈ ghi khi `L` phiên gần nhất đều
-    nằm dưới đường đó. `None` = có phiên nhô lên trong `L` phiên, hoặc chuỗi quá ngắn.
+    """Vị trí của giá so với đường chỉ số neo N năm, tính bằng %:
+    **dương = còn ở dưới bấy nhiêu · âm = đã vượt lên bấy nhiêu.**
 
-    Số dương, càng nhỏ càng áp sát. Chip hỏi ≤ 10. Xem khối chú thích trên.
+    Chỉ ghi khi `L` phiên trước đoạn vừa cắt đều nằm dưới, và đoạn vừa cắt (nếu có) chưa
+    vượt quá `CAT_TREN`%. `None` = không phải hình dạng đang hỏi. Xem khối chú thích trên.
     """
     r = {('ap%d' % N): None for N in CAT_NAM}
     n = len(P)
@@ -661,13 +662,22 @@ def cat_len(P, X):
         a = n - 1 - N * CAT_NEN
         if a < 0:
             a = 0                       # chuỗi ngắn hơn N năm -> neo phiên đầu, y như chart
-        if n - 1 - a < L:
-            continue                    # `L` phiên phải nằm trọn sau phiên neo
         ra = R[a]
-        # ① `L` phiên gần nhất ĐỀU ở dưới — một phiên nhô lên là loại
-        if any(R[k] >= ra for k in range(n - L, n)):
+        # đoạn ĐANG Ở TRÊN tính ngược từ hôm nay (rỗng nếu hôm nay còn ở dưới)
+        c = 0
+        while c < n - 1 - a and R[n - 1 - c] >= ra:
+            c += 1
+        if c:
+            # ② cả đoạn vượt phải nằm trong CAT_TREN% — vọt quá là đã phá lên và chạy
+            cao = max(R[k] / ra - 1.0 for k in range(n - c, n))
+            if cao > CAT_TREN / 100.0:
+                continue
+        het = n - c                     # `L` phiên ở dưới nằm ngay TRƯỚC đoạn vượt
+        if het - L < a:
+            continue                    # không đủ chỗ sau phiên neo
+        # ① `L` phiên đó ĐỀU ở dưới — một phiên nhô lên là loại
+        if any(R[k] >= ra for k in range(het - L, het)):
             continue
-        # ② khoảng cách hôm nay, tính bằng % so với mức của đường chỉ số
         r['ap%d' % N] = round(100.0 * (ra / R[n - 1] - 1.0), 2)
     return r
 
