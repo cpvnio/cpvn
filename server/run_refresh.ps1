@@ -149,6 +149,11 @@ if ($LASTEXITCODE -ne 0) { "kho_giaodich --td EXIT $LASTEXITCODE - bo qua, chay 
 & $py tools\va_donvi.py 2>&1
 if ($LASTEXITCODE -ne 0) { "va_donvi EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
+# [8b] DONG TIEN TU DOANH + THOA THUAN cho cac the Radar -> data/dongtien.json.
+# PHAI DUNG SAU va_donvi (doc data/giaodich da va don vi) va truoc git push cuoi.
+& $py tools\kho_dongtien.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_dongtien EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
 # [9] DỰNG BẢNG PHIÊN LẦN HAI — lấp thêm phần tách thoả thuận và tỉ lệ sở hữu.
 & $py tools\build_phantich.py 2>&1
 if ($LASTEXITCODE -ne 0) { "build_phantich (luot 2) EXIT $LASTEXITCODE - bo qua, chay tiep" }

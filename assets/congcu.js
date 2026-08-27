@@ -161,7 +161,7 @@ function shot(el,name){
 
 /* ---------------------------------------------------------------- dữ liệu */
 const ST={ map:new Map(), list:[], date:'', indices:[], parents:[], sectors:[], nnBuy:0, nnSell:0,
-  vn30:new Set(), tapdoan:[], quy:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map() };
+  vn30:new Set(), tapdoan:[], quy:[], pack:null, market:null, spark:{}, sparkT:[], hist:new Map(), tdDate:'' };
 /* GỘP NGÀNH — BẢN SAO Y HỆT core.js và bubbles.html. Trang này trước đây dùng thẳng
    `sector` thô của nguồn, nên ô chọn ngành của đường đua hiện "Bán lẻ chuyên dụng",
    "Bán lẻ thực phẩm và thuốc", "Bán lẻ tổng hợp" thành ba ngành riêng trong khi bảng giá
@@ -262,6 +262,18 @@ async function loadAll(){
     const len=(sp.d[Object.keys(sp.d)[0]]||[]).length;
     ST.sparkT=(mk&&mk.t)?mk.t.slice(-len):[];
     drawSparks();
+  });
+  /* TỰ DOANH + THOẢ THUẬN tải NỀN như sparkline — kho_dongtien.py gói sẵn. Tự doanh trễ T+1
+     (nguồn công bố sau một phiên) nên `tdDate` thường lùi một phiên so với giá; radar gắn
+     nhãn ngày lên thẻ tự doanh cho khỏi lẫn với ba thẻ khối ngoại. Bản đồ/giá sống KHÔNG
+     đụng mấy trường này, nên vẽ lại thế nào chúng vẫn còn. */
+  j('data/dongtien.json').then(dt=>{
+    if(!dt) return;
+    ST.tdDate=dt.tdDate||'';
+    for(const sym in (dt.td||{})){ const c=ST.map.get(sym); if(c) c.tdVal=dt.td[sym]; }
+    for(const sym in (dt.td30||{})){ const c=ST.map.get(sym); if(c) c.td30=dt.td30[sym]; }
+    for(const sym in (dt.tt||{})){ const c=ST.map.get(sym); if(c){ c.ttVol=dt.tt[sym][0]; c.ttVal=dt.tt[sym][1]; } }
+    if(cur==='radar'&&radarTab==='phien') veLaiTrongNuoc();
   });
   $('#fdate').textContent=ST.date||'—';
 }
@@ -4028,6 +4040,11 @@ function renderRadar(){
     return a.concat(fls.slice(0,6-a.length).map(c=>row(c,'SÀN','fo'))).slice(0,6);
   }
 
+  /* Nhãn ngày cho thẻ tự doanh: chỉ hiện khi phiên tự doanh LÙI so với phiên giá (nguồn T+1).
+     'YYYY-MM-DD' -> 'DD/MM'. */
+  const ddmm=x=>x?x.slice(8,10)+'/'+x.slice(5,7):'';
+  const tdN=(ST.tdDate&&ST.tdDate!==ST.date)
+    ? ' <small style="opacity:.55;font-weight:400">'+ddmm(ST.tdDate)+'</small>' : '';
   const flow=[
     radarCard('🔥','Đột biến khối lượng',
       top(c=>c.volr>=2&&c.chg>0&&liq(c)>=2e9,(a,b)=>b.volr-a.volr).map(c=>row(c,'×'+fx(c.volr,1)+' KL','up')),'vol'),
@@ -4041,6 +4058,19 @@ function renderRadar(){
       top(c=>c.nnVal<0,(a,b)=>a.nnVal-b.nnVal).map(c=>row(c,'−'+ty(-c.nnVal),'dn')),'nns'),
     radarCard('🧲','Khối ngoại gom 30 phiên',
       top(c=>(c.nn20||0)>0,(a,b)=>b.nn20-a.nn20).map(c=>row(c,'+'+ty(c.nn20),'up')),'nng'),
+    /* TỰ DOANH — bộ tương tự khối ngoại. `tdVal` = ròng phiên · `td30` = gom 30 phiên (đồng,
+       gồm cả thoả thuận, đúng chuẩn "tự doanh ròng"). Nhãn ngày `tdN` vì nguồn trễ một phiên. */
+    radarCard('🏦','Tự doanh mua ròng phiên'+tdN,
+      top(c=>(c.tdVal||0)>0,(a,b)=>b.tdVal-a.tdVal).map(c=>row(c,'+'+ty(c.tdVal),'up')),'tdb'),
+    radarCard('📤','Tự doanh bán ròng phiên'+tdN,
+      top(c=>(c.tdVal||0)<0,(a,b)=>a.tdVal-b.tdVal).map(c=>row(c,'−'+ty(-c.tdVal),'dn')),'tds'),
+    radarCard('🧺','Tự doanh gom 30 phiên'+tdN,
+      top(c=>(c.td30||0)>0,(a,b)=>b.td30-a.td30).map(c=>row(c,'+'+ty(c.td30),'up')),'tdg'),
+    /* THOẢ THUẬN — không tách được mua/bán nên chỉ liệt kê khối lượng (user chốt). Đơn vị
+       triệu cổ phiếu cho gọn; kèm giá trị tỷ ở nhãn phụ. */
+    radarCard('🤝','Thoả thuận khối lượng lớn',
+      top(c=>(c.ttVol||0)>0,(a,b)=>b.ttVol-a.ttVol)
+        .map(c=>row(c,fx(c.ttVol/1e6,1)+' tr cp','')),'tt'),
   ];
   const power=[
     radarCard('🏔️','Vượt / sát đỉnh 52 tuần',
