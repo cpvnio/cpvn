@@ -988,11 +988,6 @@ function ptTop(){
       +' &nbsp; <i class="pk3"></i> VN-Index (trục phải)'
       +' &nbsp;·&nbsp; phần tô = <b>mức tham gia</b> của khối đó trong TỔNG giao dịch'
       +' &nbsp;·&nbsp; <b>bấm vào cột để xem chi tiết phiên đó</b></p>'
-    +ptGiai('cot','Vì sao màu trên cột lại chia như vậy',
-       'Màu trên cột là <b>mức tham gia</b> = (mua + bán) ÷ 2, không phải mua cộng bán: mỗi '
-      +'lệnh khớp có đúng một người mua và một người bán, cộng thẳng cả hai vế là đếm hai '
-      +'lần. Chia đôi thì ba mảng cộng lại bằng đúng giá trị khớp lệnh của phiên. '
-      +'Cột <b>xám</b> là phiên kho chưa cào đủ mã — thấp vì thiếu dữ liệu chứ không phải vì ế.')
     +'</div></div>';
   const ch=$('#ptChe');
   if(ch) ch.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
@@ -2898,7 +2893,6 @@ async function ptBang(){
   const chip=(v,t)=>'<button data-ex="'+v+'"'+(PT.ex===v?' class="on"':'')+'>'+t+'</button>';
   const th=PTC.map(c=>'<th data-k="'+c.k+'" class="'+(c.n?'r':'')+
     (s===c.k?' sorted '+(dir<0?'d':'a'):'')+'">'+c.t+'</th>').join('');
-  const coVG=!!(p.ma&&Object.keys(p.ma).length);
   const body=r.slice(0,400).map(x=>{
     const mo=PT.mo===x.sym;
     let tr='<tr data-sym="'+x.sym+'" class="'+(mo?'ptmo':'')+(x.vg?' ptco':'')+'">'+PTC.map(c=>{
@@ -2931,11 +2925,6 @@ async function ptBang(){
     +(PT_HIEN.boloc?ptBoLoc(p):'')+
     '<div class="panel"><div class="ph">'+ptIc('bang')+'Bảng mã — phiên '+esc(PT.ngay)+
     '<span class="cnt">'+num(r.length)+' mã</span></div><div class="pb">'
-    +ptGiai('bang','Vì sao bảng xếp theo tiền chứ không theo khối lượng',
-       'Một mã khớp mấy triệu cổ phiếu giá 3.000đ chỉ là vài tỷ, còn mã khớp vài trăm nghìn '
-      +'cổ phiếu giá 200.000đ mới là tiền thật. '
-      +(coVG?'Bấm vào dòng có dấu ▾ để xem <b>vùng giá khớp lệnh</b> của mã đó trong phiên này.'
-        :'Vùng giá khớp lệnh của phiên này chưa cào — bảng vẫn đầy đủ.'))
     +'<div class="nybar"><div class="nyseg" id="ptEx">'+chip('all','Tất cả')
       +chip('HOSE','HOSE'+(dem.HOSE?' '+dem.HOSE:''))+chip('HNX','HNX'+(dem.HNX?' '+dem.HNX:''))
       +chip('UPCOM','UPCOM'+(dem.UPCOM?' '+dem.UPCOM:''))+'</div>'
