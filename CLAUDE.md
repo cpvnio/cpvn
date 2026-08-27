@@ -3169,6 +3169,13 @@ trường này nên vẽ lại thế nào chúng vẫn còn.
 > lẫn với thẻ khối ngoại của phiên hiện tại. Phủ ~57–89 mã/phiên (chỉ mã CÓ tự doanh) — đủ
 > cho thẻ top-5, không phải thiếu dữ liệu.
 
+>**BỐ CỤC RADAR PHIÊN GỌN LẠI CÒN MỘT MỤC (27/08/2026).** User bỏ ba mục **Sức mạnh giá**
+(`power`) · **Mặt tối của phiên** (`risk`) · **Nhóm ngành hôm nay** (`sectorPanel`). Radar phiên
+nay = bản đồ thế giới + **💰 Dòng tiền trong CKVN** (11 thẻ). Riêng **Lập đỉnh lịch sử hôm nay**
+(`ath`) được GIỮ, dời sang cạnh Thoả thuận trong chính mục Dòng tiền. Dữ liệu của mấy thẻ đã bỏ
+(rsi/dhi/dlo/streak/cross/rs…) vẫn còn trong `screen.json`, `sectorPanel()` vẫn định nghĩa —
+muốn bật lại chỉ dựng lại `power`/`risk`/`ceflRows` + hai `sectionHead`, đừng "dọn rác" xoá đi.
+
 > **THOẢ THUẬN KHÔNG CÓ "RÒNG"** — mỗi lô có cả người mua lẫn bán, ròng luôn bằng 0. Nên thẻ
 > này chỉ liệt kê **khối lượng** (`pv`), đúng như user chốt; `pval` để dành nhãn phụ.
 

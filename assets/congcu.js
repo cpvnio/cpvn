@@ -4032,14 +4032,6 @@ function renderRadar(){
   const top=(f,s,n)=>L.filter(c=>c.close>0).filter(f).sort(s).slice(0,n||5);
   const md=moodLive(), s=marketStats(), tot=Math.max(1,s.up+s.dn+s.fl);
 
-  /* trần — sàn gộp 1 thẻ: ưu tiên mã thanh khoản cao */
-  function ceflRows(){
-    const ces=L.filter(c=>!c.nt&&c.close>0&&c.ceil>0&&c.close>=c.ceil).sort((a,b)=>b.gtgd-a.gtgd);
-    const fls=L.filter(c=>c.close>0&&c.floor>0&&c.close<=c.floor).sort((a,b)=>b.gtgd-a.gtgd);
-    const a=ces.slice(0,3).map(c=>row(c,'TRẦN','ce'));
-    return a.concat(fls.slice(0,6-a.length).map(c=>row(c,'SÀN','fo'))).slice(0,6);
-  }
-
   /* Nhãn ngày cho thẻ tự doanh: chỉ hiện khi phiên tự doanh LÙI so với phiên giá (nguồn T+1).
      'YYYY-MM-DD' -> 'DD/MM'. */
   const ddmm=x=>x?x.slice(8,10)+'/'+x.slice(5,7):'';
@@ -4071,34 +4063,15 @@ function renderRadar(){
     radarCard('🤝','Thoả thuận khối lượng lớn',
       top(c=>(c.ttVol||0)>0,(a,b)=>b.ttVol-a.ttVol)
         .map(c=>row(c,fx(c.ttVol/1e6,1)+' tr cp','')),'tt'),
-  ];
-  const power=[
-    radarCard('🏔️','Vượt / sát đỉnh 52 tuần',
-      top(c=>c.dhi!=null&&c.dhi>=-3&&liq(c)>=5e8,(a,b)=>b.dhi-a.dhi).map(c=>row(c,c.dhi>=-0.05?'đỉnh 52T':fx(c.dhi,1)+'%','up')),'hi52'),
+    /* LẬP ĐỈNH LỊCH SỬ — user chốt GIỮ lại (bỏ cả mục "Sức mạnh giá") và đưa CẠNH thoả thuận. */
     radarCard('👑','Lập đỉnh lịch sử hôm nay',
       top(c=>c.ath===1&&liq(c)>=5e8,(a,b)=>(b.mcapLive||0)-(a.mcapLive||0)).map(c=>row(c,vnd(c.mcapLive),'up')),'ath'),
-    radarCard('⚡','Cắt lên MA50 (10 phiên)',
-      top(c=>c.cross===1&&liq(c)>=1e9,(a,b)=>(b.rs||0)-(a.rs||0)).map(c=>row(c,'RS '+(c.rs||'—'),c.rs>=70?'up':'')),'ma50'),
-    radarCard('🏆','RS Rating dẫn đầu',
-      top(c=>c.rs>=93&&liq(c)>=3e9,(a,b)=>(b.rs||0)-(a.rs||0)).map(c=>row(c,'RS '+c.rs,'up')),'rs'),
-    radarCard('🔗','Chuỗi tăng đang chạy',
-      top(c=>c.streak>=4&&liq(c)>=5e8,(a,b)=>b.streak-a.streak).map(c=>row(c,'+'+c.streak+' phiên','up')),'stku'),
-    radarCard('🟣','Kịch trần — kịch sàn',ceflRows(),'cefl'),
   ];
-  const risk=[
-    radarCard('🧊','Quá bán đang hồi',
-      top(c=>c.rsi!=null&&c.rsi<=35&&c.chg>0&&liq(c)>=1e9,(a,b)=>a.rsi-b.rsi).map(c=>row(c,'RSI '+fx(c.rsi,0),'fo')),'rsi'),
-    radarCard('🌡️','Quá mua (RSI ≥ 75)',
-      top(c=>c.rsi>=75&&liq(c)>=1e9,(a,b)=>b.rsi-a.rsi).map(c=>row(c,'RSI '+fx(c.rsi,0),'dn')),'rsih'),
-    radarCard('🕳️','Chạm / thủng đáy 52 tuần',
-      top(c=>c.dlo!=null&&c.dlo<=1.5&&liq(c)>=5e8,(a,b)=>a.dlo-b.dlo).map(c=>row(c,c.dlo<=0.05?'đáy 52T':'+'+fx(c.dlo,1)+'% đáy','dn')),'lo52'),
-    radarCard('⛓️','Chuỗi giảm đang chạy',
-      top(c=>c.streak<=-4&&liq(c)>=5e8,(a,b)=>a.streak-b.streak).map(c=>row(c,c.streak+' phiên','dn')),'stkd'),
-    radarCard('🔻','Cắt xuống MA50 (10 phiên)',
-      top(c=>c.cross===-1&&liq(c)>=1e9,(a,b)=>(a.rs||99)-(b.rs||99)).map(c=>row(c,'RS '+(c.rs||'—'),'dn')),'ma50d'),
-    radarCard('💤','Thanh khoản rất thấp',
-      top(c=>c.vol>0&&liq(c)>0&&liq(c)<3e8,(a,b)=>a.avgval20-b.avgval20).map(c=>row(c,ty(c.avgval20),'')),'illq'),
-  ];
+  /* HAI MỤC "Sức mạnh giá" và "Mặt tối của phiên" ĐÃ GỠ 27/08/2026 theo yêu cầu user.
+     Thẻ "Lập đỉnh lịch sử hôm nay" (`ath`) được GIỮ, đã dời sang mục Dòng tiền cạnh thoả
+     thuận (xem `flow`). Muốn bật lại thì dựng lại mảng `power`/`risk` + `ceflRows` và thêm
+     hai dòng `sectionHead` bên dưới — dữ liệu (rsi/dhi/dlo/streak/cross/rs…) vẫn còn trong
+     `screen.json`. Mục "Nhóm ngành hôm nay" cũng bỏ; `sectorPanel()` vẫn còn, chỉ thôi gọi. */
 
   const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
   const nnNet=ST.nnBuy-ST.nnSell;
@@ -4125,9 +4098,6 @@ function renderRadar(){
     +'<div id="rdTg"></div>'
     +'<div id="radarAll">'
     +sectionHead('r-flow','💰 Dòng tiền trong CKVN')+'<div class="grid g3">'+flow.join('')+'</div>'
-    +sectionHead('r-power','🚀 Sức mạnh giá')+'<div class="grid g3">'+power.join('')+'</div>'
-    +sectionHead('r-risk','⚠️ Mặt tối của phiên')+'<div class="grid g3">'+risk.join('')+'</div>'
-    +sectionHead('r-sec','🏭 Nhóm ngành hôm nay')+sectorPanel()
     +'</div></div>';
   const bt=$('#vbThem'); if(bt) bt.onclick=()=>{ vbTop+=100; renderRadar(); };
   $$('#m-radar [data-vbs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vbs;
