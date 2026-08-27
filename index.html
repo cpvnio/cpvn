@@ -701,8 +701,6 @@ document.addEventListener(MO,function(e){
 <div class="nguon">Giá trực tiếp &amp; chỉ số: <a href="https://www.vps.com.vn" target="_blank" rel="noopener">Chứng khoán VPS</a>
   · Nến lịch sử, khối ngoại &amp; tin: <a href="https://www.vndirect.com.vn" target="_blank" rel="noopener">VNDIRECT</a></div>
 <footer>
-  <span id="kho">kho dữ liệu: đang kiểm tra…</span>
-  <span>·</span><span>CPVN.IO — dữ liệu HOSE · HNX · UPCOM</span>
   <div class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
     <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không
     cung cấp dịch vụ tư vấn đầu tư chứng khoán. Bộ lọc là công cụ đo theo tiêu chí người
@@ -1060,7 +1058,8 @@ function renderStats(){
   if(bc) bc.onclick=()=>{ ST.bd=null; ST.page=1; render(); renderStats(); };
 }
 function renderKho(){
-  const el=$('kho'), h=CP.health;
+  const el=$('kho'); if(!el) return;   // #kho đã gỡ khỏi footer 27/08/2026
+  const h=CP.health;
   /* NHÃN GIÁ đứng trước, vì nó là thứ ĐANG SỐNG. Hai máy cào cùng chết thì trang vẫn hiện
      giá bình thường, chỉ là số của mấy tiếng trước — nhãn này là chỗ duy nhất lộ ra. */
   const g=CP.nhanGia&&CP.nhanGia();

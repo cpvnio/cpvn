@@ -769,7 +769,7 @@ document.addEventListener(MO,function(e){
     <div id="ptWrap"><canvas id="ptCv"></canvas></div></div>
 </div>
 
-<footer><span id="kho"></span><span>·</span><span>CPVN.IO — Thông tin chứng khoán Việt Nam</span>
+<footer>
   <div class="mientru">Toàn bộ nội dung là dữ liệu và thống kê mô tả quá khứ,
     <b>không phải khuyến nghị đầu tư</b>. CPVN.IO không phải công ty chứng khoán và không
     cung cấp dịch vụ tư vấn đầu tư chứng khoán; mục báo cáo chỉ nêu công ty chứng khoán nào
@@ -2562,7 +2562,7 @@ applyThmIcon();
   loadNnHist();         // dòng tiền khối ngoại 7D/30D: nạp ngầm, bấm là có ngay
   renderPeers(); renderDocsNews();
   const h=CP.health;
-  $('kho').textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;
+  const kel=$('kho'); if(kel) kel.textContent=h?`kho dữ liệu: phiên ${h.date} ${h.ok?'✓':'(một phần)'}`:`kho: phiên ${CP.eodDate||'—'}`;   // #kho đã gỡ 27/08/2026
   CP.startPolling(()=>{ C=CP.coins.get(SYM); renderHero();
       if(gopGiaSongVaoNen()) drawChart();
       if(document.querySelector('#secTabs button[data-t="cn"]').classList.contains('on')) renderPeers();
