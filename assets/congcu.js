@@ -4044,7 +4044,7 @@ function renderRadar(){
      'YYYY-MM-DD' -> 'DD/MM'. */
   const ddmm=x=>x?x.slice(8,10)+'/'+x.slice(5,7):'';
   const tdN=(ST.tdDate&&ST.tdDate!==ST.date)
-    ? ' <small style="opacity:.55;font-weight:400">'+ddmm(ST.tdDate)+'</small>' : '';
+    ? ' <b style="font-weight:700;font-size:.92em;white-space:nowrap">· '+ddmm(ST.tdDate)+'</b>' : '';
   const flow=[
     radarCard('🔥','Đột biến khối lượng',
       top(c=>c.volr>=2&&c.chg>0&&liq(c)>=2e9,(a,b)=>b.volr-a.volr).map(c=>row(c,'×'+fx(c.volr,1)+' KL','up')),'vol'),
