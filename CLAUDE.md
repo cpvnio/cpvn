@@ -3181,9 +3181,14 @@ muốn bật lại chỉ dựng lại `power`/`risk`/`ceflRows` + hai `sectionHe
 
 ### GỘP RADAR VÀO PHÂN TÍCH — MỘT TRANG CUỘN (27/08/2026)
 
-User chốt gộp Radar vào Phân tích thành **một trang cuộn**. Trang Phân tích (`/phantich`) nay:
-**bản đồ thế giới → thẻ dòng tiền (11 thẻ) → bảng chọn phiên → bảng mã**, cuộn liền một mạch.
-Nav từ **4 nhóm xuống 3**: Bảng giá · **Phân tích** · Đường đua.
+User chốt gộp Radar vào Phân tích thành **một trang cuộn**. Bố cục (chốt lại 27/08/2026):
+**bảng chọn phiên → 🌐 bản đồ thế giới (GẤP LẠI, mặc định TẮT) → Toàn thị trường → 💰 Dòng tiền
+(11 thẻ) → Bảng mã**. Nav từ **4 nhóm xuống 3**: Bảng giá · **Phân tích** · Đường đua.
+
+> **BẢN ĐỒ THẾ GIỚI = `<details class="acc" id="ptMap">` gấp lại, mặc định TẮT** — chỉ nạp
+> (và fetch CNBC) khi người dùng MỞ (`ptMapBind` → `napBanDo`, nhớ trạng thái ở
+> `localStorage['cpvn_ptmap']`). Vào trang KHÔNG tốn lượt gọi CNBC nào. `napBanDo` nạp `#rdTg`
+> đúng một lần/lượt dựng (`el._nap`); `tgNhip` nay chỉ chạy khi `nhipHien() && #ptMap.open`.
 
 **MODULE `radar` GIỮ NGUYÊN ID, NAY CHỈ CÒN "KHI NÀO VỀ BỜ".** Không đổi id để khỏi dựng lại
 `BYPATH`/`PATHOF`/`_redirects` và mọi `cur==='radar'`. Đường `/radar` nay dẫn tới Về bờ; nav

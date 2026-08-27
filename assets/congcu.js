@@ -856,8 +856,7 @@ async function ptVe(){
   const co=ptCoFile(o), i=co.indexOf(PT.ngay);
   const opt=co.slice().reverse().map(d=>'<option'+(d===PT.ngay?' selected':'')+'>'+d+'</option>').join('');
   b.innerHTML=
-    nhipHTML()
-    +'<div class="ptbar">'
+    '<div class="ptbar">'
       +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">'+ptIc('trai')+'</button>'
       +'<select id="ptNgay">'+opt+'</select>'
       +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">'+ptIc('phai')+'</button>'
@@ -866,8 +865,12 @@ async function ptVe(){
             +x+'</button>').join('')+'</span>'
       +'<span class="ptbarn">'+co.length+' phiên có bảng mã</span>'
       +'<span class="ptbaon" id="ptBaoN"></span></div>'
-    +'<div id="ptTop"></div><div id="ptTab"></div>';
-  nhipInit();
+    +mapHTML()                                       // bản đồ thế giới — gấp lại, mặc định tắt
+    +'<div id="ptTop"></div>'                        // TOÀN THỊ TRƯỜNG (trên cùng)
+    +'<div id="radarAll">'+nhipCardsHTML()+'</div>'  // DÒNG TIỀN
+    +'<div id="ptTab"></div>';                       // BẢNG MÃ
+  ptMapBind();
+  drawSparks();
   ptTop();
   await ptBang();
   /* ĐỔI KHUNG THÌ CHỈ VẼ LẠI ĐỒ THỊ, đừng dựng lại cả trang: bảng mã và mấy khối dưới
@@ -3935,7 +3938,7 @@ function tgNhip(){
   /* Hỏi mỗi 20 giây nhưng chỉ GỌI MẠNG khi số đã cũ quá 2 phút — cùng ngưỡng với lượt vẽ
      đầu, nên hai đường không giẫm chân nhau. Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích. */
   TG.hen=setInterval(()=>{
-    if(!nhipHien()){ clearInterval(TG.hen); TG.hen=null; return; }
+    if(!nhipHien()||!(($('#ptMap')||{}).open)){ clearInterval(TG.hen); TG.hen=null; return; }
     /* Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích — trừ khi có cờ kiểm thử ?forcelive,
        dùng chung với startLive vì khung xem tự động luôn báo document.hidden=true. */
     if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<TG_HAN) return;
@@ -4063,17 +4066,26 @@ function nhipCardsHTML(){
   ];
   return sectionHead('r-flow','💰 Dòng tiền trong CKVN')+'<div class="grid g3">'+flow.join('')+'</div>';
 }
-function nhipHTML(){ return '<div id="rdTg"></div><div id="radarAll">'+nhipCardsHTML()+'</div>'; }
 function veLaiNhip(){ const el=$('#radarAll'); if(el){ el.innerHTML=nhipCardsHTML(); drawSparks(); } }
-function nhipInit(){
-  drawSparks();
-  /* BẢN ĐỒ nạp qua mạng nên KHÔNG chặn lượt vẽ: hiện "đang lấy…" trước, có số rồi mới thay
-     ruột. Số cũ quá TG_HAN thì lấy lại. Cập nhật tại chỗ theo nhịp riêng `tgNhip`. */
-  const ve=()=>{ const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } };
+/* BẢN ĐỒ THẾ GIỚI = panel GẤP LẠI, MẶC ĐỊNH TẮT (user chốt 27/08/2026). Chỉ nạp (và fetch
+   CNBC) khi người dùng MỞ ra — vào trang không tốn lượt gọi nào. Trạng thái nhớ ở localStorage. */
+function mapHTML(){
+  return '<details class="acc" id="ptMap"><summary>🌐 Bản đồ chứng khoán thế giới</summary>'
+    +'<div class="accb"><div id="rdTg"></div></div></details>';
+}
+function napBanDo(){
+  const el=$('#rdTg'); if(!el||el._nap) return; el._nap=true;   // mỗi lượt dựng trang nạp một lần
+  const ve=()=>{ if(el.isConnected&&$('#rdTg')===el){ el.innerHTML=toanCauPanel(); tgBind(); } };
   if(!TG.rows||Date.now()-TG.at>TG_HAN){
-    tgLoad().then(()=>{ if(nhipHien()) ve(); });
-    const el=$('#rdTg'); if(el) el.innerHTML='<div class="panel"><div class="pb tgce">Đang lấy bản đồ thế giới…</div></div>';
+    el.innerHTML='<div class="panel"><div class="pb tgce">Đang lấy bản đồ thế giới…</div></div>';
+    tgLoad().then(ve);
   } else ve();
+}
+function ptMapBind(){
+  const d=$('#ptMap'); if(!d) return;
+  d.ontoggle=()=>{ LS.set('cpvn_ptmap',d.open);
+    if(d.open){ napBanDo(); tgNhip(); } else { clearInterval(TG.hen); TG.hen=null; } };
+  if(LS.get('cpvn_ptmap',false)){ d.open=true; napBanDo(); tgNhip(); }
 }
 
 /* Module `radar` NAY CHỈ CÒN "Khi nào về bờ" — Nhịp phiên đã gộp vào Phân tích (một trang
