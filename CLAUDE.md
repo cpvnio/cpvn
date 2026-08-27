@@ -51,6 +51,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/kho_thoathuan.py` | 260 | Vá `pv`/`pval` từ Vietstock cho cả kho. **Lượt một lần**, không nằm trong pipeline |
 | `tools/lap_slcp_cu.py` | 190 | Lấp `sh` cho phần ĐẦU khung bằng cách đi ngược `data/sukien`. KHÔNG gọi mạng, bước `[1c]` của lượt EOD |
 | `tools/kho_luuthong.py` | 130 | Tỉ lệ **lưu thông** tính từ sổ cổ đông (`100% − Σ cổ đông ≥5%`) -> ghi đè `freeFloat` trong `data/profile`. KHÔNG gọi mạng, bước `[3b]` của lượt EOD |
+| `tools/kho_dongtien.py` | 90 | Tự doanh ròng phiên + gom 30 phiên + thoả thuận KL từ `data/giaodich` → `data/dongtien.json` (bốn thẻ Radar). KHÔNG gọi mạng, bước `[8b]` sau `va_donvi` |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -69,6 +70,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/dactrung/{MÃ}.json` | **Kho đặc trưng** (~41MB): vòng quay free float, Amihud, biên độ, cộng dồn khối ngoại, đỉnh 52 tuần, và chỉ tiêu cơ bản **gắn theo NGÀY CÔNG BỐ BCTC**. `kho_dactrung.py` |
 | `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang`+`f` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt`+`dtf` lát cắt ngang cho bộ lọc. **FILE NHIỀU CHỦ — MỌI LƯỢT GHI PHẢI TRỘN.** Đã trả giá 21/08/2026, xem mục *Phân tích dữ liệu* |
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
+| `data/dongtien.json` | **Dòng tiền tự doanh + thoả thuận cho Radar** (~7 KB): `td` ròng phiên · `td30` gom 30 phiên (đồng) · `tt[MÃ]=[KL,GT]` thoả thuận. `tdDate` LÙI 1 phiên so `date` (nguồn tự doanh T+1). `tools/kho_dongtien.py` |
 | `data/chiso.json` | 5 chỉ số theo phiên (`d,c,v,pc`) — **VNINDEX từ 28/07/2000**, phiên đầu tiên của chỉ số. Kho CHÍNH, `build_phantich.py` đọc. `kho_giaodich.py --chiso` |
 | `data/chiso/{CHỈ SỐ}.json` | **Bản GẦY của file trên** — chỉ `d`+`c`, cho chart nến trang mã (VNINDEX 34 KB đã nén thay vì 254 KB). Cùng một hàm ghi ra, không thể trôi khỏi nhau |
 | `data/vonhoa/{MÃ}.json` | **Vốn hoá theo phiên, lùi tới 02/01/2013** — 405 mã HOSE, `d`+`v` (đơn vị TỶ). Ba tầng ghép: kho đã soi -> MARKETCAP -> giá thô × vốn góp. 21 KB đã nén/mã, thay cho lượt tải `data/giaodich` 81 KB. `tools/kho_vonhoa.py` |
@@ -3138,6 +3140,37 @@ và luôn theo hướng lạc quan**, và càng nghiêng về mã nhỏ thì cà
 > **ĐỪNG NÓI KHO NÀY ĐÃ CHỮA XONG SỐNG SÓT SAI LỆCH.** Nó chưa có GIÁ của mã đã rời sàn,
 > nên mới chỉ làm cho chỗ thiếu đếm được, chưa đo được lợi suất thật của nhóm đó. Muốn
 > đo thì phải cào nến của chúng, mà **nguồn nến có giữ lại hay không thì chưa dò**.
+
+### RADAR: THẺ TỰ DOANH + THOẢ THUẬN (27/08/2026)
+
+User: *"thêm mục tương tự \[ba thẻ khối ngoại\] nhưng với tự doanh và thoả thuận; ở thoả thuận
+vì không phân biệt được mua hay bán nên chỉ cần liệt kê bảng vol"*. Bốn thẻ mới trong mục
+**💰 Dòng tiền trong CKVN**, đối xứng ba thẻ khối ngoại đã có:
+
+| thẻ | đọc trường | hiện |
+|---|---|---|
+| 🏦 Tự doanh mua ròng phiên | `c.tdVal > 0` | `+ty()` |
+| 📤 Tự doanh bán ròng phiên | `c.tdVal < 0` | `−ty()` |
+| 🧺 Tự doanh gom 30 phiên | `c.td30 > 0` | `+ty()` |
+| 🤝 Thoả thuận khối lượng lớn | `c.ttVol > 0` | `tr cp` |
+
+`kho_dongtien.py` đọc `data/giaodich/*` (đã `va_donvi`) → `data/dongtien.json`; radar tải NỀN
+như `spark.json`, map `tdVal`/`td30`/`ttVol`/`ttVal` lên `ST.list`. Giá sống KHÔNG đụng mấy
+trường này nên vẽ lại thế nào chúng vẫn còn.
+
+> **TỰ DOANH RÒNG = `tdMuaTG − tdBanTG` (VNDirect, ĐÃ GỒM thoả thuận), ĐỪNG lấy `*GT`
+> (Vietstock, chỉ ~251 phiên).** Số ròng lớn của tự doanh phần nhiều là **block trade qua thoả
+> thuận** — kiểm thật: VCK bán 157,8 tỷ = ĐÚNG `pval` thoả thuận, GMD/TNT mua khớp y thoả
+> thuận. Đây đúng chuẩn "tự doanh ròng" mà /phantich đang hiện, không phải nhiễu.
+
+> **TỰ DOANH TRỄ T+1 — nhãn ngày là BẮT BUỘC.** Nguồn `proprietary_trading` công bố sau một
+> phiên, nên `tdDate` (mới nhất **có** số tự doanh) thường LÙI một phiên so với `date` (giá).
+> Ba thẻ tự doanh gắn nhãn `<small>` ngày (vd `24/08`) khi `ST.tdDate !== ST.date`, cho khỏi
+> lẫn với thẻ khối ngoại của phiên hiện tại. Phủ ~57–89 mã/phiên (chỉ mã CÓ tự doanh) — đủ
+> cho thẻ top-5, không phải thiếu dữ liệu.
+
+> **THOẢ THUẬN KHÔNG CÓ "RÒNG"** — mỗi lô có cả người mua lẫn bán, ròng luôn bằng 0. Nên thẻ
+> này chỉ liệt kê **khối lượng** (`pv`), đúng như user chốt; `pval` để dành nhãn phụ.
 
 ## Quy ước toàn site
 
