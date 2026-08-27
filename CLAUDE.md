@@ -4923,6 +4923,12 @@ Mà giấu cũng vô nghĩa: mọi lượt gọi **từ trình duyệt người 
 > **Chưa đưa email vào UA** — chờ có pháp nhân rồi mới thêm địa chỉ của công ty. Đừng phơi
 > liên hệ cá nhân vào log của bên thứ ba khi chưa có lớp bảo vệ nào.
 
+> **NHÃN `#kho` ("kho dữ liệu: phiên… đầy đủ") ĐÃ GỠ 27/08/2026** khỏi footer index.html và
+> cophieu.html (user chốt footer chỉ còn miễn trừ) — nó chỉ là nhãn chẩn đoán (ngày phiên,
+> "thiếu một phần", cảnh báo giá sống cũ), không ràng buộc pháp lý. **`.nguon` thì GIỮ, ĐỪNG
+> gỡ theo** — là lá chắn pháp lý ngay dưới đây, không phải trang trí. `renderKho`/setter ở
+> cophieu nay guard `if(!el) return`.
+
 **GHI NGUỒN đặt NGAY DƯỚI BẢNG GIÁ** (`.nguon` trong index.html), không nhét xuống chân
 trang: *"Giá trực tiếp & chỉ số: Chứng khoán VPS · Nến lịch sử, khối ngoại & tin: VNDIRECT"*.
 Vừa là phép lịch sự tối thiểu, vừa là **cách xin phép ngầm** — tên họ hiện công khai, họ
