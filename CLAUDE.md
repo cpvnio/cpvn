@@ -26,7 +26,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc nhanh |
 | `cophieu.html` | 1169 | Trang một mã: hero giá · thống kê · nến · PTKT toàn màn hình · 5 thẻ nội dung |
 | `bubbles.html` | 2185 | Bong bóng (canvas vật lý) + bản đồ nhiệt (treemap DOM). **Tự chứa bản sao lõi giá** |
-| `congcu.html` + `assets/congcu.js` | 1450+3900 | **5 module**: Radar phiên · Danh mục tập đoàn (kèm tab quỹ) · **Phân tích dữ liệu** · Đường đua vốn hoá · Thông tin niêm yết |
+| `congcu.html` + `assets/congcu.js` | 1450+3900 | **5 module** (nav gộp còn 3 nhóm từ 27/08/2026): **Phân tích dữ liệu** (đầu trang là Nhịp phiên = bản đồ thế giới + thẻ dòng tiền, cuộn xuống là bảng mã theo phiên) · module `radar` NAY = **Khi nào về bờ** · Danh mục tập đoàn (kèm tab quỹ) · Đường đua vốn hoá · Thông tin niêm yết |
 | `assets/core.js` | 522 | **Lõi dữ liệu `CP`** — chỉ index + cophieu dùng. Phần lớn là cơ chế giá |
 | `assets/chart.js` | 798 | **`CPChart`** — bộ vẽ nến canvas tự viết + lớp vẽ PTKT. Không phụ thuộc core.js |
 | `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
@@ -3178,6 +3178,44 @@ muốn bật lại chỉ dựng lại `power`/`risk`/`ceflRows` + hai `sectionHe
 
 > **THOẢ THUẬN KHÔNG CÓ "RÒNG"** — mỗi lô có cả người mua lẫn bán, ròng luôn bằng 0. Nên thẻ
 > này chỉ liệt kê **khối lượng** (`pv`), đúng như user chốt; `pval` để dành nhãn phụ.
+
+### GỘP RADAR VÀO PHÂN TÍCH — MỘT TRANG CUỘN (27/08/2026)
+
+User chốt gộp Radar vào Phân tích thành **một trang cuộn**. Trang Phân tích (`/phantich`) nay:
+**bản đồ thế giới → thẻ dòng tiền (11 thẻ) → bảng chọn phiên → bảng mã**, cuộn liền một mạch.
+Nav từ **4 nhóm xuống 3**: Bảng giá · **Phân tích** · Đường đua.
+
+**MODULE `radar` GIỮ NGUYÊN ID, NAY CHỈ CÒN "KHI NÀO VỀ BỜ".** Không đổi id để khỏi dựng lại
+`BYPATH`/`PATHOF`/`_redirects` và mọi `cur==='radar'`. Đường `/radar` nay dẫn tới Về bờ; nav
+gọi nó là "🛟 Khi nào về bờ", nằm trong menu thả xuống của nhóm **Phân tích**. Module mặc định
+khi vào thẳng `congcu.html` đổi từ `radar` sang **`phantich`**.
+
+**NHỊP PHIÊN THÀNH HÀM DÙNG CHUNG** (`assets/congcu.js`):
+· `nhipHTML()` = `<div id="rdTg">` (bản đồ) + `<div id="radarAll">` (thẻ dòng tiền, do
+  `nhipCardsHTML()` dựng). `renderPhanTich` chèn nó ở ĐẦU màn thị trường (nhánh `!PT.ma`).
+· `nhipInit()` nạp bản đồ + `drawSparks`, gọi một lần khi dựng trang.
+· `nhipHien()` = `cur==='phantich' && !PT.ma` — cổng DUY NHẤT thay cho `cur==='radar'&&radarTab==='phien'` cũ ở `tgNhip`, poll sống và lượt nạp `dongtien`.
+· `veLaiNhip()` — poll sống chỉ vẽ lại **khối thẻ `#radarAll`** rồi `drawSparks`; KHÔNG đụng
+  `#rdTg` (bản đồ tự cập nhật tại chỗ qua `tgNhip`/`tgVeLai`) và KHÔNG đụng bảng mã. Đây là
+  chỗ khác `veLaiTrongNuoc` cũ (dựng lại cả module) — nay bảng mã bên dưới nặng nên phải vá
+  đúng khối thẻ, đừng dựng lại cả trang.
+
+> **TRANG MỘT MÃ (`?sym=`) KHÔNG CÓ NHỊP.** `nhipHien()` sai khi `PT.ma` — nên bấm một mã ở
+> bảng mã là mở trang mã sạch (không bản đồ, không thẻ, không bảng mã), back về là màn thị
+> trường đủ nhịp trở lại. Đã kiểm cả hai chiều.
+
+> **MOBILE (`assets/mobi.js`): thanh đáy còn 3 tab** (Bảng giá · Phân tích · Đường đua). Dải
+> mục con mọc ở nhóm **`pt`** (trước là `radar`): [Bong bóng · Tập đoàn · Về bờ]. `dangO()`
+> ánh xạ /bubbles→['pt','bong'] · /tapdoan→['pt','tap'] · /radar→['pt','vb']. Bong bóng/Tập
+> đoàn vẫn là lối rẽ ở đây (mobile gom "soi thị trường theo góc khác" dưới một tab), đúng
+> tinh thần cũ chỉ đổi tên nhóm từ Radar sang Phân tích.
+
+> **`renderNav` phải sáng mục cha "Phân tích" cả khi `cur==='radar'`** (đang xem Về bờ) — cùng
+> lối với Bảng giá sáng cho tập đoàn/niêm yết. Thiếu là vào Về bờ thì thanh trên tối thui.
+
+> **`veLaiTrongNuoc` thành DEAD CODE** (callers đã chuyển sang `veLaiNhip`); để lại định
+> nghĩa cũng vô hại. `radarTab` còn dùng cho `moTab`/`renderNav` nhưng module radar nay bỏ
+> qua nó (luôn vẽ Về bờ).
 
 ## Quy ước toàn site
 

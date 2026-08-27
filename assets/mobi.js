@@ -27,7 +27,6 @@
      20/08/2026: GIỮA Radar và Đường đua, khớp với thanh máy bàn. */
   var MUC=[
     ['bang','Bảng giá',  '/'],
-    ['radar','Radar',    'congcu.html?m=radar'],
     ['pt','Phân tích',   'congcu.html?m=phantich'],
     ['dua','Đường đua',  'congcu.html?m=race']
   ];
@@ -67,27 +66,30 @@
   function dangO(){
     var p=location.pathname.replace(/\/index\.html$/,'').replace(/\/+$/,'');
     var q=new URLSearchParams(location.search);
-    if(/bubbles/.test(p))  return ['radar','bong'];
+    /* Nhóm PHÂN TÍCH ('pt') nay gom cả Nhịp phiên (trang chính), Bong bóng, Tập đoàn và
+       Về bờ (module 'radar' nay = Về bờ). Bảng giá vẫn sạch, Đường đua đứng riêng. */
+    if(/bubbles/.test(p))  return ['pt','bong'];
     if(/cophieu/.test(p))  return ['bang',''];      /* trang một mã đi ra từ bảng giá */
     if(/duongdua/.test(p)) return ['dua',''];
     if(/phantich/.test(p)) return ['pt',''];
-    if(/tapdoan/.test(p))  return ['radar','tap'];
-    var m=/radar/.test(p) ? 'radar' : /congcu/.test(p) ? (q.get('m')||'radar') : '';
+    if(/tapdoan/.test(p))  return ['pt','tap'];
+    if(/radar/.test(p))    return ['pt','vb'];       /* /radar nay là Về bờ */
+    var m=/congcu/.test(p) ? (q.get('m')||'phantich') : '';
     if(!m)            return ['bang',''];   /* BẢNG GIÁ: không dải mục con */
     if(m==='race')     return ['dua',''];
     if(m==='phantich') return ['pt',''];
-    if(m==='tapdoan') return ['radar','tap'];
-    var tt=q.get('t')||'phien'; if(tt==='tg') tt='phien';   // link cũ ?t=tg
-    return ['radar',tt];   /* phien = mặc định, không nút nào sáng */
+    if(m==='tapdoan') return ['pt','tap'];
+    if(m==='radar')   return ['pt','vb'];
+    return ['pt',''];   /* Nhịp phiên = mặc định, không nút con nào sáng */
   }
 
   function dung(){
     if(document.querySelector('.mobibar')) return;
     var o=dangO(), cur=o[0], con=o[1];
 
-    /* Dải chỉ mọc ở nhóm Radar. Bảng giá và Đường đua không có: bảng giá phải
-       sạch, còn đường đua đã sẵn nút đổi chế độ trong trang. */
-    if(cur==='radar'){
+    /* Dải mục con mọc ở nhóm PHÂN TÍCH (đã gộp Radar vào 27/08/2026). Bảng giá và
+       Đường đua không có: bảng giá phải sạch, đường đua đã sẵn nút đổi chế độ. */
+    if(cur==='pt'){
       var h=document.querySelector('header'), s=document.createElement('div');
       s.className='mobisub';
       s.innerHTML='<div class="mobisub-in">'+CON.map(function(m){

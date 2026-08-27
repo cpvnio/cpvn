@@ -273,7 +273,7 @@ async function loadAll(){
     for(const sym in (dt.td||{})){ const c=ST.map.get(sym); if(c) c.tdVal=dt.td[sym]; }
     for(const sym in (dt.td30||{})){ const c=ST.map.get(sym); if(c) c.td30=dt.td30[sym]; }
     for(const sym in (dt.tt||{})){ const c=ST.map.get(sym); if(c){ c.ttVol=dt.tt[sym][0]; c.ttVal=dt.tt[sym][1]; } }
-    if(cur==='radar'&&radarTab==='phien') veLaiTrongNuoc();
+    if(nhipHien()) veLaiNhip();
   });
   $('#fdate').textContent=ST.date||'—';
 }
@@ -464,7 +464,7 @@ function startLive(){
          mất con trỏ giữa chừng, bàn phím điện thoại đóng sập, gõ dở một mã là cụt. Bỏ qua
          một lượt bơm giá đổi lại việc gõ liền mạch — lượt sau (10 giây) tự bù. */
       const dangGo=document.activeElement&&document.activeElement.id==='vbQ';
-      if(cur==='radar'&&radarTab==='phien') veLaiTrongNuoc();
+      if(nhipHien()) veLaiNhip();
       else if(cur==='radar'&&!dangGo) MODULES.find(x=>x.id==='radar').render();
     }
   };
@@ -856,7 +856,8 @@ async function ptVe(){
   const co=ptCoFile(o), i=co.indexOf(PT.ngay);
   const opt=co.slice().reverse().map(d=>'<option'+(d===PT.ngay?' selected':'')+'>'+d+'</option>').join('');
   b.innerHTML=
-    '<div class="ptbar">'
+    nhipHTML()
+    +'<div class="ptbar">'
       +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">'+ptIc('trai')+'</button>'
       +'<select id="ptNgay">'+opt+'</select>'
       +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">'+ptIc('phai')+'</button>'
@@ -866,6 +867,7 @@ async function ptVe(){
       +'<span class="ptbarn">'+co.length+' phiên có bảng mã</span>'
       +'<span class="ptbaon" id="ptBaoN"></span></div>'
     +'<div id="ptTop"></div><div id="ptTab"></div>';
+  nhipInit();
   ptTop();
   await ptBang();
   /* ĐỔI KHUNG THÌ CHỈ VẼ LẠI ĐỒ THỊ, đừng dựng lại cả trang: bảng mã và mấy khối dưới
@@ -3001,7 +3003,7 @@ function ptBind(){
 }
 
 const MODULES=[
-  {id:'radar', ic:'📡', name:'Radar phiên', tag:'',
+  {id:'radar', ic:'🛟', name:'Khi nào về bờ', tag:'',
    meta:[], render:renderRadar},
   {id:'tapdoan', ic:'🏢', name:'Danh mục tập đoàn', tag:'Gom công ty cùng một nhà để soi dòng tiền chảy vào cả họ — và lật danh mục các quỹ đang nắm giữ.',
    meta:[], render:renderTapDoan},
@@ -3015,7 +3017,7 @@ const MODULES=[
 let cur=null; const done={};
 const PATHOF={radar:'/radar',tapdoan:'/tapdoan',race:'/duongdua',niemyet:'/niemyet',
               phantich:'/phantich'};
-const TITLEOF={radar:'Radar phiên',tapdoan:'Danh mục tập đoàn',race:'Đường đua vốn hoá',
+const TITLEOF={radar:'Khi nào về bờ',tapdoan:'Danh mục tập đoàn',race:'Đường đua vốn hoá',
                niemyet:'Thông tin niêm yết',phantich:'Phân tích dữ liệu'};
 /* ĐƯỜNG DẪN SẠCH -> MODULE. Trước nằm ngay trong `init` nên `popstate` không với tới được;
    nhấc ra đây để hai chỗ đọc CÙNG một bảng — lệch nhau là bấm Lùi về đúng URL cũ mà nội
@@ -3056,6 +3058,9 @@ function renderNav(){
   /* mục con đang xem cũng sáng theo, để mở menu ra là biết mình đứng ở đâu */
   const tNay=cur==='radar'?radarTab:cur==='race'?(RA.mode==='dca'?'dca':'dua'):null;
   $$('.dd a[data-md]').forEach(a=>a.classList.toggle('on',a.dataset.md===cur&&a.dataset.t===tNay));
+  /* "Khi nào về bờ" (module radar) NẰM TRONG nhóm Phân tích -> mục cha "Phân tích" phải sáng
+     cả khi đang xem Về bờ, cùng lối với Bảng giá sáng cho tập đoàn/niêm yết ở trên. */
+  const ptp=$('.tabs a[data-m="phantich"]'); if(ptp) ptp.classList.toggle('on',cur==='phantich'||cur==='radar');
 }
 function head(m){
   return '<div class="mhead"><span class="eyebrow">CPVN.IO — công cụ thị trường</span>'+
@@ -3930,7 +3935,7 @@ function tgNhip(){
   /* Hỏi mỗi 20 giây nhưng chỉ GỌI MẠNG khi số đã cũ quá 2 phút — cùng ngưỡng với lượt vẽ
      đầu, nên hai đường không giẫm chân nhau. Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích. */
   TG.hen=setInterval(()=>{
-    if(cur!=='radar'||radarTab!=='phien'){ clearInterval(TG.hen); TG.hen=null; return; }
+    if(!nhipHien()){ clearInterval(TG.hen); TG.hen=null; return; }
     /* Tab ẩn thì thôi, khỏi tốn lượt gọi vô ích — trừ khi có cờ kiểm thử ?forcelive,
        dùng chung với startLive vì khung xem tự động luôn báo document.hidden=true. */
     if((document.hidden&&!FORCE_LIVE)||Date.now()-TG.at<TG_HAN) return;
@@ -3938,7 +3943,7 @@ function tgNhip(){
        không bao giờ còn mang giá trị 'tg'. Để sót một chữ ở đây là mỗi 2 phút vẫn tải số
        mới về đàng hoàng rồi VỨT ĐI — bản đồ đứng im, đúng cái cảnh "mở lúc 9 giờ tối xem
        Mỹ mà số không nhúc nhích" mà nhịp riêng này sinh ra để chữa. */
-    tgLoad().then(()=>{ if(cur==='radar'&&radarTab==='phien') tgVeLai(); });
+    tgLoad().then(()=>{ if(nhipHien()) tgVeLai(); });
   },20000);
 }
 
@@ -4015,14 +4020,15 @@ function tgKhung(M,path,cham,tang,giam,nhan){
 }
 
 let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'vb'  ('cd' đã bỏ 16/08/2026)
-function renderRadar(){
-  const m=MODULES.find(x=>x.id==='radar');
+/* ============ NHỊP PHIÊN — bản đồ thế giới + thẻ dòng tiền ============
+   Trước là tab 'phien' của module radar; GỘP vào đầu trang Phân tích 27/08/2026
+   (user chốt: một trang cuộn). `nhipHien()` = đang ở trang Phân tích, màn thị trường
+   (không phải trang một mã). Poll sống chỉ vẽ lại KHỐI THẺ (`#radarAll`) qua `veLaiNhip`,
+   giữ nguyên bản đồ `#rdTg` và toàn bộ bảng mã bên dưới. */
+function nhipHien(){ return cur==='phantich' && !PT.ma; }
+function nhipCardsHTML(){
   const L=ST.list, liq=c=>(c.avgval20||0);
-  const top=(f,s,n)=>L.filter(c=>c.close>0).filter(f).sort(s).slice(0,n||5);
-  const md=moodLive(), s=marketStats(), tot=Math.max(1,s.up+s.dn+s.fl);
-
-  /* Nhãn ngày cho thẻ tự doanh: chỉ hiện khi phiên tự doanh LÙI so với phiên giá (nguồn T+1).
-     'YYYY-MM-DD' -> 'DD/MM'. */
+  const top=(f,srt,n)=>L.filter(c=>c.close>0).filter(f).sort(srt).slice(0,n||5);
   const ddmm=x=>x?x.slice(8,10)+'/'+x.slice(5,7):'';
   const tdN=(ST.tdDate&&ST.tdDate!==ST.date)
     ? ' <b style="font-weight:700;font-size:.92em;white-space:nowrap">· '+ddmm(ST.tdDate)+'</b>' : '';
@@ -4039,88 +4045,58 @@ function renderRadar(){
       top(c=>c.nnVal<0,(a,b)=>a.nnVal-b.nnVal).map(c=>row(c,'−'+ty(-c.nnVal),'dn')),'nns'),
     radarCard('🧲','Khối ngoại gom 30 phiên',
       top(c=>(c.nn20||0)>0,(a,b)=>b.nn20-a.nn20).map(c=>row(c,'+'+ty(c.nn20),'up')),'nng'),
-    /* TỰ DOANH — bộ tương tự khối ngoại. `tdVal` = ròng phiên · `td30` = gom 30 phiên (đồng,
-       gồm cả thoả thuận, đúng chuẩn "tự doanh ròng"). Nhãn ngày `tdN` vì nguồn trễ một phiên. */
+    /* TỰ DOANH — `tdVal` ròng phiên · `td30` gom 30 phiên (đồng, gồm thoả thuận). Nhãn ngày
+       `tdN` vì nguồn trễ một phiên. */
     radarCard('🏦','Tự doanh mua ròng phiên'+tdN,
       top(c=>(c.tdVal||0)>0,(a,b)=>b.tdVal-a.tdVal).map(c=>row(c,'+'+ty(c.tdVal),'up')),'tdb'),
     radarCard('📤','Tự doanh bán ròng phiên'+tdN,
       top(c=>(c.tdVal||0)<0,(a,b)=>a.tdVal-b.tdVal).map(c=>row(c,'−'+ty(-c.tdVal),'dn')),'tds'),
     radarCard('🧺','Tự doanh gom 30 phiên'+tdN,
       top(c=>(c.td30||0)>0,(a,b)=>b.td30-a.td30).map(c=>row(c,'+'+ty(c.td30),'up')),'tdg'),
-    /* THOẢ THUẬN — không tách được mua/bán nên chỉ liệt kê khối lượng (user chốt). Đơn vị
-       triệu cổ phiếu cho gọn; kèm giá trị tỷ ở nhãn phụ. */
+    /* THOẢ THUẬN — chỉ liệt kê khối lượng (không tách được mua/bán). */
     radarCard('🤝','Thoả thuận khối lượng lớn',
       top(c=>(c.ttVol||0)>0,(a,b)=>b.ttVol-a.ttVol)
         .map(c=>row(c,fx(c.ttVol/1e6,1)+' tr cp','')),'tt'),
-    /* LẬP ĐỈNH LỊCH SỬ — user chốt GIỮ lại (bỏ cả mục "Sức mạnh giá") và đưa CẠNH thoả thuận. */
+    /* LẬP ĐỈNH LỊCH SỬ — user chốt giữ, đưa cạnh thoả thuận. */
     radarCard('👑','Lập đỉnh lịch sử hôm nay',
       top(c=>c.ath===1&&liq(c)>=5e8,(a,b)=>(b.mcapLive||0)-(a.mcapLive||0)).map(c=>row(c,vnd(c.mcapLive),'up')),'ath'),
   ];
-  /* HAI MỤC "Sức mạnh giá" và "Mặt tối của phiên" ĐÃ GỠ 27/08/2026 theo yêu cầu user.
-     Thẻ "Lập đỉnh lịch sử hôm nay" (`ath`) được GIỮ, đã dời sang mục Dòng tiền cạnh thoả
-     thuận (xem `flow`). Muốn bật lại thì dựng lại mảng `power`/`risk` + `ceflRows` và thêm
-     hai dòng `sectionHead` bên dưới — dữ liệu (rsi/dhi/dlo/streak/cross/rs…) vẫn còn trong
-     `screen.json`. Mục "Nhóm ngành hôm nay" cũng bỏ; `sectorPanel()` vẫn còn, chỉ thôi gọi. */
+  return sectionHead('r-flow','💰 Dòng tiền trong CKVN')+'<div class="grid g3">'+flow.join('')+'</div>';
+}
+function nhipHTML(){ return '<div id="rdTg"></div><div id="radarAll">'+nhipCardsHTML()+'</div>'; }
+function veLaiNhip(){ const el=$('#radarAll'); if(el){ el.innerHTML=nhipCardsHTML(); drawSparks(); } }
+function nhipInit(){
+  drawSparks();
+  /* BẢN ĐỒ nạp qua mạng nên KHÔNG chặn lượt vẽ: hiện "đang lấy…" trước, có số rồi mới thay
+     ruột. Số cũ quá TG_HAN thì lấy lại. Cập nhật tại chỗ theo nhịp riêng `tgNhip`. */
+  const ve=()=>{ const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } };
+  if(!TG.rows||Date.now()-TG.at>TG_HAN){
+    tgLoad().then(()=>{ if(nhipHien()) ve(); });
+    const el=$('#rdTg'); if(el) el.innerHTML='<div class="panel"><div class="pb tgce">Đang lấy bản đồ thế giới…</div></div>';
+  } else ve();
+}
 
-  const vni=(ST.indices||[]).find(i=>/VNINDEX/i.test(i.name));
-  const nnNet=ST.nnBuy-ST.nnSell;
-  /* THANH KHOẢN lấy số CHÍNH THỨC của cả sàn (VPS trả kèm chỉ số), KHÔNG cộng gtgd từng
-     mã: bảng giá chỉ có phần khớp lệnh, thiếu hẳn thoả thuận. Phiên 06/08 cộng tay ra
-     13.411 tỷ cho cả 3 sàn, trong khi riêng HOSE đã là 15.136 tỷ. Kho cũ chưa có trường
-     này thì rơi về cách cộng cũ, thà thiếu còn hơn trống. */
-  const gSan=nm=>(((ST.indices||[]).find(i=>i.name===nm)||{}).gtgd)||0;
-  const gHose=gSan('VNINDEX'), gPhu=gSan('HNX')+gSan('UPCOM');
-  const infoRow=(k,v,cls2)=>'<div class="rrRow"><span>'+k+'</span>'+
-    '<b class="bdg '+(cls2||'')+'">'+v+'</b></div>';
-  /* TAB ngay đầu trang radar: xem nhịp phiên hay soi tập đoàn. Để tập đoàn thành một mục
-     riêng trên thanh điều hướng chính thì nó tách khỏi bối cảnh phiên, mà hai thứ này
-     người xem hay đọc nối nhau. */
-  $('#m-radar').innerHTML=head(m)
-    /* dải tab của radar đã dọn lên MENU THẢ XUỐNG của mục "Radar" trên thanh trên —
-       giữ lại ở đây là hai chỗ chọn cùng một thứ, lại ăn thêm một hàng */
-    +'<div id="rdVb"'+(radarTab==='vb'?'':' style="display:none"')+'>'
-    +(radarTab==='vb'?veBoPanel():'')+'</div>'
-    +'<div id="rdPhien"'+(radarTab!=='phien'?' style="display:none"':'')+'>'
-    /* BẢN ĐỒ THẾ GIỚI đứng ngay đầu Radar phiên, thay cho cụm ba thẻ cũ (nhịp sợ hãi
-       trong nước / toàn cầu / tóm tắt chỉ số). Cụm đó lặp lại thứ đã có ở thanh đầu trang
-       và ăn nguyên một màn trước khi thấy nội dung thật. */
-    +'<div id="rdTg"></div>'
-    +'<div id="radarAll">'
-    +sectionHead('r-flow','💰 Dòng tiền trong CKVN')+'<div class="grid g3">'+flow.join('')+'</div>'
-    +'</div></div>';
+/* Module `radar` NAY CHỈ CÒN "Khi nào về bờ" — Nhịp phiên đã gộp vào Phân tích (một trang
+   cuộn). Giữ id 'radar' và đường /radar để khỏi dựng lại BYPATH/_redirects; nav gọi nó là
+   "Khi nào về bờ", nằm trong nhóm Phân tích. */
+function renderRadar(){
+  $('#m-radar').innerHTML=veBoPanel();
   const bt=$('#vbThem'); if(bt) bt.onclick=()=>{ vbTop+=100; renderRadar(); };
   $$('#m-radar [data-vbs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vbs;
     if(vbSort.k===k) vbSort.d=-vbSort.d; else { vbSort.k=k; vbSort.d=(k==='roi'?1:-1); }
     vbTop=100; renderRadar(); });
-  /* chip chế độ — về đầu danh sách vì rổ đổi hẳn; `vbTop` phải reset, bằng không đang mở
-     300 mã của rổ cũ thì rổ mới cũng bung sẵn 300 dòng */
   $$('#m-radar [data-vbc]').forEach(b=>b.onclick=()=>{
-    if(tachMa(vbQ).length) return;                // đang gõ mã thì chip vô hiệu, đúng như vẻ mờ của nó
+    if(tachMa(vbQ).length) return;                // đang gõ mã thì chip vô hiệu
     vbChe=b.dataset.vbc; vbTop=100;
-    /* HƯỚNG XẾP ĐI THEO CHẾ ĐỘ. Rổ "Gần đỉnh" mà vẫn xếp rơi-nhiều-nhất-trước thì mở ra
-       thấy ngay mã −9,9% còn mã đang ở đúng đỉnh nằm tận cuối — ngược hẳn thứ vừa bấm vào
-       để tìm. Chỉ chỉnh khi đang xếp theo MỨC RƠI; ai đã chuyển sang vốn hoá thì để yên,
-       và chiều vẫn lật tay được như cũ. */
     if(vbSort.k==='roi') vbSort.d=(vbChe==='gan'?-1:1);
     renderRadar();
     const el=$('#vbChe'), hd=document.querySelector('header');
-    /* đọc rect TRƯỚC rồi mới tới scrollY — xem chú thích dài ở chip lọc bảng tập đoàn */
     if(el){ const dinh=el.getBoundingClientRect().top;
       scrollTo({top:Math.max(0,dinh+scrollY
         -((hd?hd.getBoundingClientRect().height:0)+10)),behavior:'auto'}); } });
   vbBind();
-  if(radarTab==='phien') drawSparks($('#m-radar'));
-  if(radarTab==='phien'&&!tgGiu){
-    /* Bản đồ nạp qua mạng nên KHÔNG chặn lượt vẽ: hiện "đang lấy…" trước, có số rồi mới
-       thay ruột. Số cũ quá 2 phút thì lấy lại — chợ nước ngoài không nhảy nhanh tới mức
-       phải hỏi mỗi phút. */
-    const ve=()=>{ const el=$('#rdTg'); if(el){ el.innerHTML=toanCauPanel(); tgBind(); tgNhip(); } };
-    if(!TG.rows||Date.now()-TG.at>TG_HAN){
-      tgLoad().then(()=>{ if(radarTab==='phien') ve(); });
-      const el=$('#rdTg'); if(el) el.innerHTML='<div class="panel"><div class="pb tgce">Đang lấy bản đồ thế giới…</div></div>';
-    } else ve();
-  }
 }
+
 /* Rê/chạm vào một nước -> hiện thẻ nhỏ. Gắn theo lối UỶ QUYỀN trên khung ngoài, không
    gắn 174 listener lên từng path; và chạm cũng ăn, kẻo trên điện thoại bản đồ thành
    một mảng màu không tra cứu được gì. */
@@ -5327,7 +5303,7 @@ async function init(){
   if(s0&&/^[A-Z0-9]{3,10}$/.test(s0)) PT.ma=s0;
   const cached=applyLiveCache();          // có bộ nhớ sống -> vẽ TỨC THÌ, poll chạy nền
   if(!cached&&sessionOpenVN()) await pollLive();   // lần đầu tiên trong phiên mới phải chờ (~1s)
-  showMod(MODULES.some(m=>m.id===start)?start:'radar');
+  showMod(MODULES.some(m=>m.id===start)?start:'phantich');
   updateHeadChips();   // chip nhịp đập + ngày đúng NGAY (kể cả khi dùng bản đệm)
   startLive();         // rồi giữ nhịp mỗi phút
   $('#load').classList.add('off');
