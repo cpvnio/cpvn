@@ -5315,7 +5315,8 @@ async function init(){
   const q=new URLSearchParams(location.search).get('m');
   const byPath=BYPATH[location.pathname.replace(/\//g,'')];
   let start=q||byPath||(location.hash||'').replace('#','');
-  if(start==='radar'){ start='phantich'; PT.tab='vb'; }   // /radar cũ -> tab Về bờ
+  /* /radar cũ (pathname, vì rewrite 200 KHÔNG truyền query cho JS) -> tab Về bờ của Phân tích */
+  if(start==='radar'||location.pathname.replace(/\//g,'')==='radar'){ start='phantich'; PT.tab='vb'; }
   /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
   const t0=new URLSearchParams(location.search).get('t');
   if(t0==='vb') PT.tab='vb';
