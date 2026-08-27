@@ -26,7 +26,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `index.html` | 925 | **Trang chủ** — bảng giá 13 cột, 100 mã/trang, cột ngành trái, bộ lọc nhanh |
 | `cophieu.html` | 1169 | Trang một mã: hero giá · thống kê · nến · PTKT toàn màn hình · 5 thẻ nội dung |
 | `bubbles.html` | 2185 | Bong bóng (canvas vật lý) + bản đồ nhiệt (treemap DOM). **Tự chứa bản sao lõi giá** |
-| `congcu.html` + `assets/congcu.js` | 1450+3900 | **5 module** (nav gộp còn 3 nhóm từ 27/08/2026): **Phân tích dữ liệu** (đầu trang là Nhịp phiên = bản đồ thế giới + thẻ dòng tiền, cuộn xuống là bảng mã theo phiên) · module `radar` NAY = **Khi nào về bờ** · Danh mục tập đoàn (kèm tab quỹ) · Đường đua vốn hoá · Thông tin niêm yết |
+| `congcu.html` + `assets/congcu.js` | 1450+3900 | **4 module** (nav 3 nhóm từ 27/08/2026): **Phân tích dữ liệu** — có HAI TAB `📊 Thị trường` (bản đồ thế giới gấp + dòng tiền + bảng mã) và `🛟 Khi nào về bờ` (`PT.tab`) · Danh mục tập đoàn (kèm tab quỹ) · Đường đua vốn hoá · Thông tin niêm yết. Module `radar` ĐÃ BỎ (Về bờ thành tab). |
 | `assets/core.js` | 522 | **Lõi dữ liệu `CP`** — chỉ index + cophieu dùng. Phần lớn là cơ chế giá |
 | `assets/chart.js` | 798 | **`CPChart`** — bộ vẽ nến canvas tự viết + lớp vẽ PTKT. Không phụ thuộc core.js |
 | `assets/screener.js` | 93 | `CPScreen` — bộ lọc, nạp lười `screen.json`+`fund.json` khi mở panel |
@@ -3190,10 +3190,18 @@ User chốt gộp Radar vào Phân tích thành **một trang cuộn**. Bố c�
 > `localStorage['cpvn_ptmap']`). Vào trang KHÔNG tốn lượt gọi CNBC nào. `napBanDo` nạp `#rdTg`
 > đúng một lần/lượt dựng (`el._nap`); `tgNhip` nay chỉ chạy khi `nhipHien() && #ptMap.open`.
 
-**MODULE `radar` GIỮ NGUYÊN ID, NAY CHỈ CÒN "KHI NÀO VỀ BỜ".** Không đổi id để khỏi dựng lại
-`BYPATH`/`PATHOF`/`_redirects` và mọi `cur==='radar'`. Đường `/radar` nay dẫn tới Về bờ; nav
-gọi nó là "🛟 Khi nào về bờ", nằm trong menu thả xuống của nhóm **Phân tích**. Module mặc định
-khi vào thẳng `congcu.html` đổi từ `radar` sang **`phantich`**.
+**"KHI NÀO VỀ BỜ" NAY LÀ TAB CỦA PHÂN TÍCH (27/08/2026), MODULE `radar` ĐÃ BỎ.** User chốt
+gộp nốt Về bờ thành mục con thật. Phân tích có hai tab (`ptTabsHTML`/`bindPtTabs`, `PT.tab` ∈
+{`tt`,`vb`}): `📊 Thị trường` và `🛟 Khi nào về bờ`. Chuyển tab bằng `moTab('phantich',t)` —
+đổi TẠI CHỖ (`ptVe()` + `replaceState`), không đẩy history (như mọi module). URL tab Về bờ =
+`?t=vb` (`duongMod` gắn). `/radar` và `?m=radar` cũ nay **rewrite/route sang `phantich?t=vb`**
+(`_redirects` + guard `if(start==='radar')` trong `init`). Module mặc định = `phantich`.
+
+> **`renderRadar()` GIỮ TÊN nhưng nay vẽ tab Về bờ VÀO `#ptBody`** (không phải `#m-radar` — đã
+> bỏ). Nhờ giữ tên, mọi bind cũ của Về bờ (`vbBind`, các nút `data-vbs`/`data-vbc`, ô `#vbQ`)
+> vẫn gọi `renderRadar()` để vẽ lại đúng — chỉ đổi ĐÍCH selector `#m-radar` → `#ptBody`/document.
+> Poll sống: Về bờ cập nhật giá bằng `renderRadar()` khi `cur==='phantich'&&PT.tab==='vb'`.
+> `nhipHien()` (bản đồ + dòng tiền) nay còn loại trừ `PT.tab==='vb'` — tab Về bờ không có nhịp.
 
 **NHỊP PHIÊN THÀNH HÀM DÙNG CHUNG** (`assets/congcu.js`):
 · `nhipHTML()` = `<div id="rdTg">` (bản đồ) + `<div id="radarAll">` (thẻ dòng tiền, do

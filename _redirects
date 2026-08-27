@@ -13,7 +13,7 @@
 /cophieu/:sym    /cophieu?sym=:sym     200
 # 4 công cụ dùng chung congcu.html — URL không gạch nối, mở đúng module
 /bandonhiet      /bubbles?view=heat    301
-/radar           /congcu?m=radar       200
+/radar           /congcu?m=phantich&t=vb   200
 /sogang          /bandonhiet           301
 /tapdoan         /congcu?m=tapdoan     200
 /niemyet         /congcu?m=niemyet     200

@@ -465,7 +465,7 @@ function startLive(){
          một lượt bơm giá đổi lại việc gõ liền mạch — lượt sau (10 giây) tự bù. */
       const dangGo=document.activeElement&&document.activeElement.id==='vbQ';
       if(nhipHien()) veLaiNhip();
-      else if(cur==='radar'&&!dangGo) MODULES.find(x=>x.id==='radar').render();
+      else if(cur==='phantich'&&PT.tab==='vb'&&!dangGo) renderRadar();
     }
   };
   tick();
@@ -779,7 +779,7 @@ const PT_HIEN={
    dùng cho CẢ nút, ô chú thích lẫn nhãn ô đọc số — khai một chỗ để ba chỗ không trôi. */
 const PT_IDX_SAN={HOSE:['VNINDEX','VN-Index'],HNX:['HNX','HNX-Index'],UPCOM:['UPCOM','UPCOM-Index']};
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
-          n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{},
+          n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{}, tab:'tt',
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           vh:LS.get('cpvn_ptvh',true),
           /* VỐN HOÁ TOÀN THỊ TRƯỜNG quy về cùng tầm với vốn hoá của mã — mặc định TẮT.
@@ -809,6 +809,15 @@ async function ptPhien(ng){
   catch(e){ PT.phien[ng]=null; }
   return PT.phien[ng];
 }
+
+/* HAI TAB CỦA TRANG PHÂN TÍCH (user chốt 27/08/2026: gộp "Khi nào về bờ" thành mục con):
+   📊 Thị trường (bản đồ + dòng tiền + bảng mã) · 🛟 Khi nào về bờ. `PT.tab` giữ tab đang xem. */
+function ptTabsHTML(active){
+  return '<div class="ptseg pttabs">'
+    +'<button data-pt="tt"'+(active!=='vb'?' class="on"':'')+'>📊 Thị trường</button>'
+    +'<button data-pt="vb"'+(active==='vb'?' class="on"':'')+'>🛟 Khi nào về bờ</button></div>';
+}
+function bindPtTabs(){ $$('#ptBody [data-pt]').forEach(b=>b.onclick=()=>moTab('phantich', b.dataset.pt==='vb'?'vb':null)); }
 
 async function renderPhanTich(){
   /* KHÔNG DỰNG `head(m)` — user chốt 21/08/2026 ("bỏ khối tiêu đề"). Ba dòng "CPVN.IO —
@@ -853,10 +862,12 @@ async function ptVe(){
     ptVeMa();
     return;
   }
+  if(PT.tab==='vb'){ renderRadar(); return; }   // tab "Khi nào về bờ" — vẽ vào #ptBody
   const co=ptCoFile(o), i=co.indexOf(PT.ngay);
   const opt=co.slice().reverse().map(d=>'<option'+(d===PT.ngay?' selected':'')+'>'+d+'</option>').join('');
   b.innerHTML=
-    '<div class="ptbar">'
+    ptTabsHTML('tt')
+    +'<div class="ptbar">'
       +'<button id="ptTruoc" class="ptnav"'+(i<=0?' disabled':'')+' title="Phiên trước">'+ptIc('trai')+'</button>'
       +'<select id="ptNgay">'+opt+'</select>'
       +'<button id="ptSau" class="ptnav"'+(i<0||i>=co.length-1?' disabled':'')+' title="Phiên sau">'+ptIc('phai')+'</button>'
@@ -869,6 +880,7 @@ async function ptVe(){
     +'<div id="ptTop"></div>'                        // TOÀN THỊ TRƯỜNG (trên cùng)
     +'<div id="radarAll">'+nhipCardsHTML()+'</div>'  // DÒNG TIỀN
     +'<div id="ptTab"></div>';                       // BẢNG MÃ
+  bindPtTabs();
   ptMapBind();
   drawSparks();
   ptTop();
@@ -3006,8 +3018,6 @@ function ptBind(){
 }
 
 const MODULES=[
-  {id:'radar', ic:'🛟', name:'Khi nào về bờ', tag:'',
-   meta:[], render:renderRadar},
   {id:'tapdoan', ic:'🏢', name:'Danh mục tập đoàn', tag:'Gom công ty cùng một nhà để soi dòng tiền chảy vào cả họ — và lật danh mục các quỹ đang nắm giữ.',
    meta:[], render:renderTapDoan},
   {id:'phantich', ic:'📊', name:'Phân tích dữ liệu', tag:'Số chốt phiên và sổ lệnh khi chốt phiên của cả thị trường — khớp lệnh tách khỏi thoả thuận, và áp lực đặt mua so với đặt bán.',
@@ -3025,7 +3035,7 @@ const TITLEOF={radar:'Khi nào về bờ',tapdoan:'Danh mục tập đoàn',race
 /* ĐƯỜNG DẪN SẠCH -> MODULE. Trước nằm ngay trong `init` nên `popstate` không với tới được;
    nhấc ra đây để hai chỗ đọc CÙNG một bảng — lệch nhau là bấm Lùi về đúng URL cũ mà nội
    dung lại ra module khác. */
-const BYPATH={radar:'radar',tapdoan:'tapdoan',duongdua:'race',niemyet:'niemyet',
+const BYPATH={tapdoan:'tapdoan',duongdua:'race',niemyet:'niemyet',
               phantich:'phantich'};
 /* ĐƯỜNG DẪN CỦA MỘT TRẠNG THÁI — dùng chung cho `showMod` (replaceState) và cho lượt mở
    một mã ở Phân tích dữ liệu (pushState). Gom một chỗ vì hai bên PHẢI sinh ra cùng một
@@ -3037,6 +3047,7 @@ const BYPATH={radar:'radar',tapdoan:'tapdoan',duongdua:'race',niemyet:'niemyet',
    đang trỏ sang, khỏi đẻ thêm quy ước thứ hai. */
 function duongMod(id,sym){
   let u=/\.html$/i.test(location.pathname)?('congcu.html?m='+id):PATHOF[id];
+  if(id==='phantich'&&PT.tab==='vb'&&!sym) u+=(u.indexOf('?')>=0?'&':'?')+'t=vb';
   if(sym) u+=(u.indexOf('?')>=0?'&':'?')+'sym='+encodeURIComponent(sym);
   return u;
 }
@@ -3059,11 +3070,9 @@ function renderNav(){
   const fam=$('.tabs .tw:first-child>a');
   if(fam) fam.classList.toggle('on',cur==='tapdoan'||cur==='niemyet');
   /* mục con đang xem cũng sáng theo, để mở menu ra là biết mình đứng ở đâu */
-  const tNay=cur==='radar'?radarTab:cur==='race'?(RA.mode==='dca'?'dca':'dua'):null;
+  const tNay=cur==='phantich'?(PT.tab==='vb'?'vb':undefined):cur==='race'?(RA.mode==='dca'?'dca':'dua'):null;
   $$('.dd a[data-md]').forEach(a=>a.classList.toggle('on',a.dataset.md===cur&&a.dataset.t===tNay));
-  /* "Khi nào về bờ" (module radar) NẰM TRONG nhóm Phân tích -> mục cha "Phân tích" phải sáng
-     cả khi đang xem Về bờ, cùng lối với Bảng giá sáng cho tập đoàn/niêm yết ở trên. */
-  const ptp=$('.tabs a[data-m="phantich"]'); if(ptp) ptp.classList.toggle('on',cur==='phantich'||cur==='radar');
+
 }
 function head(m){
   return '<div class="mhead"><span class="eyebrow">CPVN.IO — công cụ thị trường</span>'+
@@ -3072,8 +3081,12 @@ function head(m){
 }
 /* chọn tab bên trong của một module từ menu thả xuống */
 function moTab(m,t){
-  /* 'tg' gộp vào 'phien' từ 13/08/2026 — giữ nhánh này để link cũ ?t=tg còn mở được */
-  if(m==='radar'){ radarTab=(t==='vb')?t:'phien'; if(cur==='radar') renderRadar(); else done.radar=0; }
+  /* PHÂN TÍCH có hai tab: 'tt' (thị trường) và 'vb' (Khi nào về bờ). Đổi tab TẠI CHỖ nếu đang
+     ở Phân tích; bằng không đặt PT.tab rồi để showMod dựng. */
+  if(m==='phantich'){ PT.tab=(t==='vb')?'vb':'tt';
+    if(cur==='phantich'){ ptVe(); document.title=tieuDe(m);
+      history.replaceState(history.state,'',duongMod(m)); renderNav();
+      scrollTo({top:0,behavior:'smooth'}); return; } }
   /* ĐANG Ở TRANG ĐUA thì BẤM THẲNG nút chuyển chế độ có sẵn, đừng dựng lại module:
      nút đó mới là chỗ chạy syncMode (dừng animation, về vạch xuất phát, đổi khung đồ thị).
      Dựng lại module tưởng gọn mà chế độ không đổi — đã dính đúng vậy. */
@@ -4028,7 +4041,7 @@ let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'vb'  ('c
    (user chốt: một trang cuộn). `nhipHien()` = đang ở trang Phân tích, màn thị trường
    (không phải trang một mã). Poll sống chỉ vẽ lại KHỐI THẺ (`#radarAll`) qua `veLaiNhip`,
    giữ nguyên bản đồ `#rdTg` và toàn bộ bảng mã bên dưới. */
-function nhipHien(){ return cur==='phantich' && !PT.ma; }
+function nhipHien(){ return cur==='phantich' && !PT.ma && PT.tab!=='vb'; }
 function nhipCardsHTML(){
   const L=ST.list, liq=c=>(c.avgval20||0);
   const top=(f,srt,n)=>L.filter(c=>c.close>0).filter(f).sort(srt).slice(0,n||5);
@@ -4087,15 +4100,17 @@ function ptMapBind(){
 /* Module `radar` NAY CHỈ CÒN "Khi nào về bờ" — Nhịp phiên đã gộp vào Phân tích (một trang
    cuộn). Giữ id 'radar' và đường /radar để khỏi dựng lại BYPATH/_redirects; nav gọi nó là
    "Khi nào về bờ", nằm trong nhóm Phân tích. */
-function renderRadar(){
-  $('#m-radar').innerHTML=veBoPanel();
+function renderRadar(){   // NAY = vẽ tab "Khi nào về bờ" TRONG trang Phân tích (#ptBody)
+  const b=$('#ptBody'); if(!b) return;
+  b.innerHTML=ptTabsHTML('vb')+veBoPanel();
+  bindPtTabs();
   const bt=$('#vbThem'); if(bt) bt.onclick=()=>{ vbTop+=100; renderRadar(); };
-  $$('#m-radar [data-vbs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vbs;
+  $$('#ptBody [data-vbs]').forEach(x=>x.onclick=()=>{ const k=x.dataset.vbs;
     if(vbSort.k===k) vbSort.d=-vbSort.d; else { vbSort.k=k; vbSort.d=(k==='roi'?1:-1); }
     vbTop=100; renderRadar(); });
-  $$('#m-radar [data-vbc]').forEach(b=>b.onclick=()=>{
-    if(tachMa(vbQ).length) return;                // đang gõ mã thì chip vô hiệu
-    vbChe=b.dataset.vbc; vbTop=100;
+  $$('#ptBody [data-vbc]').forEach(x=>x.onclick=()=>{
+    if(tachMa(vbQ).length) return;
+    vbChe=x.dataset.vbc; vbTop=100;
     if(vbSort.k==='roi') vbSort.d=(vbChe==='gan'?-1:1);
     renderRadar();
     const el=$('#vbChe'), hd=document.querySelector('header');
@@ -4914,7 +4929,7 @@ function vbBind(){
   if(xo) xo.onclick=()=>{ vbQ=''; vbCaret=null; vbTop=100; renderRadar(); };
   if(vbBarEl){ vbBarEl.remove(); vbBarEl=null; }
   if(vbBdEl){ vbBdEl.remove(); vbBdEl=null; }
-  const bar=$('#m-radar #vbSecBar'), bd=$('#m-radar #vbSecBd'), btn=$('#vbSecBtn');
+  const bar=$('#vbSecBar'), bd=$('#vbSecBd'), btn=$('#vbSecBtn');
   if(!bar||!bd||!btn) return;
   document.body.appendChild(bd); document.body.appendChild(bar);
   vbBarEl=bar; vbBdEl=bd;
@@ -4930,7 +4945,7 @@ function vbBind(){
        thì bộ lọc người ta vừa chọn bị xoá không lý do. */
     if(moi!==vbSec) vbChe=(moi==='all'?'sau':'het');
     vbSec=moi; vbTop=100; dat(false); renderRadar();
-    const p=$('#m-radar .panel'); if(p) p.scrollIntoView({block:'start',behavior:'smooth'}); });
+    const p=$('#ptBody .panel'); if(p) p.scrollIntoView({block:'start',behavior:'smooth'}); });
   /* giữ trạng thái đang mở qua các lượt vẽ lại (vòng giá sống dựng lại module mỗi phút) */
   if(vbSecMo) dat(true);
 }
@@ -5299,10 +5314,11 @@ async function init(){
   });
   const q=new URLSearchParams(location.search).get('m');
   const byPath=BYPATH[location.pathname.replace(/\//g,'')];
-  const start=q||byPath||(location.hash||'').replace('#','');
+  let start=q||byPath||(location.hash||'').replace('#','');
+  if(start==='radar'){ start='phantich'; PT.tab='vb'; }   // /radar cũ -> tab Về bờ
   /* ?t= chọn sẵn tab bên trong — link từ trang khác trỏ thẳng vào đúng mục con */
   const t0=new URLSearchParams(location.search).get('t');
-  if(t0==='phien'||t0==='vb') radarTab=t0;   // 'cd' (chủ điểm) đã bỏ — link cũ rơi về 'phien'
+  if(t0==='vb') PT.tab='vb';
   if(t0==='dca'||t0==='dua') RA.mode=(t0==='dca'?'dca':'race');
   /* `?sym=XXX` mở thẳng trang phân tích của một mã — trang cổ phiếu trỏ sang bằng đường này.
      Đọc ở đây chứ không đọc trong renderPhanTich: `showMod` chỉ gọi render MỘT LẦN cho mỗi

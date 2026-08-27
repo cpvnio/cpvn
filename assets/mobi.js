@@ -48,7 +48,7 @@
   var CON=[
     ['bong','Bong bóng',  '/bubbles',                 null],
     ['tap', 'Tập đoàn',   'congcu.html?m=tapdoan',    null],
-    ['vb',  'Về bờ',      'congcu.html?m=radar&t=vb', 'vb']
+    ['vb',  'Về bờ',      'congcu.html?m=phantich&t=vb', 'vb']
   ];
 
   /* ĐỌC CẢ URL SẠCH, đừng chỉ dò "congcu". `_redirects` viết lại /radar, /tapdoan,
@@ -103,7 +103,7 @@
         var b=e.target.closest('a[data-t]'); if(!b) return;
         /* Chỉ chặn khi TRANG NÀY tự đổi tab được. Không có menu máy bàn (bong bóng)
            thì để href chạy bình thường, đừng nuốt cú bấm rồi chẳng đi đâu. */
-        var dd=document.querySelector('.dd a[data-md="radar"][data-t="'+b.dataset.t+'"]');
+        var dd=document.querySelector('.dd a[data-md="phantich"][data-t="'+b.dataset.t+'"]');
         if(!dd) return;
         e.preventDefault(); dd.click();
         /* PHẢI XOÁ .on TRÊN CẢ DẢI, đừng chỉ quét mấy mục đổi-tại-chỗ. Bản cũ chỉ
