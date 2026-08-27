@@ -4030,6 +4030,26 @@ bấm dễ hơn hẳn.
 > Neo luật vào `#cvInd` chứ đừng để `.ptseg` trần — cùng bài học với `#ptHead .ptseg` ngay
 > trên nó: `.ptseg` còn dùng cho thanh nút của cửa sổ toàn màn hình.
 
+### ĐỒ THỊ /PHANTICH ĐỔI SANG NEO PHIÊN ĐẦU KHUNG (27/08/2026)
+
+User chốt: đồ thị "Giá và giá trị giao dịch mỗi phiên" (trang một mã) nay **neo giá · VN-Index
+· vốn hoá ở PHIÊN ĐẦU KHUNG** — cả ba CÙNG XUẤT PHÁT một điểm rồi tách theo hiệu suất, thay
+cho neo-trung-bình (`neoLoga`) mô tả ở mục ngay dưới. Đọc mới: *"từ đầu khung tới nay ai hơn
+ai %"*. Mất: kiểu cắt nhau nhiều lần so với trung bình khung.
+
+- `rebToPrice(ng)` (trong `ptVeMa`): rebase một chuỗi để GẶP đường giá ở phiên chung đầu tiên
+  `k`: `line(i)=giá(k)×ng(i)/ng(k)`. Áp cho vốn hoá và VN-Index; giá giữ nguyên (đã hạ nền)
+  làm mốc. Cả ba vẽ CHUNG một trục (`cfg.phai2`, thang loga), nên cùng xuất phát.
+- `cfg.phai` (trục phải cũ của giá) **bỏ** — giá chuyển sang `phai2`, mang cờ `neoSK:true`.
+- Mốc cổ tức/BCTC bám đường giá qua `neoSK`: `ptVe1` tìm `P3.findIndex(s=>s.neoSK)` rồi neo
+  vào chuỗi đó (trước bám `P2[0]`). Thiếu cờ là mốc rơi xuống cột tiền.
+- `neoLoga`/`neoTrungBinh` GIỮ trong code (chưa gọi) — đổi cách đọc thì gọi lại. Số hơn kém
+  `vniTom` nay neo ở phiên đầu khung chung (không phải trung bình).
+
+> **CANVAS KHÔNG VẼ ĐƯỢC TRONG PANE KIỂM THỬ** (clientWidth=0, cùng lý do ảnh trắng cả buổi),
+> nên lượt này verify bằng: logic (mỗi đường = giá tại phiên neo), chú thích/toggle render
+> đúng, console sạch — chưa soi được pixel hội tụ. Xem mắt trên trình duyệt thật.
+
 ### /PHANTICH DÙNG CHUNG LUẬT CHỈ SỐ VỚI TRANG MÃ (23/08/2026)
 
 User: *"bên data phân tích cũng hiện chỉ số vnindex - vốn hoá theo quy tắc này (mã sàn nào

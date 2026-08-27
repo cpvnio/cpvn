@@ -1768,9 +1768,12 @@ function ptVe1(cv, cfg){
        thì trục phải là đường GIÁ — cổ tức và báo cáo là chuyện của giá, không phải của
        cột tiền); không có trục phải thì bám chuỗi trái, và đồ thị chồng cột thì bám ĐỈNH
        CỘT chứ không bám chuỗi đầu tiên. */
+    const iSK3=coP3?P3.findIndex(s=>s.neoSK):-1;   // đường giá trên trục ngoài (neo phiên đầu)
     const sTruc=coP2?P2[0]:S[0];
     const y2m=v=>padT+plotH-(v-lo2)/(hi2-lo2)*plotH;
+    const y3m=v=>{ const qq=q3(v); return (qq==null||isNaN(qq))?null:padT+plotH-(qq-lo3)/(hi3-lo3)*plotH; };
     const neo=i=>{
+      if(iSK3>=0){ return y3m(P3[iSK3].v[i]); }
       if(coP2){ const v=P2[0].v[i]; return v==null||isNaN(v)?null:y2m(v); }
       const v=cfg.chong?S.reduce((a,x)=>a+(x.v[i]||0),0):sTruc.v[i];
       return (v==null||isNaN(v))?null:y(v);
@@ -2198,6 +2201,20 @@ function ptVeMa(){
     const k=Math.exp(sMa/dem-sNg/dem);
     return {tis:1/k, a:a, b:b, n:dem, v:ng.map(x=>(x>0)?k*x:null)};
   };
+  /* ---- NEO PHIÊN ĐẦU KHUNG (user chốt 27/08/2026) ------------------------------------
+     Rebase một chuỗi để GẶP đường giá ở phiên đầu chung (phiên đầu tiên cả hai cùng có số):
+     line(i) = giá(k) × chuỗi(i)/chuỗi(k),  k = phiên chung đầu tiên. Nhờ vậy giá · vốn hoá ·
+     VN-Index cùng xuất phát một điểm ở đầu khung, rồi tách ra đúng theo hiệu suất — đọc "từ
+     đầu khung tới nay ai hơn ai %". Giá giữ nguyên (đã hạ nền) làm đường mốc.
+     KHÁC `neoLoga`/`neoTrungBinh` (neo theo trung bình cả khung, để hai đường cắt nhau nhiều
+     lần): hai hàm đó GIỮ NGUYÊN, chưa gọi nhưng đừng xoá — đổi cách đọc thì gọi lại. */
+  const rebToPrice=(ng)=>{
+    if(!ng) return ng;
+    let k=-1; for(let z=0;z<d.length;z++){ if(c[z]>0&&ng[z]>0){ k=z; break; } }
+    if(k<0) return ng;
+    const base=c[k]/ng[k];
+    return ng.map(x=>(x>0)?base*x:null);
+  };
   /* ---- VN-INDEX CHỒNG LÊN ĐỒ THỊ GIÁ (user chốt 22/08/2026) --------------------------
      *"bật tắt biểu đồ vnindex trên mã đó để xem hiệu suất của mã đó với vnindex là ntn"*.
 
@@ -2238,16 +2255,15 @@ function ptVeMa(){
          đôi) nên hai đường so được bằng mắt. ĐIỀU KIỆN: `sh` phải nhảy bậc ĐÚNG NGÀY GDKHQ
          — xem `tools/va_slcp_gdkhq.py`. Không có nó thì chính đường vốn hoá mới là đường bị
          sụt, và cả phép so hỏng. */
-      const r=neoLoga(vn);
-      if(r){
-        vniL=r.v;
-        /* CON SỐ HƠN KÉM vẫn tính theo lối cũ — neo MỘT phiên. Nó trả lời câu khác với đồ
-           thị ("từ phiên đầu khung tới nay ai hơn ai bao nhiêu phần trăm"), mà câu đó thì
-           điểm neo phải là một phiên cụ thể chứ không phải trung bình hai đầu. */
-        const hs=new Array(d.length).fill(null); let f=1; hs[r.a]=1;
-        for(let z=r.a+1;z<d.length;z++){ if(pcs[z]!=null) f*=1+pcs[z]/100; hs[z]=f; }
-        vniTom={tu:d[r.a], vh:(mcap[r.b]/mcap[r.a]-1)*100,
-                vni:(vn[r.b]/vn[r.a]-1)*100, ma:(hs[r.b]-1)*100};
+      vniL=rebToPrice(vn);   // VN-Index gặp đường giá ở phiên đầu khung
+      /* CON SỐ HƠN KÉM: neo ở phiên đầu khung có đủ cả ba số (giá·vốn hoá·VN-Index) */
+      let a=-1,b=-1;
+      for(let z=0;z<d.length;z++){ if(c[z]>0&&vn[z]>0&&mcap[z]>0){ if(a<0)a=z; b=z; } }
+      if(a>=0){
+        const hs=new Array(d.length).fill(null); let f=1; hs[a]=1;
+        for(let z=a+1;z<d.length;z++){ if(pcs[z]!=null) f*=1+pcs[z]/100; hs[z]=f; }
+        vniTom={tu:d[a], vh:(mcap[b]/mcap[a]-1)*100,
+                vni:(vn[b]/vn[a]-1)*100, ma:(hs[b]-1)*100};
       }
     }
   }
@@ -2419,15 +2435,12 @@ function ptVeMa(){
            +ptSw('con','pkR','còn lại')+ptSw('tt','pk2','thoả thuận')+'</span>'
            +'<span class="ptkr"> — phần tô là <b>mức tham gia</b> = (mua + bán) ÷ 2</span>'
            +'<br><b class="ptlgn">đường</b><span class="ptlgs" id="ptLeg2">'
-           +ptSw('c','pkA','đóng cửa')+'</span>'
-           +'<span class="ptkr"> — trục phải</span>'
-           /* GHI THẲNG TỈ SỐ VÀO NHÃN, không viết một câu giải thích riêng: người xem phải
-              biết đường thị trường đã bị chia bao nhiêu thì con số trên trục mới có nghĩa,
-              mà "÷ 343" là bốn ký tự nằm ngay cạnh cái ô màu — rẻ hơn mọi cách khác. */
-           +((PT.vh||vniL)?'  <span class="ptlgs" id="ptLeg4">'
-              +(PT.vh?ptSw('vh2','pkV','vốn hoá'):'')
-              +(vniL?ptSw('vni2','pkI',idxTen+' quy đổi'):'')+'</span>'
-              +'<span class="ptkr"> — trục ngoài cùng, cùng đơn vị tiền</span>':'')
+           /* BA ĐƯỜNG CHUNG MỘT DÒNG "đường" — nay cùng một trục, cùng neo phiên đầu khung
+              (user chốt 27/08/2026). Ba công tắc ẩn/hiện `c`/`vh2`/`vni2` giữ nguyên. */
+           +ptSw('c','pkA','đóng cửa')
+           +(PT.vh?ptSw('vh2','pkV','vốn hoá'):'')
+           +(vniL?ptSw('vni2','pkI',idxTen+' quy đổi'):'')+'</span>'
+           +'<span class="ptkr"> — neo ở phiên đầu khung, cùng xuất phát rồi tách theo hiệu suất</span>'
            /* BA DÒNG CHỮ ĐÃ BỎ 22/08/2026 — user chốt: *"tao không cần quá nhiều câu giải
               thích rườm rà gây loãng"*. Cụ thể: dải chú giải MỐC SỰ KIỆN (D/C/P/B), DÒNG SỐ
               so sánh vốn hoá với VN-Index, và câu giải thích đường "VN-Index quy đổi".
@@ -2567,7 +2580,10 @@ function ptVeMa(){
        của CÙNG một đại lượng, chạy sát nhau suốt 1.000 phiên — khác màu thôi thì ở chỗ
        chúng chập vào nhau (phần lớn khung) không tách nổi đường nào. Nét đứt cũng nói
        đúng thứ bậc: đóng cửa là con số chính thức, giá TB là con số dẫn xuất. */
-    phai:{nhan:num,series:[PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a'}]},
+    /* NEO PHIÊN ĐẦU KHUNG: giá · vốn hoá · VN-Index CHUNG một trục (ngoài cùng, loga), cùng
+       xuất phát ở phiên đầu (`rebToPrice`). Giá mang cờ `neoSK` để mốc cổ tức/BCTC bám nó
+       (P2 đã bỏ). Trục trái vẫn là cột giá trị giao dịch. */
+    phai:null,
     /* VN-Index quy đổi và vốn hoá thị trường đứng CHUNG TRỤC với vốn hoá của mã — cùng
        đơn vị (đồng) và cùng là đại lượng liền mạch qua ngày GDKHQ, nên so được trực tiếp.
        Trục phải chỉ còn giá.
@@ -2577,9 +2593,10 @@ function ptVeMa(){
        1,5px vì hồi đó nó chỉ là bản sao của đường giá; nay nó là đường CHỦ của đồ thị nên
        phải dày nhất khung (3px) và liền nét — nét đứt đã chuyển sang cho giá TB và cho
        đường thị trường. */
-    phai2:((PT.vh&&!PT.an.vh2)||(vniL&&!PT.an.vni2))
-      ?{nhan:v=>ptTien(v),loga:true,series:[
-      (PT.vh&&!PT.an.vh2)?{v:mcap,mau:XANH,day:3}:null,
+    phai2:((PT.vh&&!PT.an.vh2)||(vniL&&!PT.an.vni2)||!PT.an.c)
+      ?{nhan:num,loga:true,series:[
+      (PT.vh&&!PT.an.vh2)?{v:rebToPrice(mcap),mau:XANH,day:3}:null,
+      PT.an.c?null:{v:c,mau:dark?'#f8fafc':'#0f172a',day:1.8,neoSK:true},
       /* THỊ TRƯỜNG LẤY MÀU XÁM THÉP, không lấy một màu nữa trong bảng: tám ký hiệu của đồ
          thị này đã chiếm hết các sắc phân biệt được (lam, cam, lam nhạt, tím, đen/trắng,
          hổ phách, lục, hồng sen). Xám cũng đúng vai — nó là cái NỀN để so, không phải một
