@@ -4036,12 +4036,8 @@ function nhipCardsHTML(){
   const tdN=(ST.tdDate&&ST.tdDate!==ST.date)
     ? ' <b style="font-weight:700;font-size:.92em;white-space:nowrap">· '+ddmm(ST.tdDate)+'</b>' : '';
   const flow=[
-    radarCard('🔥','Đột biến khối lượng',
-      top(c=>c.volr>=2&&c.chg>0&&liq(c)>=2e9,(a,b)=>b.volr-a.volr).map(c=>row(c,'×'+fx(c.volr,1)+' KL','up')),'vol'),
     radarCard('💧','Vua thanh khoản phiên',
       top(c=>c.gtgd>0,(a,b)=>b.gtgd-a.gtgd).map(c=>row(c,ty(c.gtgd),'')),'liq'),
-    radarCard('🎯','Đóng cửa ở đỉnh phiên',
-      top(c=>c.rpos!=null&&c.rpos>=.92&&c.chg>=1.5&&c.gtgd>=3e9,(a,b)=>b.chg-a.chg).map(c=>row(c,pct(c.chg),'up')),'top'),
     radarCard('🌊','Khối ngoại mua ròng phiên',
       top(c=>c.nnVal>0,(a,b)=>b.nnVal-a.nnVal).map(c=>row(c,'+'+ty(c.nnVal),'up')),'nnb'),
     radarCard('🩸','Khối ngoại bán ròng phiên',

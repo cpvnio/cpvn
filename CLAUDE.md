@@ -3183,7 +3183,7 @@ muốn bật lại chỉ dựng lại `power`/`risk`/`ceflRows` + hai `sectionHe
 
 User chốt gộp Radar vào Phân tích thành **một trang cuộn**. Bố cục (chốt lại 27/08/2026):
 **bảng chọn phiên → 🌐 bản đồ thế giới (GẤP LẠI, mặc định TẮT) → Toàn thị trường → 💰 Dòng tiền
-(11 thẻ) → Bảng mã**. Nav từ **4 nhóm xuống 3**: Bảng giá · **Phân tích** · Đường đua.
+(9 thẻ) → Bảng mã**. Nav từ **4 nhóm xuống 3**: Bảng giá · **Phân tích** · Đường đua.
 
 > **BẢN ĐỒ THẾ GIỚI = `<details class="acc" id="ptMap">` gấp lại, mặc định TẮT** — chỉ nạp
 > (và fetch CNBC) khi người dùng MỞ (`ptMapBind` → `napBanDo`, nhớ trạng thái ở
