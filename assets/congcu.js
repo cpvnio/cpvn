@@ -88,7 +88,10 @@ function drawSpark(cv,vals,forceCol){
 }
 function drawSparks(root){
   (root||document).querySelectorAll('canvas.rs').forEach(cv=>{
-    const a=ST.spark[cv.dataset.s]; if(a) drawSpark(cv,a,cv.dataset.col||null);
+    /* `data-h` = dòng của DÒNG TIỀN THEO PHIÊN: sparkline 30 phiên KẾT THÚC Ở PHIÊN ĐÓ (đã
+       chuẩn hoá 0..100 trong file ngày), không phải 30 phiên gần nhất của spark.json. */
+    const a=cv.dataset.h?(PT.dtSp||{})[cv.dataset.s]:ST.spark[cv.dataset.s];
+    if(a) drawSpark(cv,a,cv.dataset.col||null);
   });
 }
 function heatColor(p,cap){
@@ -464,7 +467,9 @@ function startLive(){
          mất con trỏ giữa chừng, bàn phím điện thoại đóng sập, gõ dở một mã là cụt. Bỏ qua
          một lượt bơm giá đổi lại việc gõ liền mạch — lượt sau (10 giây) tự bù. */
       const dangGo=document.activeElement&&document.activeElement.id==='vbQ';
-      if(nhipHien()) veLaiNhip();
+      /* đang xem MỘT PHIÊN ĐÃ CHỌN thì thẻ là số chốt của phiên đó — giá sống không đổi
+         được gì, vẽ lại chỉ tổ nháy */
+      if(nhipHien()){ if(!PT.dt) veLaiNhip(); }
       else if(cur==='phantich'&&PT.tab==='vb'&&!dangGo) renderRadar();
     }
   };
@@ -780,6 +785,7 @@ const PT_HIEN={
 const PT_IDX_SAN={HOSE:['VNINDEX','VN-Index'],HNX:['HNX','HNX-Index'],UPCOM:['UPCOM','UPCOM-Index']};
 const PT={tt:null, ngay:null, phien:{}, sort:'mval', dir:-1, ex:'all', q:'', mo:null,
           n:100, ma:null, maD:null, nMa:100, maI:null, ghim:null, giai:{}, tab:'tt',
+          dt:null, dtD:{}, dtSp:null,   // dòng tiền: null = hôm nay (sống) · 'YYYY-MM-DD' = phiên đã chọn
           skD:null, skH:LS.get('cpvn_ptsk',{sk:true,bctc:true}), skMo:null,
           vh:LS.get('cpvn_ptvh',true),
           /* VỐN HOÁ TOÀN THỊ TRƯỜNG quy về cùng tầm với vốn hoá của mã — mặc định TẮT.
@@ -892,9 +898,12 @@ async function ptVe(){
     PT.n=+b.dataset.n;
     $$('#ptKhung button').forEach(x=>x.classList.toggle('on',x===b));
     ptVeChart(); };
-  $('#ptNgay').onchange=e=>{ PT.ngay=e.target.value; PT.mo=null; ptVe(); };
-  $('#ptTruoc').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>0){ PT.ngay=co[j-1]; PT.mo=null; ptVe(); } };
-  $('#ptSau').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>=0&&j<co.length-1){ PT.ngay=co[j+1]; PT.mo=null; ptVe(); } };
+  /* CHỌN PHIÊN = dòng tiền đi theo phiên đó (`PT.dt`). Ba lối chọn phiên — ô chọn, hai nút
+     ‹ ›, bấm cột đồ thị — phải cùng đặt cờ này, sót một lối là bảng mã sang phiên mới còn
+     chín cái thẻ vẫn đứng ở hôm nay. */
+  $('#ptNgay').onchange=e=>{ PT.ngay=PT.dt=e.target.value; PT.mo=null; ptVe(); };
+  $('#ptTruoc').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>0){ PT.ngay=PT.dt=co[j-1]; PT.mo=null; ptVe(); } };
+  $('#ptSau').onclick=()=>{ const j=co.indexOf(PT.ngay); if(j>=0&&j<co.length-1){ PT.ngay=PT.dt=co[j+1]; PT.mo=null; ptVe(); } };
 }
 
 function ptTop(){
@@ -1199,7 +1208,7 @@ function ptVeChart(){
         PT._bn=setTimeout(()=>{ nb.style.display='none'; },4000); }
       return;
     }
-    PT.ngay=c.d; PT.mo=null; ptVe(); };
+    PT.ngay=PT.dt=c.d; PT.mo=null; ptVe(); };
   /* THẺ CHÚ GIẢI TỰ VẼ, KHÔNG DÙNG `title` CỦA TRÌNH DUYỆT. `title` đợi ~1 giây mới hiện,
      hiện ở góc chuột bằng phông hệ thống, và không xuống dòng được — rê dọc một dải 60 cột
      thì gần như không bao giờ kịp thấy. Thẻ tự vẽ hiện tức thì và xếp được số theo cột.
@@ -3135,17 +3144,17 @@ function row(c,metric,mcls){
   const spark=ce?'#c026d3':fo?'#0ea5e9':'';
   return '<div class="rw" data-sym="'+c.sym+'" title="Bấm mở trang '+c.sym+'">'+logoHTML(c)+
     '<span class="idn">'+sym+'<i>'+esc(shortName(c.name))+'</i></span>'+
-    '<canvas class="rs" data-s="'+c.sym+'"'+(spark?' data-col="'+spark+'"':'')+'></canvas>'+
+    '<canvas class="rs" data-s="'+c.sym+'"'+(spark?' data-col="'+spark+'"':'')+(c._h?' data-h="1"':'')+'></canvas>'+
     '<span class="pz '+pcls+'">'+num(c.close)+'</span>'+
     '<span class="mt '+(ce?'ce':fo?'fo':(mcls||''))+'">'+metric+'</span></div>';
 }
-function radarCard(ic,title,rows,id){
+function radarCard(ic,title,rows,id,trong){   // `trong` = câu thay khi thẻ trống CÓ LÝ DO
   return '<div class="panel" id="rc-'+id+'"><div class="ph"><span>'+ic+'</span>'+title+
-    '<span class="cnt">'+rows.length+'</span>'+
+    '<span class="cnt">'+(trong?'—':rows.length)+'</span>'+
     '<button class="shotbtn" title="Chụp thẻ này" onclick="LB.shotCard(\''+id+'\',\''+id+'\')">📷</button></div>'+
-    '<div class="pb">'+(rows.length?rows.join(''):'<div class="empty">Phiên này không có mã nào thoả</div>')+'</div></div>';
+    '<div class="pb">'+(rows.length?rows.join(''):'<div class="empty">'+(trong||'Phiên này không có mã nào thoả')+'</div>')+'</div></div>';
 }
-LB.shotCard=(el,name)=>shot($('#rc-'+el),'cpvn-'+name+'-'+ST.date);
+LB.shotCard=(el,name)=>shot($('#rc-'+el),'cpvn-'+name+'-'+(PT.dt||ST.date));
 function sectionHead(id,t){ return '<div class="secthead" id="'+id+'">'+t+'</div>'; }
 /* bảng ngành hôm nay: 1D% bình quân theo vốn hoá + độ rộng trong ngành */
 function sectorPanel(){
@@ -4059,7 +4068,64 @@ let radarTab='phien';   // tab đang xem trong module radar: 'phien' | 'vb'  ('c
    (không phải trang một mã). Poll sống chỉ vẽ lại KHỐI THẺ (`#radarAll`) qua `veLaiNhip`,
    giữ nguyên bản đồ `#rdTg` và toàn bộ bảng mã bên dưới. */
 function nhipHien(){ return cur==='phantich' && !PT.ma && PT.tab!=='vb'; }
+/* DÒNG TIỀN THEO PHIÊN (user chốt 06/10/2026: *"cho theo ngày khi tôi chọn trên cột nến toàn
+   thị trường, và có ô Hôm nay ở chỗ Dòng tiền trong CKVN"*).
+   `PT.dt` = null -> HÔM NAY: thẻ đọc giá SỐNG (ST.list) như trước giờ, giá sống bơm vào mỗi
+   nhịp. `PT.dt` = 'YYYY-MM-DD' -> phiên người xem vừa CHỌN (bấm cột đồ thị toàn thị trường,
+   ô chọn phiên, hai nút ‹ ›): thẻ đọc `data/dongtien/{NGÀY}.json` do kho_dongtien.py gói sẵn
+   top 5 của cả 9 thẻ. Nút "Hôm nay" đưa CẢ TRANG về phiên mới nhất — một trang một phiên,
+   để tam giác trên đồ thị và chín cái thẻ không chỉ hai ngày khác nhau. */
+function ptDtNap(ng){
+  if(PT.dtD[ng]!==undefined||PT._dtNap===ng) return;
+  PT._dtNap=ng;
+  fetch('data/dongtien/'+ng+'.json').then(r=>r.ok?r.json():null).catch(()=>null).then(o=>{
+    PT.dtD[ng]=o; if(PT._dtNap===ng) PT._dtNap=null;
+    if(PT.dt===ng&&nhipHien()) veLaiNhip();
+  });
+}
+function dtVeHomNay(){
+  const co=ptCoFile(PT.tt);
+  PT.dt=null; PT.ngay=co[co.length-1]; PT.mo=null;
+  ptVe();
+}
+function dtHead(){
+  const ng=PT.dt, d8=x=>x.slice(8,10)+'/'+x.slice(5,7)+'/'+x.slice(0,4);
+  return '<div class="secthead dthead" id="r-flow">💰 Dòng tiền trong CKVN'
+    +(ng?'<span class="dtngay">· phiên '+d8(ng)+'</span>':'')
+    +'<button type="button" id="dtHomNay" class="dthn'+(ng?'':' on')+'"'
+    +(ng?' title="Quay về phiên hôm nay"':' disabled')+'>Hôm nay</button></div>';
+}
+function dtCardsNgay(){
+  const ng=PT.dt, o=PT.dtD[ng];
+  const bao=t=>'<div class="panel" style="grid-column:1/-1"><div class="pb"><div class="empty">'+t+'</div></div></div>';
+  if(o===undefined){ ptDtNap(ng); return bao('Đang nạp dòng tiền phiên '+esc(ng)+'…'); }
+  if(!o||!o.the) return bao('Kho chưa có dòng tiền cho phiên '+esc(ng)+'.');
+  PT.dtSp={}; for(const s in (o.ma||{})) PT.dtSp[s]=o.ma[s][3];
+  const dong=(sym,metric,mcls)=>{
+    const m=(o.ma||{})[sym], b=ST.map.get(sym)||{sym:sym,name:sym};
+    return row(Object.assign({},b,{close:m?m[0]:0, chg:m?m[1]:null, nt:false,
+      ceil:m&&m[2]===1?m[0]:0, floor:m&&m[2]===-1?m[0]:0, _h:1}),metric,mcls);
+  };
+  const T=o.the, ds=k=>T[k]||[];
+  /* thẻ `null` = TRỐNG CÓ LÝ DO, khác hẳn "không mã nào thoả" — nói ra lý do */
+  const tdTrong=(ST.tdDate&&ng>ST.tdDate)?'Nguồn chưa công bố tự doanh phiên này (trễ một phiên)'
+    :'Nguồn không có số tự doanh phiên này';
+  const thieu30='Kho chưa đủ 30 phiên tính tới ngày này';
+  const the=(ic,ten,k,f,trong)=>radarCard(ic,ten,ds(k).map(f),k,T[k]==null?trong:null);
+  return [
+    the('💧','Vua thanh khoản phiên','liq',x=>dong(x[0],ty(x[1]),'')),
+    the('🌊','Khối ngoại mua ròng phiên','nnb',x=>dong(x[0],'+'+ty(x[1]),'up')),
+    the('🩸','Khối ngoại bán ròng phiên','nns',x=>dong(x[0],'−'+ty(-x[1]),'dn')),
+    the('🧲','Khối ngoại gom 30 phiên','nng',x=>dong(x[0],'+'+ty(x[1]),'up'),thieu30),
+    the('🏦','Tự doanh mua ròng phiên','tdb',x=>dong(x[0],'+'+ty(x[1]),'up'),tdTrong),
+    the('📤','Tự doanh bán ròng phiên','tds',x=>dong(x[0],'−'+ty(-x[1]),'dn'),tdTrong),
+    the('🧺','Tự doanh gom 30 phiên','tdg',x=>dong(x[0],'+'+ty(x[1]),'up'),o.td===false?tdTrong:thieu30),
+    the('🤝','Thoả thuận khối lượng lớn','tt',x=>dong(x[0],fx(x[1]/1e6,1)+' tr cp','')),
+    the('👑','Lập đỉnh lịch sử phiên này','ath',x=>dong(x[0],x[1]>0?vnd(x[1]):'—','up')),
+  ].join('');
+}
 function nhipCardsHTML(){
+  if(PT.dt) return dtHead()+'<div class="grid g3">'+dtCardsNgay()+'</div>';
   const L=ST.list, liq=c=>(c.avgval20||0);
   const top=(f,srt,n)=>L.filter(c=>c.close>0).filter(f).sort(srt).slice(0,n||5);
   const ddmm=x=>x?x.slice(8,10)+'/'+x.slice(5,7):'';
@@ -4090,7 +4156,7 @@ function nhipCardsHTML(){
     radarCard('👑','Lập đỉnh lịch sử hôm nay',
       top(c=>c.ath===1&&liq(c)>=5e8,(a,b)=>(b.mcapLive||0)-(a.mcapLive||0)).map(c=>row(c,vnd(c.mcapLive),'up')),'ath'),
   ];
-  return sectionHead('r-flow','💰 Dòng tiền trong CKVN')+'<div class="grid g3">'+flow.join('')+'</div>';
+  return dtHead()+'<div class="grid g3">'+flow.join('')+'</div>';
 }
 function veLaiNhip(){ const el=$('#radarAll'); if(el){ el.innerHTML=nhipCardsHTML(); drawSparks(); } }
 /* BẢN ĐỒ THẾ GIỚI = panel GẤP LẠI, MẶC ĐỊNH TẮT (user chốt 27/08/2026). Chỉ nạp (và fetch
@@ -5262,6 +5328,8 @@ async function init(){
     showMod(cur);
   };
   $('#mn').addEventListener('click',e=>{
+    /* nút "Hôm nay" của mục Dòng tiền — uỷ quyền ở đây vì khối thẻ dựng lại mỗi nhịp */
+    if(e.target.closest('#dtHomNay')){ if(PT.dt) dtVeHomNay(); return; }
     /* bấm HÀNG TẬP ĐOÀN -> mở/thu danh sách công ty con. Phải bắt TRƯỚC dòng mã, bằng
        không bấm trúng hàng nhóm lại nhảy sang trang một mã nào đó. */
     /* nút xếp thứ tự nằm ở ĐẦU BẢNG, bắt trước mọi thứ — bấm lại nút đang bật thì lật chiều */

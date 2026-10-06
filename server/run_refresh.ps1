@@ -151,6 +151,9 @@ if ($LASTEXITCODE -ne 0) { "va_donvi EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
 # [8b] DONG TIEN TU DOANH + THOA THUAN cho cac the Radar -> data/dongtien.json.
 # PHAI DUNG SAU va_donvi (doc data/giaodich da va don vi) va truoc git push cuoi.
+# Tu 06/10/2026 con ghi KHO THEO PHIEN data/dongtien/{NGAY}.json (9 the cua tung phien).
+# Chi file doi noi dung moi bi ghi lai. CHAY LAN HAI sau refresh_daily (xem duoi): luc nay
+# data/hist chua co nen hom nay nen sparkline/dinh lich su cua phien moi nhat dung duong tam.
 & $py tools\kho_dongtien.py 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_dongtien EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
@@ -231,6 +234,12 @@ if ($LASTEXITCODE -ne 0) { "va_dau_fin EXIT $LASTEXITCODE - bo qua, chay tiep" }
 # refresh_daily (bên cào tin) và kho PHẢI GOM DỒN: data/news chỉ giữ tin trong 30 ngày.
 & $py tools\kho_noibo.py 2>&1
 if ($LASTEXITCODE -ne 0) { "kho_noibo EXIT $LASTEXITCODE - bo qua, chay tiep" }
+
+# DONG TIEN THEO PHIEN - LAN HAI. refresh_daily vua ghi nen hom nay vao data/hist, nen
+# sparkline va the "Lap dinh lich su" cua phien moi nhat gio moi dung. Khong goi mang, ~7 giay;
+# chi file hom nay doi noi dung nen chi no bi ghi lai.
+& $py tools\kho_dongtien.py 2>&1
+if ($LASTEXITCODE -ne 0) { "kho_dongtien (lan 2) EXIT $LASTEXITCODE - bo qua, chay tiep" }
 
 $sess2 = & $py -c "import json;print(json.load(open('data/health.json'))['date'])" 2>$null
 if (-not $sess2) { $sess2 = $sess }

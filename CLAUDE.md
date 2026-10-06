@@ -51,7 +51,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `tools/kho_thoathuan.py` | 260 | Vá `pv`/`pval` từ Vietstock cho cả kho. **Lượt một lần**, không nằm trong pipeline |
 | `tools/lap_slcp_cu.py` | 190 | Lấp `sh` cho phần ĐẦU khung bằng cách đi ngược `data/sukien`. KHÔNG gọi mạng, bước `[1c]` của lượt EOD |
 | `tools/kho_luuthong.py` | 130 | Tỉ lệ **lưu thông** tính từ sổ cổ đông (`100% − Σ cổ đông ≥5%`) -> ghi đè `freeFloat` trong `data/profile`. KHÔNG gọi mạng, bước `[3b]` của lượt EOD |
-| `tools/kho_dongtien.py` | 90 | Tự doanh ròng phiên + gom 30 phiên + thoả thuận KL từ `data/giaodich` → `data/dongtien.json` (bốn thẻ Radar). KHÔNG gọi mạng, bước `[8b]` sau `va_donvi` |
+| `tools/kho_dongtien.py` | 410 | Tự doanh ròng phiên + gom 30 phiên + thoả thuận KL từ `data/giaodich` → `data/dongtien.json` (thẻ sống) **và `data/dongtien/{NGÀY}.json`** (9 thẻ của từng phiên, 1.000 phiên). KHÔNG gọi mạng, ~7 giây, chạy HAI lần trong lượt EOD: `[8b]` sau `va_donvi` và sau `refresh_daily` |
 
 ## Kho dữ liệu `data/` (~130MB)
 
@@ -71,6 +71,7 @@ refresh_daily.py (VPS 15:15 · Actions dự phòng)
 | `data/phien/{NGÀY}.json` | Một file mỗi phiên (~510KB): `bang`+`f` bảng mã · `ma` vùng giá khớp lệnh · `la` quét bất thường · `dt`+`dtf` lát cắt ngang cho bộ lọc. **FILE NHIỀU CHỦ — MỌI LƯỢT GHI PHẢI TRỘN.** Đã trả giá 21/08/2026, xem mục *Phân tích dữ liệu* |
 | `data/phantich.json` | Chuỗi toàn thị trường theo phiên + khối `chiso`. Nhẹ, trang tải ngay |
 | `data/dongtien.json` | **Dòng tiền tự doanh + thoả thuận cho Radar** (~7 KB): `td` ròng phiên · `td30` gom 30 phiên (đồng) · `tt[MÃ]=[KL,GT]` thoả thuận. `tdDate` LÙI 1 phiên so `date` (nguồn tự doanh T+1). `tools/kho_dongtien.py` |
+| `data/dongtien/{NGÀY}.json` | **Dòng tiền THEO PHIÊN** (~4 KB/phiên, 1.000 phiên): `the` = top 5 của cả 9 thẻ (`liq nnb nns nng tdb tds tdg tt ath`, `null` = trống có lý do) · `ma[MÃ]=[giá thô, %, trần/sàn, sparkline 0..100]` · `td` = phiên đã có số tự doanh. Client tải khi người xem CHỌN một phiên. `tools/kho_dongtien.py` |
 | `data/chiso.json` | 5 chỉ số theo phiên (`d,c,v,pc`) — **VNINDEX từ 28/07/2000**, phiên đầu tiên của chỉ số. Kho CHÍNH, `build_phantich.py` đọc. `kho_giaodich.py --chiso` |
 | `data/chiso/{CHỈ SỐ}.json` | **Bản GẦY của file trên** — chỉ `d`+`c`, cho chart nến trang mã (VNINDEX 34 KB đã nén thay vì 254 KB). Cùng một hàm ghi ra, không thể trôi khỏi nhau |
 | `data/vonhoa/{MÃ}.json` | **Vốn hoá theo phiên, lùi tới 02/01/2013** — 405 mã HOSE, `d`+`v` (đơn vị TỶ). Ba tầng ghép: kho đã soi -> MARKETCAP -> giá thô × vốn góp. 21 KB đã nén/mã, thay cho lượt tải `data/giaodich` 81 KB. `tools/kho_vonhoa.py` |
@@ -3178,6 +3179,62 @@ muốn bật lại chỉ dựng lại `power`/`risk`/`ceflRows` + hai `sectionHe
 
 > **THOẢ THUẬN KHÔNG CÓ "RÒNG"** — mỗi lô có cả người mua lẫn bán, ròng luôn bằng 0. Nên thẻ
 > này chỉ liệt kê **khối lượng** (`pv`), đúng như user chốt; `pval` để dành nhãn phụ.
+
+### DÒNG TIỀN ĐI THEO PHIÊN ĐANG CHỌN + NÚT "HÔM NAY" (06/10/2026)
+
+User: *"mục dòng tiền ở Phân tích không đi theo ngày … cho theo ngày khi tôi chọn trên cột nến
+toàn thị trường, và có ô Hôm nay ở chỗ Dòng tiền trong CKVN để xem đủ các ngày trước và hiện
+tại"*. Chín thẻ của mục **💰 Dòng tiền trong CKVN** nay có HAI trạng thái (`PT.dt`):
+
+| `PT.dt` | nguồn | khi nào |
+|---|---|---|
+| `null` — **Hôm nay** | giá SỐNG `ST.list` như trước, giá sống bơm vào mỗi nhịp | mở trang · bấm nút "Hôm nay" |
+| `'YYYY-MM-DD'` | `data/dongtien/{NGÀY}.json` (số chốt của đúng phiên đó) | bấm cột đồ thị toàn thị trường · ô chọn phiên · nút ‹ › |
+
+- **Ba lối chọn phiên phải CÙNG đặt `PT.dt`** (`PT.ngay=PT.dt=…`). Sót một lối là bảng mã sang
+  phiên mới còn chín cái thẻ đứng ở hôm nay — loại lệch im lặng.
+- **Nút "Hôm nay" đưa CẢ TRANG về phiên mới nhất** (`dtVeHomNay`: `PT.dt=null` + `PT.ngay` =
+  phiên cuối của `ptCoFile`), không riêng mục dòng tiền — một trang một phiên, để tam giác trên
+  đồ thị và chín thẻ không chỉ hai ngày khác nhau. Nút nằm cuối vạch kẻ của tiêu đề mục
+  (`.dthead`, `order` đẩy nó qua `::after`), sáng đặc + `disabled` khi đang ở hôm nay; lúc xem
+  phiên cũ thì tiêu đề in `· PHIÊN dd/mm/yyyy` màu hồng. Bắt bằng uỷ quyền trên `#mn` vì khối
+  thẻ dựng lại mỗi nhịp.
+- **Đang xem phiên cũ thì vòng giá sống KHÔNG vẽ lại thẻ** (`if(!PT.dt) veLaiNhip()`) — số chốt
+  không đổi, vẽ lại chỉ tổ nháy.
+
+**`tools/kho_dongtien.py` gói SẴN top 5 của cả 9 thẻ cho từng phiên** — client không phải tải
+1.529 file mã. Định nghĩa bám bản sống, chỉ đổi NGUỒN sang số chốt của phiên đó:
+· thanh khoản = `mval` (khớp lệnh — bản sống `avePrice×lot` cũng khớp lệnh) · khối ngoại ròng =
+`fnMuaTG−fnBanTG` (giá trị THẬT, bản sống phải lấy KL × giá đóng cửa vì bảng giá không trả giá
+trị) · gom 30 = cộng 30 PHIÊN THỊ TRƯỜNG tới phiên đó · đỉnh lịch sử = giá đã hạ nền ≥ 99,9% đỉnh
+chuỗi TỚI phiên đó (không nhìn trước), cổng `mval` TB 20 phiên ≥ 500 triệu, xếp theo vốn hoá
+`c×sh` của chính phiên.
+· Giá + % trên dòng là giá THÔ của phiên (đúng thứ bảng điện hiện hôm ấy); trần/sàn tính lại từ
+tham chiếu + biên độ sàn + bước giá (trần làm tròn xuống, sàn lên; `|%|` vượt biên + 0,5% thì
+không đoán — ngày chào sàn/mở lại).
+· Sparkline (`data-h` trên canvas → `PT.dtSp`) = 30 phiên đã hạ nền KẾT THÚC Ở PHIÊN ĐÓ, chuẩn
+hoá 0..100 theo min-max của cửa sổ: hình không đổi (drawSpark vốn co giãn min-max), còn file
+thì KHÔNG đổi khi nguồn hạ nền lại cả chuỗi — mọi giá trước sự kiện nhân cùng hệ số, min-max
+triệt tiêu nó.
+
+> **THẺ `null` = TRỐNG CÓ LÝ DO, KHÁC "KHÔNG MÃ NÀO THOẢ".** Ô đếm in `—` và câu thay nói lý do:
+> 29 phiên đầu kho → *"chưa đủ 30 phiên"* (thẻ gom); phiên mới hơn `tdDate` → *"nguồn chưa công
+> bố tự doanh (trễ một phiên)"*; phiên cũ mà cả thị trường không có tự doanh (16 phiên) →
+> *"nguồn không có số"*. In một tổng hụt hay một thẻ rỗng trơn là để người đọc tự đoán sai.
+
+> **GHI LẠI TOÀN BỘ MỖI LƯỢT, CHỈ ĐỤNG FILE ĐỔI NỘI DUNG; xoá file của phiên trôi khỏi cửa sổ
+> 1.000.** Tự doanh T+1 lấp phiên hôm qua ở lượt hôm nay, va_donvi sửa số cũ thì phiên cũ tự
+> đúng lại — mà ghi vô điều kiện là mỗi ngày 1.000 file "đổi" y hệt. Chạy lại ngay: `ghi 0 ·
+> giữ nguyên 1000`.
+
+> **CHẠY HAI LẦN TRONG LƯỢT EOD.** Lần `[8b]` thì `data/hist` CHƯA có nến hôm nay
+> (`refresh_daily` ghi sau lượt đẩy 1) nên sparkline + đỉnh lịch sử của phiên mới nhất dùng
+> đường tạm (giá thô so đỉnh cũ); lần hai sau `refresh_daily` lấp đúng, chỉ file hôm nay đổi.
+
+Kiểm chứng lúc dựng: thẻ tự doanh phiên 02/10 khớp TỪNG SỐ với thẻ sống user chụp (HDB +1.479 ·
+VPB +117 · PNJ +64,3 · HPG +52,1 · BID +20,3; gom 30 VPB +2.063 · HDB +1.376 · ABB +190); thoả
+thuận + đỉnh lịch sử phiên 05/10 trùng bộ mã thẻ sống. Trần/sàn: SHB 20/07/2026 tham chiếu
+12.650 → sàn 11.800 (đúng `l`), tô xanh lơ.
 
 ### GỘP RADAR VÀO PHÂN TÍCH — MỘT TRANG CUỘN (27/08/2026)
 
