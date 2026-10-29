@@ -24,6 +24,7 @@ UNIV=os.path.join(BASE,"universe.json")
 EOD_DIR=os.path.join(BASE,"data","eod"); HIST_DIR=os.path.join(BASE,"data","hist")
 FIN_DIR=os.path.join(BASE,"data","fin"); IDX_FILE=os.path.join(BASE,"data","idx.json")
 NEWS_DIR=os.path.join(BASE,"data","news")
+SUKIEN_DIR=os.path.join(BASE,"data","sukien")
 PROF_DIR=os.path.join(BASE,"data","profile")
 SPARK=os.path.join(BASE,"data","spark.json"); HEALTH=os.path.join(BASE,"data","health.json")
 HL={}   # health: kết quả từng bước của lượt chạy này -> data/health.json
@@ -549,13 +550,61 @@ os.makedirs(FIN_DIR,exist_ok=True)
 # Đã dính đúng lỗi này với `divQ` (cổ tức theo quý): 234 mã đứng ngoài suốt vì bảng kiểm
 # chỉ dò mỗi `bsQ` của lần đổi sơ đồ trước đó.
 FIN_KEYS=("bsQ","divQ")
+def _thu_ky(lb):         # 'Q3/26' -> 2026.3 · '2026' -> 2026. CHỈ để SO và XẾP, không để hiện.
+    m=re.match(r"Q(\d)/(\d{2})$",str(lb))
+    if m: return 2000+int(m.group(2))+int(m.group(1))/10
+    m=re.match(r"(\d{4})$",str(lb));  return int(m.group(1)) if m else -1
+def _ky_moi(lbs):        # kỳ MỚI NHẤT trong một mớ nhãn; không có nhãn nào hợp lệ -> -1
+    return max((_thu_ky(x) for x in lbs),default=-1)
+def _ky_kho(d):          # kỳ quý mới nhất kho tài chính ĐANG CÓ
+    return _ky_moi(r.get("label") for r in (d.get("Q") or []) if r.get("label"))
+def _ky_da_ra(s):        # kỳ mới nhất KHO SỰ KIỆN nói là đã công bố BCTC
+    try:
+        with open(os.path.join(SUKIEN_DIR,f"{s}.json"),encoding="utf-8") as fh: j=json.load(fh)
+    except Exception: return -1
+    return _ky_moi(e.get("ky") for e in (j.get("ev") or [])
+                   if e.get("k")=="bctc" and e.get("ky"))
+fmoi=[0]                 # đếm riêng số mã được cào vì CÓ KỲ MỚI, để soi được ở health.json
 def fin_stale(s):
+    """Mã này có cần cào lại kho tài chính không?
+
+    HAI câu hỏi khác hẳn nhau, bản cũ chỉ hỏi câu đầu:
+      ① file có ĐÚNG SƠ ĐỒ không  (thiếu khoá -> cào)
+      ② file có ĐÚNG KỲ không     (nguồn đã ra quý mới mà kho chưa có -> cào)
+
+    Thiếu câu ② thì kho tài chính CHỈ làm mới mỗi tuần một lần, vào lượt `--full` thứ Hai —
+    vì file nào đã đủ khoá là vĩnh viễn không ai hỏi lại. Ngày thường `need` đứng yên ở
+    con số 199 (mấy mã sơ đồ hỏng), nhìn health.json thì tưởng vẫn chạy đều.
+    Đo 29/10/2026 — ĐÚNG mùa BCTC quý 3, hạn công bố 30/10: cả 1.333 file lành lặn đều mang
+    `updated: 2026-10-26` (lượt --full thứ Hai), trong đó 636 mã còn kẹt ở Q2/26 vì hôm ấy
+    họ CHƯA nộp. Ba ngày sau, **145 mã đã công bố BCTC Q3 mà kho vẫn chưa hề biết** (ACB,
+    AAA, BWE, BFC, C4G…), và sẽ không biết cho tới thứ Hai 02/11 — tức cả tuần cao điểm
+    nhất của mùa báo cáo thì trang hiện số cũ. Kéo theo cả `data/finq` lẫn `data/nganh`:
+    `kho_sau.can_lam()` so kỳ của finq với kỳ của fin, mà fin đứng im thì nó cũng đứng im.
+
+    CÂU ② HỎI KHO SỰ KIỆN, KHÔNG HỎI CUỐN LỊCH. `data/sukien` đã ghi sẵn mốc "Công bố BCTC
+    Q3/26" cho từng mã (lượt 7:30 cào đủ 1.487 mã mỗi sáng, chỉ ghi lại khi danh sách đổi —
+    70 file đổi riêng hôm nay, đúng đợt Q3 đang về). Nên phép kiểm này KHÔNG tốn thêm một
+    lượt gọi mạng nào, và chỉ cào đúng mã thật sự vừa ra báo cáo.
+      · Suy theo lịch ("quá 20 ngày sau cuối quý thì lẽ ra phải có") thì ngày nào cũng phải
+        hỏi lại cả mấy trăm mã nộp muộn và mấy trăm mã đã ngừng công bố hẳn — mỗi mã 8 lượt
+        gọi, mỗi ngày, mãi mãi. Trái hẳn mục *Gọi mạng* của CLAUDE.md.
+      · So KỲ MỚI NHẤT chứ đừng so TẬP HỢP kỳ: hai kho phủ lịch sử khác nhau (sự kiện lấy
+        VNDirect từ 2020, fin gom 24hMoney + lượt vá `va_quy.py`), nên hiệu của hai tập luôn
+        khác rỗng ở phần quá khứ -> mã nào cũng "ôi" vĩnh viễn.
+      · Mã nguồn sự kiện không có gì (-1) thì không bao giờ bị kết luận là ôi -> cổ phiếu
+        chết/đình chỉ không bị hỏi lại mỗi ngày.
+    LƯỚI AN TOÀN vẫn là `--full` thứ Hai: sự kiện sót mã nào thì chậm nhất một tuần có lại,
+    đúng bằng mức bảo đảm cũ — phép kiểm này chỉ lấp quãng từ thứ Ba tới Chủ nhật."""
     p=os.path.join(FIN_DIR,f"{s}.json")
     if not os.path.exists(p): return True
     try:
         d=json.load(open(p,encoding="utf-8"))
-        return any(k not in d for k in FIN_KEYS)
     except Exception: return True
+    if any(k not in d for k in FIN_KEYS): return True
+    if _ky_da_ra(s)>_ky_kho(d):
+        fmoi[0]+=1; return True
+    return False
 need=[s for s in syms if FULL or fin_stale(s)]
 RX_RATIO=re.compile(r"tỷ lệ\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)",re.I)
 RX_DIVCP=re.compile(r"cổ tức.*cổ phiếu",re.I)
@@ -673,14 +722,10 @@ def work_fin(sym):
         with open(os.path.join(FIN_DIR,f"{sym}.json"),encoding="utf-8") as fh: cu=json.load(fh)
     except Exception: pass
     if cu:
-        def _thu(lb):                      # 'Q3/24' -> 2024.75 · '2024' -> 2024 (để xếp thứ tự)
-            m=re.match(r"Q(\d)/(\d{2})$",str(lb))
-            if m: return 2000+int(m.group(2))+int(m.group(1))/10
-            m=re.match(r"(\d{4})$",str(lb));  return int(m.group(1)) if m else -1
         for k in ("Y","Q"):
             gop={r.get("label"):r for r in (cu.get(k) or []) if r.get("label")}
             gop.update({r.get("label"):r for r in (o.get(k) or []) if r.get("label")})
-            o[k]=sorted(gop.values(),key=lambda r:_thu(r.get("label")))
+            o[k]=sorted(gop.values(),key=lambda r:_thu_ky(r.get("label")))
         # CÙNG LUẬT ĐÓ CHO MẤY KHOÁ CÒN LẠI. Chúng đang ghi đè thẳng: bsY/bsQ/cfY/cfQ chỉ
         # gán `if g:` nên cào hụt là khoá VẮNG MẶT, jdump xoá luôn khỏi file; div/divQ thì
         # fetch_div nuốt lỗi và trả về rỗng, ghi rỗng đè lên số cũ. fin_stale() không thấy
@@ -701,7 +746,7 @@ if need:
         list(pool.map(work_fin,need))
 print(f"kho tài chính (KQKD+CĐKT+LCTT+cổ tức): cào {len(need)} mã, có dữ liệu {fdone[1]}",flush=True)
 moc("kho_tai_chinh")
-HL["fin"]={"need":len(need),"ok":fdone[1],"giu_cu":fkeep[0]}
+HL["fin"]={"need":len(need),"ok":fdone[1],"giu_cu":fkeep[0],"ky_moi":fmoi[0]}
 
 # 6b) RÚT 3 CHỈ SỐ CƠ BẢN TỪ KHO TÀI CHÍNH -> universe.json (bảng giá đọc 1 lần, không phải
 #     tải 1.500 file lẻ). Không tốn thêm lượt gọi mạng nào — đọc lại file vừa ghi ở bước 6.

@@ -5050,6 +5050,36 @@ news 6, profile 5) — tăng lên dễ bị chặn IP.
 > **Nguyên tắc chung: mọi bản vá một lần phải chuyển thành một phép kiểm trong pipeline** —
 > việc gì cần người ngồi chạy tay là việc sẽ bị quên.
 
+> **`fin_stale()` PHẢI HỎI CẢ "ĐÚNG KỲ CHƯA", KHÔNG CHỈ "ĐÚNG SƠ ĐỒ CHƯA" (29/10/2026).**
+> Bản cũ chỉ dò `FIN_KEYS`, nên **file nào đã đủ khoá là vĩnh viễn không ai hỏi lại** — kho
+> tài chính thật ra chỉ làm mới MỖI TUẦN MỘT LẦN, vào lượt `--full` thứ Hai. Triệu chứng
+> đánh lừa: `health.json.fin.need` đứng yên ở 199 ngày này qua ngày khác, nhìn tưởng chạy đều,
+> trong khi 199 đó chỉ là mấy mã sơ đồ hỏng.
+> Đo ngày 29/10/2026 — đúng tuần cao điểm BCTC quý 3, hạn công bố 30/10: cả **1.333** file
+> lành lặn đều mang `updated: 2026-10-26`, và **636 mã còn kẹt ở Q2/26** vì thứ Hai ấy họ chưa
+> nộp. Ba ngày sau đã có **145 mã công bố BCTC Q3 mà kho không hề biết** (ACB, AAA, BWE, BFC,
+> C4G, CTR…), và sẽ không biết tới tận thứ Hai 02/11. Hỏng **dây chuyền và im lặng**:
+> `kho_sau.can_lam()` so kỳ của `finq` với kỳ của `fin`, `build_nganh --moi` so mtime — hai
+> bước sau đều viết ĐÚNG, nhưng `fin` đứng im thì chúng cũng đứng im. **Chỉ số đặc thù ngành
+> và kho sâu kẹt theo, cùng một con số 506/636.** Bài học: phép kiểm "ôi" ở ĐẦU chuỗi sai thì
+> mọi phép kiểm đúng ở phía sau đều vô dụng.
+> **HỎI KHO SỰ KIỆN, ĐỪNG SUY THEO CUỐN LỊCH.** `data/sukien/{MÃ}.json` đã có sẵn mốc
+> `{"k":"bctc","ky":"Q3/26"}` — lượt 7:30 cào đủ 1.487 mã mỗi sáng và chỉ ghi lại khi danh
+> sách đổi (70 file đổi riêng ngày 29/10, đúng đợt Q3 đang về). Nên phép kiểm mới **không tốn
+> thêm một lượt gọi mạng nào** và chỉ cào đúng mã vừa ra báo cáo: `need` 196 → 342.
+> Ba thứ phải giữ, bỏ cái nào là hỏng theo một kiểu riêng:
+> 1. **So KỲ MỚI NHẤT (`_thu_ky` → số), đừng so TẬP HỢP kỳ.** Hai kho phủ lịch sử khác nhau
+>    (sự kiện lấy VNDirect từ 2020; `fin` gom 24hMoney + lượt vá `va_quy.py` lùi tới 2005),
+>    nên hiệu hai tập LUÔN khác rỗng ở phần quá khứ → mã nào cũng "ôi" vĩnh viễn.
+> 2. **Không có mốc BCTC nào thì trả -1, và -1 không bao giờ lớn hơn kỳ trong kho** → 326 mã
+>    đã ngừng công bố (đình chỉ, huỷ niêm yết) KHÔNG bị hỏi lại mỗi ngày. Nếu thay bằng cách
+>    suy theo lịch ("quá 20 ngày sau cuối quý thì lẽ ra phải có") thì đúng 326 mã đó cộng mấy
+>    trăm mã nộp muộn bị nện 8 lượt gọi mỗi ngày, mãi mãi — trái hẳn mục *Gọi mạng*.
+> 3. **`--full` thứ Hai vẫn là lưới an toàn**, đừng gỡ: kho sự kiện sót mã nào thì chậm nhất
+>    một tuần vẫn có lại — đúng bằng mức bảo đảm cũ. Phép kiểm này chỉ lấp quãng thứ Ba→CN.
+> `health.json.fin.ky_moi` đếm riêng số mã cào vì CÓ KỲ MỚI. **Giữa tháng 1/4/7/10 mà `ky_moi`
+> nằm im ở 0 suốt là chuông báo**, đừng đọc thành "không có gì mới".
+
 > **CÀO HỤT THÌ GIỮ SỐ CŨ, ĐỪNG GHI RỖNG ĐÈ LÊN.** `work_fin` và `work_prof` đều `jdump`
 > NGUYÊN file, mà mấy hàm cào con (`fetch_div`, `fetch_ownership`, khối `bsY/bsQ/cfY/cfQ`)
 > nuốt lỗi rồi trả về rỗng — một cú 5xx của nguồn là mất sạch cổ tức, cổ đông, công ty con
