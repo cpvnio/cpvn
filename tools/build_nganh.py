@@ -277,8 +277,16 @@ def main(chi=None, moi=False):
         if not os.path.exists(pf):
             dem["khong_fin"] += 1; continue
         if moi and os.path.exists(po):
+            # PHẢI SO MTIME CỦA ĐỦ BA NGUỒN VÀO. Bản cũ chỉ so fin + finq, trong khi
+            # `margin_ck()` đọc thẳng data/cocau -> cocau làm mới theo NHỊP RIÊNG (3 ngày,
+            # xem bước 6c2) nên có ngày nó mới hơn mà fin/finq thì không, và file ngành
+            # KHÔNG được dựng lại: dòng "Dư nợ cho vay ký quỹ" của CTCK giữ số quý cũ, im
+            # lặng. Luật chung: bảng kiểm "ôi" phải nhìn ĐỦ MỌI THỨ nó đọc vào, thiếu một
+            # nguồn là nguồn đó cập nhật xong vẫn không tới được trang.
+            pc = os.path.join(COCAU, sym + ".json")
             mt = max(os.path.getmtime(pf),
-                     os.path.getmtime(pq) if os.path.exists(pq) else 0)
+                     os.path.getmtime(pq) if os.path.exists(pq) else 0,
+                     os.path.getmtime(pc) if os.path.exists(pc) else 0)
             if os.path.getmtime(po) >= mt:
                 dem["nguyen"] += 1; continue
         try:

@@ -204,7 +204,7 @@ def cu(path, ngay):
     return (time.time() - os.path.getmtime(path)) > ngay * 86400
 
 
-def main(chi=None, moi=False, ngay=7, gioi_han=0):
+def main(chi=None, moi=False, ngay=7, gioi_han=0, quet=False):
     os.makedirs(OUT, exist_ok=True)
     if chi:
         syms = [x.strip().upper() for x in (chi.split(",") if isinstance(chi, str) else chi) if x.strip()]
@@ -213,7 +213,23 @@ def main(chi=None, moi=False, ngay=7, gioi_han=0):
         st = u.get("stocks") if isinstance(u, dict) else u
         syms = sorted(st.keys() if isinstance(st, dict) else [x["sym"] for x in st])
     if moi:
-        syms = [s for s in syms if cu(os.path.join(OUT, f"{s}.json"), ngay)]
+        # `cu()` TRẢ True CHO MỌI FILE CHƯA TỒN TẠI, mà 1.484/1.527 mã KHÔNG BAO GIỜ có file
+        # (chỉ nhóm chứng khoán mới còn khối `ts` để ghi — xem TS_GIU). Nên ngưỡng ngày lọc
+        # NGƯỢC: 43 mã thật sự có số thì bị bỏ qua suốt `ngay` ngày, còn gần cả thị trường
+        # thì bị hỏi lại MỖI PHIÊN cho đúng con số không. Đo health.json 28/10/2026:
+        #     hoi 1.490 · ok 0 · rong 1.490
+        # tức ~3.000 lượt gọi Simplize mỗi phiên không mang về gì — đúng thứ chú thích ở
+        # refresh_daily bảo là `--moi` đã tránh được. Hệ quả thấy được: dòng "Dư nợ cho vay
+        # ký quỹ" của CTCK đứng im tới 20 ngày sau khi báo cáo quý ra, trong khi cột quý mới
+        # đã hiện trên bảng cân đối -> ô trống không ai hiểu vì sao.
+        # Nay tách hai rổ: mã ĐÃ CÓ file đi theo ngưỡng ngày; mã CHƯA CÓ chỉ dò khi `quet`
+        # (lượt --full thứ Hai) — vẫn đủ bắt công ty chứng khoán mới lên sàn, mà hết hỏi
+        # vu vơ. ĐỪNG lọc bằng `sector` của universe.json: tên ngành thô có thể lệch, còn
+        # phép dò thật thì chính nguồn trả lời.
+        daco = [x for x in syms if os.path.exists(os.path.join(OUT, f"{x}.json"))]
+        tap = set(daco)
+        syms = ([x for x in daco if cu(os.path.join(OUT, f"{x}.json"), ngay)]
+                + ([x for x in syms if x not in tap] if quet else []))
     if gioi_han:
         syms = syms[:gioi_han]
     if not syms:
@@ -261,7 +277,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--ma", help="danh sách mã, phẩy ngăn cách")
     ap.add_argument("--moi", action="store_true", help="bỏ qua mã đã có file mới hơn --ngay")
+    ap.add_argument("--quet", action="store_true", help="với --moi: dò luôn mã CHƯA có file (lượt --full)")
     ap.add_argument("--ngay", type=int, default=7, help="ngưỡng coi là cũ cho --moi (mặc định 7)")
     ap.add_argument("--gioihan", type=int, default=0, help="chỉ chạy N mã đầu (dò thử)")
     a = ap.parse_args()
-    main(chi=a.ma, moi=a.moi, ngay=a.ngay, gioi_han=a.gioihan)
+    main(chi=a.ma, moi=a.moi, ngay=a.ngay, gioi_han=a.gioihan, quet=a.quet)

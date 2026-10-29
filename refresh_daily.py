@@ -822,13 +822,18 @@ except Exception as e:
 #      Thứ DUY NHẤT ở đây mà hai kho kia không có: bảng phân rã theo ĐÚNG loại hình doanh
 #      nghiệp. fin/finq đều lấy bản báo cáo mẫu THƯỜNG nên với công ty chứng khoán thì
 #      40 nghìn tỷ đang cho khách vay không nằm ở dòng nào (xem tools/cao_cocau.py).
-#      `--moi` với ngưỡng 20 ngày: báo cáo quý ra mỗi 3 tháng, hỏi lại hằng ngày là phí
-#      3.000 lượt gọi mỗi phiên cho một con số cả quý mới nhúc nhích. Nguồn chỉ trả 15 quý
-#      nên đây KHÔNG phải kho vĩnh viễn — mất là cào lại được, không cần bảo toàn như fin.
+#      `--moi`: 43 mã ĐÃ CÓ file thì hỏi lại khi quá 3 ngày (~29 lượt/phiên, trễ nhiều
+#      nhất 3 ngày sau khi báo cáo quý ra); mã CHƯA CÓ file chỉ dò vào lượt `--full` thứ Hai
+#      (`quet=FULL`), đủ để bắt công ty chứng khoán mới lên sàn.
+#      BẢN CŨ ĐẶT `ngay=20` VÀ LỌC NGƯỢC: `cu()` coi file chưa tồn tại là "cũ", mà
+#      1.484/1.527 mã không bao giờ có file -> đo được `hoi 1.490 · ok 0 · rong 1.490`, tức
+#      ~3.000 lượt gọi Simplize mỗi phiên không mang về gì, trong khi đúng 43 mã có số thì bị
+#      bỏ qua 20 ngày. Nguồn chỉ trả 15 quý nên đây KHÔNG phải kho vĩnh viễn — mất là cào
+#      lại được, không cần bảo toàn như fin.
 try:
     sys.path.insert(0,os.path.join(BASE,"tools"))
     import cao_cocau as _cc
-    HL["cocau"]=_cc.main(moi=True, ngay=20)
+    HL["cocau"]=_cc.main(moi=True, ngay=3, quet=FULL)
 except Exception as e:
     print(f"cơ cấu lợi nhuận LỖI (không chặn pipeline): {e}",flush=True)
     HL["cocau"]={"err":str(e)[:120]}

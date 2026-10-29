@@ -5034,8 +5034,31 @@ nhìn thấy, không phản đối; đó là đồng thuận trên thực tế m
 (`build_nganh`) phải đứng SAU 6c (`kho_sau`)** vì nó chỉ tin dấu lưu chuyển tiền tệ
 của `finq`, **và SAU 6c2 (`cao_cocau`)** vì dòng ký quỹ của mẫu CTCK đọc thẳng
 `data/cocau`; chạy bằng `--moi` (so mtime) nên ngày thường xong trong vài giây.
-**6c2 dùng `--moi --ngay 20`**, không phải hằng ngày: báo cáo quý ra mỗi 3 tháng, hỏi lại
-mỗi phiên là phí ~3.000 lượt gọi cho một con số cả quý mới nhúc nhích một lần.
+**6c2 dùng `--moi --ngay 3 --quet(chỉ khi --full)`**: 42 mã CTCK đã có file thì hỏi lại khi
+quá 3 ngày (~29 lượt/phiên); mã CHƯA có file chỉ dò vào lượt `--full` thứ Hai.
+
+> **BẢNG KIỂM "ÔI" CỦA 6c2 TỪNG LỌC NGƯỢC HOÀN TOÀN (vá 29/10/2026).** `cu()` coi file
+> **chưa tồn tại** là "cũ", mà chỉ nhóm `INVESTMENT` mới còn khối `ts` để ghi — tức
+> **1.490/1.532 mã KHÔNG BAO GIỜ có file**. Nên ngưỡng `--ngay 20` chặn đúng 42 mã CÓ số
+> và thả cho gần cả thị trường bị hỏi lại mỗi phiên. Đo `health.json` 28/10/2026:
+> `{"ok":0,"rong":1490,"hoi":1490}` — **1.490 lượt gọi Simplize mỗi phiên mang về đúng con
+> số không**, chính xác cái mà chú thích cũ tưởng là đã tránh được. Chạy thử bản cũ trên kho
+> thật ra lại đúng 1.490, khớp từng số với health.json.
+> Hậu quả thấy được trên trang: dòng **"Dư nợ cho vay ký quỹ"** của CTCK đứng im tới 20 ngày
+> sau khi báo cáo quý ra — đo 29/10: **39/42 CTCK còn ở Q2/26** trong khi cột Q3 đã hiện trên
+> bảng cân đối, nên ô đó trống mà không ai hiểu vì sao.
+> **ĐỪNG lọc bằng `sector` của `universe.json`** cho gọn: tên ngành thô có thể lệch, còn phép
+> dò thật thì chính nguồn trả lời. Giữ hai rổ — có file thì theo ngưỡng ngày, chưa có thì để
+> lượt `--full` khám phá.
+
+> **`build_nganh --moi` PHẢI SO MTIME CỦA ĐỦ BA NGUỒN VÀO (vá 29/10/2026).** Bản cũ chỉ so
+> `data/fin` + `data/finq`, trong khi `margin_ck()` đọc thẳng `data/cocau` — mà từ bản vá
+> trên, cocau làm mới theo **nhịp riêng 3 ngày**, nên có ngày nó mới hơn mà fin/finq thì
+> không, và file ngành KHÔNG được dựng lại: số ký quỹ mới cào về **không bao giờ tới trang**.
+> Thiếu mắt này thì bản vá 6c2 ở trên thành vô ích — hai lỗi phải sửa CÙNG LÚC.
+> Luật chung: **bảng kiểm "ôi" phải nhìn ĐỦ MỌI THỨ nó đọc vào**; thiếu một nguồn là nguồn
+> đó cập nhật xong vẫn đứng ngoài trang. Dựng lại 348 mã sau khi vá: **0 thay đổi có nghĩa**
+> (5 file lệch đúng một ký tự `0.0` → `-0.0`, số không mang dấu, không ảnh hưởng hiển thị).
 Mọi JSON ghi qua `jdump()` (compact, `ensure_ascii=False`, atomic `.tmp`+`os.replace`).
 Chỉ cập nhật universe bằng giá trị **khác None** — đó là cách giữ số cũ khi API lỗi.
 Song song đã cân theo giới hạn nguồn (Simplize 4 luồng + sleep 0.15, hist 12, fin 5,
